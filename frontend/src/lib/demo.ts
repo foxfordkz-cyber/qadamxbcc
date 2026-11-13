@@ -34,6 +34,7 @@ export function evaluateDemo(input: TransferInput): Evaluation {
   const isNew = ctx.is_new_recipient ?? recipient.id !== ids.friend;
   const reasons: Reason[] = [];
   if (ctx.active_call) reasons.push(reason("ACTIVE_CALL", "behavioral", 25, "Аударым кезінде қоңырау белсенді.", "Во время перевода активен телефонный звонок."));
+  if (ctx.active_call && ctx.pasted_recipient) reasons.push(reason("PASTED_DURING_CALL", "behavioral", 15, "Реквизиттер белсенді қоңырау кезінде алмасу буферінен қойылды", "Реквизиты вставлены из буфера обмена во время активного звонка"));
   if (ctx.from_deposit) reasons.push(reason("DEPOSIT_WITHDRAWAL", "behavioral", 15, "Қаражат депозиттен жаңа шығарылған.", "Средства только что сняты с депозита."));
   if (ctx.is_new_device) reasons.push(reason("NEW_DEVICE", "behavioral", 15, "Аударым жаңа құрылғыдан жасалуда.", "Перевод выполняется с нового устройства."));
   if (isNew) reasons.push(reason("NEW_RECIPIENT", "behavioral", 10, "Бұл алушыға алғашқы аударым.", "Первый перевод этому получателю."));

@@ -4,6 +4,7 @@ import { useRef, type Dispatch, type SetStateAction } from "react";
 import { ArrowLeft, ArrowRight, BatteryFull, Check, ChevronDown, ChevronRight, CreditCard, Landmark, LoaderCircle, LockKeyhole, PhoneCall, ShieldCheck, Signal, Smartphone, Wifi } from "lucide-react";
 import type { AppConfig, Preset, PresetForm } from "@/lib/contracts";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
+import type { Biometrics } from "./use-biometrics";
 
 export type RecipientType = "phone" | "card" | "iban";
 interface Props {
@@ -15,9 +16,10 @@ interface Props {
   busy: boolean;
   error: MessageKey | null;
   onSubmit: () => void;
+  sensor: Biometrics;
 }
 
-export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, error, onSubmit }: Props) {
+export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, error, onSubmit, sensor }: Props) {
   const { lang, t } = useLocale();
   const senderDetails = useRef<HTMLDetailsElement>(null);
   const contacts = [
@@ -44,18 +46,18 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
               const phone = config.presets[contact.key].recipient;
               const active = recipientType === "phone" && form.recipient === phone;
               return <button key={contact.key} type="button" className={`contact ${active ? "selected" : ""}`} disabled={busy || !phone} aria-pressed={active} aria-label={`${t("contactHint")}: ${contact.name}`} onClick={() => {
-                setRecipientType("phone");
+                sensor.reset(); setRecipientType("phone");
                 setForm(v => ({ ...v, recipient: phone, context: { ...v.context, is_new_recipient: undefined } }));
               }}><span className={`avatar ${contact.tone}`}>{config.mode === "demo" ? contact.initials : contact.name.slice(-1)}{active && <i><Check size={11} /></i>}</span><span>{contact.name}</span></button>;
             })}
           </div></section>
           <div className="recipient-section"><div className="field-heading"><label htmlFor="recipient">{t("recipient")}</label><div className="segmented">{(["phone", "card", "iban"] as const).map(type => <button key={type} type="button" aria-pressed={recipientType === type} onClick={() => {
-            setRecipientType(type); setForm(v => ({ ...v, recipient: "", context: { ...v.context, is_new_recipient: undefined } }));
+            sensor.reset(); setRecipientType(type); setForm(v => ({ ...v, recipient: "", context: { ...v.context, is_new_recipient: undefined } }));
           }}>{t(type)}</button>)}</div></div>
-            <div className="recipient-input"><input id="recipient" required value={form.recipient} inputMode={recipientType === "iban" ? "text" : "tel"} autoComplete="off" placeholder={recipientType === "phone" ? "+7 701 000 00 02" : recipientType === "card" ? "4400 0000 0000 0002" : "KZ000000000000000002"} onChange={e => setForm(v => ({ ...v, recipient: e.target.value, context: { ...v.context, is_new_recipient: undefined } }))} /><ChevronRight size={18} aria-hidden="true" /></div>
+            <div className="recipient-input"><input id="recipient" required value={form.recipient} inputMode={recipientType === "iban" ? "text" : "tel"} autoComplete="off" placeholder={recipientType === "phone" ? "+7 701 000 00 02" : recipientType === "card" ? "4400 0000 0000 0002" : "KZ000000000000000002"} onFocus={e => sensor.focus("recipient", e.target.value.length)} onBlur={() => sensor.blur("recipient")} onPaste={() => sensor.paste("recipient")} onChange={e => { sensor.input("recipient", e); setForm(v => ({ ...v, recipient: e.target.value, context: { ...v.context, is_new_recipient: undefined } })); }} /><ChevronRight size={18} aria-hidden="true" /></div>
             {recipientType === "card" && <p className="muted input-hint">{t("cardHint")}</p>}
           </div>
-          <div className="amount-section"><label htmlFor="transfer-amount" className="field-label">{t("transferAmount")}</label><div className="amount-input"><input id="transfer-amount" required type="number" min="0.01" max="1000000000" step="0.01" inputMode="decimal" value={form.amount} onChange={e => setForm(v => ({ ...v, amount: e.target.value }))} /><span aria-hidden="true">₸</span></div><div className="amount-pills" aria-label={t("quickAmounts")}>{[5000, 25000, 100000].map(amount => <button key={amount} type="button" aria-pressed={Number(form.amount) === amount} onClick={() => setForm(v => ({ ...v, amount: String(amount) }))}>{money(amount, lang)}</button>)}</div></div>
+          <div className="amount-section"><label htmlFor="transfer-amount" className="field-label">{t("transferAmount")}</label><div className="amount-input"><input id="transfer-amount" required type="number" min="0.01" max="1000000000" step="0.01" inputMode="decimal" value={form.amount} onFocus={e => sensor.focus("amount", e.target.value.length)} onBlur={() => sensor.blur("amount")} onPaste={() => sensor.paste("amount")} onChange={e => { sensor.input("amount", e); setForm(v => ({ ...v, amount: e.target.value })); }} /><span aria-hidden="true">₸</span></div><div className="amount-pills" aria-label={t("quickAmounts")}>{[5000, 25000, 100000].map(amount => <button key={amount} type="button" aria-pressed={Number(form.amount) === amount} onClick={() => { sensor.blur("amount"); setForm(v => ({ ...v, amount: String(amount) })); }}>{money(amount, lang)}</button>)}</div></div>
           <section className="context-box" aria-labelledby="context-title"><p id="context-title" className="field-label">{t("context")}</p>{(["active_call", "from_deposit", "is_new_device"] as const).map(key => {
             const Icon = key === "active_call" ? PhoneCall : key === "from_deposit" ? Landmark : Smartphone;
             return <button className="toggle-row" type="button" role="switch" aria-checked={form.context[key]} key={key} onClick={() => setForm(v => ({ ...v, context: { ...v.context, [key]: !v.context[key] } }))}><span><Icon size={17} />{t(key)}</span><i className={form.context[key] ? "on" : ""}><b /></i></button>;

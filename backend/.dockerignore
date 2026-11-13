@@ -8,3 +8,6 @@ tests/
 .env.*
 *.db
 .pytest_tmp/
+*.pyc
+.pytest_tmp
+app/ml/*.joblib
