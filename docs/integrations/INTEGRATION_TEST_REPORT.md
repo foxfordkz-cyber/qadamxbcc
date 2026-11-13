@@ -33,3 +33,12 @@ Latency baseline: 3 runs × 200 engine evaluations, identical seeded graph and
 fakeredis, Python 3.12 on this Windows host. p95: 5.292 / 7.614 / 8.757 ms. This is
 an engine microbenchmark, not HTTP/PostgreSQL latency or a production SLA. The
 combined-branch report will include the repeated measurement and methodology.
+
+PR A final: full verify PASS; 38/38 integration cases passed on PostgreSQL/Redis,
+including two concurrency cases. PostgreSQL migrations round-tripped successfully.
+Draft PR [#1](https://github.com/foxfordkz-cyber/qadamxbcc/pull/1), commit `5a755f8`.
+GitHub Actions run 43439317486 completed successfully (full oracle and live tests).
+
+PR B adds 30 cases, including one PostgreSQL concurrency case. Combined A+B live
+suite: 68 passed. All original 5 OpenAPI paths and all original component schemas
+were compared with baseline and are structurally identical.

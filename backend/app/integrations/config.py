@@ -19,6 +19,8 @@ class IntegrationSettings(BaseSettings):
     invitation_ttl_seconds: int = Field(600, ge=60, le=900)
     adapter_timeout_seconds: float = Field(2.0, gt=0, le=5)
     rate_limit_per_minute: int = Field(30, ge=1, le=300)
+    gateway_enabled: bool = True
+    gateway_timeout_seconds: float = Field(0.2, gt=0, le=1)
 
     @model_validator(mode="after")
     def validate_secrets(self) -> Self:
