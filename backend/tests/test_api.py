@@ -200,6 +200,12 @@ async def test_drop_hub_blocked_and_visible_in_soc(world: World) -> None:
         "hub", "cashout", 1_000_000, occurred_at=(start + timedelta(minutes=25)).isoformat()
     )
     assert "SENDER_PASS_THROUGH" in {r["code"] for r in cash["reasons"]}
+    assert cash["status"] == "cooling_off"
+    # The coached mule clears the questionnaire: money actually leaves the hub.
+    released = await world.client.post(
+        f"{API}/transfers/{cash['transaction_id']}/resolve-cooling", json={"answers": CLEAN}
+    )
+    assert released.json()["status"] == "approved"
 
     blocked = await world.evaluate("victim", "hub", 250_000)
     assert blocked["status"] == "blocked"

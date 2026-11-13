@@ -35,3 +35,37 @@ def test_subgraph_respects_max_nodes_and_unknown_center() -> None:
     # heaviest links are kept first
     assert {n.id for n in view.nodes} == {"c", "s29", "s28", "s27", "s26"}
     assert g.subgraph("missing").nodes == []
+
+
+def test_birthday_host_is_not_a_hub_but_forwarding_hub_is() -> None:
+    """SOC roles mirror the engine's corroboration rule: fan-in alone is a collection."""
+    from app.services.graph import NodeView
+    from app.services.soc import _role
+
+    g = GraphStore()
+    g.add_account("host", device_id="host-phone")
+    g.add_account("hub", device_id="ring-phone")
+    for i in range(15):
+        g.add_transfer(f"guest{i}", "host", 10_000)
+        g.add_transfer(f"victim{i}", "hub", 100_000)
+    g.add_transfer("hub", "cashout", 1_300_000)
+
+    host, hub = g.metrics("host"), g.metrics("hub")
+    assert host.in_degree == 15
+    assert not host.suspected_mule
+    assert not host.is_hub
+    assert hub.is_transit
+    assert hub.is_hub
+
+    def role(node_id: str) -> str:
+        return _role(NodeView(node_id, node_id, "", 1, g.metrics(node_id)))
+
+    assert role("host") == "normal"
+    assert role("hub") == "hub"
+
+    # One shared phone is not enough; a device cluster (2+ peers) corroborates.
+    g.add_account("twin1", device_id="host-phone")
+    assert not g.metrics("host").suspected_mule
+    g.add_account("twin2", device_id="host-phone")
+    assert g.metrics("host").suspected_mule
+    assert role("host") == "hub"

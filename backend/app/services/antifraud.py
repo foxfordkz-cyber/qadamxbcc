@@ -28,7 +28,13 @@ from redis.asyncio import Redis
 
 from app.models import TransactionStatus
 from app.services import explain
-from app.services.graph import GraphMetrics, GraphStore
+from app.services.graph import (
+    SHARED_DEVICE_MIN,
+    TRANSIT_MIN_SENDERS,
+    TRANSIT_RATIO,
+    GraphMetrics,
+    GraphStore,
+)
 from app.services.velocity import VelocityCounters, VelocitySnapshot
 
 LAYER_BEHAVIORAL: Final = "behavioral"
@@ -69,10 +75,8 @@ W_MANY_SENDERS: Final = 10
 MANY_SENDERS_HIGH: Final = 10
 MANY_SENDERS: Final = 5
 W_TRANSIT: Final = 15
-TRANSIT_MIN_SENDERS: Final = 3
 W_RECIPIENT_SHARED_DEVICE: Final = 15
 W_SENDER_DEVICE_SHARED: Final = 15
-SHARED_DEVICE_MIN: Final = 2
 W_FLAGGED: Final = 40
 
 # Fan-in alone describes a *collection* (birthday, rent split, small business), not a mule.
@@ -344,7 +348,7 @@ class AntifraudEngine:
         elif senders >= MANY_SENDERS:
             out.append(_reason("RECIPIENT_MANY_SENDERS", LAYER_GRAPH, W_MANY_SENDERS, n=senders))
 
-        if rm.in_degree >= TRANSIT_MIN_SENDERS and rm.transit_ratio >= CASHOUT_RATIO:
+        if rm.in_degree >= TRANSIT_MIN_SENDERS and rm.transit_ratio >= TRANSIT_RATIO:
             out.append(
                 _reason(
                     "RECIPIENT_TRANSIT_RATIO",

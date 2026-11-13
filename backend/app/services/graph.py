@@ -11,6 +11,7 @@ import networkx as nx
 HUB_MIN_SENDERS = 10
 TRANSIT_MIN_SENDERS = 3
 TRANSIT_RATIO = 0.7
+SHARED_DEVICE_MIN = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,9 +28,23 @@ class GraphMetrics:
         return self.out_weight / self.in_weight if self.in_weight > 0 else 0.0
 
     @property
+    def is_transit(self) -> bool:
+        """Forwards most of what it receives from several senders."""
+        return self.in_degree >= TRANSIT_MIN_SENDERS and self.transit_ratio >= TRANSIT_RATIO
+
+    @property
     def suspected_mule(self) -> bool:
-        transit = self.in_degree >= TRANSIT_MIN_SENDERS and self.transit_ratio >= TRANSIT_RATIO
-        return self.flagged or self.in_degree >= HUB_MIN_SENDERS or transit
+        """Mule evidence, mirroring the engine's corroboration rule.
+
+        Fan-in alone (many senders) is a collection, not a mule: a birthday host who
+        keeps the money and shares no device is never marked.
+        """
+        return self.flagged or self.is_transit or self.shared_device_accounts >= SHARED_DEVICE_MIN
+
+    @property
+    def is_hub(self) -> bool:
+        """A corroborated mule that also collects from many distinct senders."""
+        return self.suspected_mule and self.in_degree >= HUB_MIN_SENDERS
 
 
 @dataclass(frozen=True, slots=True)
