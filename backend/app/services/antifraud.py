@@ -19,7 +19,7 @@ coming out of, a mule structure. This keeps the false-positive rate low.
 """
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Any, Final
 from zoneinfo import ZoneInfo
@@ -74,6 +74,23 @@ W_RECIPIENT_SHARED_DEVICE: Final = 15
 W_SENDER_DEVICE_SHARED: Final = 15
 SHARED_DEVICE_MIN: Final = 2
 W_FLAGGED: Final = 40
+
+# Fan-in alone describes a *collection* (birthday, rent split, small business), not a mule.
+# Collection signals keep full weight only when something says the money is leaving the
+# recipient or the recipient sits in a mule structure; otherwise they are downgraded.
+COLLECTION_WEIGHTS: Final[dict[str, int]] = {
+    "DROP_HUB_FAN_IN": 10,
+    "FAN_IN_VELOCITY": 5,
+    "RECIPIENT_MANY_SENDERS": 5,
+}
+MULE_CORROBORATION: Final = frozenset(
+    {
+        "RECIPIENT_INSTANT_CASHOUT",
+        "RECIPIENT_TRANSIT_RATIO",
+        "RECIPIENT_SHARED_DEVICE",
+        "RECIPIENT_FLAGGED",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,6 +155,24 @@ def _reason(code: str, layer: str, delta: int, **evidence: Any) -> RiskReason:
     return RiskReason(code, layer, delta, kk, ru, evidence)
 
 
+def _corroborate(network: list[RiskReason]) -> list[RiskReason]:
+    codes = {r.code for r in network}
+    if codes & MULE_CORROBORATION or not codes & COLLECTION_WEIGHTS.keys():
+        return network
+    adjusted = [
+        replace(
+            r,
+            score_delta=min(r.score_delta, COLLECTION_WEIGHTS[r.code]),
+            evidence={**r.evidence, "corroborated": False},
+        )
+        if r.code in COLLECTION_WEIGHTS
+        else r
+        for r in network
+    ]
+    adjusted.append(_reason("FAN_IN_UNCORROBORATED", LAYER_GRAPH, 0))
+    return adjusted
+
+
 class AntifraudEngine:
     def __init__(
         self,
@@ -179,9 +214,10 @@ class AntifraudEngine:
         self.graph.link_device(ctx.sender_id, ctx.device_id)
         t3 = time.perf_counter()
 
-        reasons = sorted([*behavioral, *velocity, *graph], key=lambda r: (-r.score_delta, r.code))
+        network = _corroborate([*velocity, *graph])
+        reasons = sorted([*behavioral, *network], key=lambda r: (-r.score_delta, r.code))
         raw = sum(r.score_delta for r in reasons)
-        network_evidence = bool(velocity or graph)
+        network_evidence = bool(network)
         score = max(0, min(100, raw if network_evidence else min(raw, BEHAVIORAL_ONLY_CAP)))
         decision = decide(score)
         head_kk, head_ru = explain.headline(decision, minutes=self.cooling_off_minutes)
