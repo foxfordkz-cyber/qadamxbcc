@@ -2,7 +2,9 @@
 
 This is not an official National Bank of Kazakhstan integration, contract, blacklist
 or source. It has no NBK URL, credentials, banking connection or real identifiers.
-Every result carries `source: MOCK` and `advisory_only: true`.
+Every result carries `source: MOCK` and `advisory_only: true`. The `verified` flag
+only describes validation of the synthetic fixture contract; it is not cryptographic
+attestation, an official NBK signature or a finding about a real person.
 
 ## Boundaries
 
