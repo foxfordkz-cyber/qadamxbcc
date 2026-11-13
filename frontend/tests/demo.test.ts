@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { demoPresets, ids } from "../src/lib/config";
 import { transferSchema, type Answers, type Preset } from "../src/lib/contracts";
 import { DemoError, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "../src/lib/demo";
+import { countBlockedHubs } from "../src/lib/feed-summary";
+import { money } from "../src/lib/i18n";
 
 function run(key: Preset) {
   const p = demoPresets[key];
@@ -37,4 +39,21 @@ test("invalid amounts and ambiguous recipients are rejected", () => {
   assert.equal(transferSchema.safeParse(input).success, false);
   assert.equal(transferSchema.safeParse({ ...input, amount: "1.001" }).success, false);
   assert.equal(transferSchema.safeParse({ ...input, amount: "10", recipient_id: ids.friend }).success, false);
+});
+
+test("SOC hub KPI excludes scam blocks and deduplicates blocked hub recipients", () => {
+  run("hub");
+  const hub = feedDemo().items[0];
+  const scam = { ...hub, recipient: { ...hub.recipient, id: ids.stranger }, reasons: [{ code: "QUESTIONNAIRE", layer: "questionnaire", score_delta: 90, reason_kk: "", reason_ru: "" }] };
+  assert.equal(countBlockedHubs([scam]), 0);
+  assert.equal(countBlockedHubs([hub, { ...hub, transaction_id: "repeat" }, scam]), 1);
+  assert.equal(countBlockedHubs([{ ...hub, status: "cooling_off" }]), 0);
+});
+
+test("KZT formatting is deterministic in kk and ru, including fractional tenge", () => {
+  for (const lang of ["kk", "ru"] as const) {
+    assert.equal(money(25000, lang), "25\u00a0000 ₸");
+    assert.equal(money("1234567.50", lang), "1\u00a0234\u00a0567,5 ₸");
+    assert.equal(money("invalid", lang), "— ₸");
+  }
 });
