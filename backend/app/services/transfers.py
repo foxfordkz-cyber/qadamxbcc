@@ -94,6 +94,16 @@ def red_flags(answers: CoolingQuestionnaire) -> list[str]:
     return flags
 
 
+def register_account(graph: GraphStore, account: Account) -> None:
+    """Sync an account's label, home device and SOC flag into the resident graph."""
+    graph.add_account(
+        str(account.id),
+        label=account.full_name,
+        device_id=account.device_id,
+        flagged=account.is_flagged,
+    )
+
+
 async def upsert_transfer_edge(
     session: AsyncSession, source: uuid.UUID, target: uuid.UUID, amount: float, at: datetime
 ) -> None:
@@ -154,6 +164,17 @@ class TransferService:
             raise InvalidTransferError("sender and recipient must differ")
 
         device_id = req.device_id or sender.device_id
+        # The resident graph only knows accounts hydrated at startup. Sync both parties and
+        # every account sharing a relevant device (indexed lookup) so device-cluster rules
+        # also see accounts created while the service is running.
+        register_account(self.engine.graph, sender)
+        register_account(self.engine.graph, recipient)
+        device_peers = await self.session.execute(
+            select(Account).where(Account.device_id.in_({recipient.device_id, device_id}))
+        )
+        for peer in device_peers.scalars():
+            register_account(self.engine.graph, peer)
+
         is_new_device = (
             req.context.is_new_device
             if req.context.is_new_device is not None

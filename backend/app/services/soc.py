@@ -24,7 +24,7 @@ from app.schemas.soc import (
 )
 from app.schemas.transfers import RiskReasonOut
 from app.services.graph import HUB_MIN_SENDERS, GraphStore, NodeView
-from app.services.transfers import NotFoundError
+from app.services.transfers import NotFoundError, register_account
 
 RING_SPACING = 280.0
 
@@ -148,13 +148,12 @@ def _layout(nodes: list[NodeView]) -> dict[str, Position]:
 async def account_graph(
     session: AsyncSession, graph: GraphStore, account_id: uuid.UUID, *, depth: int = 2
 ) -> GraphResponse:
-    if await session.get(Account, account_id) is None:
+    account = await session.get(Account, account_id)
+    if account is None:
         raise NotFoundError(f"account {account_id} not found")
+    # Accounts created after startup (e.g. seeded while running) are not hydrated yet.
+    register_account(graph, account)
     view = graph.subgraph(str(account_id), depth=depth)
-    if not view.nodes:
-        # Known account without any flows yet: return it alone.
-        graph.add_account(str(account_id))
-        view = graph.subgraph(str(account_id), depth=depth)
 
     positions = _layout(view.nodes)
     roles = {n.id: _role(n) for n in view.nodes}
