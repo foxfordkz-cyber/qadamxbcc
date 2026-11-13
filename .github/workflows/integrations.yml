@@ -1,0 +1,42 @@
+name: Integration verification
+on:
+  pull_request:
+  push:
+    branches: [main, 'feature/bekzat-*']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: bcc
+          POSTGRES_PASSWORD: bcc
+          POSTGRES_DB: bcc_integration_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U bcc -d bcc_integration_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Full project oracle
+        run: bash verify.sh
+      - name: PostgreSQL and Redis integration tests
+        working-directory: backend
+        env:
+          BCC_TEST_DATABASE_URL: postgresql+asyncpg://bcc:bcc@localhost:5432/bcc_integration_test
+          BCC_TEST_REDIS_URL: redis://localhost:6379/15
+        run: uv run --no-sync pytest tests/integrations
