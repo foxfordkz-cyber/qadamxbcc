@@ -2,20 +2,21 @@
 
 Wipes and re-creates (idempotent):
 
-* 300 accounts with checksum-valid 12-digit IINs, BCC KZ IBANs (bank code 856),
-  Kazakh / Russian full names, phones, device ids and average transfer amounts;
-* 3,000 transactions with risk events and aggregated graph edges. Background
-  history is scored by the real ``AntifraudEngine`` (so latency, reasons and the
-  Redis velocity windows are genuine); demo-ring history is staged directly;
-* four one-click demo presets with fixed UUIDs (see ``DEMO_PRESETS``).
+* the 4 fixed demo accounts used by the Next.js live presets (``DEMO_ACCOUNTS``):
+  Sender, Friend (prior approved history with Sender), Stranger (scam target) and
+  Dropper Hub (12 distinct victims in the last 30 min, rapid cash-out, 1 account
+  sharing its device_id) — written to Postgres *and* the Redis velocity windows;
+* 295 background accounts: checksum-valid 12-digit IINs, BCC KZ IBANs (bank code
+  856), Kazakh / Russian full names, phones, device ids, average transfer amounts;
+* ~2,500 background transactions scored by the real ``AntifraudEngine`` (genuine
+  reasons, latency and velocity), plus aggregated ``graph_edges``.
 
-Usage (schema must exist: the backend container runs ``alembic upgrade head``)::
+Usage (schema must exist — the backend container runs ``alembic upgrade head``)::
 
     docker compose exec backend python -m scripts.seed_bcc
-    # or from backend/:  uv run python -m scripts.seed_bcc
+    docker compose restart backend      # re-hydrate the resident graph
 
-Restart the backend afterwards so its resident graph is re-hydrated:
-``docker compose restart backend``.
+The hub's velocity evidence is time-bound: re-seed within ~1 hour of the live demo.
 """
 
 import argparse
@@ -47,48 +48,51 @@ from app.services.transfers import BLOCKED_AFTER_RED_FLAG_SCORE, RED_FLAG_LABELS
 from app.services.velocity import KEY_PREFIX
 
 RNG_SEED: Final = 20261126
-TOTAL_ACCOUNTS: Final = 300
-TOTAL_TRANSACTIONS: Final = 3000
+BACKGROUND_ACCOUNTS: Final = 295
+BACKGROUND_TRANSACTIONS: Final = 2500
 HISTORY_DAYS: Final = 30
 ALMATY: Final = ZoneInfo("Asia/Almaty")
 BATCH: Final = 500
 
-# --------------------------------------------------------------------------- fixed ids
-_NS: Final = uuid.UUID("bcc00000-0000-4000-8000-000000000000")
+# --------------------------------------------------------------------------- demo accounts
+SENDER_ID: Final = uuid.UUID("00000000-0000-4000-8000-000000000001")
+FRIEND_ID: Final = uuid.UUID("00000000-0000-4000-8000-000000000002")
+STRANGER_ID: Final = uuid.UUID("00000000-0000-4000-8000-000000000003")
+HUB_ID: Final = uuid.UUID("00000000-0000-4000-8000-000000000004")
+HUB_DEVICE: Final = "android-hub-7f3e9a1c"
+
+HUB_VICTIMS: Final = 12
+VICTIM_WINDOW_MIN: Final = 14  # victims land between now-14m and now-3m (inside 30 min)
+CASHOUT_SHARES: Final = (0.50, 0.35)  # 85 % of the inflow leaves within minutes
 
 
-def _fixed(n: int) -> uuid.UUID:
-    return uuid.UUID(f"bcc00000-0000-4000-8000-{n:012d}")
+@dataclass(frozen=True, slots=True)
+class DemoAccount:
+    id: uuid.UUID
+    full_name: str
+    phone: str
+    role: str
+    avg: Decimal
+    age_days: int
+    device_id: str | None = None
 
 
-def _ring(name: str) -> uuid.UUID:
-    return uuid.uuid5(_NS, name)
-
-
-P2P_SENDER: Final = _fixed(101)
-P2P_RECIPIENT: Final = _fixed(102)
-SE_VICTIM: Final = _fixed(201)
-SE_SCAMMER: Final = _fixed(202)
-HUB_VICTIM: Final = _fixed(301)
-DROP_HUB: Final = _fixed(302)
-CASHOUT_OLD: Final = _fixed(303)
-CASHOUT_NEW: Final = _fixed(304)
-BIRTHDAY_GUEST: Final = _fixed(401)
-BIRTHDAY_HOST: Final = _fixed(402)
-RING_DEVICE: Final = "android-ring-7f3e9a1c"
-
-OLD_FEEDERS: Final = [_ring(f"hub-old-feeder-{i:02d}") for i in range(6)]
-NEW_FEEDERS: Final = [_ring(f"hub-feeder-{i:02d}") for i in range(12)]
-GUESTS: Final = [_ring(f"birthday-guest-{i:02d}") for i in range(15)]
+DEMO_ACCOUNTS: Final[tuple[DemoAccount, ...]] = (
+    DemoAccount(SENDER_ID, "Аружан С.", "+77010000001", "sender", Decimal("25000"), 1_600),
+    DemoAccount(FRIEND_ID, "Данияр А.", "+77010000002", "friend", Decimal("30000"), 1_200),
+    DemoAccount(STRANGER_ID, "Алексей К.", "+77010000003", "stranger", Decimal("20000"), 3),
+    DemoAccount(HUB_ID, "Марат Т.", "+77010000004", "dropper_hub", Decimal("150000"), 30,
+                HUB_DEVICE),
+)  # fmt: skip
 
 
 @dataclass(frozen=True, slots=True)
 class DemoPreset:
+    """Mirrors ``frontend/src/lib/config.ts`` presets (recipient resolved by phone)."""
+
     key: str
-    title_kk: str
-    title_ru: str
     sender_id: uuid.UUID
-    recipient_id: uuid.UUID
+    recipient_phone: str
     amount: Decimal
     expected: TransactionStatus
     context: dict[str, bool] = field(default_factory=dict)
@@ -97,51 +101,22 @@ class DemoPreset:
         """Request body for ``POST /api/v1/transfers/evaluate``."""
         return {
             "sender_id": str(self.sender_id),
-            "recipient_id": str(self.recipient_id),
+            "recipient_phone": self.recipient_phone,
             "amount": str(self.amount),
             "context": dict(self.context),
         }
 
 
+_NO_CTX: Final = {"active_call": False, "from_deposit": False, "is_new_device": False}
 DEMO_PRESETS: Final[tuple[DemoPreset, ...]] = (
-    DemoPreset(
-        "legit_p2p",
-        "Қалыпты P2P аударым",
-        "Обычный P2P-перевод",
-        P2P_SENDER,
-        P2P_RECIPIENT,
-        Decimal("25000.00"),
-        TransactionStatus.APPROVED,
-    ),
-    DemoPreset(
-        "social_engineering",
-        "Әлеуметтік инженерия құрбаны",
-        "Жертва социальной инженерии",
-        SE_VICTIM,
-        SE_SCAMMER,
-        Decimal("1500000.00"),
-        TransactionStatus.COOLING_OFF,
-        {"active_call": True, "from_deposit": True},
-    ),
-    DemoPreset(
-        "drop_hub",
-        "Дроп-хаб желісі",
-        "Сеть дроп-хаба",
-        HUB_VICTIM,
-        DROP_HUB,
-        Decimal("600000.00"),
-        TransactionStatus.BLOCKED,
-    ),
-    DemoPreset(
-        "birthday_collection",
-        "Туған күнге ақша жинау",
-        "Сбор на день рождения",
-        BIRTHDAY_GUEST,
-        BIRTHDAY_HOST,
-        Decimal("10000.00"),
-        TransactionStatus.APPROVED,
-    ),
-)
+    DemoPreset("normal", SENDER_ID, "+77010000002", Decimal("25000"),
+               TransactionStatus.APPROVED, {**_NO_CTX, "is_new_recipient": False}),
+    DemoPreset("scam", SENDER_ID, "+77010000003", Decimal("900000"),
+               TransactionStatus.COOLING_OFF,
+               {**_NO_CTX, "active_call": True, "from_deposit": True, "is_new_recipient": True}),
+    DemoPreset("hub", SENDER_ID, "+77010000004", Decimal("250000"),
+               TransactionStatus.BLOCKED, {**_NO_CTX, "is_new_recipient": True}),
+)  # fmt: skip
 
 # --------------------------------------------------------------------------- names
 KZ_MALE: Final = (
@@ -224,8 +199,8 @@ class Factory:
         self.now = now
         self._iins: set[str] = set()
         self._ibans: set[str] = set()
-        self._phones: set[str] = set()
-        self._devices: set[str] = set()
+        self._phones: set[str] = {a.phone for a in DEMO_ACCOUNTS}
+        self._devices: set[str] = {HUB_DEVICE}
 
     def _unique(self, pool: set[str], make: Callable[[], str]) -> str:
         while True:
@@ -279,28 +254,72 @@ class Factory:
         value = self.rng.lognormvariate(math.log(median), 0.55)
         return Decimal(int(min(max(value, 3_000), 400_000) // 100 * 100))
 
-    def person(
-        self,
-        account_id: uuid.UUID | None = None,
-        *,
-        full_name: str | None = None,
-        male: bool | None = None,
-        device_id: str | None = None,
-        avg: Decimal | None = None,
-        age_days: int | None = None,
-    ) -> Person:
-        is_male = self.rng.random() < 0.5 if male is None else male
-        days = age_days if age_days is not None else self.rng.randint(120, 2_500)
+    def background(self) -> Person:
+        male = self.rng.random() < 0.5
         return Person(
-            id=account_id or uuid.UUID(int=self.rng.getrandbits(128), version=4),
-            full_name=full_name or self.name(is_male),
-            iin=self.iin(is_male),
+            id=uuid.UUID(int=self.rng.getrandbits(128), version=4),
+            full_name=self.name(male),
+            iin=self.iin(male),
             iban=self.iban(),
             phone=self.phone(),
-            device_id=device_id or self.device(),
-            avg=avg if avg is not None else self.avg_amount(),
-            created_at=self.now - timedelta(days=days),
+            device_id=self.device(),
+            avg=self.avg_amount(),
+            created_at=self.now - timedelta(days=self.rng.randint(120, 2_500)),
         )
+
+    def demo(self, spec: DemoAccount) -> Person:
+        male = spec.role in ("friend", "stranger", "dropper_hub")
+        return Person(
+            id=spec.id,
+            full_name=spec.full_name,
+            iin=self.iin(male),
+            iban=self.iban(),
+            phone=spec.phone,
+            device_id=spec.device_id or self.device(),
+            avg=spec.avg,
+            created_at=self.now - timedelta(days=spec.age_days),
+        )
+
+
+@dataclass(slots=True)
+class Population:
+    demo: dict[uuid.UUID, Person]
+    background: list[Person]
+    victims: list[Person]
+    cashouts: list[Person]
+    device_twin: Person
+
+    @property
+    def everyone(self) -> list[Person]:
+        return [*self.demo.values(), *self.background]
+
+    @property
+    def organic(self) -> list[Person]:
+        """Background customers that take part in normal day-to-day flows."""
+        ring = {p.id for p in (*self.cashouts, self.device_twin)}
+        return [p for p in self.background if p.id not in ring]
+
+
+def build_population(rng: random.Random, now: datetime, n_background: int) -> Population:
+    if n_background < HUB_VICTIMS + len(CASHOUT_SHARES) + 1 + 20:
+        raise ValueError("too few background accounts for the dropper ring")
+    f = Factory(rng, now)
+    demo = {a.id: f.demo(a) for a in DEMO_ACCOUNTS}
+    background = [f.background() for _ in range(n_background)]
+
+    # Ring roles live inside the background population (victims are ordinary customers).
+    cashouts = background[-len(CASHOUT_SHARES) - 1 : -1]
+    device_twin = background[-1]
+    device_twin.device_id = HUB_DEVICE  # the single account sharing the hub's phone
+    for mule in (*cashouts, device_twin):
+        mule.created_at = now - timedelta(days=rng.randint(10, 45))
+    victims = rng.sample(background[: -len(CASHOUT_SHARES) - 1], HUB_VICTIMS)
+
+    pop = Population(demo, background, victims, cashouts, device_twin)
+    organic = pop.organic
+    for p in organic:
+        p.contacts = [c.id for c in rng.sample(organic, rng.randint(3, 7)) if c.id != p.id]
+    return pop
 
 
 # --------------------------------------------------------------------------- planning
@@ -338,64 +357,48 @@ def _local_moment(rng: random.Random, now: datetime, days_back: int) -> datetime
     moment = datetime.combine(
         day, dtime(hour, rng.randint(0, 59), rng.randint(0, 59)), tzinfo=ALMATY
     )
-    return moment.astimezone(UTC)
-
-
-def build_population(rng: random.Random, now: datetime, n_accounts: int) -> dict[str, list[Person]]:
-    f = Factory(rng, now)
-    demo = [
-        f.person(P2P_SENDER, full_name="Ахметова Айгерим Ерлановна", male=False,
-                 avg=Decimal("35000")),
-        f.person(P2P_RECIPIENT, full_name="Сулейменов Даурен Маратович", male=True,
-                 avg=Decimal("30000")),
-        f.person(SE_VICTIM, full_name="Касымова Гульнара Болатовна", male=False,
-                 avg=Decimal("60000"), age_days=4_000),
-        f.person(SE_SCAMMER, full_name="Омаров Ерасыл Талгатович", male=True,
-                 avg=Decimal("20000"), age_days=2),
-        f.person(HUB_VICTIM, full_name="Жумабаев Ержан Серікович", male=True,
-                 avg=Decimal("50000")),
-        f.person(DROP_HUB, full_name="Искаков Санжар Асхатович", male=True,
-                 avg=Decimal("300000"), device_id=RING_DEVICE, age_days=40),
-        f.person(CASHOUT_OLD, full_name="Байжанов Арман Жомартович", male=True,
-                 avg=Decimal("250000"), device_id=RING_DEVICE, age_days=35),
-        f.person(CASHOUT_NEW, full_name="Тулегенов Мадияр Нурланович", male=True,
-                 avg=Decimal("250000"), device_id=RING_DEVICE, age_days=12),
-        f.person(BIRTHDAY_GUEST, full_name="Смирнова Анна Сергеевна", male=False,
-                 avg=Decimal("15000")),
-        f.person(BIRTHDAY_HOST, full_name="Есенова Томирис Даурен қызы", male=False,
-                 avg=Decimal("40000")),
-    ]  # fmt: skip
-    ring = [f.person(i) for i in (*OLD_FEEDERS, *NEW_FEEDERS)]
-    guests = [f.person(i, avg=f.avg_amount(15_000)) for i in GUESTS]
-    fixed = len(demo) + len(ring) + len(guests)
-    if n_accounts < fixed + 10:
-        raise ValueError(f"need at least {fixed + 10} accounts")
-    background = [f.person() for _ in range(n_accounts - fixed)]
-    for p in background:
-        p.contacts = [c.id for c in rng.sample(background, rng.randint(3, 7)) if c.id != p.id]
-    return {"demo": demo, "ring": ring, "guests": guests, "background": background}
+    return min(moment.astimezone(UTC), now - timedelta(hours=2))
 
 
 def plan_background(
-    rng: random.Random, now: datetime, pop: dict[str, list[Person]], n_transfers: int
+    rng: random.Random, now: datetime, pop: Population, n_transfers: int
 ) -> list[PlannedTransfer]:
-    """Organic history for normal customers plus scripted demo-customer history."""
-    bg = pop["background"]
-    by_id = {p.id: p for group in pop.values() for p in group}
-    demo = {p.id: p for p in pop["demo"]}
+    """Scripted Sender↔Friend history plus organic day-to-day transfers."""
+    organic = pop.organic
+    by_id = {p.id: p for p in pop.everyone}
+    sender, friend = pop.demo[SENDER_ID], pop.demo[FRIEND_ID]
     plan: list[PlannedTransfer] = []
 
-    def transfer(s: Person, r: Person, at: datetime, amount: float | None = None) -> None:
+    def clean(s: Person, r: Person, amount: float, at: datetime) -> None:
+        plan.append(PlannedTransfer(s, r, _money(amount), at, s.device_id))
+
+    # Prior approved history between Sender and Friend (both directions).
+    for days, amount in ((27, 22_000), (20, 27_500), (13, 24_000), (6, 26_000), (2, 23_500)):
+        clean(sender, friend, amount, _local_moment(rng, now, days))
+    for days, amount in ((16, 15_000), (4, 18_500)):
+        clean(friend, sender, amount, _local_moment(rng, now, days))
+    # Sender and Friend also live ordinary financial lives.
+    for person in (sender, friend):
+        for contact in rng.sample(organic, 4):
+            for _ in range(rng.randint(1, 3)):
+                value = float(person.avg) * rng.lognormvariate(0, 0.35)
+                clean(person, contact, value, _local_moment(rng, now, rng.randint(1, 29)))
+
+    while len(plan) < n_transfers:
+        s = rng.choice(organic)
+        r = by_id[rng.choice(s.contacts)] if rng.random() > 0.12 else rng.choice(organic)
+        if r.id == s.id:
+            continue
         new_device = rng.random() < 0.02
-        value = amount if amount is not None else float(s.avg) * rng.lognormvariate(0, 0.45)
-        if amount is None and rng.random() < 0.03:
+        value = float(s.avg) * rng.lognormvariate(0, 0.45)
+        if rng.random() < 0.03:
             value *= rng.uniform(3, 8)
         plan.append(
             PlannedTransfer(
                 sender=s,
                 recipient=r,
                 amount=_money(value),
-                at=at,
+                at=_local_moment(rng, now, rng.randint(1, HISTORY_DAYS)),
                 device_id=f"android-{rng.getrandbits(48):012x}" if new_device else s.device_id,
                 active_call=rng.random() < 0.02,
                 from_deposit=rng.random() < 0.03,
@@ -403,55 +406,34 @@ def plan_background(
             )
         )
 
-    # Preset 1: Aigerim has paid Dauren before → known recipient.
-    for days, amount in ((26, 28_000), (19, 31_500), (11, 27_000), (4, 33_000)):
-        transfer(demo[P2P_SENDER], demo[P2P_RECIPIENT], _local_moment(rng, now, days), amount)
-    # Demo senders also look like ordinary customers.
-    for sid in (P2P_SENDER, SE_VICTIM, HUB_VICTIM, BIRTHDAY_GUEST):
-        for c in rng.sample(bg, 4):
-            for _ in range(rng.randint(1, 3)):
-                transfer(demo[sid], c, _local_moment(rng, now, rng.randint(1, HISTORY_DAYS)))
-
-    while len(plan) < n_transfers:
-        s = rng.choice(bg)
-        r = by_id[rng.choice(s.contacts)] if rng.random() > 0.12 else rng.choice(bg)
-        if r.id == s.id:
-            continue
-        transfer(s, r, _local_moment(rng, now, rng.randint(1, HISTORY_DAYS)))
-
     plan.sort(key=lambda t: t.at)
     return plan[:n_transfers]
 
 
-def plan_staged(
-    rng: random.Random, now: datetime, pop: dict[str, list[Person]]
-) -> list[PlannedTransfer]:
-    """Drop-ring and birthday flows that pre-date the demo (inserted as settled history)."""
-    by_id = {p.id: p for group in pop.values() for p in group}
+def plan_hub_ring(rng: random.Random, now: datetime, pop: Population) -> list[PlannedTransfer]:
+    """12 distinct victims → hub inside the last 30 min, then rapid cash-out (85 %)."""
+    hub = pop.demo[HUB_ID]
     staged: list[PlannedTransfer] = []
-
-    def add(s: uuid.UUID, r: uuid.UUID, amount: int, at: datetime) -> None:
-        staged.append(PlannedTransfer(by_id[s], by_id[r], Decimal(amount), at, by_id[s].device_id))
-
-    # 3 days ago: 6 victims pay the hub, 4 h later 95 % leaves to the first cash-out mule.
-    t0 = (now - timedelta(days=3)).replace(hour=5, minute=0, second=0, microsecond=0)
-    for i, fid in enumerate(OLD_FEEDERS):
-        add(fid, DROP_HUB, 100_000, t0 + timedelta(minutes=20 * i))
-    add(DROP_HUB, CASHOUT_OLD, 570_000, t0 + timedelta(hours=4))
-
-    # Last 30 min: 12 distinct senders → hub, then two rapid cash-out chunks (65 %).
+    start = now - timedelta(minutes=VICTIM_WINDOW_MIN)
     inflow = 0
-    for i, fid in enumerate(NEW_FEEDERS):
-        amount = rng.randrange(85_000, 115_001, 500)
+    for i, victim in enumerate(pop.victims):
+        amount = rng.randrange(70_000, 130_001, 500)
         inflow += amount
-        add(fid, DROP_HUB, amount, now - timedelta(minutes=29) + timedelta(minutes=2 * i))
-    add(DROP_HUB, CASHOUT_NEW, inflow * 40 // 100, now - timedelta(minutes=5))
-    add(DROP_HUB, CASHOUT_NEW, inflow * 25 // 100, now - timedelta(minutes=4))
-
-    # Last 30 min: 15 friends chip in for a birthday; nothing is forwarded.
-    for i, gid in enumerate(GUESTS):
-        amount = rng.choice((5_000, 7_000, 10_000, 10_000, 15_000, 20_000))
-        add(gid, BIRTHDAY_HOST, amount, now - timedelta(minutes=29) + timedelta(seconds=110 * i))
+        staged.append(
+            PlannedTransfer(
+                victim, hub, Decimal(amount), start + timedelta(minutes=i), victim.device_id
+            )
+        )
+    for i, (mule, share) in enumerate(zip(pop.cashouts, CASHOUT_SHARES, strict=True)):
+        staged.append(
+            PlannedTransfer(
+                hub,
+                mule,
+                Decimal(int(inflow * share) // 100 * 100),
+                now - timedelta(minutes=2 - i),
+                hub.device_id,
+            )
+        )
     return staged
 
 
@@ -539,26 +521,29 @@ async def _flush(session: AsyncSession, rows: list[Transaction]) -> None:
     rows.clear()
 
 
+def _new_id(rng: random.Random) -> uuid.UUID:
+    return uuid.UUID(int=rng.getrandbits(128), version=4)
+
+
 async def seed(
     session_factory: async_sessionmaker[AsyncSession],
     redis: Redis,
     *,
-    n_accounts: int = TOTAL_ACCOUNTS,
-    n_transactions: int = TOTAL_TRANSACTIONS,
+    n_background_accounts: int = BACKGROUND_ACCOUNTS,
+    n_background_transactions: int = BACKGROUND_TRANSACTIONS,
     rng_seed: int = RNG_SEED,
     now: datetime | None = None,
 ) -> SeedReport:
     started = time.perf_counter()
+    await redis.ping()  # connect before scoring so no history row carries connect latency
     rng = random.Random(rng_seed)
     now = (now or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0)
     settings = get_settings()
     report = SeedReport()
 
-    await redis.ping()  # connect before scoring so no history row carries connect latency
-    population = build_population(rng, now, n_accounts)
-    staged = plan_staged(rng, now, population)
-    background = plan_background(rng, now, population, n_transactions - len(staged))
-    people = [p for group in population.values() for p in group]
+    pop = build_population(rng, now, n_background_accounts)
+    background = plan_background(rng, now, pop, n_background_transactions)
+    ring = plan_hub_ring(rng, now, pop)
 
     engine = AntifraudEngine(
         redis,
@@ -566,20 +551,20 @@ async def seed(
         timezone=settings.timezone,
         cooling_off_minutes=settings.cooling_off_minutes,
     )
-    for p in people:
+    for p in pop.everyone:
         engine.graph.add_account(str(p.id), label=p.full_name, device_id=p.device_id)
     edges = EdgeBook()
     latencies: list[float] = []
 
     async with session_factory() as session:
         report.redis_keys_cleared = await _clear(session, redis)
-        session.add_all(p.to_account() for p in people)
+        session.add_all(p.to_account() for p in pop.everyone)
         await session.commit()
 
         pending: list[Transaction] = []
         for t in background:
             ctx = TransferContext(
-                tx_id=str(uuid.UUID(int=rng.getrandbits(128), version=4)),
+                tx_id=str(_new_id(rng)),
                 sender_id=str(t.sender.id),
                 recipient_id=str(t.recipient.id),
                 amount=float(t.amount),
@@ -619,8 +604,9 @@ async def seed(
             if len(pending) >= BATCH:
                 await _flush(session, pending)
 
-        for t in staged:
-            tx_id = uuid.UUID(int=rng.getrandbits(128), version=4)
+        # Dropper ring: settled before the demo, mirrored into the Redis velocity windows.
+        for t in ring:
+            tx_id = _new_id(rng)
             await engine.velocity.record_and_snapshot(
                 tx_id=str(tx_id),
                 sender_id=str(t.sender.id),
@@ -646,10 +632,20 @@ async def seed(
         await _flush(session, pending)
 
         edge_rows = list(edges.rows())
+        edge_rows.append(
+            GraphEdge(
+                source_id=HUB_ID,
+                target_id=pop.device_twin.id,
+                edge_type=EdgeType.SHARED_DEVICE,
+                weight=0.0,
+                tx_count=0,
+                last_seen_at=now,
+            )
+        )
         session.add_all(edge_rows)
         await session.commit()
 
-        report.accounts = len(people)
+        report.accounts = len(pop.everyone)
         report.graph_edges = len(edge_rows)
         status_rows = await session.execute(
             select(Transaction.status, func.count()).group_by(Transaction.status)
@@ -695,34 +691,37 @@ def render_summary(report: SeedReport) -> str:
             f"{report.elapsed_s} s",
         )],
     )  # fmt: skip
+    accounts = _table(
+        ("role", "account_id", "full_name", "phone"),
+        [(a.role, str(a.id), a.full_name, a.phone) for a in DEMO_ACCOUNTS],
+    )
     presets = _table(
-        ("#", "preset", "sender_id", "recipient_id", "amount ₸", "context", "expected"),
+        ("preset", "recipient_phone", "amount ₸", "context", "expected"),
         [
             (
-                str(i),
                 p.key,
-                str(p.sender_id),
-                str(p.recipient_id),
+                p.recipient_phone,
                 explain.fmt_tenge(float(p.amount)),
                 ",".join(k for k, v in p.context.items() if v) or "-",
                 p.expected.value,
             )
-            for i, p in enumerate(DEMO_PRESETS, start=1)
+            for p in DEMO_PRESETS
         ],
     )
     return (
         f"\nBCC Shield seed complete (cleared {report.redis_keys_cleared} Redis keys)\n"
-        f"{stats}\n\nDemo presets → POST /api/v1/transfers/evaluate\n{presets}\n\n"
-        "SOC graph: GET /api/v1/soc/graph/" + str(DROP_HUB) + "\n"
+        f"{stats}\n\nDemo accounts\n{accounts}\n\n"
+        f"Live presets (sender {SENDER_ID}) → POST /api/v1/transfers/evaluate\n{presets}\n\n"
+        f"SOC graph: GET /api/v1/soc/graph/{HUB_ID}\n"
         "Next: docker compose restart backend   (re-hydrates the resident graph)\n"
-        "Velocity windows are 'live' for ~30 min; graph evidence keeps presets stable after.\n"
+        "Hub velocity evidence is time-bound: re-seed within ~1 hour of the live demo.\n"
     )
 
 
 async def _main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
-    parser.add_argument("--accounts", type=int, default=TOTAL_ACCOUNTS)
-    parser.add_argument("--transactions", type=int, default=TOTAL_TRANSACTIONS)
+    parser = argparse.ArgumentParser(description="Seed BCC Shield with deterministic KZ data.")
+    parser.add_argument("--accounts", type=int, default=BACKGROUND_ACCOUNTS)
+    parser.add_argument("--transactions", type=int, default=BACKGROUND_TRANSACTIONS)
     parser.add_argument("--seed", type=int, default=RNG_SEED)
     args = parser.parse_args()
 
@@ -733,8 +732,8 @@ async def _main() -> None:
         report = await seed(
             build_session_factory(db_engine),
             redis,
-            n_accounts=args.accounts,
-            n_transactions=args.transactions,
+            n_background_accounts=args.accounts,
+            n_background_transactions=args.transactions,
             rng_seed=args.seed,
         )
     finally:
