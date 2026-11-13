@@ -1,6 +1,7 @@
 # Telegram trusted contacts — advisory only
 
-Owner: Bekzat, Integrations & External APIs. Core baseline: `627fa88`.
+Owner: Bekzat, Integrations & External APIs. Initial audit: `627fa88`;
+current compatible core baseline: `a02d20d` (Damir's hybrid ML work preserved).
 The existing `TransferService`, scoring weights, 15-minute cooling deadline and
 `resolve-cooling` are unchanged. No integration can approve or block funds.
 

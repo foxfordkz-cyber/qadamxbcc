@@ -59,7 +59,7 @@ async def demo(base_url: str) -> None:
                 f"/api/v1/integrations/transactions/{tx['transaction_id']}",
                 {"contact_id": contact, "gateway_identifier": "SYN-REVIEW-001"},
             )
-            for _ in range(40):
+            for _ in range(20):
                 response = await client.get(
                     f"/api/v1/integrations/soc/transactions/{tx['transaction_id']}",
                     headers=auth("soc"),
@@ -72,7 +72,7 @@ async def demo(base_url: str) -> None:
                 ):
                     notification = data["notifications"][0]
                     break
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1)
             else:
                 raise RuntimeError("worker did not deliver fake notification within 20 seconds")
             await post(
