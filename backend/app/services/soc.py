@@ -23,7 +23,7 @@ from app.schemas.soc import (
     Position,
 )
 from app.schemas.transfers import RiskReasonOut
-from app.services.graph import HUB_MIN_SENDERS, GraphStore, NodeView
+from app.services.graph import GraphStore, NodeView
 from app.services.transfers import NotFoundError, register_account
 
 RING_SPACING = 280.0
@@ -116,9 +116,7 @@ async def _stats(session: AsyncSession) -> FeedStats:
 def _role(node: NodeView) -> NodeRole:
     if node.depth == 0:
         return "center"
-    if node.metrics.in_degree >= HUB_MIN_SENDERS or (
-        node.metrics.flagged and node.metrics.in_degree > 0
-    ):
+    if node.metrics.is_hub or (node.metrics.flagged and node.metrics.in_degree > 0):
         return "hub"
     if node.metrics.suspected_mule:
         return "mule"
