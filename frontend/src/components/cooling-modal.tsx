@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Clock3, LoaderCircle } from "lucide-react";
+import { Clock3, LoaderCircle, ShieldCheck } from "lucide-react";
 import { api, type Answers, type Decision, type Evaluation } from "@/lib/contracts";
 import { errorKey, useLocale, type MessageKey } from "@/lib/i18n";
 
@@ -19,9 +19,11 @@ export function CoolingModal({ result, onClose, onResolved }: { result: Evaluati
   useEffect(() => {
     const element = dialog.current;
     const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     element?.showModal();
     const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => { clearInterval(timer); element?.close(); if (previous instanceof HTMLElement) previous.focus(); };
+    return () => { clearInterval(timer); element?.close(); document.body.style.overflow = previousOverflow; if (previous instanceof HTMLElement) previous.focus(); };
   }, []);
   async function submit() {
     if (inFlight.current || !questions.every(q => typeof answers[q] === "boolean")) return;
@@ -34,9 +36,11 @@ export function CoolingModal({ result, onClose, onResolved }: { result: Evaluati
     <div className="flex items-center justify-between gap-3"><span className="badge cooling_off"><Clock3 size={15} />{t("cooling_off")} · 15:00</span>
       <div className="language" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button type="button" key={l} aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>
     </div>
+    <div className="security-sheet-brand"><span className="sheet-shield"><ShieldCheck size={30} /></span><div><strong>bcc.kz</strong><span>{t("securityCheck")}</span></div></div>
     <h2 id="cooling-title">{t("coolingTitle")}</h2><p id="cooling-description" className="muted">{t("coolingText")}</p>
     <div className="countdown"><span>{t("remaining")}</span><strong>{String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</strong></div>
     {seconds === 0 && <p className="muted">{t("expired")}</p>}
+    <div className="verification-progress"><span>{t("verificationProgress")}</span><strong>{questions.filter(q => typeof answers[q] === "boolean").length} / {questions.length}</strong></div>
     <form onSubmit={e => { e.preventDefault(); void submit(); }}>
       <fieldset disabled={busy} className="space-y-3 border-0 p-0">
         {questions.map((q, index) => <fieldset key={q} className="question"><legend>{index + 1}. {t(q)}</legend><div className="flex gap-3">{[true, false].map(value => <label key={String(value)}><input type="radio" name={q} required checked={answers[q] === value} onChange={() => setAnswers(a => ({ ...a, [q]: value }))} />{t(value ? "yes" : "no")}</label>)}</div></fieldset>)}

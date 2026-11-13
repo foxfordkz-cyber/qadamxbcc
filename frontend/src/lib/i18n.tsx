@@ -4,6 +4,35 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Lang } from "./contracts";
 
 const messages = {
+  sourceCard: ["Қай картадан", "Откуда"],
+  cardSettings: ["Жіберуші шоты", "Счёт отправителя"],
+  quickContacts: ["Жылдам аударым", "Быстрый перевод"],
+  contactHint: ["Алушыны таңдау", "Выбрать получателя"],
+  contactOne: ["Алушы 1", "Получатель 1"],
+  contactTwo: ["Алушы 2", "Получатель 2"],
+  contactThree: ["Алушы 3", "Получатель 3"],
+  quickAmounts: ["Жылдам сома", "Быстрая сумма"],
+  transferAmount: ["Аударым сомасы", "Сумма перевода"],
+  transferCta: ["Аудару", "Перевести"],
+  simulator: ["Аударым симуляторы", "Симулятор перевода"],
+  sourceHint: ["Теңгедегі карта · •••• 4821", "Карта в тенге · •••• 4821"],
+  telemetry: ["BCC Shield · нақты уақыттағы телеметрия", "BCC Shield · телеметрия в реальном времени"],
+  telemetryIntro: ["Әр шешімнің артында — түсінікті қауіп сигналдары.", "За каждым решением — понятные сигналы риска."],
+  monitoring: ["Қорғаныс белсенді", "Защита активна"],
+  scoringTarget: ["Бағалау мақсаты: <50 мс", "Целевое время оценки: <50 мс"],
+  totalChecked: ["Тексерілген аударымдар", "Всего проверено"],
+  coolingPrevented: ["Салқындату арқылы қорғау", "Защита охлаждением"],
+  blockedHubs: ["Бұғатталған дроп-тораптар", "Заблокированные дроп-хабы"],
+  allEvaluations: ["Барлық бағаланған аударымдар", "Все оценённые переводы"],
+  releasedTransfers: ["Мақұлданған аударымдар", "Одобренные переводы"],
+  currentlyHeld: ["Қазір кідірісте тұрған аударымдар", "Переводы на удержании сейчас"],
+  visibleHubScope: ["Соңғы 50 аударымдағы бірегей алушылар", "Уникальные получатели в последних 50 переводах"],
+  caseDetails: ["Аударымды талдау", "Разбор перевода"],
+  liveFeed: ["Нақты уақыттағы бақылау", "Мониторинг в реальном времени"],
+  securityCheck: ["Қауіпсіздік тексеруі", "Проверка безопасности"],
+  verificationProgress: ["Жауап берілген сұрақтар", "Ответов на вопросы"],
+  protectedFunds: ["Аударым кідірісте. Тексеруге уақыт бар.", "Перевод на удержании. Есть время разобраться."],
+  safeAccount: ["Қауіп белгісі жоқ шот", "Счёт без признаков риска"],
   tagline: ["Әр аударым қорғалған", "Защита каждого перевода"],
   demo: ["Демо режим • синтетикалық деректер", "Демо режим • синтетические данные"],
   live: ["Банк API-іне қосылған", "Подключено к банковскому API"],
@@ -90,6 +119,13 @@ export function errorKey(error: unknown): MessageKey {
   const code = error instanceof Error ? error.message : "apiError";
   return Object.hasOwn(messages, code) ? code as MessageKey : "apiError";
 }
-export function money(amount: number | string, lang: Lang) {
-  return `${new Intl.NumberFormat(lang === "kk" ? "kk-KZ" : "ru-KZ", { maximumFractionDigits: 2 }).format(Number(amount))} ₸`;
+export function money(amount: number | string, _lang: Lang) {
+  // Both supported locales use spaced groups and a decimal comma. Explicit
+  // formatting avoids differing ICU locale support in Node and the browser.
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return "— ₸";
+  const [whole, fraction] = value.toFixed(2).split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+  const decimals = fraction.replace(/0+$/, "");
+  return `${grouped}${decimals ? `,${decimals}` : ""} ₸`;
 }
