@@ -1,4 +1,5 @@
 import asyncio
+import time
 import uuid
 from typing import cast
 from unittest.mock import AsyncMock
@@ -50,16 +51,24 @@ async def test_real_adapter_callback_payloads_are_bounded() -> None:
 
 
 class SlowAdapter:
+    elapsed: float = 0
+
     async def send(self, chat_id: int, text: str, notification_id: uuid.UUID, language: str) -> str:
-        await asyncio.sleep(10)
+        started = time.perf_counter()
+        try:
+            await asyncio.sleep(10)
+        finally:
+            self.elapsed = time.perf_counter() - started
         return "never"
 
 
 async def test_delivery_timeout_is_bounded(iw: IntegrationWorld) -> None:
     row = await iw.queue(await iw.verified())
     iw.cfg.adapter_timeout_seconds = 0.01
-    async with asyncio.timeout(2):
-        assert await deliver_one(iw.factory, SlowAdapter(), iw.cfg)
+    adapter = SlowAdapter()
+    assert await deliver_one(iw.factory, adapter, iw.cfg)
+    # Measure provider time independently of PostgreSQL fsync / worker persistence latency.
+    assert 0 < adapter.elapsed < 1
     response = await iw.client.get(
         f"/api/v1/trusted-contacts/transactions/{row['transaction_id']}/notifications",
         headers=iw.auth(),
