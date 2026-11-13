@@ -34,6 +34,10 @@ if [[ -f "$ROOT/frontend/package.json" ]]; then
   if [[ -f package-lock.json ]]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
   step "frontend: tsc --noEmit"
   npx tsc --noEmit
+  if npm pkg get scripts.test | grep -q tsx; then
+    step "frontend: tests"
+    npm test
+  fi
   step "frontend: build"
   npm run build
 else

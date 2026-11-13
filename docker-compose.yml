@@ -52,5 +52,31 @@ services:
       timeout: 3s
       retries: 10
 
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      # live = proxy to the FastAPI backend; presets target accounts from scripts/seed_bcc.py
+      BCC_API_MODE: live
+      BCC_API_URL: http://backend:8000
+      BCC_NORMAL_SENDER_ID: 00000000-0000-4000-8000-000000000001
+      BCC_NORMAL_RECIPIENT_PHONE: "+77010000002"
+      BCC_SCAM_SENDER_ID: 00000000-0000-4000-8000-000000000001
+      BCC_SCAM_RECIPIENT_PHONE: "+77010000003"
+      BCC_HUB_SENDER_ID: 00000000-0000-4000-8000-000000000001
+      BCC_HUB_RECIPIENT_PHONE: "+77010000004"
+      # simulator test cards only
+      BCC_CARD_ACCOUNT_MAP: '{"4400000000000002":"00000000-0000-4000-8000-000000000002","4400000000000003":"00000000-0000-4000-8000-000000000003","4400000000000004":"00000000-0000-4000-8000-000000000004"}'
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 volumes:
   pgdata:
