@@ -1,6 +1,27 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { completeAnswers, remainingSeconds } from "../src/lib/cooling";
 import { demoPresets, demoTrafficAccounts, ids } from "../src/lib/config";
+
+test("cooling countdown uses the API deadline across reopening and tab suspension", () => {
+  const start = Date.parse("2026-11-13T10:00:00Z");
+  const deadline = "2026-11-13T10:15:00Z";
+  assert.equal(remainingSeconds(deadline, start), 900);
+  assert.equal(remainingSeconds(deadline, start + 89_500), 811);
+  assert.equal(remainingSeconds(deadline, start + 901_000), 0);
+  assert.equal(remainingSeconds(null, start), null);
+  assert.equal(remainingSeconds("invalid", start), null);
+});
+
+test("verification requires five explicit answers, including false responses", () => {
+  assert.equal(completeAnswers({}), false);
+  assert.equal(completeAnswers({ caller_claims_bank_or_police: false }), false);
+  assert.equal(completeAnswers({
+    caller_claims_bank_or_police: false, asked_to_move_to_safe_account: false,
+    asked_to_keep_secret_or_install_app: false, initiated_by_customer: false,
+    knows_recipient_personally: false,
+  }), true);
+});
 import { BiometricSensor, warningKeys } from "../src/lib/biometrics";
 import { preventedLoss, reconcileTraffic, trafficScenario, type TrafficRecord } from "../src/lib/traffic";
 import { transferSchema, type Answers, type Preset } from "../src/lib/contracts";
