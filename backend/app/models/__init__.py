@@ -1,4 +1,5 @@
-import app.integrations.models  # noqa: F401 (register isolated integration tables)
+import app.integrations.models
+import app.integrations.nbk_mock.models  # noqa: F401 (register mock enrichment table)
 from app.models.entities import (
     Account,
     EdgeType,

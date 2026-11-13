@@ -31,3 +31,18 @@ consent separately from verified. Only offer notify for the existing `cooling_of
 response. Display delivery failure/expiry as advisory, never as payment approval or
 rejection. Existing `resolve-cooling` remains the sole core questionnaire route.
 Do not store owner capabilities or invitations in analytics or browser logs.
+
+## Synthetic external checks (PR B)
+
+`POST /external-checks` requires owner role and a UUID `Idempotency-Key` header.
+Body: `{"identifier":"SYN-CLEAR-001","transaction_id":null}`. A transaction may
+be associated only by its owner. `GET /external-checks/{id}` permits owner or SOC.
+The response includes `id`, `correlation_id`, `transaction_id`, `fresh`, `cache_hit`,
+and `result` with source MOCK, synthetic identifier, status CLEAR/INDICATORS/UNKNOWN/
+UNAVAILABLE, markers, checked_at, expires_at, verified, error_code and advisory_only.
+
+Display source MOCK and freshness beside the result. CLEAR does not authorize a
+transfer; INDICATORS does not prove fraud. UNKNOWN/UNAVAILABLE require explicit
+display. Expired evidence has `fresh:false`; never present it as current. A 409
+`external_check_in_progress` permits retry with the same key; a 409
+`idempotency_key_payload_conflict` requires correcting the caller's request.
