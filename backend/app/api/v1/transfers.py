@@ -3,7 +3,9 @@ import uuid
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import EngineDep, SessionDep
+from app.ml.model import MODEL_VERSION
 from app.schemas.transfers import (
+    MLContributorOut,
     PartyOut,
     ResolveCoolingRequest,
     ResolveCoolingResponse,
@@ -48,6 +50,19 @@ async def evaluate_transfer(
         transaction_id=tx.id,
         status=ev.decision,
         risk_score=ev.score,
+        ml_score=ev.ml_score,
+        ml_base_score=ev.ml_base_score,
+        ml_model_version=MODEL_VERSION,
+        ml_contributors=[
+            MLContributorOut(
+                feature=c.feature,
+                value=c.value,
+                contribution=round(c.contribution, 4),
+                label_kk=c.label_kk,
+                label_ru=c.label_ru,
+            )
+            for c in ev.ml_contributors
+        ],
         headline_kk=ev.headline_kk,
         headline_ru=ev.headline_ru,
         reasons=[
