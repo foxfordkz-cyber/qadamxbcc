@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
@@ -15,6 +15,23 @@ class TransferContextIn(BaseModel):
 
     active_call: bool = Field(False, description="A phone call is active during the transfer")
     from_deposit: bool = Field(False, description="Funds were just withdrawn from a deposit")
+    pasted_recipient: bool = False
+    typing_duration_ms: int | None = Field(None, ge=0, le=3_600_000, strict=True)
+    hesitation_count: int = Field(0, ge=0, le=100, strict=True)
+    recipient_input_length: int | None = Field(
+        None,
+        ge=0,
+        le=128,
+        strict=True,
+        description="Measured typed characters; needed with duration to compute characters/sec",
+    )
+    hesitation_ms: int | None = Field(
+        None,
+        ge=0,
+        le=300_000,
+        strict=True,
+        description="Measured cumulative pauses; never inferred from hesitation_count",
+    )
     is_new_device: bool | None = Field(
         None, description="Override; by default derived from the sender's registered device"
     )
@@ -61,10 +78,23 @@ class PartyOut(BaseModel):
     iban_masked: str
 
 
+class MLContributorOut(BaseModel):
+    feature: str
+    value: float
+    contribution: float = Field(description="Signed probability points, before blending; not SHAP")
+    label_kk: str
+    label_ru: str
+
+
 class TransferEvaluateResponse(BaseModel):
     transaction_id: uuid.UUID
     status: TransactionStatus
     risk_score: int = Field(ge=0, le=100)
+    ml_score: float = Field(ge=0, le=100)
+    ml_base_score: float = Field(ge=0, le=100)
+    ml_model_version: str
+    ml_explanation_method: Literal["tree_path_probability"] = "tree_path_probability"
+    ml_contributors: list[MLContributorOut]
     headline_kk: str
     headline_ru: str
     reasons: list[RiskReasonOut]

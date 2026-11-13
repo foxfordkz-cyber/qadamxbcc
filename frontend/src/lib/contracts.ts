@@ -8,6 +8,11 @@ export const contextSchema = z.object({
   from_deposit: z.boolean().default(false),
   is_new_device: z.boolean().default(false),
   is_new_recipient: z.boolean().optional(),
+  pasted_recipient: z.boolean().optional(),
+  typing_duration_ms: z.number().int().min(0).max(3_600_000).nullable().optional(),
+  hesitation_count: z.number().int().min(0).max(100).optional(),
+  recipient_input_length: z.number().int().min(0).max(128).nullable().optional(),
+  hesitation_ms: z.number().int().min(0).max(300_000).nullable().optional(),
 }).strict();
 export const transferSchema = z.object({
   sender_id: z.uuid(),
@@ -34,13 +39,20 @@ export interface Decision {
   transaction_id: string; status: Status; risk_score: number;
   headline_kk: string; headline_ru: string; reasons_kk: string[]; reasons_ru: string[];
 }
-export interface Evaluation extends Decision {
+export interface MLDetails {
+  ml_score?: number;
+  ml_base_score?: number;
+  ml_model_version?: string;
+  ml_explanation_method?: string;
+  ml_contributors?: { feature: string; value: number; contribution: number; label_kk: string; label_ru: string }[];
+}
+export interface Evaluation extends Decision, MLDetails {
   reasons: Reason[]; latency_ms: number; layer_latency_ms: Record<string, number>;
   cooling_off_until: string | null; is_new_recipient: boolean; is_new_device: boolean;
   recipient: { id: string; display_name: string; iban_masked: string };
 }
 export interface Party { id: string; full_name: string; iban: string }
-export interface FeedItem {
+export interface FeedItem extends MLDetails {
   transaction_id: string; created_at: string; status: Status; risk_score: number;
   amount: string | number; currency: string; latency_ms: number; sender: Party; recipient: Party;
   active_call: boolean; from_deposit: boolean; is_new_device: boolean; is_new_recipient: boolean;
@@ -62,7 +74,9 @@ export interface Graph {
     data: { edge_type: "transfer" | "shared_device"; weight: number; tx_count: number; highlight: boolean } }[];
 }
 export interface PresetForm { sender: string; recipient: string; amount: string; context: Context }
-export interface AppConfig { mode: "demo" | "live"; presets: Record<Preset, PresetForm> }
+export type City = "astana" | "almaty" | "shymkent" | "atyrau";
+export interface TrafficAccount { id: string; city: City; role: "normal" | "scam" | "hub" }
+export interface AppConfig { mode: "demo" | "live"; presets: Record<Preset, PresetForm>; trafficAccounts?: TrafficAccount[] }
 
 export class ApiError extends Error {
   constructor(public code: string) { super(code); }

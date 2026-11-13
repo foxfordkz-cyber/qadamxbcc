@@ -194,6 +194,11 @@ class TransferService:
             from_deposit=req.context.from_deposit,
             is_new_device=is_new_device,
             is_new_recipient=req.context.is_new_recipient,
+            pasted_recipient=req.context.pasted_recipient,
+            typing_duration_ms=req.context.typing_duration_ms,
+            hesitation_count=req.context.hesitation_count,
+            recipient_input_length=req.context.recipient_input_length,
+            hesitation_ms=req.context.hesitation_ms,
         )
 
         evaluation = await self.engine.evaluate(ctx)
