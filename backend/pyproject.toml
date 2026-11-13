@@ -53,7 +53,7 @@ ignore = [
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
-files = ["app", "tests", "alembic"]
+files = ["app", "tests", "alembic", "scripts"]
 exclude = ["alembic/versions/"]
 
 [[tool.mypy.overrides]]
