@@ -20,7 +20,7 @@ function Controls() {
   const flow = useReactFlow();
   return <Panel position="bottom-left"><div className="graph-controls"><button aria-label={t("zoomIn")} title={t("zoomIn")} onClick={() => void flow.zoomIn()}><Plus size={16} /></button><button aria-label={t("zoomOut")} title={t("zoomOut")} onClick={() => void flow.zoomOut()}><Minus size={16} /></button><button aria-label={t("fit")} title={t("fit")} onClick={() => void flow.fitView({ padding: 0.2 })}><Maximize2 size={16} /></button></div></Panel>;
 }
-function Canvas({ graph }: { graph: Graph }) {
+function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
   const { t, lang } = useLocale();
   const [selected, setSelected] = useState<GraphData | null>(null);
   const prepared = useMemo(() => {
@@ -40,7 +40,7 @@ function Canvas({ graph }: { graph: Graph }) {
     const shared = edge.data.edge_type === "shared_device";
     const risky = edge.data.highlight || prepared.some(n => n.id === edge.target && n.data.tone === "danger");
     const color = shared ? "#F79009" : risky ? "#F04438" : "#00A859";
-    return { ...edge, ariaLabel: shared ? t("shared") : t("transfer"), label: shared ? t("shared") : edge.label ?? undefined, animated: !shared && risky,
+    return { ...edge, ariaLabel: shared ? t("shared") : t("transfer"), label: shared ? t("shared") : edge.label ?? undefined, animated: !shared && (risky || streaming),
       style: { stroke: color, strokeWidth: 1.8, strokeDasharray: shared ? "6 5" : undefined },
       markerEnd: shared ? undefined : { type: MarkerType.ArrowClosed, color },
       labelStyle: { fill: "#344054", fontSize: 11, fontWeight: 600 }, labelBgStyle: { fill: "#FFFFFF", fillOpacity: 0.96 },
@@ -55,6 +55,6 @@ function Canvas({ graph }: { graph: Graph }) {
     {selected && <div className="node-detail"><strong>{selected.label}</strong><span>{t("incoming")}: {selected.in_degree}</span><span>{t("outgoing")}: {selected.out_degree}</span><span>{t("device")}: {selected.device_id || "—"}</span></div>}
   </>;
 }
-export default function NetworkGraph({ graph }: { graph: Graph }) {
-  return <ReactFlowProvider><Canvas key={graph.center} graph={graph} /></ReactFlowProvider>;
+export default function NetworkGraph({ graph, streaming = false }: { graph: Graph; streaming?: boolean }) {
+  return <ReactFlowProvider><Canvas key={graph.center} graph={graph} streaming={streaming} /></ReactFlowProvider>;
 }
