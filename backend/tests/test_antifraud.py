@@ -150,8 +150,10 @@ async def test_popular_recipient_without_cashout_is_not_blocked(
 
     result = await run(engine, ctx("friend", "hub", 10_000, avg=12_000))
 
-    assert result.decision is not TransactionStatus.BLOCKED
-    assert "DROP_HUB_FAN_IN" in codes(result)
+    assert result.decision is TransactionStatus.APPROVED
+    assert {"DROP_HUB_FAN_IN", "RECIPIENT_MANY_SENDERS", "FAN_IN_UNCORROBORATED"} <= codes(result)
+    fan_in = next(r for r in result.reasons if r.code == "DROP_HUB_FAN_IN")
+    assert fan_in.evidence["corroborated"] is False
 
 
 async def test_scenario_4_new_device_at_night(engine: AntifraudEngine) -> None:
