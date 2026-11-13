@@ -1,0 +1,32 @@
+# Optional local/test overlay. Core compose remains usable without any integration secret.
+services:
+  backend:
+    environment: &integration-environment
+      BCC_DATABASE_URL: postgresql+asyncpg://bcc:bcc@postgres:5432/bcc_shield
+      BCC_REDIS_URL: redis://redis:6379/0
+      BCC_INTEGRATIONS_ENABLED: ${BCC_INTEGRATIONS_ENABLED:-false}
+      BCC_INTEGRATIONS_SIGNING_KEY: ${BCC_INTEGRATIONS_SIGNING_KEY:-}
+      BCC_INTEGRATIONS_ENVIRONMENT: ${BCC_INTEGRATIONS_ENVIRONMENT:-local}
+      BCC_INTEGRATIONS_TELEGRAM_MODE: ${BCC_INTEGRATIONS_TELEGRAM_MODE:-fake}
+      BCC_INTEGRATIONS_TELEGRAM_TOKEN: ${BCC_INTEGRATIONS_TELEGRAM_TOKEN:-}
+      BCC_INTEGRATIONS_TELEGRAM_ALLOWED_CHAT_IDS: ${BCC_INTEGRATIONS_TELEGRAM_ALLOWED_CHAT_IDS:-[]}
+      BCC_INTEGRATIONS_INVITATION_TTL_SECONDS: ${BCC_INTEGRATIONS_INVITATION_TTL_SECONDS:-600}
+      BCC_INTEGRATIONS_ADAPTER_TIMEOUT_SECONDS: ${BCC_INTEGRATIONS_ADAPTER_TIMEOUT_SECONDS:-2}
+      BCC_INTEGRATIONS_RATE_LIMIT_PER_MINUTE: ${BCC_INTEGRATIONS_RATE_LIMIT_PER_MINUTE:-30}
+      BCC_INTEGRATIONS_GATEWAY_ENABLED: ${BCC_INTEGRATIONS_GATEWAY_ENABLED:-true}
+      BCC_INTEGRATIONS_GATEWAY_TIMEOUT_SECONDS: ${BCC_INTEGRATIONS_GATEWAY_TIMEOUT_SECONDS:-0.2}
+  integrations-worker:
+    profiles: [integrations]
+    build:
+      context: ./backend
+    command: [python, -m, app.integrations.worker]
+    environment: *integration-environment
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -m, app.integrations.worker, --health]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s

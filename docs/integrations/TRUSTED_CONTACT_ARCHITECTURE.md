@@ -16,6 +16,9 @@ simulator role; owner credentials cannot call it. Share invitations privately.
 Both consents are required before an owner can queue an alert for their own active
 cooling transaction. The database enforces one notification per contact/transaction;
 PostgreSQL row locks serialize competing enqueue, revoke and consent requests.
+The invitation quota guard uses PostgreSQL FOR NO KEY UPDATE so core foreign-key
+checks are not blocked; SQLAlchemy maps this via
+[`with_for_update(key_share=True)`](https://docs.sqlalchemy.org/en/20/core/selectable.html#sqlalchemy.sql.expression.GenerativeSelect.with_for_update).
 The worker runs separately; no Telegram network I/O occurs in scoring or enqueue.
 Notification expiry uses the existing transaction's `cooling_until`, never a new timer.
 

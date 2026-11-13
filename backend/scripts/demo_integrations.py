@@ -1,0 +1,113 @@
+"""Localhost-only fake end-to-end demo; uses the existing deterministic seed accounts."""
+
+import argparse
+import asyncio
+import json
+import uuid
+from typing import Any
+from urllib.parse import urlparse
+
+import httpx
+
+from app.integrations.config import get_integration_settings
+from app.integrations.security import Principal, Role, issue_token
+from scripts.seed_bcc import DEMO_PRESETS, SENDER_ID
+
+OWNER = SENDER_ID
+
+
+async def demo(base_url: str) -> None:
+    cfg = get_integration_settings()
+    if urlparse(base_url).hostname not in {"localhost", "127.0.0.1"}:
+        raise ValueError("demo must target localhost")
+    if not cfg.enabled or cfg.telegram_mode != "fake":
+        raise ValueError("demo requires enabled fake integrations")
+
+    def auth(role: Role) -> dict[str, str]:
+        token = issue_token(Principal(role=role, subject=OWNER), cfg.signing_key.get_secret_value())
+        return {"Authorization": f"Bearer {token}"}
+
+    async with httpx.AsyncClient(base_url=base_url, timeout=15) as client:
+
+        async def post(path: str, body: dict[str, Any], role: Role = "owner") -> dict[str, Any]:
+            response = await client.post(
+                path, json=body, headers={**auth(role), "Idempotency-Key": str(uuid.uuid4())}
+            )
+            response.raise_for_status()
+            result: dict[str, Any] = response.json()
+            return result
+
+        invite = await post("/api/v1/trusted-contacts", {"owner_consent": True, "language": "kk"})
+        contact = invite["contact"]["id"]
+        try:
+            await post(
+                "/api/v1/trusted-contacts/simulator/update",
+                {"kind": "start", "chat_id": 123, "reference": invite["invitation_token"]},
+                "simulator",
+            )
+            await post(
+                "/api/v1/trusted-contacts/simulator/update",
+                {"kind": "consent", "chat_id": 123, "reference": contact},
+                "simulator",
+            )
+            payload = next(preset for preset in DEMO_PRESETS if preset.key == "scam").payload()
+            payload["occurred_at"] = "2026-11-13T09:00:00Z"
+            tx = await post("/api/v1/transfers/evaluate", payload)
+            if tx["status"] != "cooling_off":
+                raise RuntimeError("demo requires a fresh deterministic seed")
+            job = await post(
+                f"/api/v1/integrations/transactions/{tx['transaction_id']}",
+                {"contact_id": contact, "gateway_identifier": "SYN-REVIEW-001"},
+            )
+            for _ in range(40):
+                response = await client.get(
+                    f"/api/v1/integrations/soc/transactions/{tx['transaction_id']}",
+                    headers=auth("soc"),
+                )
+                response.raise_for_status()
+                data = response.json()
+                if (
+                    data["notifications"]
+                    and data["notifications"][0]["state"] == "NOTIFICATION_SENT"
+                ):
+                    notification = data["notifications"][0]
+                    break
+                await asyncio.sleep(0.5)
+            else:
+                raise RuntimeError("worker did not deliver fake notification within 20 seconds")
+            await post(
+                "/api/v1/trusted-contacts/simulator/update",
+                {
+                    "kind": "suspect",
+                    "chat_id": 123,
+                    "reference": notification["id"],
+                    "message_id": str(uuid.UUID(notification["id"]).int % 2_000_000_000),
+                },
+                "simulator",
+            )
+            response = await client.get(
+                f"/api/v1/integrations/soc/transactions/{tx['transaction_id']}", headers=auth("soc")
+            )
+            data = response.json()
+            assert data["core_status"] == "cooling_off"
+            assert data["notifications"][0]["state"] == "SUSPICION_REPORTED"
+            print(
+                json.dumps(
+                    {
+                        "result": "PASS",
+                        "transaction_id": tx["transaction_id"],
+                        "correlation_id": job["correlation_id"],
+                        "core_status": data["core_status"],
+                        "notification": data["notifications"][0]["state"],
+                        "gateway_source": data["external_checks"][0]["result"]["source"],
+                    }
+                )
+            )
+        finally:
+            await client.delete(f"/api/v1/trusted-contacts/{contact}", headers=auth("owner"))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base-url", default="http://localhost:8000")
+    asyncio.run(demo(parser.parse_args().base_url))

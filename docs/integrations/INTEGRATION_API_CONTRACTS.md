@@ -46,3 +46,12 @@ transfer; INDICATORS does not prove fraud. UNKNOWN/UNAVAILABLE require explicit
 display. Expired evidence has `fresh:false`; never present it as current. A 409
 `external_check_in_progress` permits retry with the same key; a 409
 `idempotency_key_payload_conflict` requires correcting the caller's request.
+
+## Orchestration (PR C)
+
+POST `/integrations/transactions/{id}` accepts contact_id and/or gateway_identifier,
+requires owner capability + Idempotency-Key, and returns 202 without calling adapters.
+GET the same path polls the run. SOC uses GET `/integrations/soc/transactions/{id}`;
+GET `/integrations/health` reports dependencies. See [handoff](ORCHESTRATION_HANDOFF.md)
+for state, replay, failure, role and UI rules. All request/response models appear in
+the generated OpenAPI, including enums and UUID/date-time constraints.

@@ -1,5 +1,6 @@
 import app.integrations.models
-import app.integrations.nbk_mock.models  # noqa: F401 (register mock enrichment table)
+import app.integrations.nbk_mock.models
+import app.integrations.run_model  # noqa: F401 (register durable orchestration queue)
 from app.models.entities import (
     Account,
     EdgeType,

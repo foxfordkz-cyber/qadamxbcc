@@ -3,10 +3,16 @@ import uuid
 import pytest
 from fastapi import HTTPException
 
+from app.integrations.config import IntegrationSettings
 from app.integrations.security import Principal, issue_token, verify_token
 from tests.integrations.conftest import TEST_KEY, IntegrationWorld
 
 ROOT = "/api/v1/trusted-contacts"
+
+
+def test_disabled_mode_ignores_unused_telegram_configuration() -> None:
+    cfg = IntegrationSettings(enabled=False, telegram_mode="test")
+    assert not cfg.enabled
 
 
 @pytest.mark.parametrize("token", ["", "owner:bad:9999999999:sig", "Bearer user", "a:b:c:d:e"])

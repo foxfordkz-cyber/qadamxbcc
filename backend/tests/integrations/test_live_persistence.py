@@ -62,3 +62,77 @@ async def test_concurrent_gateway_reservation(iw: IntegrationWorld) -> None:
     code, identifier = await request()
     assert code == 200
     assert identifier in ids
+
+
+async def test_concurrent_orchestration_is_unique(iw: IntegrationWorld) -> None:
+    from tests.integrations.test_orchestration import enqueue, process
+
+    tx = await iw.transfer()
+    jobs = await asyncio.gather(*(enqueue(iw, tx["transaction_id"]) for _ in range(8)))
+    assert len({job["id"] for job in jobs}) == 1
+    results = await asyncio.gather(process(iw), process(iw))
+    assert sorted(results) == [False, True]
+
+
+async def test_stale_session_observes_consent_revocation(iw: IntegrationWorld) -> None:
+    from app.integrations.errors import IntegrationError
+    from app.integrations.models import TrustedContact
+    from app.integrations.telegram.service import TrustedContactService
+
+    contact_id = uuid.UUID(await iw.verified())
+    tx = await iw.transfer()
+    async with iw.factory() as session:
+        contact = await session.get(TrustedContact, contact_id)
+        assert contact is not None
+        assert contact.state == "CONTACT_VERIFIED"
+        await iw.client.delete(f"/api/v1/trusted-contacts/{contact_id}", headers=iw.auth())
+        with pytest.raises(IntegrationError, match="contact_consent_required"):
+            await TrustedContactService(session, iw.cfg).enqueue(
+                iw.owner.id, uuid.UUID(str(tx["transaction_id"])), contact_id
+            )
+
+
+async def test_invitation_lock_does_not_block_core_foreign_keys(
+    iw: IntegrationWorld,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from decimal import Decimal
+
+    from sqlalchemy import text
+
+    from app.integrations.telegram.schemas import InviteRequest
+    from app.integrations.telegram.service import TrustedContactService
+    from app.models import Transaction, TransactionStatus
+
+    entered, release = asyncio.Event(), asyncio.Event()
+    async with iw.factory() as inviting:
+        commit = inviting.commit
+
+        async def delayed_commit() -> None:
+            entered.set()
+            await release.wait()
+            await commit()
+
+        monkeypatch.setattr(inviting, "commit", delayed_commit)
+        invitation = asyncio.create_task(
+            TrustedContactService(inviting, iw.cfg).invite(
+                iw.owner.id, InviteRequest(owner_consent=True)
+            )
+        )
+        await entered.wait()
+        try:
+            async with iw.factory() as core:
+                await core.execute(text("SET LOCAL lock_timeout = '150ms'"))
+                core.add(
+                    Transaction(
+                        sender_id=iw.owner.id,
+                        recipient_id=iw.recipient.id,
+                        amount=Decimal("1"),
+                        device_id="synthetic",
+                        status=TransactionStatus.APPROVED,
+                    )
+                )
+                await core.commit()
+        finally:
+            release.set()
+            await invitation

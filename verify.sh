@@ -47,6 +47,7 @@ fi
 if command -v docker >/dev/null 2>&1; then
   step "docker compose config"
   docker compose -f "$ROOT/docker-compose.yml" config --quiet
+  docker compose -f "$ROOT/docker-compose.yml" -f "$ROOT/docker-compose.integrations.yml" config --quiet
 fi
 
 step "verify: ALL GREEN"

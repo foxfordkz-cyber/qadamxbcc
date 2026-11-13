@@ -7,7 +7,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import external_checks, soc, transfers, trusted_contacts
+from app.api.v1 import external_checks, integrations, soc, transfers, trusted_contacts
 from app.core.config import Settings, get_settings
 from app.core.resources import Resources
 from app.integrations.config import get_integration_settings
@@ -57,6 +57,7 @@ def create_app(settings: Settings | None = None, resources: Resources | None = N
     api.include_router(soc.router)
     api.include_router(trusted_contacts.router)
     api.include_router(external_checks.router)
+    api.include_router(integrations.router)
     app.include_router(api)
     return app
 
