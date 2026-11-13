@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { demoPresets, ids } from "../src/lib/config";
+import { demoPresets, demoTrafficAccounts, ids } from "../src/lib/config";
+import { BiometricSensor, warningKeys } from "../src/lib/biometrics";
+import { preventedLoss, reconcileTraffic, trafficScenario, type TrafficRecord } from "../src/lib/traffic";
 import { transferSchema, type Answers, type Preset } from "../src/lib/contracts";
 import { DemoError, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "../src/lib/demo";
 import { countBlockedHubs } from "../src/lib/feed-summary";
@@ -56,4 +58,93 @@ test("KZT formatting is deterministic in kk and ru, including fractional tenge",
     assert.equal(money("1234567.50", lang), "1\u00a0234\u00a0567,5 ₸");
     assert.equal(money("invalid", lang), "— ₸");
   }
+});
+
+test("real event timing detects pauses/deletions and excludes time away from an input", () => {
+  const sensor = new BiometricSensor();
+  sensor.focus("recipient", 0);
+  sensor.input("recipient", 1, "insertText", 1, 100);
+  sensor.input("recipient", 2, "insertText", 1, 600);
+  sensor.input("recipient", 1, "deleteContentBackward", 0, 2600);
+  assert.equal(sensor.snapshot().hesitation_count, 2);
+  assert.equal(sensor.context().typing_duration_ms, 2500);
+  assert.equal(sensor.context().recipient_input_length, 2);
+  sensor.blur("recipient");
+  sensor.focus("recipient", 1);
+  sensor.input("recipient", 2, "insertText", 1, 20000);
+  assert.equal(sensor.context().typing_duration_ms, 2500);
+  sensor.focus("amount", 4);
+  sensor.input("amount", 3, "deleteContentBackward", 0, 21000);
+  assert.equal(sensor.context().hesitation_count, 3);
+  sensor.input("amount", 4, "insertText", 1, 21500);
+  assert.equal(sensor.context().typing_duration_ms, 3000);
+  assert.equal(sensor.context().recipient_input_length, null);
+});
+
+test("recipient paste is sticky until reset; amount paste never flags the recipient", () => {
+  const sensor = new BiometricSensor();
+  sensor.paste("amount");
+  assert.equal(sensor.context().pasted_recipient, false);
+  sensor.paste("recipient");
+  sensor.input("recipient", 12, "insertFromPaste", 12, 100);
+  assert.equal(sensor.context().pasted_recipient, true);
+  assert.equal(sensor.context().recipient_input_length, 0);
+  assert.equal(sensor.context().typing_duration_ms, 0);
+  sensor.reset();
+  assert.deepEqual(sensor.context(), { pasted_recipient: false, typing_duration_ms: null, recipient_input_length: null, hesitation_count: 0, hesitation_ms: null });
+});
+
+test("biometrics survive request validation with backend-compatible bounds", () => {
+  const base = { sender_id: ids.sender, recipient_phone: demoPresets.normal.recipient, amount: "1000" };
+  const context = { pasted_recipient: true, typing_duration_ms: 12000, hesitation_count: 3, recipient_input_length: 12, hesitation_ms: 8000 };
+  const parsed = transferSchema.parse({ ...base, context });
+  for (const [key, value] of Object.entries(context)) assert.equal(parsed.context[key as keyof typeof context], value);
+  assert.equal(transferSchema.safeParse({ ...base, context: { hesitation_count: -1 } }).success, false);
+  assert.equal(transferSchema.safeParse({ ...base, context: { typing_duration_ms: 1.5 } }).success, false);
+  assert.equal(transferSchema.safeParse({ ...base, context: { hesitation_count: 101 } }).success, false);
+  const result = evaluateDemo({ ...parsed, context: { ...parsed.context, active_call: true } });
+  assert.ok(result.reasons.some(reason => reason.code === "PASTED_DURING_CALL"));
+  assert.equal(result.ml_score, undefined, "rule-only demo must not invent ML probabilities");
+});
+
+test("cooling warnings use exact submitted context or server reason codes", () => {
+  assert.deepEqual(warningKeys({ active_call: true, from_deposit: true, pasted_recipient: true }, []), ["warningSafeAccount", "warningPaste"]);
+  assert.deepEqual(warningKeys({}, [{ code: "PASTED_DURING_CALL", layer: "behavioral", score_delta: 15, reason_kk: "", reason_ru: "" }]), ["warningPaste"]);
+  assert.deepEqual(warningKeys({ is_new_device: true }, []), ["warningDevice"]);
+  assert.deepEqual(warningKeys({}, []), ["warningGeneric"]);
+});
+
+test("traffic uses configured accounts, covers four cities and yields diverse decisions", () => {
+  const cities = new Set<string>();
+  const statuses = new Set<string>();
+  for (let i = 0; i < 6; i++) {
+    const scenario = trafficScenario(demoTrafficAccounts, i)!;
+    assert.notEqual(scenario.input.sender_id, scenario.input.recipient_id);
+    assert.ok(demoTrafficAccounts.some(account => account.id === scenario.input.sender_id));
+    cities.add(scenario.from); cities.add(scenario.to);
+    statuses.add(evaluateDemo(scenario.input).status);
+  }
+  assert.deepEqual([...cities].sort(), ["almaty", "astana", "atyrau", "shymkent"]);
+  assert.deepEqual([...statuses].sort(), ["approved", "blocked", "cooling_off"]);
+  assert.equal(trafficScenario([], 0), null);
+  const configured = trafficScenario([], 2, demoPresets)!;
+  assert.equal(configured.input.sender_id, demoPresets.normal.sender);
+  assert.equal(configured.input.recipient_phone, demoPresets.scam.recipient);
+  assert.equal(configured.to, "shymkent");
+});
+
+test("prevented loss counts unique blocked transfers only and retains reconciled decisions", () => {
+  const held = run("scam");
+  const blocked = run("hub");
+  const records: Record<string, TrafficRecord> = {
+    [held.transaction_id]: { evaluation: held, amount: "100.50", from: "astana", to: "shymkent" },
+    [blocked.transaction_id]: { evaluation: blocked, amount: "250000", from: "almaty", to: "atyrau" },
+  };
+  assert.equal(preventedLoss(records, []), 250000);
+  const row = feedDemo().items.find(item => item.transaction_id === held.transaction_id)!;
+  const update = { ...row, status: "blocked" as const };
+  assert.equal(preventedLoss(records, [update, update]), 250100.50);
+  const reconciled = reconcileTraffic(records, [update]);
+  assert.equal(preventedLoss(reconciled, []), 250100.50);
+  assert.equal(reconcileTraffic(reconciled, [update]), reconciled);
 });
