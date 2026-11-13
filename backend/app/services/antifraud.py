@@ -257,8 +257,10 @@ class AntifraudEngine:
         if burst >= SENDER_BURST_10M:
             out.append(_reason("SENDER_BURST", LAYER_VELOCITY, W_SENDER_BURST, n=burst))
 
-        fan_in_30m = snap.recipient_in.count("30m")
-        fan_in_1h = snap.recipient_in.count("1h")
+        # Fan-in counts DISTINCT senders: one customer repeatedly paying a known
+        # recipient is not a drop hub.
+        fan_in_30m = snap.recipient_in.distinct("30m")
+        fan_in_1h = snap.recipient_in.distinct("1h")
         if fan_in_30m >= HUB_FAN_IN_30M:
             out.append(_reason("DROP_HUB_FAN_IN", LAYER_VELOCITY, W_HUB_FAN_IN, n=fan_in_30m))
         elif fan_in_1h >= FAN_IN_1H:
@@ -266,7 +268,7 @@ class AntifraudEngine:
 
         r_in, r_out = snap.recipient_in.volume("1h"), snap.recipient_out.volume("1h")
         r_in_prior = r_in - ctx.amount  # money that was already sitting with the recipient
-        if snap.recipient_in.count("1h") > PASS_THROUGH_MIN_IN and r_in_prior > 0:
+        if snap.recipient_in.distinct("1h") > PASS_THROUGH_MIN_IN and r_in_prior > 0:
             ratio = r_out / r_in_prior
             if ratio >= CASHOUT_RATIO:
                 out.append(
@@ -278,7 +280,7 @@ class AntifraudEngine:
                     )
                 )
 
-        s_in_n, s_in = snap.sender_in.count("1h"), snap.sender_in.volume("1h")
+        s_in_n, s_in = snap.sender_in.distinct("1h"), snap.sender_in.volume("1h")
         if s_in_n >= PASS_THROUGH_MIN_IN and s_in > 0:
             ratio = snap.sender_out.volume("1h") / s_in  # includes the current transfer
             if ratio >= CASHOUT_RATIO:

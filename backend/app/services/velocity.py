@@ -1,8 +1,9 @@
 """Redis sliding-window velocity counters (sorted sets, one round trip per evaluation).
 
 Each account owns two ZSETs: ``vel:out:{id}`` and ``vel:in:{id}``. A member is
-``"{tx_id}:{amount}"`` scored by the event's epoch seconds, so count and volume for
-any window up to 24h are derived from a single ``ZRANGEBYSCORE ... WITHSCORES``.
+``"{tx_id}:{counterparty_id}:{amount}"`` scored by the event's epoch seconds, so count,
+distinct counterparties and volume for any window up to 24h are derived from a single
+``ZRANGEBYSCORE ... WITHSCORES``.
 Writing the same ``tx_id`` twice is idempotent.
 """
 
@@ -18,6 +19,7 @@ KEY_PREFIX = "bcc:vel"
 @dataclass(frozen=True, slots=True)
 class WindowStat:
     count: int = 0
+    distinct: int = 0  # distinct counterparties (senders for "in", recipients for "out")
     volume: float = 0.0
 
 
@@ -29,6 +31,9 @@ class FlowStats:
 
     def count(self, window: str) -> int:
         return self.windows.get(window, WindowStat()).count
+
+    def distinct(self, window: str) -> int:
+        return self.windows.get(window, WindowStat()).distinct
 
     def volume(self, window: str) -> float:
         return self.windows.get(window, WindowStat()).volume
@@ -44,7 +49,8 @@ class VelocitySnapshot:
     def as_dict(self) -> dict[str, dict[str, dict[str, float]]]:
         return {
             name: {
-                w: {"count": s.count, "volume": round(s.volume, 2)} for w, s in fs.windows.items()
+                w: {"count": s.count, "distinct": s.distinct, "volume": round(s.volume, 2)}
+                for w, s in fs.windows.items()
             }
             for name, fs in (
                 ("sender_out", self.sender_out),
@@ -65,17 +71,23 @@ def _decode(member: bytes | str) -> str:
 
 def _aggregate(rows: list[tuple[bytes | str, float]], now: float) -> FlowStats:
     windows: dict[str, WindowStat] = {}
-    parsed: list[tuple[float, float]] = []
+    parsed: list[tuple[float, str, float]] = []
     for member, score in rows:
-        _, _, amount = _decode(member).rpartition(":")
+        parts = _decode(member).split(":")
+        # legacy members "{tx}:{amount}" count each tx as its own counterparty
+        counterparty = parts[1] if len(parts) == 3 else parts[0]
         try:
-            parsed.append((float(score), float(amount)))
+            parsed.append((float(score), counterparty, float(parts[-1])))
         except ValueError:
             continue
     for name, span in WINDOWS.items():
         lo = now - span
-        hits = [amt for ts, amt in parsed if ts > lo]
-        windows[name] = WindowStat(count=len(hits), volume=sum(hits))
+        hits = [(cp, amt) for ts, cp, amt in parsed if ts > lo]
+        windows[name] = WindowStat(
+            count=len(hits),
+            distinct=len({cp for cp, _ in hits}),
+            volume=sum(amt for _, amt in hits),
+        )
     return FlowStats(windows=windows)
 
 
@@ -93,14 +105,15 @@ class VelocityCounters:
         ts: float,
     ) -> VelocitySnapshot:
         """Atomically-ish record the attempt and read all windows in ONE pipeline round trip."""
-        member = f"{tx_id}:{amount:.2f}"
+        out_member = f"{tx_id}:{recipient_id}:{amount:.2f}"
+        in_member = f"{tx_id}:{sender_id}:{amount:.2f}"
         out_s, in_s = _key("out", sender_id), _key("in", sender_id)
         in_r, out_r = _key("in", recipient_id), _key("out", recipient_id)
         floor = ts - RETENTION_S
 
         pipe = self._redis.pipeline(transaction=False)
-        pipe.zadd(out_s, {member: ts})
-        pipe.zadd(in_r, {member: ts})
+        pipe.zadd(out_s, {out_member: ts})
+        pipe.zadd(in_r, {in_member: ts})
         for key in (out_s, in_r):
             pipe.zremrangebyscore(key, "-inf", floor)
             pipe.expire(key, RETENTION_S + 3600)

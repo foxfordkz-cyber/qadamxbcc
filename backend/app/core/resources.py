@@ -43,6 +43,9 @@ class Resources:
         return cls(session_factory, redis_client, engine, db_engine, owns)
 
     async def start(self) -> None:
+        # Open the Redis connection now (fail fast) so the first scored transfer
+        # does not pay the connect cost inside its latency budget.
+        await self.redis.ping()
         async with self.session_factory() as session:
             await hydrate_graph(session, self.engine.graph)
 

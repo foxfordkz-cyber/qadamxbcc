@@ -310,3 +310,39 @@ async def test_resolve_on_approved_transfer_conflicts(world: World) -> None:
         f"{API}/transfers/{data['transaction_id']}/resolve-cooling", json={"answers": CLEAN}
     )
     assert resp.status_code == 409
+
+
+async def test_accounts_created_after_startup_join_the_graph(
+    world: World, session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    """Regression (live smoke): seeding while the API runs must not leave graph blind spots."""
+    async with session_factory() as session:
+        late = [
+            Account(
+                iin=f"9502024{n:05d}",
+                iban=make_kz_iban(f"{900 + n:013d}"),
+                phone=f"+7705{n:07d}",
+                full_name=f"Late{n} Mule",
+                device_id="shared-burner",
+                avg_tx_amount=Decimal("40000"),
+            )
+            for n in range(3)
+        ]
+        session.add_all(late)
+        await session.commit()
+    mule0 = str(late[0].id)
+
+    data = await world.evaluate("alice", "bob", 1_000, recipient_id=mule0)
+    shared = next(r for r in data["reasons"] if r["code"] == "RECIPIENT_SHARED_DEVICE")
+    assert shared["evidence"]["n"] == 2
+
+    graph = (await world.client.get(f"{API}/soc/graph/{mule0}", params={"depth": 1})).json()
+    labels = {n["id"]: n["data"]["label"] for n in graph["nodes"]}
+    assert labels[mule0] == "Late0 Mule"
+    assert labels[world.id("alice")] == "Alice Testov"
+    assert {e["data"]["edge_type"] for e in graph["edges"]} == {"transfer", "shared_device"}
+
+    lonely = (await world.client.get(f"{API}/soc/graph/{late[1].id}", params={"depth": 1})).json()
+    assert next(n for n in lonely["nodes"] if n["id"] == str(late[1].id))["data"]["label"] == (
+        "Late1 Mule"
+    )

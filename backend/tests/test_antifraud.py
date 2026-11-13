@@ -25,6 +25,7 @@ NIGHT = datetime(2026, 11, 12, 21, 30, tzinfo=UTC)  # 02:30 Asia/Almaty
 @pytest.fixture
 async def engine() -> AsyncIterator[AntifraudEngine]:
     redis = fakeredis.FakeAsyncRedis()
+    await redis.ping()  # warm the connection, as Resources.start() does in production
     graph = GraphStore()
     yield AntifraudEngine(redis, graph)
     await redis.aclose()
@@ -214,3 +215,20 @@ async def test_p95_latency_under_budget(engine: AntifraudEngine) -> None:
         samples.append((time.perf_counter() - t) * 1000)
     p95 = statistics.quantiles(samples, n=20)[-1]
     assert p95 < 50, f"p95={p95:.2f}ms"
+
+
+async def test_repeat_payer_to_known_recipient_is_not_a_drop_hub(
+    engine: AntifraudEngine,
+) -> None:
+    """Regression (live smoke): fan-in must count distinct senders, not transfers."""
+    engine.graph.add_transfer("payer", "landlord", 50_000)
+    result = None
+    for i in range(15):
+        result = await run(
+            engine, ctx("payer", "landlord", 1_000 + i, at=DAY + timedelta(minutes=i))
+        )
+    assert result is not None
+    assert result.decision is TransactionStatus.APPROVED
+    assert not codes(result) & {"DROP_HUB_FAN_IN", "FAN_IN_VELOCITY"}
+    assert result.velocity.recipient_in.count("30m") == 15
+    assert result.velocity.recipient_in.distinct("30m") == 1
