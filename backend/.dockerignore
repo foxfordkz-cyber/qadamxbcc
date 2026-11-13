@@ -4,3 +4,7 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 tests/
+*.pyc
+.pytest_tmp
+.env
+app/ml/*.joblib

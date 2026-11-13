@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Clock3, LoaderCircle, ShieldCheck } from "lucide-react";
-import { api, type Answers, type Decision, type Evaluation } from "@/lib/contracts";
+import { api, type Answers, type Context, type Decision, type Evaluation } from "@/lib/contracts";
+import { warningKeys } from "@/lib/biometrics";
 import { errorKey, useLocale, type MessageKey } from "@/lib/i18n";
 
 const questions: (keyof Answers)[] = ["caller_claims_bank_or_police", "asked_to_move_to_safe_account", "asked_to_keep_secret_or_install_app", "initiated_by_customer", "knows_recipient_personally"];
 
-export function CoolingModal({ result, onClose, onResolved }: { result: Evaluation; onClose: () => void; onResolved: (value: Decision) => void }) {
+export function CoolingModal({ result, context, onClose, onResolved }: { result: Evaluation; context: Partial<Context>; onClose: () => void; onResolved: (value: Decision) => void }) {
   const { lang, setLang, t } = useLocale();
   const dialog = useRef<HTMLDialogElement>(null);
   const [answers, setAnswers] = useState<Partial<Answers>>({});
@@ -38,6 +39,7 @@ export function CoolingModal({ result, onClose, onResolved }: { result: Evaluati
     </div>
     <div className="security-sheet-brand"><span className="sheet-shield"><ShieldCheck size={30} /></span><div><strong>bcc.kz</strong><span>{t("securityCheck")}</span></div></div>
     <h2 id="cooling-title">{t("coolingTitle")}</h2><p id="cooling-description" className="muted">{t("coolingText")}</p>
+    <aside className="ai-warning"><strong><ShieldCheck size={17} />{t("aiWarning")}</strong>{warningKeys(context, result.reasons).map(key => <p key={key}>{t(key)}</p>)}</aside>
     <div className="countdown"><span>{t("remaining")}</span><strong>{String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</strong></div>
     {seconds === 0 && <p className="muted">{t("expired")}</p>}
     <div className="verification-progress"><span>{t("verificationProgress")}</span><strong>{questions.filter(q => typeof answers[q] === "boolean").length} / {questions.length}</strong></div>
