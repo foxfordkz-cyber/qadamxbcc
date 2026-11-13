@@ -1,7 +1,8 @@
 # Integration orchestration and local demo handoff
 
 Review stack: [A #1](https://github.com/foxfordkz-cyber/qadamxbcc/pull/1) →
-[B #2](https://github.com/foxfordkz-cyber/qadamxbcc/pull/2) → C.
+[B #2](https://github.com/foxfordkz-cyber/qadamxbcc/pull/2) →
+[C #3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3).
 Core owner reviews minimal router/model registration and reversible migrations;
 Damir/mobile and SOC owners consume the additive contracts. No frontend is rewritten.
 

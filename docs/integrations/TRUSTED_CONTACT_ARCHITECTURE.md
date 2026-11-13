@@ -36,8 +36,10 @@ Notification expiry uses the existing transaction's `cooling_until`, never a new
 | SUSPICION_REPORTED | Advisory risk signal; later ACK cannot erase it |
 | NOTIFICATION_EXPIRED | Worker suppressed expired/resolved transfer alert |
 
-Repeated consent, revoke, enqueue and callbacks are idempotent. Used/expired link
-tokens are rejected. Callback sender, private chat, exact message ID and notification
+Repeated consent, owner DELETE, enqueue and valid callbacks do not duplicate state.
+Owner DELETE remains idempotent after revocation. Contact-side revoke erases its
+delivery address, so repeating that authenticated contact callback is rejected as
+not found; it never restores consent. Used/expired link tokens are rejected. Callback sender, private chat, exact message ID and notification
 expiry are validated. Consent/revoke callbacks also require the bound private sender.
 History preserves observed delivery/advisory states; `expires_at` governs whether
 callbacks remain actionable. Expiry does not erase a previously reported suspicion.
