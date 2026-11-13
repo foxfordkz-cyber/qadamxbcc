@@ -118,6 +118,47 @@ async def test_legit_p2p_approved_and_persisted(
         assert edge.weight == pytest.approx(55_000)
 
 
+async def test_biometrics_and_ml_response(world: World) -> None:
+    data = await world.evaluate(
+        "victim",
+        "scammer",
+        120_000,
+        occurred_at=DAY.isoformat(),
+        context={
+            "active_call": True,
+            "pasted_recipient": True,
+            "typing_duration_ms": 12_000,
+            "recipient_input_length": 12,
+            "hesitation_ms": 8000,
+            "hesitation_count": 3,
+        },
+    )
+    assert data["status"] == "cooling_off"
+    assert 0 <= data["ml_score"] <= 100
+    assert data["ml_explanation_method"] == "tree_path_probability"
+    assert data["ml_model_version"].startswith("bcc-synthetic-rf-")
+    assert len(data["ml_contributors"]) == 5
+    assert data["layer_latency_ms"]["ml"] > 0
+    for contributor in data["ml_contributors"]:
+        assert contributor["label_kk"]
+        assert contributor["label_ru"]
+        assert isinstance(contributor["contribution"], (float, int))
+    reason = next(r for r in data["reasons"] if r["code"] == "PASTED_DURING_CALL")
+    assert reason["reason_kk"] == ("Реквизиттер белсенді қоңырау кезінде алмасу буферінен қойылды")
+    assert reason["reason_ru"] == ("Реквизиты вставлены из буфера обмена во время активного звонка")
+    feed = (await world.client.get(f"{API}/soc/feed")).json()
+    assert "PASTED_DURING_CALL" in {r["code"] for r in feed["items"][0]["reasons"]}
+    paste_only = await world.evaluate(
+        "alice",
+        "bob",
+        1000,
+        occurred_at=DAY.isoformat(),
+        context={"pasted_recipient": True},
+    )
+    assert paste_only["status"] == "approved"
+    assert "PASTED_DURING_CALL" not in {r["code"] for r in paste_only["reasons"]}
+
+
 async def test_social_engineering_cooling_off_then_red_flag_blocks(world: World) -> None:
     data = await world.evaluate(
         "victim",
