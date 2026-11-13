@@ -1,6 +1,6 @@
 """BCC Shield real-time antifraud & drop-network engine.
 
-Three-layer pipeline evaluated on every transfer (target end-to-end < 50 ms):
+Hybrid pipeline evaluated on every transfer (warmed scorer p95 target < 15 ms):
 
 * **Layer 1 — Behavioral & context guard** (pure CPU): active phone call, deposit
   withdrawal, new recipient, amount deviation from the sender's average, new device,
@@ -8,14 +8,18 @@ Three-layer pipeline evaluated on every transfer (target end-to-end < 50 ms):
 * **Layer 2 — Velocity & graph engine**: Redis sliding windows (10m/30m/1h/24h, one
   pipeline round trip) and in-memory NetworkX metrics (distinct senders, transit
   ratio, shared device clusters, SOC flags).
-* **Layer 3 — Adaptive decision**: score 0–100 → ``approved`` (<40),
+* **Layer 3 — Machine learning**: locally trained random forest, including browser
+  biometrics, with signed local tree-path explanations (inference target < 2 ms).
+* **Layer 4 — Adaptive decision**: score 0–100 → ``approved`` (<40),
   ``cooling_off`` (40–74) or ``blocked`` (>=75), with bilingual kk/ru reasons.
 
 Adaptive principle: customer-side behavioral signals alone never hard-block a
 transfer — they are capped at the top of the cooling-off band so a real customer
 gets a 15-minute pause and an anti-scam check instead of a rejection. A hard block
 requires network evidence (velocity or graph) that the money is heading into, or
-coming out of, a mule structure. This keeps the false-positive rate low.
+coming out of, a mule structure. ML may introduce a block only with corroborated
+recipient-side mule evidence. Synthetic-model scores require real-data validation
+before production use; they are not calibrated estimates of banking fraud rates.
 """
 
 import time
@@ -26,6 +30,8 @@ from zoneinfo import ZoneInfo
 
 from redis.asyncio import Redis
 
+from app.ml.features import Features
+from app.ml.model import Contributor, get_model
 from app.models import TransactionStatus
 from app.services import explain
 from app.services.graph import (
@@ -40,6 +46,7 @@ from app.services.velocity import VelocityCounters, VelocitySnapshot
 LAYER_BEHAVIORAL: Final = "behavioral"
 LAYER_VELOCITY: Final = "velocity"
 LAYER_GRAPH: Final = "graph"
+LAYER_ML: Final = "ml"
 
 COOLING_OFF_THRESHOLD: Final = 40
 BLOCK_THRESHOLD: Final = 75
@@ -110,6 +117,11 @@ class TransferContext:
     from_deposit: bool = False
     is_new_device: bool = False
     is_new_recipient: bool | None = None  # None → derived from the transfer graph
+    pasted_recipient: bool = False
+    typing_duration_ms: int | None = None
+    hesitation_count: int = 0
+    recipient_input_length: int | None = None
+    hesitation_ms: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,6 +148,9 @@ class Evaluation:
     headline_kk: str
     headline_ru: str
     cooling_off_minutes: int
+    ml_score: float
+    ml_base_score: float
+    ml_contributors: tuple[Contributor, ...]
 
     @property
     def reasons_kk(self) -> list[str]:
@@ -190,6 +205,7 @@ class AntifraudEngine:
         self.velocity = VelocityCounters(redis)
         self._tz = ZoneInfo(timezone)
         self.cooling_off_minutes = cooling_off_minutes
+        self.model = get_model()  # train/load once, outside the request latency budget
 
     # ------------------------------------------------------------------ public
     async def evaluate(self, ctx: TransferContext) -> Evaluation:
@@ -219,10 +235,49 @@ class AntifraudEngine:
         t3 = time.perf_counter()
 
         network = _corroborate([*velocity, *graph])
+        features = Features(
+            amount_ratio=ctx.amount / ctx.sender_avg_amount if ctx.sender_avg_amount > 0 else 1.0,
+            night_hour=ctx.occurred_at.astimezone(self._tz).hour in NIGHT_HOURS,
+            new_recipient=is_new_recipient,
+            active_call=ctx.active_call,
+            deposit_withdrawal=ctx.from_deposit,
+            fan_in_velocity=snapshot.recipient_in.distinct("30m"),
+            transit_ratio=recipient_metrics.transit_ratio,
+            paste_detected=ctx.pasted_recipient,
+            typing_speed_cps=(
+                ctx.recipient_input_length * 1000 / ctx.typing_duration_ms
+                if ctx.recipient_input_length is not None and ctx.typing_duration_ms
+                else -1.0
+            ),
+            hesitation_ms=ctx.hesitation_ms if ctx.hesitation_ms is not None else -1,
+            hesitation_count=ctx.hesitation_count,
+            new_device=ctx.is_new_device,
+        )
+        prediction = self.model.score(features)
+        t_ml = time.perf_counter()
         reasons = sorted([*behavioral, *network], key=lambda r: (-r.score_delta, r.code))
         raw = sum(r.score_delta for r in reasons)
+        # Bounded residual blend: preserve rule floors; weak synthetic probabilities
+        # add no friction. ML can add at most 15 points and cannot itself justify a block.
+        ml_delta = round(0.25 * max(0.0, prediction.score - 40.0))
         network_evidence = bool(network)
-        score = max(0, min(100, raw if network_evidence else min(raw, BEHAVIORAL_ONLY_CAP)))
+        rule_score = max(0, min(100 if network_evidence else BEHAVIORAL_ONLY_CAP, raw))
+        # Preserve all rule floors, but ML may cross into BLOCKED only with
+        # corroborated recipient-side mule evidence. A sender pass-through signal
+        # by itself still gets the existing questionnaire, not an ML-only block.
+        corroborated = any(r.code in MULE_CORROBORATION for r in network)
+        cap = 100 if corroborated else max(rule_score, BEHAVIORAL_ONLY_CAP)
+        score = min(cap, rule_score + ml_delta)
+        if score > rule_score:
+            reasons.append(
+                _reason(
+                    "ML_RISK_UPLIFT",
+                    LAYER_ML,
+                    score - rule_score,
+                    ml_score=round(prediction.score, 2),
+                )
+            )
+            reasons.sort(key=lambda r: (-r.score_delta, r.code))
         decision = decide(score)
         head_kk, head_ru = explain.headline(decision, minutes=self.cooling_off_minutes)
         t4 = time.perf_counter()
@@ -238,13 +293,17 @@ class AntifraudEngine:
                 LAYER_BEHAVIORAL: round((t1 - t0) * 1000, 3),
                 LAYER_VELOCITY: round((t2 - t1) * 1000, 3),
                 LAYER_GRAPH: round((t3 - t2) * 1000, 3),
-                "decision": round((t4 - t3) * 1000, 3),
+                LAYER_ML: round((t_ml - t3) * 1000, 3),
+                "decision": round((t4 - t_ml) * 1000, 3),
             },
             velocity=snapshot,
             recipient_graph=recipient_metrics,
             headline_kk=head_kk,
             headline_ru=head_ru,
             cooling_off_minutes=self.cooling_off_minutes,
+            ml_score=round(prediction.score, 4),
+            ml_base_score=round(prediction.base_score, 4),
+            ml_contributors=prediction.contributors[:5],
         )
 
     def apply_transfer(self, ctx: TransferContext) -> None:
@@ -258,6 +317,8 @@ class AntifraudEngine:
         out: list[RiskReason] = []
         if ctx.active_call:
             out.append(_reason("ACTIVE_CALL", LAYER_BEHAVIORAL, W_ACTIVE_CALL))
+        if ctx.active_call and ctx.pasted_recipient:
+            out.append(_reason("PASTED_DURING_CALL", LAYER_BEHAVIORAL, 15))
         if ctx.from_deposit:
             out.append(_reason("DEPOSIT_WITHDRAWAL", LAYER_BEHAVIORAL, W_DEPOSIT))
         if is_new_recipient:
