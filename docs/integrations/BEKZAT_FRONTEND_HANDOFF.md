@@ -4,8 +4,13 @@ Scope: additive APIs from [PR #1](https://github.com/foxfordkz-cyber/qadamxbcc/p
 [PR #2](https://github.com/foxfordkz-cyber/qadamxbcc/pull/2) and
 [PR #3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3). Current core baseline a02d20d.
 Existing frontend/core contracts are preserved. No frontend files were changed.
-Validated implementation: `e23df31514553990b59b9c0181046aff2c1c63fa`;
-[successful CI](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43557924729).
+
+Durable retry update: notification responses include `attempts` and `next_attempt_at`.
+Explicit Telegram rejection schedules at most three attempts across restarts. A queued
+notification with `telegram_rate_limited` is waiting until its persisted due time.
+Consent, core state and expiry are rechecked; ambiguous delivery is never resent.
+Implementation: `04392a8` in PR #1, inherited by this stack. The prior audit below
+records historical verification; new acceptance results are documented separately.
 
 ## Contract package
 

@@ -1875,6 +1875,23 @@
             ],
             "title": "Error Code"
           },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts",
+            "default": 0
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
           "advisory_only": {
             "type": "boolean",
             "const": true,
