@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, utcnow
@@ -38,6 +38,7 @@ class ContactNotification(Base):
     __tablename__ = "contact_notifications"
     __table_args__ = (
         UniqueConstraint("contact_id", "transaction_id", name="uq_contact_transaction"),
+        Index("ix_notification_due", "state", "next_attempt_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -48,6 +49,8 @@ class ContactNotification(Base):
     state: Mapped[str] = mapped_column(String(40), default="NOTIFICATION_QUEUED")
     expires_at: Mapped[datetime] = mapped_column()
     claimed_at: Mapped[datetime | None] = mapped_column()
+    attempts: Mapped[int] = mapped_column(default=0, server_default="0")
+    next_attempt_at: Mapped[datetime | None] = mapped_column()
     message_id: Mapped[str | None] = mapped_column(String(32))
     error_code: Mapped[str | None] = mapped_column(String(40))
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
