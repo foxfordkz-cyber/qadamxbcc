@@ -102,6 +102,8 @@
       "state": "NOTIFICATION_QUEUED",
       "expires_at": "2026-11-14T09:15:00Z",
       "error_code": null,
+      "attempts": 0,
+      "next_attempt_at": null,
       "advisory_only": true
     }
   },
@@ -129,6 +131,8 @@
         "state": "NOTIFICATION_SENT",
         "expires_at": "2026-11-14T09:15:00Z",
         "error_code": null,
+        "attempts": 0,
+        "next_attempt_at": null,
         "advisory_only": true
       }
     ]
@@ -363,6 +367,8 @@
           "state": "NOTIFICATION_SENT",
           "expires_at": "2026-11-14T09:15:00Z",
           "error_code": null,
+          "attempts": 0,
+          "next_attempt_at": null,
           "advisory_only": true
         }
       ],
