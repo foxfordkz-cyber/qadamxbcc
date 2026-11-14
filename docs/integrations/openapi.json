@@ -707,6 +707,109 @@
         }
       }
     },
+    "/api/v1/integrations/soc/transactions/{transaction_id}/timeline": {
+      "get": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Incident Timeline",
+        "operationId": "incident_timeline_api_v1_integrations_soc_transactions__transaction_id__timeline_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelinePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/health/details": {
+      "get": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Integration Health Details",
+        "operationId": "integration_health_details_api_v1_integrations_health_details_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/integrations/transactions/{transaction_id}": {
       "post": {
         "tags": [
@@ -1690,6 +1793,112 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HealthDetails": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "cache_seconds": {
+            "type": "integer",
+            "const": 5,
+            "title": "Cache Seconds",
+            "default": 5
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Database"
+          },
+          "redis": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Redis"
+          },
+          "worker": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "not_seen",
+              "unknown"
+            ],
+            "title": "Worker"
+          },
+          "telegram": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "fake_enabled",
+              "test_enabled"
+            ],
+            "title": "Telegram"
+          },
+          "gateway": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "mock_ready"
+            ],
+            "title": "Gateway"
+          },
+          "queue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueueCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_successful_processing": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Successful Processing"
+          },
+          "real_provider_probed": {
+            "type": "boolean",
+            "const": false,
+            "title": "Real Provider Probed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "checked_at",
+          "database",
+          "redis",
+          "worker",
+          "telegram",
+          "gateway",
+          "queue",
+          "last_successful_processing"
+        ],
+        "title": "HealthDetails"
+      },
       "IntegrationHealth": {
         "properties": {
           "status": {
@@ -2012,6 +2221,34 @@
         ],
         "title": "Position"
       },
+      "QueueCounts": {
+        "properties": {
+          "notifications_queued": {
+            "type": "integer",
+            "title": "Notifications Queued"
+          },
+          "notifications_delayed": {
+            "type": "integer",
+            "title": "Notifications Delayed"
+          },
+          "notifications_failed": {
+            "type": "integer",
+            "title": "Notifications Failed"
+          },
+          "runs_pending": {
+            "type": "integer",
+            "title": "Runs Pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "notifications_queued",
+          "notifications_delayed",
+          "notifications_failed",
+          "runs_pending"
+        ],
+        "title": "QueueCounts"
+      },
       "ResolveCoolingRequest": {
         "properties": {
           "answers": {
@@ -2290,6 +2527,128 @@
         ],
         "title": "SimulatedUpdate",
         "description": "Test-only equivalent of authenticated private Telegram updates."
+      },
+      "TimelineEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "core",
+              "contact",
+              "gateway",
+              "orchestration"
+            ],
+            "title": "Category"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "information",
+              "attention"
+            ],
+            "title": "Importance"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "description_ru": {
+            "type": "string",
+            "title": "Description Ru"
+          },
+          "description_kk": {
+            "type": "string",
+            "title": "Description Kk"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "persisted_core",
+              "integration_audit"
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "timestamp",
+          "category",
+          "importance",
+          "code",
+          "correlation_id",
+          "description_ru",
+          "description_kk",
+          "source"
+        ],
+        "title": "TimelineEvent"
+      },
+      "TimelinePage": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Advisory Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "as_of",
+          "events",
+          "next_cursor"
+        ],
+        "title": "TimelinePage"
       },
       "TransactionStatus": {
         "type": "string",
