@@ -44,6 +44,26 @@ async def test_concurrent_enqueue_is_unique(iw: IntegrationWorld) -> None:
     assert len(iw.adapter.messages) == 1
 
 
+async def test_concurrent_gateway_reservation(iw: IntegrationWorld) -> None:
+    key = str(uuid.uuid4())
+
+    async def request() -> tuple[int, str | None]:
+        response = await iw.client.post(
+            "/api/v1/external-checks",
+            headers={**iw.auth(), "Idempotency-Key": key},
+            json={"identifier": "SYN-CLEAR-001"},
+        )
+        assert response.status_code in {200, 409}, response.text
+        return response.status_code, response.json().get("id")
+
+    results = await asyncio.gather(*(request() for _ in range(8)))
+    ids = {identifier for code, identifier in results if code == 200}
+    assert len(ids) == 1
+    code, identifier = await request()
+    assert code == 200
+    assert identifier in ids
+
+
 async def test_stale_session_observes_consent_revocation(iw: IntegrationWorld) -> None:
     from app.integrations.errors import IntegrationError
     from app.integrations.models import TrustedContact
