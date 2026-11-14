@@ -1,11 +1,18 @@
 """Opt-in test-only polling ingress. No public webhook trusting caller-supplied Telegram IDs."""
 
 import asyncio
+import logging
 from typing import Literal
 
 from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    ErrorEvent,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 from redis.asyncio import Redis
 
 from app.core.config import get_settings
@@ -29,10 +36,19 @@ async def run() -> None:
     bot = Bot(cfg.telegram_token.get_secret_value())
     router = Router()
 
+    @router.errors()
+    async def rejected_update(event: ErrorEvent) -> bool:
+        # Never let aiogram's default error logger serialize raw updates, DB details,
+        # validation input (including invitations), or provider exception messages.
+        logging.getLogger("bcc.integrations").warning(
+            "TELEGRAM_UPDATE_REJECTED", extra={"event_code": "TELEGRAM_UPDATE_REJECTED"}
+        )
+        return True
+
     async def admitted(chat_id: int) -> bool:
         if chat_id not in cfg.telegram_allowed_chat_ids:
             return False
-        async with redis.pipeline(transaction=True) as pipe:
+        async with asyncio.timeout(2), redis.pipeline(transaction=True) as pipe:
             pipe.incr(f"bcc:integrations:bot-rate:{chat_id}")
             pipe.expire(f"bcc:integrations:bot-rate:{chat_id}", 60, nx=True)
             count, _ = await pipe.execute()
