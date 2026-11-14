@@ -11,6 +11,7 @@ from app.integrations.telegram.handlers import process_update
 from app.integrations.telegram.schemas import (
     AuditOut,
     ContactOut,
+    ContactPreferences,
     ContactsOut,
     InvitationOut,
     InviteRequest,
@@ -121,3 +122,18 @@ async def simulate(
     if cfg.telegram_mode != "fake":
         raise IntegrationError(404, "simulator_disabled")
     return await process_update(TrustedContactService(session, cfg), body)
+
+
+@router.patch("/{contact_id}/preferences", response_model=ContactOut)
+async def preferences(
+    contact_id: uuid.UUID,
+    body: ContactPreferences,
+    session: SessionDep,
+    cfg: ConfigDep,
+    principal: PrincipalDep,
+    response: Response,
+) -> ContactOut:
+    require_role(principal, "owner")
+    response.headers["Cache-Control"] = "no-store"
+    row = await TrustedContactService(session, cfg).preferences(principal.subject, contact_id, body)
+    return ContactOut.model_validate(row)

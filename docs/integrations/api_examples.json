@@ -19,6 +19,8 @@
     "status": 201,
     "response": {
       "contact": {
+        "alias": "",
+        "notifications_enabled": true,
         "id": "00000000-0000-4000-8000-000000000001",
         "state": "CONTACT_PENDING_CONSENT",
         "language": "kk",
@@ -47,6 +49,8 @@
       "state": "CONTACT_VERIFIED",
       "contacts": [
         {
+          "alias": "",
+          "notifications_enabled": true,
           "id": "00000000-0000-4000-8000-000000000001",
           "state": "CONTACT_VERIFIED",
           "language": "kk",
@@ -71,6 +75,8 @@
     "request": null,
     "status": 200,
     "response": {
+      "alias": "",
+      "notifications_enabled": true,
       "id": "00000000-0000-4000-8000-000000000001",
       "state": "CONTACT_REVOKED",
       "language": "kk",
@@ -496,6 +502,28 @@
       },
       "last_successful_processing": "2026-11-14T09:00:00Z",
       "real_provider_probed": false
+    }
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/trusted-contacts/{contact_id}/preferences",
+    "role": "owner",
+    "status": 200,
+    "headers": {
+      "Authorization": "Bearer <owner-capability>"
+    },
+    "request": {
+      "alias": "Demo contact",
+      "notifications_enabled": false,
+      "language": "kk"
+    },
+    "response": {
+      "alias": "Demo contact",
+      "notifications_enabled": false,
+      "id": "00000000-0000-4000-8000-000000000001",
+      "state": "CONTACT_PENDING_CONSENT",
+      "language": "kk",
+      "created_at": "2026-11-14T09:00:00Z"
     }
   }
 ]

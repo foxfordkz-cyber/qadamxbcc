@@ -100,6 +100,9 @@ async def _deliver(
             or not contact.telegram_chat_id
         ):
             row.state = NotificationState.REVOKED
+        elif not contact.notifications_enabled:
+            row.state = NotificationState.FAILED
+            row.error_code = "notifications_disabled"
         elif row.expires_at <= utcnow() or tx is None or tx.status != TransactionStatus.COOLING_OFF:
             row.state = NotificationState.EXPIRED
         else:

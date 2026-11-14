@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Index, String, UniqueConstraint, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, utcnow
@@ -26,6 +26,10 @@ class TrustedContact(Base):
     invitation_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
     invitation_expires_at: Mapped[datetime] = mapped_column()
     language: Mapped[str] = mapped_column(String(2))
+    alias: Mapped[str] = mapped_column(String(40), default="", server_default="")
+    notifications_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=true()
+    )
     state: Mapped[str] = mapped_column(String(40), default="CONTACT_PENDING_CONSENT")
     owner_consented_at: Mapped[datetime] = mapped_column(default=utcnow)
     contact_consented_at: Mapped[datetime | None] = mapped_column()
