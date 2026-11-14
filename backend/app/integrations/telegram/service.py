@@ -13,6 +13,7 @@ from app.integrations.errors import IntegrationError
 from app.integrations.models import ContactNotification, TrustedContact
 from app.integrations.telegram.schemas import (
     ContactOut,
+    ContactPreferences,
     ContactsOut,
     ContactState,
     InvitationOut,
@@ -44,7 +45,7 @@ class TrustedContactService:
                 )
             ).all()
         )
-        if len(existing) >= 5:
+        if len(existing) >= 3:
             raise IntegrationError(409, "contact_limit_reached")
         token = secrets.token_urlsafe(32)
         contact = TrustedContact(
@@ -63,6 +64,26 @@ class TrustedContactService:
             invitation_token=token,
             expires_at=contact.invitation_expires_at,
         )
+
+    async def preferences(
+        self, owner: uuid.UUID, contact_id: uuid.UUID, body: ContactPreferences
+    ) -> TrustedContact:
+        row = await self.get_contact(contact_id)
+        if row.owner_id != owner:
+            raise IntegrationError(404, "contact_not_found")
+        if row.state == ContactState.REVOKED:
+            raise IntegrationError(409, "contact_revoked")
+        if (row.alias, row.notifications_enabled, row.language) != (
+            body.alias,
+            body.notifications_enabled,
+            body.language,
+        ):
+            row.alias = body.alias
+            row.notifications_enabled = body.notifications_enabled
+            row.language = body.language
+            record(self.session, owner, row.id, row.id, "CONTACT_PREFERENCES_UPDATED")
+            await self.session.commit()
+        return row
 
     async def contacts(self, owner: uuid.UUID) -> ContactsOut:
         rows = list(
@@ -152,6 +173,8 @@ class TrustedContactService:
         row.state = ContactState.REVOKED
         row.invitation_hash = None
         row.telegram_chat_id = None
+        row.alias = ""
+        row.notifications_enabled = False
         record(self.session, row.owner_id, row.id, row.id, row.state)
         queued = await self.session.scalars(
             select(ContactNotification)
@@ -195,6 +218,8 @@ class TrustedContactService:
         )
         if prior is not None:
             return prior
+        if not contact.notifications_enabled:
+            raise IntegrationError(409, "contact_notifications_disabled")
         if contact.state != ContactState.VERIFIED or contact.contact_consented_at is None:
             raise IntegrationError(409, "contact_consent_required")
         if (

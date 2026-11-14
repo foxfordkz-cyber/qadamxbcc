@@ -600,6 +600,64 @@
         ]
       }
     },
+    "/api/v1/trusted-contacts/{contact_id}/preferences": {
+      "patch": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Preferences",
+        "operationId": "preferences_api_v1_trusted_contacts__contact_id__preferences_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Contact Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactPreferences"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/external-checks": {
       "post": {
         "tags": [
@@ -1028,6 +1086,16 @@
       },
       "ContactOut": {
         "properties": {
+          "alias": {
+            "type": "string",
+            "title": "Alias",
+            "default": ""
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled",
+            "default": true
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -1054,6 +1122,35 @@
           "created_at"
         ],
         "title": "ContactOut"
+      },
+      "ContactPreferences": {
+        "properties": {
+          "alias": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Alias"
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "kk"
+            ],
+            "title": "Language"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "alias",
+          "notifications_enabled",
+          "language"
+        ],
+        "title": "ContactPreferences"
       },
       "ContactState": {
         "type": "string",

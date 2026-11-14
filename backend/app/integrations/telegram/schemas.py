@@ -1,9 +1,10 @@
+import unicodedata
 import uuid
 from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ContactState(StrEnum):
@@ -29,8 +30,24 @@ class InviteRequest(BaseModel):
     language: Literal["ru", "kk"] = "ru"
 
 
+class ContactPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    alias: str = Field(max_length=40)
+    notifications_enabled: bool
+    language: Literal["ru", "kk"]
+
+    @field_validator("alias")
+    @classmethod
+    def safe_alias(cls, value: str) -> str:
+        if any(unicodedata.category(c).startswith("C") for c in value):
+            raise ValueError("control characters are not allowed")
+        return value.strip()
+
+
 class ContactOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    alias: str = ""
+    notifications_enabled: bool = True
     id: uuid.UUID
     state: ContactState
     language: str
