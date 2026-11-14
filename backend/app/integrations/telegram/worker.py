@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import logging
 import uuid
 from datetime import timedelta
 
@@ -152,7 +153,15 @@ async def run(*, once: bool = False) -> None:
     )
     try:
         while True:
-            await deliver_one(factory, adapter, cfg)
+            try:
+                async with asyncio.timeout(15):
+                    await deliver_one(factory, adapter, cfg)
+            except Exception:
+                logging.getLogger("bcc.integrations").warning(
+                    "DELIVERY_DEPENDENCY_ERROR", extra={"event_code": "DELIVERY_DEPENDENCY_ERROR"}
+                )
+                if once:
+                    raise SystemExit(1) from None
             if once:
                 break
             await asyncio.sleep(0.5)
