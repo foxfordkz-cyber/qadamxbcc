@@ -110,7 +110,10 @@ async def _deliver(
                 async with asyncio.timeout(cfg.adapter_timeout_seconds):
                     row.message_id = await adapter.send(
                         int(contact.telegram_chat_id),
-                        ALERTS[contact.language],
+                        ALERTS[contact.language]
+                        + "\n"
+                        + ("Актуально до: " if contact.language == "ru" else "Мерзімі: ")
+                        + row.expires_at.strftime("%Y-%m-%d %H:%M UTC"),
                         row.id,
                         contact.language,
                     )

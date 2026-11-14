@@ -19,5 +19,8 @@ so the bot deliberately cannot recover revoked contacts by guessing a banking id
 An empty view explains the protected-app invitation and authorization boundary.
 
 Owner management remains in authenticated APIs; the Telegram recipient cannot mint an
-owner capability. General incident submission and enhanced consent management are separate
-P1 work; the educational draft button explicitly says nothing has been submitted.
+owner capability. Contacts offer confirmed consent revocation. The educational draft is
+not submitted automatically: a separate demo SOC flow chooses a verified consent,
+category and short description, previews it, and requires explicit Submit. History opens
+current demo receipts. Every receipt read rechecks the same recipient's active consent.
+See INCIDENT_REPORTING.md for privacy, quotas, retention and error behavior.

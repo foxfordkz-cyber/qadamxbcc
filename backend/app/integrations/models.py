@@ -58,3 +58,27 @@ class ContactNotification(Base):
     message_id: Mapped[str | None] = mapped_column(String(32))
     error_code: Mapped[str | None] = mapped_column(String(40))
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class GuardianReport(Base):
+    __tablename__ = "guardian_reports"
+    __table_args__ = (
+        UniqueConstraint("owner_id", "idempotency_key", name="uq_guardian_owner_key"),
+        UniqueConstraint("owner_id", "content_hash", name="uq_guardian_owner_content"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("accounts.id"), index=True)
+    contact_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("trusted_contacts.id"))
+    transaction_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("transactions.id"))
+    idempotency_key: Mapped[uuid.UUID] = mapped_column()
+    content_hash: Mapped[str] = mapped_column(String(64))
+    category: Mapped[str] = mapped_column(String(24))
+    description: Mapped[str | None] = mapped_column(String(500))
+    state: Mapped[str] = mapped_column(String(32), default="SUBMITTED")
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(index=True)
+
+    @property
+    def source(self) -> str:
+        return "trusted_contact" if self.contact_id is not None else "owner_demo"
