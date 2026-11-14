@@ -15,7 +15,11 @@ from app.db.session import build_engine, build_session_factory
 from app.integrations.audit import record
 from app.integrations.config import IntegrationSettings, get_integration_settings
 from app.integrations.models import ContactNotification, TrustedContact
-from app.integrations.telegram.adapter import AiogramTelegramAdapter, TelegramAdapter
+from app.integrations.telegram.adapter import (
+    AiogramTelegramAdapter,
+    RejectedDeliveryError,
+    TelegramAdapter,
+)
 from app.integrations.telegram.fake_adapter import FakeTelegramAdapter
 from app.integrations.telegram.schemas import ContactState, NotificationState
 from app.integrations.telegram.templates import ALERTS
@@ -90,13 +94,32 @@ async def _deliver(
         else:
             try:
                 async with asyncio.timeout(cfg.adapter_timeout_seconds):
-                    row.message_id = await adapter.send(
-                        int(contact.telegram_chat_id),
-                        ALERTS[contact.language],
-                        row.id,
-                        contact.language,
-                    )
-                row.state = NotificationState.SENT
+                    for attempt in range(2):
+                        if row.expires_at <= utcnow():
+                            row.state = NotificationState.EXPIRED
+                            break
+                        try:
+                            row.message_id = await adapter.send(
+                                int(contact.telegram_chat_id),
+                                ALERTS[contact.language],
+                                row.id,
+                                contact.language,
+                            )
+                            row.state = NotificationState.SENT
+                            break
+                        except RejectedDeliveryError as exc:
+                            # Only explicit rejection is safe to retry. Never retry timeouts,
+                            # connection errors, 5xx, or ambiguous delivery after a crash.
+                            if attempt or not 0 <= exc.retry_after <= 1:
+                                raise
+                            record(
+                                session,
+                                row.owner_id,
+                                row.id,
+                                row.correlation_id,
+                                "NOTIFICATION_RETRY",
+                            )
+                            await asyncio.sleep(max(0.05, exc.retry_after))
             except Exception:  # isolation boundary: no provider exception text/secret is logged
                 row.state = NotificationState.FAILED
                 row.error_code = "delivery_failed_or_uncertain"

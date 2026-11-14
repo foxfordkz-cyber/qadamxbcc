@@ -60,6 +60,19 @@ access and establish retention/encryption policies before any non-demo usage.
 
 ## Review boundary
 
+Audit follow-up (2026-11-14): Telegram flood-control rejection (`retry_after`)
+permits at most one retry after the specified wait (minimum 50 ms), only when the
+wait is at most 1 second and within the overall adapter timeout/cooling expiry.
+Long waits, repeated rejection, generic errors, timeouts and unknown delivery are
+terminal. The existing durable claim remains in force; a crash never blindly resends.
+`NOTIFICATION_RETRY` is audited without provider text. This policy relies only on
+explicit failed responses documented in the [Telegram Bot API](https://core.telegram.org/bots/api#responseparameters).
+Polling rejects malformed updates/dependency failures at a sanitized error boundary.
+Regression tests use real aiogram dispatch with mocked HTTP; they do not prove live delivery.
+
+The row refresh on consent checks and FOR NO KEY UPDATE invitation guard are now
+included in PR A itself, with live PostgreSQL tests, rather than relying on PR C.
+
 Shared changes: register isolated ORM tables; mount a new router and error handler;
 add a reversible migration and compatible aiogram dependency. Existing API schemas
 are unchanged. Core owner must review these hooks before merge. Production is NO-GO:
