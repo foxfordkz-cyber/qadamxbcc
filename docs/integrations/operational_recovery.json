@@ -1,0 +1,110 @@
+{
+  "before": {
+    "status": "ok",
+    "checked_at": "2026-11-14T06:31:31.670785Z",
+    "cache_seconds": 5,
+    "database": "ok",
+    "redis": "ok",
+    "worker": "ok",
+    "telegram": "fake_enabled",
+    "gateway": "mock_ready",
+    "queue": {
+      "notifications_queued": 0,
+      "notifications_delayed": 0,
+      "notifications_failed": 0,
+      "runs_pending": 0
+    },
+    "last_successful_processing": "2026-11-14T06:21:11.128018Z",
+    "real_provider_probed": false
+  },
+  "redis_stopped": {
+    "status": "degraded",
+    "checked_at": "2026-11-14T06:31:39.420540Z",
+    "cache_seconds": 5,
+    "database": "ok",
+    "redis": "unavailable",
+    "worker": "unknown",
+    "telegram": "fake_enabled",
+    "gateway": "mock_ready",
+    "queue": {
+      "notifications_queued": 0,
+      "notifications_delayed": 0,
+      "notifications_failed": 0,
+      "runs_pending": 0
+    },
+    "last_successful_processing": "2026-11-14T06:21:11.128018Z",
+    "real_provider_probed": false
+  },
+  "redis_recovered": {
+    "status": "ok",
+    "checked_at": "2026-11-14T06:31:45.146232Z",
+    "cache_seconds": 5,
+    "database": "ok",
+    "redis": "ok",
+    "worker": "ok",
+    "telegram": "fake_enabled",
+    "gateway": "mock_ready",
+    "queue": {
+      "notifications_queued": 0,
+      "notifications_delayed": 0,
+      "notifications_failed": 0,
+      "runs_pending": 0
+    },
+    "last_successful_processing": "2026-11-14T06:21:11.128018Z",
+    "real_provider_probed": false
+  },
+  "postgres_stopped": {
+    "status": "degraded",
+    "checked_at": "2026-11-14T06:31:54.288469Z",
+    "cache_seconds": 5,
+    "database": "unavailable",
+    "redis": "ok",
+    "worker": "ok",
+    "telegram": "fake_enabled",
+    "gateway": "mock_ready",
+    "queue": null,
+    "last_successful_processing": null,
+    "real_provider_probed": false
+  },
+  "postgres_recovered": {
+    "status": "ok",
+    "checked_at": "2026-11-14T06:32:00.999140Z",
+    "cache_seconds": 5,
+    "database": "ok",
+    "redis": "ok",
+    "worker": "ok",
+    "telegram": "fake_enabled",
+    "gateway": "mock_ready",
+    "queue": {
+      "notifications_queued": 0,
+      "notifications_delayed": 0,
+      "notifications_failed": 0,
+      "runs_pending": 0
+    },
+    "last_successful_processing": "2026-11-14T06:21:11.128018Z",
+    "real_provider_probed": false
+  },
+  "worker_restarted": {
+    "status": "ok",
+    "checked_at": "2026-11-14T06:32:11.694552Z",
+    "cache_seconds": 5,
+    "database": "ok",
+    "redis": "ok",
+    "worker": "ok",
+    "telegram": "fake_enabled",
+    "gateway": "mock_ready",
+    "queue": {
+      "notifications_queued": 0,
+      "notifications_delayed": 0,
+      "notifications_failed": 0,
+      "runs_pending": 0
+    },
+    "last_successful_processing": "2026-11-14T06:21:11.128018Z",
+    "real_provider_probed": false
+  },
+  "persisted_after_restart": {
+    "core_status": "cooling_off",
+    "notifications": 1,
+    "state": "SUSPICION_REPORTED"
+  }
+}

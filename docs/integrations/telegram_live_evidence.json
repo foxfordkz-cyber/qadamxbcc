@@ -1,0 +1,129 @@
+{
+  "flows": [
+    {
+      "kind": "prepare-decline",
+      "contact_state": "CONTACT_REVOKED"
+    },
+    {
+      "kind": "prepare-ru",
+      "contact_state": "CONTACT_REVOKED",
+      "core_status": "cooling_off",
+      "notifications": [
+        "SUSPICION_REPORTED"
+      ],
+      "audit_events": [
+        "INTEGRATION_QUEUED",
+        "INTEGRATION_STARTED",
+        "NOTIFICATION_QUEUED",
+        "MOCK_GATEWAY_REQUESTED",
+        "MOCK_GATEWAY_INDICATORS",
+        "INTEGRATION_COMPLETE",
+        "NOTIFICATION_SENT",
+        "SUSPICION_REPORTED"
+      ],
+      "correlation_matches": true,
+      "timeline_codes": [
+        "TRANSFER_EVALUATED",
+        "DECISION_COOLING_OFF",
+        "COOLING_STARTED",
+        "INTEGRATION_QUEUED",
+        "INTEGRATION_STARTED",
+        "NOTIFICATION_QUEUED",
+        "MOCK_GATEWAY_REQUESTED",
+        "MOCK_GATEWAY_INDICATORS",
+        "INTEGRATION_COMPLETE",
+        "NOTIFICATION_SENT",
+        "SUSPICION_REPORTED"
+      ]
+    },
+    {
+      "kind": "prepare-kk",
+      "contact_state": "CONTACT_REVOKED",
+      "core_status": "cooling_off",
+      "notifications": [
+        "CONTACT_ACKNOWLEDGED"
+      ],
+      "audit_events": [
+        "INTEGRATION_QUEUED",
+        "INTEGRATION_STARTED",
+        "NOTIFICATION_QUEUED",
+        "MOCK_GATEWAY_REQUESTED",
+        "MOCK_GATEWAY_INDICATORS",
+        "INTEGRATION_COMPLETE",
+        "NOTIFICATION_SENT",
+        "CONTACT_ACKNOWLEDGED"
+      ],
+      "correlation_matches": true,
+      "timeline_codes": [
+        "TRANSFER_EVALUATED",
+        "DECISION_COOLING_OFF",
+        "COOLING_STARTED",
+        "INTEGRATION_QUEUED",
+        "INTEGRATION_STARTED",
+        "NOTIFICATION_QUEUED",
+        "MOCK_GATEWAY_REQUESTED",
+        "MOCK_GATEWAY_INDICATORS",
+        "INTEGRATION_COMPLETE",
+        "NOTIFICATION_SENT",
+        "CONTACT_ACKNOWLEDGED"
+      ]
+    }
+  ],
+  "delivery_ledger": [
+    {
+      "at": "2026-11-14T05:55:16.294223+00:00",
+      "kind": "SERVICE_REPLY",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T05:55:16.298223+00:00",
+      "kind": "SERVICE_REPLY",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T05:55:16.301223+00:00",
+      "kind": "SERVICE_REPLY",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T05:57:07.838620+00:00",
+      "kind": "SERVICE_REPLY",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T05:57:41.913784+00:00",
+      "kind": "CONSENT_PROMPT",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T05:58:10.620609+00:00",
+      "kind": "SERVICE_REPLY",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T05:58:48.778030+00:00",
+      "kind": "CONSENT_PROMPT",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T05:59:16.933192+00:00",
+      "kind": "ALERT_RU",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T06:03:14.279443+00:00",
+      "kind": "SERVICE_REPLY",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T06:05:24.500424+00:00",
+      "kind": "CONSENT_PROMPT",
+      "outcome": "PROVIDER_ACCEPTED"
+    },
+    {
+      "at": "2026-11-14T06:05:40.520239+00:00",
+      "kind": "ALERT_KK",
+      "outcome": "PROVIDER_ACCEPTED"
+    }
+  ]
+}
