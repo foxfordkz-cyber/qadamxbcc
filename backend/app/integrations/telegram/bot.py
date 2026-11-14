@@ -4,8 +4,10 @@ import asyncio
 import logging
 from typing import Literal
 
-from aiogram import Bot, Dispatcher, Router
+from aiogram import Bot, Dispatcher, F, Router
 from aiogram.filters import Command
+from aiogram.fsm.storage.base import DefaultKeyBuilder
+from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import (
     CallbackQuery,
     ErrorEvent,
@@ -19,6 +21,7 @@ from app.core.config import get_settings
 from app.db.session import build_engine, build_session_factory
 from app.integrations.config import get_integration_settings
 from app.integrations.errors import IntegrationError
+from app.integrations.telegram.guardian import build_router
 from app.integrations.telegram.handlers import process_update
 from app.integrations.telegram.schemas import SimulatedUpdate
 from app.integrations.telegram.service import TrustedContactService
@@ -54,7 +57,9 @@ async def run() -> None:
             count, _ = await pipe.execute()
         return int(count) <= cfg.rate_limit_per_minute
 
-    @router.message(Command("start", "revoke"))
+    router.include_router(build_router(factory, admitted))
+
+    @router.message(Command("start", "revoke"), F.text.contains(" "))
     async def command(message: Message) -> None:
         if (
             message.chat.type != "private"
@@ -103,7 +108,7 @@ async def run() -> None:
         else:
             await message.answer("Согласие отозвано / Келісім қайтарылды")
 
-    @router.callback_query()
+    @router.callback_query(~F.data.startswith("g:"))
     async def callback(query: CallbackQuery) -> None:
         message = query.message
         if (
@@ -132,7 +137,10 @@ async def run() -> None:
                 return
         await query.answer("Принято / Қабылданды")
 
-    dispatcher = Dispatcher()
+    storage = RedisStorage(
+        redis, key_builder=DefaultKeyBuilder(with_bot_id=True), state_ttl=900, data_ttl=900
+    )
+    dispatcher = Dispatcher(storage=storage, events_isolation=storage.create_isolation())
     dispatcher.include_router(router)
     try:
         await dispatcher.start_polling(bot, allowed_updates=["message", "callback_query"])
