@@ -2,6 +2,7 @@
 
 import secrets
 import time
+import uuid
 from collections.abc import Awaitable, Callable
 
 from aiogram import F, Router
@@ -12,7 +13,10 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.integrations.errors import IntegrationError
+from app.integrations.guardian_reports import contact_identity
 from app.integrations.models import ContactNotification, TrustedContact
+from app.integrations.telegram.guardian_reports import build_report_router
 from app.integrations.telegram.schemas import ContactState
 from app.integrations.telegram.templates import STATE_LABELS
 
@@ -226,6 +230,7 @@ def build_router(
     factory: async_sessionmaker[AsyncSession], admitted: Callable[[int], Awaitable[bool]]
 ) -> Router:
     router = Router(name="guardian")
+    router.include_router(build_report_router(factory, admitted))
 
     @router.message(Command("start", "help", "menu"), ~F.text.contains(" "))
     async def welcome(message: Message, state: FSMContext) -> None:
@@ -238,6 +243,13 @@ def build_router(
             return
         data = await state.get_data()
         language = data.get("language", "ru")
+        if "language" not in data:
+            await message.answer(
+                TEXT["ru"]["welcome"] + "\n\n" + TEXT["kk"]["welcome"],
+                reply_markup=keyboard([("Русский", "ru"), ("Қазақша", "kk")]),
+                parse_mode=None,
+            )
+            return
         await state.set_data({"language": language})
         await message.answer(
             TEXT[language]["welcome"], reply_markup=menu(language), parse_mode=None
@@ -257,6 +269,10 @@ def build_router(
         data = await state.get_data()
         language = data.get("language", "ru")
         action = (query.data or "")[2:]
+        if "report_contact" in data:
+            # Leaving report navigation cancels its pending text input and removes the draft.
+            data = {"language": language}
+            await state.set_data(data)
         if action in {"ru", "kk"}:
             language = action
             await state.set_data({"language": language})
@@ -268,6 +284,67 @@ def build_router(
         elif action in {"security", "contacts", "alerts", "history"}:
             text = await recipient_view(factory, message.chat.id, action, language)
             buttons = keyboard([(t["back"], "home")])
+            if action == "contacts":
+                async with factory() as session:
+                    contacts = list(
+                        await session.scalars(
+                            select(TrustedContact)
+                            .where(
+                                TrustedContact.telegram_chat_id == str(message.chat.id),
+                                TrustedContact.state == ContactState.VERIFIED,
+                                TrustedContact.contact_consented_at.is_not(None),
+                            )
+                            .limit(10)
+                        )
+                    )
+                for i, contact in enumerate(contacts):
+                    label = "Отозвать согласие " if language == "ru" else "Келісімді қайтару "
+                    buttons.inline_keyboard.insert(
+                        i,
+                        [
+                            InlineKeyboardButton(
+                                text=label + str(i + 1), callback_data="g:revoke:" + str(contact.id)
+                            )
+                        ],
+                    )
+            if action == "history":
+                buttons.inline_keyboard.insert(
+                    0,
+                    [
+                        InlineKeyboardButton(
+                            text="Мои демо-обращения"
+                            if language == "ru"
+                            else "Демо-хабарламаларым",
+                            callback_data="r:list",
+                        )
+                    ],
+                )
+        elif action.startswith("revoke:"):
+            try:
+                async with factory() as session:
+                    contact = await contact_identity(
+                        session, uuid.UUID(action.split(":")[1]), message.chat.id
+                    )
+            except (ValueError, IntegrationError):
+                await message.edit_text(
+                    t["stale"], reply_markup=keyboard([(t["back"], "home")]), parse_mode=None
+                )
+                return
+            text = (
+                "Отозвать согласие на уведомления?"
+                if language == "ru"
+                else "Хабарламаларға келісімді қайтару керек пе?"
+            )
+            buttons = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text=t["yes"], callback_data="revoke:" + str(contact.id)
+                        )
+                    ],
+                    [InlineKeyboardButton(text=t["no"], callback_data="g:contacts")],
+                ]
+            )
         elif action == "help":
             text, buttons = t["help_text"], keyboard([(t["back"], "home")])
         elif action == "scam" or action.startswith("a:"):
@@ -316,6 +393,17 @@ def build_router(
                 buttons = keyboard([(t["draft"], "draft"), (t["finish"], "home")])
         elif action == "draft":
             text, buttons = t["draft_text"], keyboard([(t["finish"], "home")])
+            buttons.inline_keyboard.insert(
+                0,
+                [
+                    InlineKeyboardButton(
+                        text="Демо-обращение в SOC"
+                        if language == "ru"
+                        else "SOC-қа демо-хабарлама",
+                        callback_data="r:begin",
+                    )
+                ],
+            )
         else:
             await state.set_data({"language": language})
         # Editing is never retried as a new send on an ambiguous provider result.

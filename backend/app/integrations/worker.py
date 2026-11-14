@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import logging
+import time
 
 from aiogram import Bot
 from redis.asyncio import Redis
@@ -10,6 +11,7 @@ from redis.asyncio import Redis
 from app.core.config import get_settings
 from app.db.session import build_engine, build_session_factory
 from app.integrations.config import get_integration_settings
+from app.integrations.guardian_reports import expire_reports
 from app.integrations.nbk_mock.adapter import MockGatewayAdapter
 from app.integrations.nbk_mock.client import GatewayClient
 from app.integrations.observability import HEARTBEAT, configure_logging
@@ -41,12 +43,20 @@ async def run(*, once: bool = False, check_health: bool = False) -> None:
         AiogramTelegramAdapter(bot, cfg.telegram_allowed_chat_ids) if bot else FakeTelegramAdapter()
     )
     client = GatewayClient(MockGatewayAdapter(), timeout=cfg.gateway_timeout_seconds)
+    last_cleanup = 0.0
+    burst = 0
     try:
         while True:
+            worked = False
             try:
                 async with asyncio.timeout(15):
-                    await process_one(factory, redis, cfg, client)
-                    await deliver_one(factory, adapter, cfg)
+                    if time.monotonic() - last_cleanup >= 60:
+                        async with factory() as session:
+                            await expire_reports(session)
+                        last_cleanup = time.monotonic()
+                    processed = await process_one(factory, redis, cfg, client)
+                    delivered = await deliver_one(factory, adapter, cfg)
+                    worked = processed or delivered
                     await redis.set(HEARTBEAT, "ok", ex=30)
             except Exception:
                 logger.warning(
@@ -56,7 +66,12 @@ async def run(*, once: bool = False, check_health: bool = False) -> None:
                     raise SystemExit(1) from None
             if once:
                 break
-            await asyncio.sleep(0.5)
+            burst = burst + 1 if worked else 0
+            # Bounded fake/demo drain; real Telegram retains its previous pacing.
+            delay = 0.01 if worked and burst < 10 and cfg.telegram_mode != "test" else 0.5
+            if burst >= 10:
+                burst = 0
+            await asyncio.sleep(delay)
     finally:
         if bot:
             await bot.session.close()

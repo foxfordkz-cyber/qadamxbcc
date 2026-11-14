@@ -2,9 +2,11 @@
 
 import asyncio
 import logging
+from contextlib import suppress
 from typing import Literal
 
 from aiogram import Bot, Dispatcher, F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.redis import RedisStorage
@@ -25,7 +27,7 @@ from app.integrations.telegram.guardian import build_router
 from app.integrations.telegram.handlers import process_update
 from app.integrations.telegram.schemas import SimulatedUpdate
 from app.integrations.telegram.service import TrustedContactService
-from app.integrations.telegram.templates import CONSENT
+from app.integrations.telegram.templates import CONSENT, STATE_LABELS
 
 
 async def run() -> None:
@@ -108,7 +110,7 @@ async def run() -> None:
         else:
             await message.answer("Согласие отозвано / Келісім қайтарылды")
 
-    @router.callback_query(~F.data.startswith("g:"))
+    @router.callback_query(~(F.data.startswith("g:") | F.data.startswith("r:")))
     async def callback(query: CallbackQuery) -> None:
         message = query.message
         if (
@@ -131,11 +133,21 @@ async def run() -> None:
         )
         async with factory() as session:
             try:
-                await process_update(TrustedContactService(session, cfg), update)
+                result = await process_update(TrustedContactService(session, cfg), update)
             except IntegrationError:
                 await query.answer("Недействительный запрос / Жарамсыз сұрау")
                 return
         await query.answer("Принято / Қабылданды")
+        labels = STATE_LABELS.get(result.state, ("Согласие подтверждено", "Келісім расталды"))
+        marker = "\n\nСтатус / Күй: "
+        text = (message.text or "").split(marker)[0] + marker + " / ".join(labels)
+        markup = (
+            None
+            if result.state in {"CONTACT_REVOKED", "SUSPICION_REPORTED"}
+            else message.reply_markup
+        )
+        with suppress(TelegramBadRequest):
+            await message.edit_text(text, reply_markup=markup, parse_mode=None)
 
     storage = RedisStorage(
         redis, key_builder=DefaultKeyBuilder(with_bot_id=True), state_ttl=900, data_ttl=900

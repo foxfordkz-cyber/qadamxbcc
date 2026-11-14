@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.api.deps import SessionDep
 from app.api.v1.external_checks import ResourcesDep
 from app.integrations.errors import IntegrationError
+from app.integrations.guardian_summary import IncidentSummary, summarize
 from app.integrations.health_details import HealthDetails, HealthSampler
 from app.integrations.security import ConfigDep, PrincipalDep, require_role, verify_token
 from app.integrations.timeline import TimelinePage, timeline
@@ -57,3 +58,22 @@ async def integration_health_details(
         raise
     response.headers["Cache-Control"] = "no-store"
     return await sampler.sample(resources, cfg)
+
+
+@router.get("/soc/transactions/{transaction_id}/summary", response_model=IncidentSummary)
+async def incident_summary(
+    transaction_id: uuid.UUID,
+    session: SessionDep,
+    cfg: ConfigDep,
+    principal: PrincipalDep,
+    resources: ResourcesDep,
+    request: Request,
+    response: Response,
+) -> IncidentSummary:
+    require_role(principal, "soc")
+    sampler = getattr(request.app.state, "integration_health_sampler", None)
+    if not isinstance(sampler, HealthSampler):
+        sampler = HealthSampler()
+        request.app.state.integration_health_sampler = sampler
+    response.headers["Cache-Control"] = "no-store"
+    return await summarize(session, transaction_id, await sampler.sample(resources, cfg))
