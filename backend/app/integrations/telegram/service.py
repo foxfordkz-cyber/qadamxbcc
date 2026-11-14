@@ -218,10 +218,10 @@ class TrustedContactService:
         )
         if prior is not None:
             return prior
-        if not contact.notifications_enabled:
-            raise IntegrationError(409, "contact_notifications_disabled")
         if contact.state != ContactState.VERIFIED or contact.contact_consented_at is None:
             raise IntegrationError(409, "contact_consent_required")
+        if not contact.notifications_enabled:
+            raise IntegrationError(409, "contact_notifications_disabled")
         if (
             tx.status != TransactionStatus.COOLING_OFF
             or tx.cooling_until is None
