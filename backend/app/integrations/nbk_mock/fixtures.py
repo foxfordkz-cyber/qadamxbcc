@@ -4,4 +4,5 @@ from app.integrations.nbk_mock.schemas import GatewayStatus
 SANDBOX: dict[str, GatewayStatus] = {
     "SYN-CLEAR-001": GatewayStatus.CLEAR,
     "SYN-REVIEW-001": GatewayStatus.INDICATORS,
+    "SYN-NETWORK-001": GatewayStatus.INDICATORS,
 }
