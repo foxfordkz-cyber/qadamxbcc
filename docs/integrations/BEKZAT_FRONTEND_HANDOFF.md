@@ -2,20 +2,19 @@
 
 Scope: additive APIs from [PR #1](https://github.com/foxfordkz-cyber/qadamxbcc/pull/1),
 [PR #2](https://github.com/foxfordkz-cyber/qadamxbcc/pull/2) and
-[PR #3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3). Current core baseline a02d20d.
+[PR #3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3), plus additive [PR #4](https://github.com/foxfordkz-cyber/qadamxbcc/pull/4). Current core baseline a02d20d.
 Existing frontend/core contracts are preserved. No frontend files were changed.
 
 Durable retry update: notification responses include `attempts` and `next_attempt_at`.
 Explicit Telegram rejection schedules at most three attempts across restarts. A queued
 notification with `telegram_rate_limited` is waiting until its persisted due time.
 Consent, core state and expiry are rechecked; ambiguous delivery is never resent.
-Implementation: `04392a8` in PR #1, inherited by this stack. The prior audit below
-records historical verification; new acceptance results are documented separately.
+Implementation: `04392a8` in PR #1, inherited by this stack. Authorized real acceptance is recorded in TELEGRAM_LIVE_ACCEPTANCE.md.
 
 ## Contract package
 
 - [openapi.json](openapi.json): complete generated FastAPI OpenAPI, including enums, UUID/date-time constraints and request/response components.
-- [api_examples.json](api_examples.json): one request/response example for every new operation, role, headers and success status; all 13 are validated against actual route models in CI.
+- [api_examples.json](api_examples.json): one request/response example for every new operation, role, headers and success status; all 15 are validated against actual route models in CI.
 - [ui_texts.json](ui_texts.json): RU/KK labels for contact, notification, run, gateway, marker and error states. `kk` is the ISO language code used by the project.
 
 Examples are synthetic static illustrations. Header placeholders and the invitation
@@ -39,6 +38,8 @@ updates from polling. Only fake-mode operators derive the deterministic fake mes
 | GET `/api/v1/integrations/transactions/{transaction_id}` | owner | 200 | — |
 | GET `/api/v1/integrations/soc/transactions/{transaction_id}` | soc | 200 | — |
 | GET `/api/v1/integrations/health` | soc | 200 | — |
+| GET `/api/v1/integrations/soc/transactions/{transaction_id}/timeline` | soc | 200 | — |
+| GET `/api/v1/integrations/health/details` | soc | 200 | — |
 
 ## Authorization and request rules
 
@@ -128,3 +129,47 @@ The contract package has executable validation, but no joint browser acceptance 
 human core-owner approval has occurred. These remain explicit team dependencies.
 See [demo guide](BEKZAT_DEMO_GUIDE.md), [verification](BEKZAT_FINAL_VERIFICATION.md)
 and [readiness matrix](BEKZAT_90_PERCENT_AUDIT.md) for evidence and limits.
+
+## Timeline and Health presentation
+
+Timeline returns `transaction_id`, `as_of`, `events`, `next_cursor`, `advisory_only`.
+Render each event's timestamp/category/importance and description_ru/description_kk;
+importance is a static presentation label, not a new risk score. Preserve opaque cursor
+verbatim, page size 1–100 (default 50), continue until null. Cursor expires after 15min
+and binds transaction: on 422 discard cursor and reload the first page. Core facts have
+null correlation and source persisted_core; audit rows retain their actual correlation.
+Do not invent intermediate core decisions. Detailed projection/consistency rules are
+in [INCIDENT_TIMELINE_SPEC.md](INCIDENT_TIMELINE_SPEC.md).
+
+Health details returns `status`, `checked_at`, DB/Redis/worker states, configured
+Telegram/gateway modes, queue counts, nullable last_successful_processing. Poll no
+faster than 5s and share polling between widgets. queue=null means unknown, not empty.
+telegram=test_enabled does not prove Telegram availability. gateway=mock_ready means
+the in-process MOCK is enabled. Healthy/degraded responses remain HTTP 200; expired
+auth is 401, wrong role 403. Only this diagnostic API uses a bounded process-local
+SOC budget during Redis failure; other protected APIs retain Redis fail-closed rules.
+See [INTEGRATION_HEALTH_REPORT.md](INTEGRATION_HEALTH_REPORT.md) for definitions.
+
+Notification `attempts` counts reserved delivery claims, an upper bound on network
+attempts (expiry may prevent I/O); pre-migration historical rows default to zero.
+`next_attempt_at` is a server schedule, never an instruction to call send again.
+Do not retry DELIVERY_FAILED after ambiguous send. A scheduled rejection retry is
+still NOTIFICATION_QUEUED; show its due time and preserve the same notification ID.
+
+## Optional educational Scam Safety mapping
+
+Reuse the existing CoolingQuestionnaire fields; no new endpoint, blocker or automatic
+banking decision is introduced. An educational screen alone must not submit resolve-cooling.
+Existing explicit core resolution remains subject to its own contract and user intent.
+
+| Existing field | RU prompt | KK prompt |
+|---|---|---|
+| caller_claims_bank_or_police | Звонящий представился сотрудником банка или полиции? | Қоңырау шалушы өзін банк немесе полиция қызметкері деп таныстырды ма? |
+| asked_to_move_to_safe_account | Вас просили перевести деньги на «безопасный счёт»? | Ақшаны «қауіпсіз шотқа» аударуды сұрады ма? |
+| asked_to_keep_secret_or_install_app | Вас просили скрыть перевод или установить приложение удалённого доступа? | Аударымды құпия ұстауды немесе қашықтан қол жеткізу қолданбасын орнатуды сұрады ма? |
+| initiated_by_customer | Вы сами решили сделать этот перевод? | Бұл аударымды өзіңіз жасауды шештіңіз бе? |
+| knows_recipient_personally | Вы лично знаете получателя? | Алушыны жеке танисыз ба? |
+
+This is handoff copy for existing fields, not a second implemented questionnaire or
+completed frontend feature. Trusted Circle is deferred; do not fan out invitations or
+silently increase the single-active-contact quota.

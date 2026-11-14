@@ -1,8 +1,9 @@
 # Bekzat — three synthetic hackathon demos
 
-Verified 2026-11-14 on source `e23df31514553990b59b9c0181046aff2c1c63fa`, [PR #3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3).
+Verified 2026-11-14 on source `84c793028accd21c293dd50be4630072c816e924`, [PR #4](https://github.com/foxfordkz-cyber/qadamxbcc/pull/4).
 Use a fresh isolated demo database/volume and the existing core-owned synthetic seed.
-There are no real money transfers, personal customer data, Telegram sends or NBK calls.
+These three scripted scenarios use fake Telegram and synthetic data, with no bank/NBK calls.
+Separate authorized real Telegram acceptance is documented in TELEGRAM_LIVE_ACCEPTANCE.md.
 The new scenarios run through API/worker; frontend owners still wire the UI contracts.
 
 ## Reproducible setup
@@ -29,7 +30,7 @@ persists. Do not rerun core seed over integration history: its core-table reset 
 an integration retention tool. Run only one project on the default host ports. Stop
 only the explicitly selected disposable project when finished; never reset shared data.
 Base Compose starts without Telegram credentials; the optional worker needs local
-integration config. Existing running audit project: bcc-bekzat-final, five healthy services.
+integration config. Existing running audit project: bcc-bekzat-premium, five healthy services.
 Frontend localhost:3000; API docs localhost:8000/docs. New integration UI is not included.
 
 ## DEMO 1 — normal transfer (about 20 seconds to explain)
@@ -62,13 +63,13 @@ evidence about a real person and is not an official NBK response.
 
 | Scenario | Preserved core status | Transaction | Result |
 |---|---|---|---|
-| normal | approved | `95623625-753a-4aed-99a9-a116277f7e0b` | PASS |
-| scam | cooling_off | `9f222096-9c0e-434e-9725-3126074aace1` | PASS |
-| hub | blocked | `17ec8581-e437-4205-8b26-966fbaf7d7ec` | PASS |
+| normal | approved | `a2e9ef26-3b8b-461d-a48d-7b52acd6343b` | PASS |
+| scam | cooling_off | `55bba412-ee9b-4312-9635-7b551065f237` | PASS |
+| hub | blocked | `10d8a7fb-c295-4fec-9298-07df26712d8a` | PASS |
 
 The script emits safe JSON result lines only; a nonzero exit or missing PASS means
-the demo failed, not that it should be narrated as successful. Readiness is GO only
-for the verified fake flow. The script has bounded polling and raises on 401/429/503,
+the demo failed, not that it should be narrated as successful. The repeatable script uses fake delivery. Separately authorized real RU/KK
+acceptance is recorded in TELEGRAM_LIVE_ACCEPTANCE.md; its polling session is stopped. The script has bounded polling and raises on 401/429/503,
 unexpected status or absent evidence. Observe Retry-After/default rate limits if
 manually driving the APIs; use the complete request examples and owner/SOC separation.
 
@@ -79,8 +80,21 @@ manually driving the APIs; use the complete request examples and owner/SOC separ
 - Expired capability/invitation: obtain an authorized new demo session/invitation; do not bypass consent.
 - Failed/uncertain delivery: show that status; do not resend blindly or call it delivered.
 - Provider unavailable: show UNKNOWN/UNAVAILABLE; it cannot authorize or condemn a payment.
-- No real Telegram delivery is claimed. An authorized consenting-recipient test remains BLOCKED.
+- Real RU/KK delivery and callbacks were accepted separately; do not restart sending without a new scoped test session/consent.
 
 See [frontend handoff](BEKZAT_FRONTEND_HANDOFF.md), [verification](BEKZAT_FINAL_VERIFICATION.md)
 and [100-requirement audit](BEKZAT_90_PERCENT_AUDIT.md). Team merge waits for human review;
 production remains NO-GO regardless of demo score.
+
+## SOC observability walkthrough
+
+With a short-lived SOC capability, GET `/api/v1/integrations/soc/transactions/{id}/timeline`.
+Show persisted transfer evaluation, decision/cooling, queued/sent notification, contact
+signal and mock gateway/enrichment events. Read description_ru/description_kk, paginate
+using next_cursor; no chat address or raw provider diagnostic is exposed. GET
+`/api/v1/integrations/health/details` shows queue/dependency/worker state and last success.
+Poll at >=5s; adapter test_enabled is configuration, not proof of provider availability.
+The separate recovery harness observed Redis/PG outage and recovery on the fake stack.
+Before replaying the three strict presets, create a fresh disposable seeded environment:
+benchmark traffic intentionally changes current velocity/history. Never erase the
+preserved live acceptance DB just to reset a demonstration.

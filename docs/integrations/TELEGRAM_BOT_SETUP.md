@@ -17,7 +17,7 @@ Compatibility sources: [PyPI](https://pypi.org/project/aiogram/3.31.0/) and
    person's consent. Evaluate a synthetic cooling transfer through the existing API.
 5. Queue a notification with the owner credential. Run
    `uv run python -m app.integrations.telegram.worker --once` (or without `--once`
-   for polling). Inspect notification history. Fake mode never contacts Telegram.
+   for continuous delivery processing). Inspect notification history. Fake mode never contacts Telegram.
 
 For a separately authorized environment with consenting participants only, set:
 `BCC_INTEGRATIONS_ENVIRONMENT=test`, `BCC_INTEGRATIONS_TELEGRAM_MODE=test`,
@@ -27,7 +27,19 @@ processes. Polling trusts identities received from Telegram, accepts only privat
 allowlisted chats, and applies a Redis rate limit. No webhook is exposed.
 Share `https://t.me/<your-test-bot>?start=<invitation-token>` privately. The recipient
 must click consent; `/revoke <contact-uuid>` withdraws participation. The owner can
-also revoke via API. No real Telegram messages were sent during implementation.
+also revoke via API. Authorized RU/KK live acceptance was completed on 2026-11-14;
+see [TELEGRAM_LIVE_ACCEPTANCE.md](TELEGRAM_LIVE_ACCEPTANCE.md) for actual delivery,
+callback evidence and remaining controlled-only scenarios. That session is now stopped.
+
+On the tested Windows workstation, the local helper protects the token as a DPAPI
+SecureString inside a current-user-only ACL directory outside Git. It explicitly imports
+the Security module from the running Windows PowerShell's PSHOME. Repair validates the
+existing encrypted file without printing/decrypting its value and preserves history.
+Only the authorized runtime decrypts into process memory/environment. Do not pass the
+token in command arguments or chat, capture the secret prompt, or export private state.
+Reusing a valid protected token does not require another secret entry. Starting a new
+real acceptance session still requires a confirmed private recipient and scoped consent;
+the completed session's send grant is closed. Avoid concurrent pollers for the same bot.
 
 Rotate the signing key to invalidate demo capabilities. Never expose the simulator
 credential to the mobile app. Disable integrations or use `telegram_mode=disabled`

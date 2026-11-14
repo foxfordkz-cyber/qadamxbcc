@@ -65,3 +65,5 @@ environment, not production bank IAM, delivery SLA or a general Telegram certifi
 Implementation dependencies: PR #1 (durable retry/worker recovery), PR #2 (MOCK gateway),
 PR #3 (orchestration). Timeline and diagnostic Health are additive review work.
 The final verification package records checked commit SHAs, CI and sanitized live evidence.
+The checked-in [telegram_live_evidence.json](telegram_live_evidence.json) records the
+final revoked-contact states, persisted event codes and 11 accepted send timestamps.

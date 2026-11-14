@@ -1,20 +1,20 @@
 {
   "total": 100,
   "counts": {
-    "DONE": 96,
-    "PARTIAL": 1,
-    "BLOCKED": 3,
+    "DONE": 98,
+    "BLOCKED": 2,
+    "PARTIAL": 0,
     "MISSING": 0
   },
   "not_applicable": 0,
-  "score": 97.25,
+  "score": 99.5,
   "breakdown": [
     {
       "group": "T",
       "weight": 30,
       "requirements": 20,
-      "points": 18.5,
-      "weighted": 27.75
+      "points": 20,
+      "weighted": 30.0
     },
     {
       "group": "G",
@@ -121,19 +121,19 @@
     {
       "id": "T09",
       "requirement": "Реальная доставка в разрешённой тестовой среде",
-      "status": "BLOCKED",
-      "evidence": "aiogram adapter реализован; реальный send не выполнялся",
-      "tests": "Мок HTTP не является подтверждением live Telegram",
-      "remaining": "Нужны разрешённый test bot, allowlisted участник и подтверждённое согласие; live-send не выполнялся",
+      "status": "DONE",
+      "evidence": "Authorized live RU/KK alerts, 11 accepted messages; TELEGRAM_LIVE_ACCEPTANCE.md",
+      "tests": "Real private-chat consent/decline/revoke, suspicion and acknowledgment callbacks, SOC reload",
+      "remaining": "—",
       "priority": "P1"
     },
     {
       "id": "T10",
       "requirement": "Повтор при временном отказе",
-      "status": "PARTIAL",
-      "evidence": "2 попытки только явного 429, wait <=1s, общий timeout",
-      "tests": "test_rejected_send_retries_once_without_duplicate; test_long_retry_after_does_not_wait_or_resend",
-      "remaining": "Длительные retry_after требуют durable delayed scheduling; сейчас явный отказ >1s терминален, ambiguous send никогда не повторяется",
+      "status": "DONE",
+      "evidence": "Persisted next_attempt_at and max 3 claims; explicit rejection only; migration 0002a",
+      "tests": "test_durable_retry + concurrent due-claim PostgreSQL regression",
+      "remaining": "—",
       "priority": "P2"
     },
     {
@@ -221,8 +221,8 @@
       "id": "T20",
       "requirement": "Telegram integration tests",
       "status": "DONE",
-      "evidence": "47 cases на самостоятельном PR A",
-      "tests": "PostgreSQL/Redis 47 passed + A CI",
+      "evidence": "57 cases на самостоятельном PR A",
+      "tests": "PostgreSQL/Redis 57 passed + A CI",
       "remaining": "—",
       "priority": "P1"
     },
@@ -554,7 +554,7 @@
       "id": "O17",
       "requirement": "Integration API",
       "status": "DONE",
-      "evidence": "13 operations total; owner/SOC/simulator separation",
+      "evidence": "15 operations total; owner/SOC/simulator separation",
       "tests": "test_soc_requires_soc_role_and_owner_is_scoped; API examples tests",
       "remaining": "—",
       "priority": "P1"
@@ -627,7 +627,7 @@
       "requirement": "Input validation and consistent errors",
       "status": "DONE",
       "evidence": "Pydantic schemas + sanitized IntegrationError",
-      "tests": "security tests + 13 request examples validation",
+      "tests": "security tests + 15 request examples validation",
       "remaining": "—",
       "priority": "P1"
     },
@@ -645,7 +645,7 @@
       "requirement": "Concurrent duplicate protection in PostgreSQL",
       "status": "DONE",
       "evidence": "unique keys + row locks",
-      "tests": "6 live-only concurrency/locking cases",
+      "tests": "7 live-only concurrency/locking cases",
       "remaining": "—",
       "priority": "P1"
     },
@@ -789,7 +789,7 @@
       "requirement": "Request/response examples for every operation",
       "status": "DONE",
       "evidence": "api_examples.json, roles/headers/statuses",
-      "tests": "13 test_frontend_examples_match_published_routes cases",
+      "tests": "15 test_frontend_examples_match_published_routes cases",
       "remaining": "—",
       "priority": "P1"
     },
@@ -948,82 +948,116 @@
     }
   ],
   "verification": {
-    "source_sha": "e23df31514553990b59b9c0181046aff2c1c63fa",
-    "main_sha": "a02d20dcc857001de364e0b0f12a66ce72db0c12",
-    "prs": [
-      {
-        "number": 1,
-        "head_sha": "e7fdd171c0bf607439c678278c715f30dab44b1b",
-        "state": "open",
-        "draft": true,
-        "mergeable": true,
-        "merged": false,
-        "review_count": 0,
-        "run_id": 43555909599
-      },
-      {
-        "number": 2,
-        "head_sha": "71b1c3a64600020fc44c4c8df7613b103a15c0db",
-        "state": "open",
-        "draft": true,
-        "mergeable": true,
-        "merged": false,
-        "review_count": 0,
-        "run_id": 43556125459
-      },
-      {
-        "number": 3,
-        "head_sha": "e23df31514553990b59b9c0181046aff2c1c63fa",
-        "state": "open",
-        "draft": true,
-        "mergeable": true,
-        "merged": false,
-        "review_count": 0,
-        "run_id": 43557924729
-      }
+    "implementation_sha": "84c793028accd21c293dd50be4630072c816e924",
+    "baseline": "a02d20dcc857001de364e0b0f12a66ce72db0c12",
+    "unique_backend": 199,
+    "integration_cases": 151,
+    "frontend_cases": 12,
+    "portable_passed": 192,
+    "portable_skipped": 7,
+    "live_alerts": 2,
+    "accepted_send_message_calls": 11,
+    "pr_implementation_heads": [
+      "59550de781c146e517e082cada22f64bd4405e32",
+      "be7489d7bfb4f9e6a392d3c1088865a31c9db083",
+      "4533b16769a04a71b3756bc77119b276752377cf",
+      "84c793028accd21c293dd50be4630072c816e924"
+    ],
+    "successful_ci_runs": [
+      43563302792,
+      43563495541,
+      43563561759,
+      43565606217
     ],
     "latency": {
-      "median_main_p95_ms": 4.017225,
-      "median_integrated_p95_ms": 4.9204,
-      "main_p95_ms": [
-        4.017225,
-        3.41476,
-        6.534625
-      ],
-      "integrated_p95_ms": [
-        4.9204,
-        10.470195,
-        3.67586
+      "date_utc": "2026-11-14T06:32:29.648331+00:00",
+      "quantiles": "nearest rank",
+      "environment": "Windows Python 3.12.16, Docker Desktop PG16/Redis7, synthetic data",
+      "comparison": "single implementation, no speedup or regression claim",
+      "engine_only": {
+        "attempted": 500,
+        "successes": 500,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 5.7827,
+        "p95_ms": 15.5109,
+        "p99_ms": 32.7947,
+        "scope": "engine + graph + real Redis14; 30 warmups; excludes HTTP/SQL"
+      },
+      "http_database": {
+        "attempted": 100,
+        "successes": 100,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 79.2297,
+        "p95_ms": 446.7354,
+        "p99_ms": 662.804,
+        "scope": "loopback HTTP + Docker FastAPI + engine + PG; 10 warmups; serial reused sender, risk outcomes may vary"
+      },
+      "integration_enqueue_http": {
+        "attempted": 20,
+        "successes": 20,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 76.9344,
+        "p95_ms": 116.1098,
+        "p99_ms": 123.2384
+      },
+      "queue_wait": {
+        "attempted": 20,
+        "successes": 20,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 9774.138,
+        "p95_ms": 13896.28,
+        "p99_ms": 14367.428
+      },
+      "integration_processing": {
+        "attempted": 20,
+        "successes": 20,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 26.218,
+        "p95_ms": 41.138,
+        "p99_ms": 133.19
+      },
+      "integration_total": {
+        "attempted": 20,
+        "successes": 20,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 9794.754,
+        "p95_ms": 13923.344,
+        "p99_ms": 14397.282
+      },
+      "integration_workload": "20 gateway-only fake jobs in a burst; one worker, 0.5s loop; persisted audit timestamps, not client polling delay; no Telegram; p99 is maximum at N=20",
+      "health_after": {
+        "status": "ok",
+        "checked_at": "2026-11-14T06:33:09.086211Z",
+        "cache_seconds": 5,
+        "database": "ok",
+        "redis": "ok",
+        "worker": "ok",
+        "telegram": "fake_enabled",
+        "gateway": "mock_ready",
+        "queue": {
+          "notifications_queued": 0,
+          "notifications_delayed": 0,
+          "notifications_failed": 0,
+          "runs_pending": 0
+        },
+        "last_successful_processing": "2026-11-14T06:33:08.917864Z",
+        "real_provider_probed": false
+      },
+      "timeline_codes": [
+        "TRANSFER_EVALUATED",
+        "DECISION_APPROVED",
+        "INTEGRATION_QUEUED",
+        "INTEGRATION_STARTED",
+        "MOCK_GATEWAY_REQUESTED",
+        "MOCK_GATEWAY_CLEAR",
+        "INTEGRATION_COMPLETE"
       ]
-    },
-    "demos": [
-      {
-        "scenario": "normal",
-        "core_status": "approved",
-        "transaction_id": "95623625-753a-4aed-99a9-a116277f7e0b"
-      },
-      {
-        "scenario": "scam",
-        "core_status": "cooling_off",
-        "transaction_id": "9f222096-9c0e-434e-9725-3126074aace1"
-      },
-      {
-        "scenario": "hub",
-        "core_status": "blocked",
-        "transaction_id": "17ec8581-e437-4205-8b26-966fbaf7d7ec"
-      }
-    ],
-    "ci_counts": [
-      "2026-11-14T04:42:57.6725866Z 165 passed, 6 skipped in 26.65s",
-      "2026-11-14T04:43:34.9369651Z \\u001b[1;36m==> verify: ALL GREEN\\u001b[0m",
-      "2026-11-14T04:44:11.8980746Z 123 passed in 31.30s"
-    ],
-    "ci_masking": {
-      "run_id": 43557924729,
-      "job_id": 132334883902,
-      "log_size": 58767,
-      "unmasked": 0,
-      "masked": 4
     }
   }
 }
