@@ -28,3 +28,10 @@ STATE_LABELS = {
     "DELIVERY_FAILED": ("Доставка не подтверждена", "Жеткізу расталмады"),
     "CONTACT_REVOKED": ("Согласие отозвано", "Келісім қайтарылды"),
 }
+
+
+ALERTS = {
+    "ru": "🛡 BCC Shield Guardian — демо, не официальный сервис банка.\n" + ALERTS["ru"],
+    "kk": "🛡 BCC Shield Guardian — демо, банктің ресми қызметі емес.\n" + ALERTS["kk"],
+}
+CONSENT = "BCC Shield — демо, не сервис банка / банктің қызметі емес.\n" + CONSENT

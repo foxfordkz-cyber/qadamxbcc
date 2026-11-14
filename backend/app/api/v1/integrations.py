@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from app.api.deps import SessionDep
 from app.api.v1.external_checks import ResourcesDep
+from app.api.v1.guardian_reports import router as reports_router
 from app.api.v1.integration_insights import router as insights_router
 from app.integrations.contracts import (
     EnrichmentOut,
@@ -26,6 +27,7 @@ from app.models import Transaction
 
 router = APIRouter(prefix="/integrations", tags=["advisory orchestration"])
 router.include_router(insights_router)
+router.include_router(reports_router)
 
 
 @router.post("/transactions/{transaction_id}", response_model=RunOut, status_code=202)

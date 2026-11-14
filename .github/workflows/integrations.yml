@@ -61,7 +61,7 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations up -d --wait --wait-timeout 120
       - name: Exercise fake end-to-end flow
         working-directory: backend
-        run: uv run --python 3.12 python -m scripts.demo_integrations
+        run: uv run --python 3.12 python -m scripts.demo_guardian
       - name: Shutdown disposable stack
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations down -v
