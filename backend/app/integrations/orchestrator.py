@@ -128,6 +128,7 @@ async def process_one(
             return True
         run.attempts += 1
         run.state = RunState.RUNNING
+        run.error_code = None  # previous failure remains in audit, not the current outcome
         run.claimed_at = utcnow()
         run_id = run.id
         record(session, run.owner_id, run.id, run.correlation_id, "INTEGRATION_STARTED")
