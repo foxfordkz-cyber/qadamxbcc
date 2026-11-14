@@ -4,6 +4,8 @@ Scope: additive APIs from [PR #1](https://github.com/foxfordkz-cyber/qadamxbcc/p
 [PR #2](https://github.com/foxfordkz-cyber/qadamxbcc/pull/2) and
 [PR #3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3). Current core baseline a02d20d.
 Existing frontend/core contracts are preserved. No frontend files were changed.
+Validated implementation: `e23df31514553990b59b9c0181046aff2c1c63fa`;
+[successful CI](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43557924729).
 
 ## Contract package
 

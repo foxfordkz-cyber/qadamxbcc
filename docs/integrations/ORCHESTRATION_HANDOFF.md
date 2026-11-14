@@ -1,5 +1,7 @@
 # Integration orchestration and local demo handoff
 
+Updated 2026-11-14: the demo script now exercises normal, scam and hub scenarios. See [three-demo guide](BEKZAT_DEMO_GUIDE.md) and [complete frontend contracts](BEKZAT_FRONTEND_HANDOFF.md).
+
 Review stack: [A #1](https://github.com/foxfordkz-cyber/qadamxbcc/pull/1) →
 [B #2](https://github.com/foxfordkz-cyber/qadamxbcc/pull/2) →
 [C #3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3).

@@ -39,19 +39,19 @@ All paths below begin `/api/v1`. The typed source of truth is `/openapi.json`.
 
 Total: 10 new paths, 13 operations. Existing current-main paths and component schemas
 are preserved. Full role/error/state/UI rules are in [API contracts](INTEGRATION_API_CONTRACTS.md)
-and [orchestration handoff](ORCHESTRATION_HANDOFF.md).
+and the complete [frontend handoff](BEKZAT_FRONTEND_HANDOFF.md).
 
-## Tests and verification
+## Tests and verification (2026-11-14)
 
-88 new parametrized test cases: A 38, B 30, C/final fixes 20. This is a case count,
-not 88 separately named functions. Six require live PostgreSQL; 82 are portable.
-The added test area has six test modules plus fixtures and package initialization.
-Final full verification: 130 backend passes with 6 live-only skips, 12 existing
-frontend passes, Ruff, strict mypy, TypeScript, Next.js build and Compose validation.
-All 88 integration cases then pass against real PostgreSQL/Redis. Distinct backend
-coverage is 136 cases; reruns and existing frontend tests are not claimed as new work.
-Migration round trips, OpenAPI comparison and Docker E2E pass. See the
-[test report](INTEGRATION_TEST_REPORT.md) for commands, measured latency and CI links.
+123 integration cases, including 35 added during this final audit and six live-only
+PostgreSQL cases. The two old C regressions backported into A are not counted again.
+Final source CI e23df31: 165 backend passed/6 live-only skipped in verify.sh, then
+123 integration passed with PostgreSQL/Redis. This is 171 unique backend cases =
+48 existing core + 123 integration. All 12 existing frontend tests, TypeScript,
+Next.js build, Ruff, strict mypy and Compose checks pass. Frontend tests are inherited.
+All three synthetic full-stack demos and the migration roundtrip pass.
+See [verification](BEKZAT_FINAL_VERIFICATION.md) for precise local/CI distinctions,
+latency results, before/after failures and limitations; reruns are not added together.
 
 ## Published Draft PRs and commits
 
@@ -59,47 +59,44 @@ Migration round trips, OpenAPI comparison and Docker E2E pass. See the
 |---|---|---|
 | [A #1](https://github.com/foxfordkz-cyber/qadamxbcc/pull/1) | feature/bekzat-trusted-contact | main; first |
 | [B #2](https://github.com/foxfordkz-cyber/qadamxbcc/pull/2) | feature/bekzat-nbk-mock-gateway | A; second |
-| [C #3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3) | feature/bekzat-integration-orchestrator | B, which includes A; third |
+| [C #3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3) | feature/bekzat-integration-orchestrator | B; third |
 
-The explicit stack shares authorization/audit foundations and one linear Alembic
-chain without duplicating files. Each PR shows only its incremental scope. After a
-dependency is merged by the owner, retarget the next PR to main and review its diff.
+All remain open, Draft, unmerged. No owner review is claimed. The owner controls
+merging and subsequent retargeting; no force push or main merge was performed.
+Original implementation: 5a755f8 (A), 61a34d6 (B), dddbd9c (C), 179b0ca (worker/demo fixes).
+Original documentation c905b68 is the starting point of this audit.
 
-Substantive implementation commits:
+Final audit commits:
 
-- `5a755f8` — feat(contacts): add consent-bound advisory Telegram integration.
-- `61a34d6` — feat(gateway): add typed synthetic enrichment with cache and audit.
-- `dddbd9c` — feat(integrations): add durable advisory orchestration and SOC views.
-- `179b0ca` — fix(integrations): use lightweight worker health and bounded demo polling.
-- Final documentation commit — docs(integrations): record verified handoff and contribution ledger
-  (its immutable SHA is available in PR #3; this file cannot contain its own commit hash).
+- e7fdd17: bounded explicit-rejection retry, sanitized polling, consent/FK-lock backports.
+- 20e62cf: bilingual gateway descriptions and synthetic network fixture.
+- a177120: clear current run error on successful recovery, preserve audit history.
+- cb63483: three actual demo flows, outbox regression, typed examples/OpenAPI/UI vocabulary.
+- 444da14 and e23df31: mask ephemeral CI demo key before export; behavioral regression.
+- Documentation-only completion commit: current PR #3 head (its hash cannot be embedded in itself).
 
-Preservation/stack merges, counted separately from feature work: `fc48185`, `8d27c43`,
-`3ab2dff`. Damir's a02d20d is inherited, not Bekzat's authored commit. No empty commits,
-force pushes or main merges were performed. At this handoff all three PRs are open
-Draft PRs, and all integration modules remain outside main pending review.
+Stack merges 71b1c3a/24e095a propagate fixes; they are not separate authored features.
+Damir's a02d20d and existing core/ML/biometrics/frontend work are inherited, not attributed here.
 
 ## Measured source change
 
-Method: `git diff --numstat a02d20d HEAD`, grouped by file purpose, plus a diff-line
-count excluding blank lines and lines starting with `#` for Python. The latter is
-an explicit textual metric, not AST statements, complexity or a quality score.
-It includes Python strings/docstrings and is not a claim that every line is unique
-algorithmic work. New `__init__.py` files are functional package markers.
+Baseline a02d20dcc857001de364e0b0f12a66ce72db0c12. Method: git diff --numstat,
+grouped by purpose. Python textual count excludes blanks and comment-only lines
+starting with #; it includes strings/docstrings, is not AST complexity or a quality score.
+AI assistance is disclosed above. Generated exports and lockfiles are separate.
 
 | Category | Files | Added lines | Removed lines | Net |
 |---|---:|---:|---:|---:|
-| Python implementation/scripts/migrations | 40 | 2330 | 2 | 2328 |
-| Python tests/fixtures | 8 | 1264 | 0 | 1264 |
 | Configuration/CI/Docker | 7 | 127 | 1 | 126 |
-| Documentation | 8 | 662 | 0 | 662 |
+| Python implementation/scripts/migrations | 41 | 2523 | 2 | 2521 |
+| Python tests/fixtures | 13 | 1623 | 0 | 1623 |
 | Generated dependency lockfile | 1 | 735 | 105 | 630 |
+| Documentation | 12 | 1222 | 0 | 1222 |
+| Generated OpenAPI/examples/UI vocabulary/readiness JSON | 4 | 4334 | 0 | 4334 |
 
-Total changed files: 64. Python net excluding blanks and `#` comment-only lines:
-implementation **2021**, tests **1083**, combined **3104**. Physical Python net:
-implementation + tests **3592**. Configuration net **126** is reported separately;
-documentation and generated lockfile growth are not claimed as implementation.
-All attribution is relative to current main, excluding the team's intervening work.
+Total changed files: 78. Net Python lines excluding blanks/comment-only
+lines: implementation 2195, tests 1397, combined 3592.
+These counts include the integration scope across A/B/C, not only this audit's fixes.
 
 ## Exact changed-file manifest
 
@@ -125,6 +122,7 @@ All attribution is relative to current main, excluding the team's intervening wo
 - `backend/app/integrations/nbk_mock/client.py`
 - `backend/app/integrations/nbk_mock/errors.py`
 - `backend/app/integrations/nbk_mock/fixtures.py`
+- `backend/app/integrations/nbk_mock/localization.py`
 - `backend/app/integrations/nbk_mock/models.py`
 - `backend/app/integrations/nbk_mock/schemas.py`
 - `backend/app/integrations/nbk_mock/service.py`
@@ -150,6 +148,11 @@ All attribution is relative to current main, excluding the team's intervening wo
 - `backend/scripts/integration_token.py`
 - `backend/tests/integrations/__init__.py`
 - `backend/tests/integrations/conftest.py`
+- `backend/tests/integrations/test_ci_secret_masking.py`
+- `backend/tests/integrations/test_delivery_recovery.py`
+- `backend/tests/integrations/test_final_recovery.py`
+- `backend/tests/integrations/test_gateway_localization.py`
+- `backend/tests/integrations/test_handoff_contracts.py`
 - `backend/tests/integrations/test_live_persistence.py`
 - `backend/tests/integrations/test_nbk_gateway.py`
 - `backend/tests/integrations/test_orchestration.py`
@@ -158,7 +161,11 @@ All attribution is relative to current main, excluding the team's intervening wo
 - `backend/tests/integrations/test_trusted_contacts.py`
 - `backend/uv.lock`
 - `docker-compose.integrations.yml`
+- `docs/integrations/BEKZAT_90_PERCENT_AUDIT.md`
 - `docs/integrations/BEKZAT_CONTRIBUTIONS.md`
+- `docs/integrations/BEKZAT_DEMO_GUIDE.md`
+- `docs/integrations/BEKZAT_FINAL_VERIFICATION.md`
+- `docs/integrations/BEKZAT_FRONTEND_HANDOFF.md`
 - `docs/integrations/INTEGRATION_API_CONTRACTS.md`
 - `docs/integrations/INTEGRATION_SECURITY.md`
 - `docs/integrations/INTEGRATION_TEST_REPORT.md`
@@ -166,17 +173,20 @@ All attribution is relative to current main, excluding the team's intervening wo
 - `docs/integrations/ORCHESTRATION_HANDOFF.md`
 - `docs/integrations/TELEGRAM_BOT_SETUP.md`
 - `docs/integrations/TRUSTED_CONTACT_ARCHITECTURE.md`
+- `docs/integrations/api_examples.json`
+- `docs/integrations/openapi.json`
+- `docs/integrations/readiness_matrix.json`
+- `docs/integrations/ui_texts.json`
 - `verify.sh`
 
 ## Handoff and remaining limits
 
-Frontend owners receive additive OpenAPI contracts and the state/access guidance;
-no UI was authored here. Telegram signals and gateway evidence are advisory only.
-The core's 15-minute cooling/resolve workflow and decision weights are unchanged.
-The live adapter exists behind test-environment/consenting-allowlist guards but was
-not exercised with real people. All observed delivery was fake and all enrichment
-synthetic MOCK. No secrets or production configuration are committed.
+The [100-row audit](BEKZAT_90_PERCENT_AUDIT.md) records 96 DONE, 1 PARTIAL and
+3 BLOCKED, weighted readiness 97.25%. Long Telegram retry delays remain partial;
+authorized real Telegram delivery, human core review and joint frontend acceptance
+remain blocked. Mock delivery does not prove real Telegram. No UI was rewritten.
+Contact signals are advisory; they cannot authorize funds. All gateway evidence is MOCK.
 
-Local fake demo: GO with the documented seed/Compose procedure. Production: NO-GO
-pending bank IAM, approved provider contracts, retention/encryption, operational
-monitoring and independent security review. No production deployment was performed.
+Local fake demo: GO. Feature/test team integration: GO; merge/UI acceptance await
+human review. Production: NO-GO. No production deployment, real bank/NBK calls,
+unauthorized messages or existing-secret changes were performed.
