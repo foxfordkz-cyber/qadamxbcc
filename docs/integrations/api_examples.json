@@ -1,0 +1,428 @@
+[
+  {
+    "method": "POST",
+    "path": "/api/v1/trusted-contacts",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": {
+      "owner_consent": true,
+      "language": "kk"
+    },
+    "status": 201,
+    "response": {
+      "contact": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "state": "CONTACT_PENDING_CONSENT",
+        "language": "kk",
+        "created_at": "2026-11-14T09:00:00Z"
+      },
+      "invitation_token": "EXAMPLE_ONLY_NOT_A_REAL_INVITATION",
+      "expires_at": "2026-11-14T09:10:00Z"
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/trusted-contacts",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": null,
+    "status": 200,
+    "response": {
+      "state": "CONTACT_VERIFIED",
+      "contacts": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "state": "CONTACT_VERIFIED",
+          "language": "kk",
+          "created_at": "2026-11-14T09:00:00Z"
+        }
+      ]
+    }
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/trusted-contacts/{contact_id}",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": null,
+    "status": 200,
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "state": "CONTACT_REVOKED",
+      "language": "kk",
+      "created_at": "2026-11-14T09:00:00Z"
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/trusted-contacts/transactions/{transaction_id}/notifications",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": {
+      "contact_id": "00000000-0000-4000-8000-000000000001"
+    },
+    "status": 200,
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "correlation_id": "00000000-0000-4000-8000-000000000004",
+      "state": "NOTIFICATION_QUEUED",
+      "expires_at": "2026-11-14T09:15:00Z",
+      "error_code": null,
+      "advisory_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/trusted-contacts/transactions/{transaction_id}/notifications",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": null,
+    "status": 200,
+    "response": [
+      {
+        "id": "00000000-0000-4000-8000-000000000003",
+        "contact_id": "00000000-0000-4000-8000-000000000001",
+        "transaction_id": "00000000-0000-4000-8000-000000000002",
+        "correlation_id": "00000000-0000-4000-8000-000000000004",
+        "state": "NOTIFICATION_SENT",
+        "expires_at": "2026-11-14T09:15:00Z",
+        "error_code": null,
+        "advisory_only": true
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/trusted-contacts/notifications/{notification_id}/history",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": null,
+    "status": 200,
+    "response": [
+      {
+        "event": "NOTIFICATION_SENT",
+        "correlation_id": "00000000-0000-4000-8000-000000000004",
+        "created_at": "2026-11-14T09:00:00Z"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/trusted-contacts/simulator/update",
+    "role": "simulator",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-simulator-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": {
+      "kind": "suspect",
+      "chat_id": 123,
+      "reference": "00000000-0000-4000-8000-000000000003",
+      "message_id": "42"
+    },
+    "status": 200,
+    "response": {
+      "resource_id": "00000000-0000-4000-8000-000000000003",
+      "state": "SUSPICION_REPORTED"
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/external-checks",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>",
+      "Idempotency-Key": "00000000-0000-4000-8000-000000000007"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": {
+      "identifier": "SYN-NETWORK-001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002"
+    },
+    "status": 200,
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "correlation_id": "00000000-0000-4000-8000-000000000004",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "result": {
+        "source": "MOCK",
+        "identifier": "SYN-NETWORK-001",
+        "status": "INDICATORS",
+        "markers": [
+          "SYNTHETIC_NETWORK_SIGNAL"
+        ],
+        "checked_at": "2026-11-14T09:00:00Z",
+        "expires_at": "2026-11-14T09:01:00Z",
+        "verified": true,
+        "error_code": null,
+        "advisory_only": true
+      },
+      "fresh": true,
+      "cache_hit": false,
+      "description_ru": "В тестовых данных найдены синтетические признаки риска. Синтетический сигнал подозрительной сети. Демонстрация MOCK. Сведения не разрешают и не блокируют операции.",
+      "description_kk": "Тест деректерінде синтетикалық тәуекел белгілері табылды. Күдікті желінің синтетикалық белгісі. MOCK көрсетілімі. Бұл мәліметтер операцияны мақұлдамайды және бұғаттамайды."
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/external-checks/{check_id}",
+    "role": "owner or soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner or soc-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": null,
+    "status": 200,
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "correlation_id": "00000000-0000-4000-8000-000000000004",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "result": {
+        "source": "MOCK",
+        "identifier": "SYN-NETWORK-001",
+        "status": "INDICATORS",
+        "markers": [
+          "SYNTHETIC_NETWORK_SIGNAL"
+        ],
+        "checked_at": "2026-11-14T09:00:00Z",
+        "expires_at": "2026-11-14T09:01:00Z",
+        "verified": true,
+        "error_code": null,
+        "advisory_only": true
+      },
+      "fresh": true,
+      "cache_hit": false,
+      "description_ru": "В тестовых данных найдены синтетические признаки риска. Синтетический сигнал подозрительной сети. Демонстрация MOCK. Сведения не разрешают и не блокируют операции.",
+      "description_kk": "Тест деректерінде синтетикалық тәуекел белгілері табылды. Күдікті желінің синтетикалық белгісі. MOCK көрсетілімі. Бұл мәліметтер операцияны мақұлдамайды және бұғаттамайды."
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/integrations/transactions/{transaction_id}",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>",
+      "Idempotency-Key": "00000000-0000-4000-8000-000000000007"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "gateway_identifier": "SYN-NETWORK-001"
+    },
+    "status": 202,
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "correlation_id": "00000000-0000-4000-8000-000000000004",
+      "state": "QUEUED",
+      "contact_outcome": "NOT_REQUESTED",
+      "notification_id": null,
+      "external_check_id": null,
+      "attempts": 0,
+      "error_code": null,
+      "created_at": "2026-11-14T09:00:00Z",
+      "advisory_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/transactions/{transaction_id}",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": null,
+    "status": 200,
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "correlation_id": "00000000-0000-4000-8000-000000000004",
+      "state": "COMPLETE",
+      "contact_outcome": "NOTIFICATION_QUEUED",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "external_check_id": "00000000-0000-4000-8000-000000000005",
+      "attempts": 1,
+      "error_code": null,
+      "created_at": "2026-11-14T09:00:00Z",
+      "advisory_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/soc/transactions/{transaction_id}",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": null,
+    "status": 200,
+    "response": {
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "core_status": "cooling_off",
+      "run": {
+        "id": "00000000-0000-4000-8000-000000000006",
+        "transaction_id": "00000000-0000-4000-8000-000000000002",
+        "correlation_id": "00000000-0000-4000-8000-000000000004",
+        "state": "COMPLETE",
+        "contact_outcome": "NOTIFICATION_QUEUED",
+        "notification_id": "00000000-0000-4000-8000-000000000003",
+        "external_check_id": "00000000-0000-4000-8000-000000000005",
+        "attempts": 1,
+        "error_code": null,
+        "created_at": "2026-11-14T09:00:00Z",
+        "advisory_only": true
+      },
+      "notifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "contact_id": "00000000-0000-4000-8000-000000000001",
+          "transaction_id": "00000000-0000-4000-8000-000000000002",
+          "correlation_id": "00000000-0000-4000-8000-000000000004",
+          "state": "NOTIFICATION_SENT",
+          "expires_at": "2026-11-14T09:15:00Z",
+          "error_code": null,
+          "advisory_only": true
+        }
+      ],
+      "external_checks": [
+        {
+          "id": "00000000-0000-4000-8000-000000000005",
+          "correlation_id": "00000000-0000-4000-8000-000000000004",
+          "transaction_id": "00000000-0000-4000-8000-000000000002",
+          "result": {
+            "source": "MOCK",
+            "identifier": "SYN-NETWORK-001",
+            "status": "INDICATORS",
+            "markers": [
+              "SYNTHETIC_NETWORK_SIGNAL"
+            ],
+            "checked_at": "2026-11-14T09:00:00Z",
+            "expires_at": "2026-11-14T09:01:00Z",
+            "verified": true,
+            "error_code": null,
+            "advisory_only": true
+          },
+          "fresh": true,
+          "cache_hit": false,
+          "description_ru": "В тестовых данных найдены синтетические признаки риска. Синтетический сигнал подозрительной сети. Демонстрация MOCK. Сведения не разрешают и не блокируют операции.",
+          "description_kk": "Тест деректерінде синтетикалық тәуекел белгілері табылды. Күдікті желінің синтетикалық белгісі. MOCK көрсетілімі. Бұл мәліметтер операцияны мақұлдамайды және бұғаттамайды."
+        }
+      ],
+      "events": [
+        {
+          "event": "NOTIFICATION_SENT",
+          "correlation_id": "00000000-0000-4000-8000-000000000004",
+          "created_at": "2026-11-14T09:00:00Z"
+        }
+      ],
+      "source": "MOCK",
+      "advisory_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/health",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000001",
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "notification_id": "00000000-0000-4000-8000-000000000003",
+      "check_id": "00000000-0000-4000-8000-000000000005"
+    },
+    "request": null,
+    "status": 200,
+    "response": {
+      "status": "ok",
+      "database": "ok",
+      "redis": "ok",
+      "worker": "ok",
+      "telegram_mode": "fake",
+      "gateway": "MOCK"
+    }
+  }
+]
