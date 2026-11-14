@@ -430,5 +430,72 @@
       "telegram_mode": "fake",
       "gateway": "MOCK"
     }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/soc/transactions/{transaction_id}/timeline",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "transaction_id": "00000000-0000-4000-8000-000000000002"
+    },
+    "query_parameters": {
+      "limit": 50
+    },
+    "request": null,
+    "status": 200,
+    "response": {
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "as_of": "2026-11-14T09:00:00Z",
+      "events": [
+        {
+          "id": "core:0:00000000000040008000000000000002",
+          "timestamp": "2026-11-14T09:00:00Z",
+          "category": "core",
+          "importance": "information",
+          "code": "TRANSFER_EVALUATED",
+          "correlation_id": null,
+          "description_ru": "Перевод проверен",
+          "description_kk": "Аударым тексерілді",
+          "source": "persisted_core"
+        }
+      ],
+      "next_cursor": null,
+      "advisory_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/health/details",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "transaction_id": "00000000-0000-4000-8000-000000000002"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "status": "ok",
+      "checked_at": "2026-11-14T09:00:00Z",
+      "cache_seconds": 5,
+      "database": "ok",
+      "redis": "ok",
+      "worker": "ok",
+      "telegram": "fake_enabled",
+      "gateway": "mock_ready",
+      "queue": {
+        "notifications_queued": 1,
+        "notifications_delayed": 1,
+        "notifications_failed": 0,
+        "runs_pending": 0
+      },
+      "last_successful_processing": "2026-11-14T09:00:00Z",
+      "real_provider_probed": false
+    }
   }
 ]
