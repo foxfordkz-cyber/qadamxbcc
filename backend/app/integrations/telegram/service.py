@@ -30,7 +30,7 @@ class TrustedContactService:
     async def invite(self, owner: uuid.UUID, body: InviteRequest) -> InvitationOut:
         # Serialize per account: cap and concurrent invitation creation are atomic on PostgreSQL.
         account = await self.session.scalar(
-            select(Account).where(Account.id == owner).with_for_update()
+            select(Account).where(Account.id == owner).with_for_update(key_share=True)
         )
         if account is None:
             raise IntegrationError(404, "owner_not_found")
@@ -92,6 +92,7 @@ class TrustedContactService:
             .where(
                 TrustedContact.id == contact_id,
             )
+            .execution_options(populate_existing=True)
             .with_for_update()
         )
         if row is None:
