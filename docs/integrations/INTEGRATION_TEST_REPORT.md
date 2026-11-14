@@ -1,5 +1,7 @@
 # Integration verification record
 
+Historical verification from 2026-11-13. Current results, new regressions and CI evidence: [final verification](BEKZAT_FINAL_VERIFICATION.md).
+
 Date: 2026-11-13. Initial audited main: `627fa88`; final compatible main:
 `a02d20dcc857001de364e0b0f12a66ce72db0c12`. Integrated source: `179b0ca`.
 The final documentation-only commit does not change that tested Python/configuration.
