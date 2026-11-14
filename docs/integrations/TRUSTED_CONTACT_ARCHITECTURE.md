@@ -1,5 +1,8 @@
 # Telegram trusted contacts — advisory only
 
+Owner: Bekzat, Integrations & External APIs. Initial audit: `627fa88`;
+current compatible core baseline: `a02d20d` (Damir's hybrid ML work preserved).
+
 ## Durable retry update (2026-11-14)
 
 Only an explicit Telegram flood-control rejection may schedule a retry. The queue
@@ -21,7 +24,6 @@ crash/deduplication tests and migration parity. Before this change a 120-second
 explicit rejection reproduced DELIVERY_FAILED instead of a durable queued retry.
 This section supersedes the earlier short-delay policy described below.
 
-Owner: Bekzat, Integrations & External APIs. Core baseline: `627fa88`.
 The existing `TransferService`, scoring weights, 15-minute cooling deadline and
 `resolve-cooling` are unchanged. No integration can approve or block funds.
 
@@ -37,6 +39,9 @@ simulator role; owner credentials cannot call it. Share invitations privately.
 Both consents are required before an owner can queue an alert for their own active
 cooling transaction. The database enforces one notification per contact/transaction;
 PostgreSQL row locks serialize competing enqueue, revoke and consent requests.
+The invitation quota guard uses PostgreSQL FOR NO KEY UPDATE so core foreign-key
+checks are not blocked; SQLAlchemy maps this via
+[`with_for_update(key_share=True)`](https://docs.sqlalchemy.org/en/20/core/selectable.html#sqlalchemy.sql.expression.GenerativeSelect.with_for_update).
 The worker runs separately; no Telegram network I/O occurs in scoring or enqueue.
 Notification expiry uses the existing transaction's `cooling_until`, never a new timer.
 
@@ -53,8 +58,10 @@ Notification expiry uses the existing transaction's `cooling_until`, never a new
 | SUSPICION_REPORTED | Advisory risk signal; later ACK cannot erase it |
 | NOTIFICATION_EXPIRED | Worker suppressed expired/resolved transfer alert |
 
-Repeated consent, revoke, enqueue and callbacks are idempotent. Used/expired link
-tokens are rejected. Callback sender, private chat, exact message ID and notification
+Repeated consent, owner DELETE, enqueue and valid callbacks do not duplicate state.
+Owner DELETE remains idempotent after revocation. Contact-side revoke erases its
+delivery address, so repeating that authenticated contact callback is rejected as
+not found; it never restores consent. Used/expired link tokens are rejected. Callback sender, private chat, exact message ID and notification
 expiry are validated. Consent/revoke callbacks also require the bound private sender.
 History preserves observed delivery/advisory states; `expires_at` governs whether
 callbacks remain actionable. Expiry does not erase a previously reported suspicion.

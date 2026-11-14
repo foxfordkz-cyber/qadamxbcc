@@ -49,6 +49,9 @@ class InjectedAdapter:
             raw["checked_at"] = (utcnow() + timedelta(seconds=30)).isoformat()
         elif self.mode == "bad_source":
             raw["source"] = "OFFICIAL"
+        elif self.mode == "unavailable_reply":
+            raw["status"] = "UNAVAILABLE"
+            raw["error_code"] = "GATEWAY_UNAVAILABLE"
         return raw
 
 
@@ -250,6 +253,14 @@ async def test_unavailable_results_are_not_cached(iw: IntegrationWorld) -> None:
     await check(iw)
     assert (await check(iw))["cache_hit"] is False
     assert adapter.calls == 4
+
+
+async def test_explicit_unavailable_reply_is_not_cached(iw: IntegrationWorld) -> None:
+    adapter = InjectedAdapter("unavailable_reply")
+    iw.app.state.gateway_client = GatewayClient(adapter)
+    await check(iw)
+    assert (await check(iw))["cache_hit"] is False
+    assert adapter.calls == 2
 
 
 async def test_incomplete_reservation_is_explicit(iw: IntegrationWorld) -> None:

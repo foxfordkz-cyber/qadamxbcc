@@ -178,6 +178,8 @@ class TrustedContactService:
         owner: uuid.UUID,
         transaction_id: uuid.UUID,
         contact_id: uuid.UUID,
+        *,
+        correlation_id: uuid.UUID | None = None,
     ) -> ContactNotification:
         contact = await self.get_contact(contact_id)
         if contact.owner_id != owner:
@@ -206,7 +208,7 @@ class TrustedContactService:
             owner_id=owner,
             contact_id=contact_id,
             transaction_id=transaction_id,
-            correlation_id=uuid.uuid4(),
+            correlation_id=correlation_id or uuid.uuid4(),
             expires_at=tx.cooling_until,
             state=NotificationState.QUEUED,
         )

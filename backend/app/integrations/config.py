@@ -26,10 +26,14 @@ class IntegrationSettings(BaseSettings):
     def validate_secrets(self) -> Self:
         if self.enabled and len(self.signing_key.get_secret_value()) < 32:
             raise ValueError("enabled integrations require a signing key of at least 32 characters")
-        if self.telegram_mode == "test" and (
-            self.environment != "test"
-            or not self.telegram_token.get_secret_value()
-            or not self.telegram_allowed_chat_ids
+        if (
+            self.enabled
+            and self.telegram_mode == "test"
+            and (
+                self.environment != "test"
+                or not self.telegram_token.get_secret_value()
+                or not self.telegram_allowed_chat_ids
+            )
         ):
             raise ValueError(
                 "real Telegram requires test environment, token and consenting allowlist"

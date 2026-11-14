@@ -40,3 +40,28 @@ jobs:
           BCC_TEST_DATABASE_URL: postgresql+asyncpg://bcc:bcc@localhost:5432/bcc_integration_test
           BCC_TEST_REDIS_URL: redis://localhost:6379/15
         run: uv run --no-sync pytest tests/integrations
+  compose-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BCC_INTEGRATIONS_ENABLED: 'true'
+      BCC_INTEGRATIONS_TELEGRAM_MODE: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Generate ephemeral demo key
+        run: |
+          python -c "import os,secrets; key=secrets.token_hex(32); print('::add-mask::'+key); open(os.environ['GITHUB_ENV'],'a').write('BCC_INTEGRATIONS_SIGNING_KEY='+key+'\n')"
+      - name: Build and start complete stack
+        run: docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations up -d --build --wait --wait-timeout 180
+      - name: Seed synthetic core fixtures
+        run: |
+          docker compose exec -T backend python -m scripts.seed_bcc > /tmp/seed-report.txt
+          docker compose restart backend
+          docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations up -d --wait --wait-timeout 120
+      - name: Exercise fake end-to-end flow
+        working-directory: backend
+        run: uv run --python 3.12 python -m scripts.demo_integrations
+      - name: Shutdown disposable stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations down -v

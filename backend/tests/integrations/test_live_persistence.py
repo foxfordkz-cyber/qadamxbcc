@@ -64,6 +64,16 @@ async def test_concurrent_gateway_reservation(iw: IntegrationWorld) -> None:
     assert identifier in ids
 
 
+async def test_concurrent_orchestration_is_unique(iw: IntegrationWorld) -> None:
+    from tests.integrations.test_orchestration import enqueue, process
+
+    tx = await iw.transfer()
+    jobs = await asyncio.gather(*(enqueue(iw, tx["transaction_id"]) for _ in range(8)))
+    assert len({job["id"] for job in jobs}) == 1
+    results = await asyncio.gather(process(iw), process(iw))
+    assert sorted(results) == [False, True]
+
+
 async def test_stale_session_observes_consent_revocation(iw: IntegrationWorld) -> None:
     from app.integrations.errors import IntegrationError
     from app.integrations.models import TrustedContact

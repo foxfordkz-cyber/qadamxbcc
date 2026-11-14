@@ -5,7 +5,7 @@ real NBK endpoint, production deployment or production migration is part of this
 
 ## Authentication and isolation
 
-Main `627fa88` has no authentication middleware. New integration routes therefore
+Audited main (`627fa88`, then `a02d20d`) has no authentication middleware. New routes therefore
 fail closed behind short-lived HMAC capabilities provisioned by the local operator.
 Roles are owner (one bound account), soc (read enrichment), and simulator (fake
 Telegram ingress only). Signatures bind role, subject and expiration. Default TTL

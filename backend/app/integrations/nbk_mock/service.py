@@ -17,7 +17,12 @@ from app.integrations.nbk_mock.audit import GatewayAuditService
 from app.integrations.nbk_mock.client import GatewayClient, unknown
 from app.integrations.nbk_mock.errors import GatewayError
 from app.integrations.nbk_mock.models import ExternalCheck
-from app.integrations.nbk_mock.schemas import ExternalCheckOut, ExternalCheckRequest, GatewayResult
+from app.integrations.nbk_mock.schemas import (
+    ExternalCheckOut,
+    ExternalCheckRequest,
+    GatewayResult,
+    GatewayStatus,
+)
 from app.integrations.nbk_mock.validator import GatewayResponseValidator
 from app.models import Account, Transaction
 
@@ -44,7 +49,7 @@ class GatewayService:
         except (RedisError, TimeoutError, ValueError, GatewayError):
             pass  # cache is advisory; stale/untrusted values never become current results
         result = await self.client.check(identifier)
-        if result.verified:
+        if result.verified and result.status != GatewayStatus.UNAVAILABLE:
             ttl = min(60, int((result.expires_at - utcnow()).total_seconds()))
             if ttl > 0:
                 try:
@@ -59,6 +64,8 @@ class GatewayService:
         owner: uuid.UUID,
         body: ExternalCheckRequest,
         idempotency_key: uuid.UUID,
+        *,
+        correlation_id: uuid.UUID | None = None,
     ) -> ExternalCheckOut:
         if await self.session.get(Account, owner) is None:
             raise IntegrationError(404, "owner_not_found")
@@ -78,7 +85,7 @@ class GatewayService:
             identifier=body.identifier,
             transaction_id=body.transaction_id,
             idempotency_key=idempotency_key,
-            correlation_id=uuid.uuid4(),
+            correlation_id=correlation_id or uuid.uuid4(),
             cache_hit=False,
         )
         self.session.add(row)

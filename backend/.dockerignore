@@ -4,7 +4,10 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 tests/
+.env
+.env.*
+*.db
+.pytest_tmp/
 *.pyc
 .pytest_tmp
-.env
 app/ml/*.joblib
