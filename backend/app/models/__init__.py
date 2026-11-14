@@ -1,3 +1,4 @@
+import app.integrations.models  # noqa: F401 (register isolated integration tables)
 from app.models.entities import (
     Account,
     EdgeType,
