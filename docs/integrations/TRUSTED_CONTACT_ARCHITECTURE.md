@@ -1,5 +1,26 @@
 # Telegram trusted contacts — advisory only
 
+## Durable retry update (2026-11-14)
+
+Only an explicit Telegram flood-control rejection may schedule a retry. The queue
+persists attempts and next_attempt_at, releases its claim/locks, and a future worker
+rechecks recipient consent, core cooling status and expiry before sending. Maximum
+three provider attempts total, including the first. Delays are never slept through
+while holding a database lock. A delay reaching the cooling deadline expires the
+notification. Timeout, transport failure, 5xx or a crash with an outstanding claim
+remain terminal/uncertain and are never resent automatically.
+
+Migration 0002a_notification_retry extends 0002 without rewriting it. Downstream
+gateway/orchestration branches add merge revisions, so an already-applied 0004 can
+upgrade safely as well as a fresh database. Stop old workers before upgrading:
+they do not understand next_attempt_at. Rollback also requires stopping workers
+and resolving scheduled jobs before dropping scheduling columns.
+
+Evidence: test_durable_retry.py, PostgreSQL concurrent retry test, existing timeout/
+crash/deduplication tests and migration parity. Before this change a 120-second
+explicit rejection reproduced DELIVERY_FAILED instead of a durable queued retry.
+This section supersedes the earlier short-delay policy described below.
+
 Owner: Bekzat, Integrations & External APIs. Core baseline: `627fa88`.
 The existing `TransferService`, scoring weights, 15-minute cooling deadline and
 `resolve-cooling` are unchanged. No integration can approve or block funds.
