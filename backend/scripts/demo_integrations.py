@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 import uuid
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlparse
 
@@ -14,6 +15,62 @@ from app.integrations.security import Principal, Role, issue_token
 from scripts.seed_bcc import DEMO_PRESETS, SENDER_ID
 
 OWNER = SENDER_ID
+
+
+async def non_contact_demo(
+    client: httpx.AsyncClient, auth: Callable[[Role], dict[str, str]], scenario: str
+) -> None:
+    """Use the core-owned presets and verify that enrichment cannot change a decision."""
+    preset = next(preset for preset in DEMO_PRESETS if preset.key == scenario)
+    payload = preset.payload()
+    payload["occurred_at"] = "2026-11-13T09:00:00Z"
+    response = await client.post("/api/v1/transfers/evaluate", json=payload)
+    response.raise_for_status()
+    tx = response.json()
+    assert tx["status"] == preset.expected, "use a fresh seeded demo environment"
+    path = f"/api/v1/integrations/soc/transactions/{tx['transaction_id']}"
+    if scenario == "hub":
+        assert tx["reasons_ru"]
+        assert tx["reasons_kk"]
+        assert tx["recipient_graph"]["suspected_mule"]
+        response = await client.post(
+            f"/api/v1/integrations/transactions/{tx['transaction_id']}",
+            headers={**auth("owner"), "Idempotency-Key": str(uuid.uuid4())},
+            json={"gateway_identifier": "SYN-NETWORK-001"},
+        )
+        response.raise_for_status()
+    for _ in range(20):
+        response = await client.get(path, headers=auth("soc"))
+        response.raise_for_status()
+        data = response.json()
+        if scenario == "normal" or data["external_checks"]:
+            break
+        await asyncio.sleep(2.1)  # respect the default 30/minute SOC capability limit
+    else:
+        raise RuntimeError("worker did not enrich the synthetic network scenario")
+    assert data["core_status"] == preset.expected
+    assert not data["notifications"]
+    if scenario == "normal":
+        assert data["run"] is None
+        assert not data["external_checks"]
+    else:
+        check = data["external_checks"][0]
+        assert check["result"]["source"] == "MOCK"
+        assert check["result"]["markers"] == ["SYNTHETIC_NETWORK_SIGNAL"]
+        assert check["description_ru"]
+        assert check["description_kk"]
+    print(
+        json.dumps(
+            {
+                "result": "PASS",
+                "scenario": scenario,
+                "transaction_id": tx["transaction_id"],
+                "core_status": data["core_status"],
+                "notifications": 0,
+                "gateway_source": "MOCK" if scenario == "hub" else None,
+            }
+        )
+    )
 
 
 async def demo(base_url: str) -> None:
@@ -28,6 +85,7 @@ async def demo(base_url: str) -> None:
         return {"Authorization": f"Bearer {token}"}
 
     async with httpx.AsyncClient(base_url=base_url, timeout=15) as client:
+        await non_contact_demo(client, auth, "normal")
 
         async def post(path: str, body: dict[str, Any], role: Role = "owner") -> dict[str, Any]:
             response = await client.post(
@@ -72,9 +130,9 @@ async def demo(base_url: str) -> None:
                 ):
                     notification = data["notifications"][0]
                     break
-                await asyncio.sleep(1)
+                await asyncio.sleep(2.1)
             else:
-                raise RuntimeError("worker did not deliver fake notification within 20 seconds")
+                raise RuntimeError("worker did not deliver fake notification within 42 seconds")
             await post(
                 "/api/v1/trusted-contacts/simulator/update",
                 {
@@ -88,6 +146,7 @@ async def demo(base_url: str) -> None:
             response = await client.get(
                 f"/api/v1/integrations/soc/transactions/{tx['transaction_id']}", headers=auth("soc")
             )
+            response.raise_for_status()
             data = response.json()
             assert data["core_status"] == "cooling_off"
             assert data["notifications"][0]["state"] == "SUSPICION_REPORTED"
@@ -95,6 +154,7 @@ async def demo(base_url: str) -> None:
                 json.dumps(
                     {
                         "result": "PASS",
+                        "scenario": "scam",
                         "transaction_id": tx["transaction_id"],
                         "correlation_id": job["correlation_id"],
                         "core_status": data["core_status"],
@@ -104,7 +164,11 @@ async def demo(base_url: str) -> None:
                 )
             )
         finally:
-            await client.delete(f"/api/v1/trusted-contacts/{contact}", headers=auth("owner"))
+            revoked = await client.delete(
+                f"/api/v1/trusted-contacts/{contact}", headers=auth("owner")
+            )
+            revoked.raise_for_status()
+        await non_contact_demo(client, auth, "hub")
 
 
 if __name__ == "__main__":
