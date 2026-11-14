@@ -51,7 +51,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Generate ephemeral demo key
         run: |
-          python -c "import os,secrets; open(os.environ['GITHUB_ENV'],'a').write('BCC_INTEGRATIONS_SIGNING_KEY='+secrets.token_hex(32)+'\n')"
+          python -c "import os,secrets; key=secrets.token_hex(32); print('::add-mask::'+key); open(os.environ['GITHUB_ENV'],'a').write('BCC_INTEGRATIONS_SIGNING_KEY='+key+'\n')"
       - name: Build and start complete stack
         run: docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations up -d --build --wait --wait-timeout 180
       - name: Seed synthetic core fixtures
