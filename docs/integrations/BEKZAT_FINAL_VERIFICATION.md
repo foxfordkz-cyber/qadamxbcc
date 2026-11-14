@@ -1,131 +1,154 @@
-# Bekzat — final verification (2026-11-14)
+# Bekzat — final integration verification, 2026-11-14
 
-Проверенный implementation SHA: `e23df31514553990b59b9c0181046aff2c1c63fa`.
-Core baseline: `a02d20dcc857001de364e0b0f12a66ce72db0c12`. Исходная точка нового аудита: c905b68.
-Сначала прежние утверждения были сверены с Git/PR/CI и повторным baseline verify:
-130 backend passed, 6 live-only skipped, 12 frontend passed; ALL GREEN.
-Новые результаты ниже относятся к актуальному implementation tree, не к старому отчёту.
-Позднейший documentation-only commit имеет собственные PR checks; его финальный SHA
-и CI записаны в итоговом пакете, чтобы документ не ссылался на собственный будущий hash.
+Implementation checked: `84c793028accd21c293dd50be4630072c816e924`; baseline main `a02d20dcc857001de364e0b0f12a66ce72db0c12`.
+This supersedes the earlier 97.25%/171-case report retained in Git history. Subsequent
+documentation commits have their own final CI recorded in the release package; the
+implementation hash above intentionally does not refer to this document's future hash.
 
-## Результаты
+## Result and limits
 
-| Проверка | Наблюдаемый результат |
+**99.50% on the unchanged 100-row matrix: 98 DONE, 0 PARTIAL, 2 BLOCKED, 0 MISSING.**
+T09 real Telegram and T10 durable Retry-After are now DONE. D17 independent core-owner
+review and D18 joint frontend/mobile/SOC acceptance remain BLOCKED. New Timeline/Health
+features are assessed separately and do not inflate the original denominator.
+
+Existing bot connected through protected local setup; no bot/account was created by
+the agent. The confirmed private chat received one RU and one KK alert. Total accepted
+sendMessage calls: 11 (2 alerts, 3 consent prompts, 6 service/invitation messages), within
+the separately authorized limit of 12. Actual suspicion/acknowledgment callbacks were
+persisted and visible after fresh SOC reads. Both contacts revoked, polling stopped,
+send grant closed. Provider acceptance and user interaction evidence are distinguished
+in [TELEGRAM_LIVE_ACCEPTANCE.md](TELEGRAM_LIVE_ACCEPTANCE.md).
+
+Real provider outages/429, non-consenting/group/foreign chats were not exercised on
+Telegram. Their controls were tested with adapters/dispatcher and real PG/Redis.
+No NBK, real financial data, bank operations or production deployment occurred.
+
+## Changes and failures addressed
+
+- Explicit provider rejection now persists next_attempt_at; max 3 reserved attempts,
+  Retry-After <=86400s and strictly before cooling expiry. Each retry rechecks consent,
+  core state and deadline. Unknown delivery/crashed claims never trigger blind resend.
+  Pre-fix delayed-retry regression failed; new scheduling and concurrent-claim tests pass.
+- Standalone Telegram worker survives bounded DB/Redis dependency errors. The regression
+  failed before the loop fix; two reconnect/once-mode tests now pass. Logs use fixed codes.
+- Windows setup recovered the already saved DPAPI secret after Get-Acl module mismatch.
+  Explicit host-matching Security module and DACL-only persistence preserve protection,
+  owner and audit SACL. Synthetic roundtrip/ACL validation passed. No token re-entry or
+  rotation; PSReadLine history preserved. Local helper scripts remain outside repository.
+- Incident Timeline projects existing persisted core facts/audit with typed bilingual
+  events, correlations, static importance and signed cursor pagination. No duplicate audit.
+- Health details exposes cached queue/dependency/worker/configuration state, including
+  failures when Redis is unavailable. SOC signature/role required; this endpoint alone
+  uses bounded process-local admission. All other API limits still fail closed on Redis.
+
+## Verification
+
+| Check | Observed result |
 |---|---|
-| Полный финальный verify.sh | ALL GREEN; Ruff check/format, strict mypy, pytest, tsc, frontend tests/build, оба Compose config |
-| Backend в финальном CI oracle | 165 passed, 6 live-only skipped без live variables |
-| PostgreSQL 16 + Redis 7, финальная CI integration suite | 123 passed, включая все 6 live-only |
-| Локальный oracle/live до CI-only regression test | 164 passed / 6 skipped; 122 live passed; затем новый masking test отдельно PASS |
-| Уникальные backend cases в совокупности | 171 = 48 существующих core + 123 integration; reruns не складываются |
-| Frontend | 12 существующих tests PASS, TypeScript и Next.js build PASS; frontend не изменялся |
-| Добавлено за этот аудит | 35 уникальных cases: Telegram 7, gateway 11, recovery/outbox 2, handoff examples/OpenAPI 14, CI masking 1 |
-| Backport в PR A | 2 уже существовавших C cases перенесены в A; не считаются новыми в combined total |
-| Самостоятельная A live suite | 47 passed |
-| Самостоятельная A+B live suite | 88 passed |
-| Миграции | PostgreSQL upgrade head → downgrade 0001 → upgrade head, alembic check PASS; SQLite parity PASS |
-| DB changes | Новых миграций в этом аудите нет; остаются 0002–0004, пять integration tables |
-| Contracts | 13 request/response examples validated; full exported OpenAPI equals application |
-| Existing API compatibility | Все current-main paths/components структурно идентичны; 13 additive operations |
-| Ownership | Нет authored diff в frontend, services, core schemas/routes/entities, base Compose |
-| Docker | Пять healthy services; localhost synthetic normal/scam/hub E2E PASS |
-| Secret scan | Известные private-key/GitHub/Telegram/AWS token patterns не найдены в tracked files; ограниченная проверка |
+| Full local verify.sh | ALL GREEN: Ruff/format, strict mypy, pytest, tsc, 12 frontend tests/build, both Compose configs |
+| Full portable backend suite | 192 passed / 7 live-only skipped; same counts in CI |
+| Full PostgreSQL16 + Redis7 integration suite | 151 passed; includes all 7 live-only cases |
+| Unique backend cases | 199 = 48 existing core + 151 integration; reruns are not summed |
+| New cases this stage | 28 = 10 retry/reconnect/concurrency + 16 insights + 2 new contract examples |
+| Independent A / A+B / A+B+C CI integration suites | 57 / 98 / 133 passed |
+| Frontend | 12 existing tests, TypeScript and production build PASS; frontend unchanged |
+| Docker | Five healthy services; fresh normal/scam/hub E2E PASS |
+| Real dependency restart | Redis stop/start, PG stop/start, worker restart PASS; degraded states observed then recovered; one saved suspicion remains |
+| PostgreSQL migrations | Fresh upgrade; old 0004 -> head; head -> 0001 -> head; alembic check PASS |
+| Migration structure | New 0002a retry columns/index plus 0003a/0004a merge revisions; published revisions unchanged |
+| Contracts | 15 request/response examples validated; full exported OpenAPI equals app |
+| Compatibility | Existing main paths/components identical; 12 additive paths / 15 operations overall |
+| Ownership | No diff in frontend, scoring/services/core schemas/transfer/SOC routes/entities or base Compose |
+| Secret pattern scan | Known private-key/GitHub/Telegram/AWS patterns absent in tracked files; limited scan, not a proof of universal secret absence |
 
-Числа — параметризованные test cases, не количество test functions. 117 integration
-cases переносимые, 6 live-only. Тесты handoff проверяют реальные route request/response
-models, включая exact serialized output, success status и размещение в OpenAPI.
+The first local PostgreSQL run overlapped frontend installation/build: 150 passed,
+one existing gateway classification test exceeded its outer 2s wall-clock budget while
+waiting for a thread-pool dependency, before adapter validation. Its failed log is
+preserved. A full serial rerun after build completion passed 151/151 with unchanged
+code/timeouts/assertions. CI independently passed 151/151. Resource contention is the
+likely explanation; this observation is not a measured production latency guarantee.
 
-## Воспроизведённые проблемы и исправления
+New APIs, SOC capability required:
 
-| Проблема | До исправления | Исправление / regression |
+- GET `/api/v1/integrations/soc/transactions/{transaction_id}/timeline`
+- GET `/api/v1/integrations/health/details`
+
+Read-only metrics do not report a new fraud score. DB failure yields queue=null, not zero;
+test_enabled reports adapter configuration, not successful Telegram reachability.
+Cursor as_of cutoff is not a database snapshot against a later backdated commit. See
+[Timeline spec](INCIDENT_TIMELINE_SPEC.md) and [Health report](INTEGRATION_HEALTH_REPORT.md).
+
+## Runtime and latency
+
+| Scope | N | p50 ms | p95 ms | p99 ms | Errors |
+|---|---:|---:|---:|---:|---:|
+| engine_only | 500 | 5.7827 | 15.5109 | 32.7947 | 0/500 |
+| http_database | 100 | 79.2297 | 446.7354 | 662.804 | 0/100 |
+| integration_enqueue_http | 20 | 76.9344 | 116.1098 | 123.2384 | 0/20 |
+| queue_wait | 20 | 9774.138 | 13896.28 | 14367.428 | 0/20 |
+| integration_processing | 20 | 26.218 | 41.138 | 133.19 | 0/20 |
+| integration_total | 20 | 9794.754 | 13923.344 | 14397.282 | 0/20 |
+
+Nearest-rank percentiles; Windows Python3.12.16 with local Docker Desktop PG16/Redis7.
+Engine: 500 serial measurements after 30 warmups, real Redis14, existing scorer/graph,
+no HTTP/SQL. HTTP+DB: 100 evaluations after 10 warmups, actual loopback HTTP/PG/scorer;
+synthetic reused sender, core risk decisions may vary with velocity/history. A valid
+blocked/cooling response is not a transport error. Integration: 20 gateway-only fake
+jobs submitted in a burst, one worker with 0.5s loop, existing default rate budget.
+Queue and processing durations derive from saved QUEUED/STARTED/COMPLETE audit timestamps;
+client polling time is excluded. N=20 p99 is the maximum; processing includes MOCK
+cache/DB work but no real Telegram network. No concurrent builds/tests during measurement.
+These are distinct scopes on one host, not a comparison or evidence of a speedup, SLA
+or causal regression. The worker's serial loop explains queue accumulation under a burst.
+The observed engine p95 (15.51ms) exceeds the core benchmark script's 15ms target in
+this run, although it remains below the SPEC's 50ms scoring target. No 15ms budget pass
+is claimed. HTTP p95 is 446.74ms, and queue p95 is 13.90s under the 20-job burst; these
+are explicit demo-host limitations, not hidden behind engine-only numbers. Core tuning
+was not authorized and no thresholds or financial rules were changed to improve them.
+
+Machine-readable observations: [benchmark_results.json](benchmark_results.json),
+[operational_recovery.json](operational_recovery.json),
+[telegram_live_evidence.json](telegram_live_evidence.json). These contain sanitized
+states/counts/timestamps, not private Telegram addresses or raw provider updates.
+
+Integrations remain a separate optional POST after evaluate; provider I/O is not inside
+the scoring path. Client crash between core commit and optional POST does not create an
+unsolicited job. Existing resolve-cooling remains the sole financial resolution path;
+contacts cannot invoke it. Core functionality is exercised by the inherited core suite.
+
+## GitHub and external acceptance
+
+| PR | Checked implementation head | CI |
 |---|---|---|
-| Явный Telegram flood-control rejection не повторялся | 2 retry tests FAIL на старой A | e7fdd17: один bounded retry, максимум две попытки; retry_after <=1s, общий timeout; audit без приватного текста |
-| Polling выпускал malformed input/Redis exception наружу | 2 ingress tests FAIL с validation/private context | e7fdd17: aiogram router error boundary + bounded Redis admission; tests feed real dispatcher with mocked HTTP |
-| A не содержала consent refresh/FK-safe lock fixes из C | 2 live regressions FAIL на старой A | e7fdd17: populate_existing и FOR NO KEY UPDATE; переданы в самостоятельный PR A |
-| Gateway без RU/KK descriptions/network fixture | 10 localization acceptance cases FAIL на прежней B | 20e62cf: normalized descriptions + SYN-NETWORK-001; 11 cases PASS с проверкой покрытия enums |
-| COMPLETE run сохранял старую ошибку | recovery test FAIL: INTEGRATION_WORKER_ERROR остаётся | a177120: error очищается при новой попытке, история audit остаётся; recovery PASS |
-| Неполный демонстрационный/handoff пакет | только один script scenario и фрагменты examples | cb63483: три runtime-сценария, полный OpenAPI/examples/UI texts, 14 CI contract cases |
-| CI показывал ephemeral demo signing key в environment-секции | обнаружено в старом compose-demo log без вывода значения; новый поведенческий test FAIL на прежнем command | 444da14/e23df31: add-mask до GITHUB_ENV; test PASS, новый run log без немаскированного значения |
+| [#1](https://github.com/foxfordkz-cyber/qadamxbcc/pull/1) | `59550de781c146e517e082cada22f64bd4405e32` | [SUCCESS](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43563302792) |
+| [#2](https://github.com/foxfordkz-cyber/qadamxbcc/pull/2) | `be7489d7bfb4f9e6a392d3c1088865a31c9db083` | [SUCCESS](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43563495541) |
+| [#3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3) | `4533b16769a04a71b3756bc77119b276752377cf` | [SUCCESS](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43563561759) |
+| [#4](https://github.com/foxfordkz-cyber/qadamxbcc/pull/4) | `84c793028accd21c293dd50be4630072c816e924` | [SUCCESS](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43565606217) |
 
-Новый outbox failure-injection test отдельно подтверждает: ошибка commit после flush
-откатывает job и audit вместе, не меняет уже сохранённый core transfer и не вызывает
-adapter. Это outbox integration intent, а не автоматическая публикация всех core
-транзакций: optional integration POST выполняется после evaluate, что явно отражено
-в контракте. Client crash между этими двумя запросами не создаёт незапрошенный job.
+Review order: #1 -> #2 -> #3 -> #4. All open Draft, mergeable at final review, no submitted
+human reviews. Normal pushes only; no main merge, force push or GitHub secret change.
+AI-assisted implementation under Bekzat's direction, not independent human sign-off.
 
-Маскирование следует [GitHub workflow commands](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands#masking-a-value-in-a-log).
-Behavioral regression исполняет реальную команду генерации из workflow и проверяет,
-что экспортированный ключ зарегистрирован для masking; значения не попадают в failure
-output. Исторические CI-логи не удалялись; их одноразовые стенды уже уничтожены.
-Существующие пользовательские/GitHub secrets не менялись. Сырой старый CI log с
-ключом не включён в evidence archive; сохранён только факт обнаружения и IDs run/job.
+Local synthetic hackathon demo: **GO**. Team integration: **GO for feature/test wiring
+and review**, final merge/UI sign-off pending. Production: **NO-GO** (bank IAM, approved
+provider integration, retention/encryption/operations and security review outstanding).
+Frontend receives typed examples, states/errors/retry rules, RU/KK strings, new SOC APIs
+and demo presets. Trusted Circle is deferred; educational Scam Safety reuses existing
+CoolingQuestionnaire fields as handoff copy, no new blocking/financial engine.
 
-Длительный retry_after не был замаскирован как поддержанный: T10 PARTIAL в матрице.
-Ambiguous send/timeout не повторяется автоматически. Реальная Telegram-доставка
-T09 BLOCKED: dispatcher/adapter mocks не считаются live доказательством.
+## Reproduction and isolation
 
-## GitHub и review
+Run `bash verify.sh`, then `uv run pytest tests/integrations` from backend with
+BCC_TEST_DATABASE_URL pointing to explicitly named `bcc_integration_test` and
+BCC_TEST_REDIS_URL to Redis15. Live fixtures isolate schemas. Migration validation
+used separate `bcc_integration_test_upgrade`; synthetic demo uses bcc_shield/Redis0;
+engine benchmark uses Redis14. The prior bcc-bekzat-final project is stopped with its
+volumes preserved; fresh fake bcc-bekzat-premium is the active local demo. Live bot
+acceptance data resides in its separate DB on the preserved prior PG volume; polling
+is stopped. Never reseed core tables over existing integration history.
 
-| PR | Проверенный head | Состояние на проверке | CI |
-|---|---|---|---|
-| [#1](https://github.com/foxfordkz-cyber/qadamxbcc/pull/1) | `e7fdd171c0bf607439c678278c715f30dab44b1b` | open, Draft, unmerged | [SUCCESS](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43555909599) |
-| [#2](https://github.com/foxfordkz-cyber/qadamxbcc/pull/2) | `71b1c3a64600020fc44c4c8df7613b103a15c0db` | open, Draft, unmerged | [SUCCESS](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43556125459) |
-| [#3](https://github.com/foxfordkz-cyber/qadamxbcc/pull/3) | `e23df31514553990b59b9c0181046aff2c1c63fa` | open, Draft, unmerged | [SUCCESS](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43557924729) |
-
-Stack A → main, B → A, C → B сохранён; merge commits только внутри feature stack,
-без force push. Конфликты test_live_persistence разрешены объединением всех tests;
-существующие C cases не продублированы. Human reviews/comments на момент проверки
-отсутствуют. Mergeability=true. Это не owner approval; main не изменён агентом.
-
-## Runtime evidence
-
-| Demo | Core status после интеграций | Transaction | Result |
-|---|---|---|---|
-| normal | approved | `95623625-753a-4aed-99a9-a116277f7e0b` | PASS |
-| scam | cooling_off | `9f222096-9c0e-434e-9725-3126074aace1` | PASS |
-| hub | blocked | `17ec8581-e437-4205-8b26-966fbaf7d7ec` | PASS |
-
-Scam: SUSPICION_REPORTED в SOC; source MOCK; контакт отозван скриптом после проверки.
-Hub: core bilingual reasons + suspected_mule и SYNTHETIC_NETWORK_SIGNAL в enrichment;
-контакт/уведомление не создаются. Normal: нет run, checks и notifications.
-Подробный walkthrough: [BEKZAT_DEMO_GUIDE.md](BEKZAT_DEMO_GUIDE.md).
-
-## Повторный latency experiment
-
-Использован существующий core-owned scripts.benchmark_antifraud, без копии scorer.
-Одинаковый Python 3.12.16, resolved environment, локальный real Redis DB14; 3 runs ×
-500 evaluations после 30 warmups на pinned main и integrated source. Билды и тесты
-были завершены перед замером. Scope: warmed engine/ML/graph/Redis, без HTTP и SQL.
-
-Main run p95 ms: 4.017225, 3.414760, 6.534625.
-Integrated run p95 ms: 4.920400, 10.470195, 3.675860.
-Медианы run p95: 4.017225 → 4.920400 ms; разница +0.903175 ms
-(+22.48%). Это наблюдение на одном хосте и трёх последовательных
-прогонах, без randomized/interleaved design; не causal speedup/regression claim и
-не production SLA. Off-path isolation также проверена тестом, который подтверждает
-нулевые provider calls во время scoring/enqueue.
-
-## Команды и изоляция
-
-```bash
-bash verify.sh
-export BCC_TEST_DATABASE_URL=postgresql+asyncpg://bcc:bcc@localhost:5432/bcc_integration_test
-export BCC_TEST_REDIS_URL=redis://localhost:6379/15
-cd backend
-uv run pytest tests/integrations
-```
-
-Live fixtures создают отдельные схемы в явно названной test DB; Redis15 выделена
-только тестам и очищается fixture. Migration roundtrip использует отдельную
-bcc_integration_test_migrations. Demo использует другую DB bcc_shield/Redis0;
-benchmark — Redis14. Старые demo volumes не пересоздавались; новый disposable проект
-bcc-bekzat-final подготовлен с существующим локальным config без изменения секретов.
-Логи команд и before/after regressions включены в финальный evidence archive.
-
-## Решения
-
-Local fake demo GO. Team integration GO для feature/test подключения; финальный
-merge и UI acceptance ожидают owner/frontend review. Production NO-GO: нет bank IAM,
-approved real-provider integration, retention/encryption/operations security sign-off.
-Ни реального Telegram, ни НБК, ни денежных переводов, ни production deployment здесь не было.
-AI-assisted implementation и проверка явно указаны; независимый human security review
-не заявляется. [Матрица](BEKZAT_90_PERCENT_AUDIT.md) оставляет зависимости с нулём баллов.
+The release evidence package contains sanitized live results, local verification logs,
+Compose demo/recovery/migration results, benchmark inputs/results, contract exports,
+source archive and checksums. It excludes private config, IDs, grants, invitation links,
+raw Telegram updates and provider credentials. Earlier audit packages remain historical.
