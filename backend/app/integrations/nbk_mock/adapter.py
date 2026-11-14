@@ -19,7 +19,13 @@ class MockGatewayAdapter:
         return GatewayResult(
             identifier=identifier,
             status=status,
-            markers=["SYNTHETIC_REVIEW"] if status == GatewayStatus.INDICATORS else [],
+            markers=[
+                "SYNTHETIC_NETWORK_SIGNAL"
+                if identifier == "SYN-NETWORK-001"
+                else "SYNTHETIC_REVIEW"
+            ]
+            if status == GatewayStatus.INDICATORS
+            else [],
             checked_at=now,
             expires_at=now + timedelta(seconds=60),
             verified=True,

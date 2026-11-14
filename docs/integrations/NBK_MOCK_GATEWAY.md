@@ -22,6 +22,7 @@ Only identifiers matching `SYN-[A-Z0-9-]{1,40}` are accepted:
 |---|---|---|
 | SYN-CLEAR-001 | CLEAR | No synthetic risk markers in this fixture, not payment approval |
 | SYN-REVIEW-001 | INDICATORS | SYNTHETIC_REVIEW marker, not a finding about a person |
+| SYN-NETWORK-001 | INDICATORS | SYNTHETIC_NETWORK_SIGNAL, synthetic network demonstration only |
 | Other valid SYN-* | UNKNOWN | Explicitly unknown synthetic fixture |
 
 Timeout/unavailability → UNAVAILABLE. Malformed, unverified or expired provider data,
@@ -58,6 +59,12 @@ All calls are made from separate enrichment requests/worker operations, outside 
 `GET /api/v1/external-checks/{check_id}`: owning account or SOC role. Responses contain
 ID, correlation ID, optional transaction ID, result, cache_hit and fresh. No name,
 IIN, phone, amount, bank account or Telegram delivery address is included.
+
+Audit follow-up (2026-11-14): every external-check response also includes computed
+`description_ru` and `description_kk`. These are generated from normalized enum codes,
+including error/freshness states and markers, with an explicit MOCK/advisory notice.
+Raw provider text is never rendered. Existing fields and the cached provider contract
+are preserved. The same response model supplies the orchestration SOC view.
 
 Migration `0003_external_checks` adds only the durable external check table. Results
 are synthetic JSON; unique `(owner_id,idempotency_key)` prevents duplicate audit/checks.

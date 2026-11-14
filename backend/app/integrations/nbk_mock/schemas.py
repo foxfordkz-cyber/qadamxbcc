@@ -2,7 +2,9 @@ import uuid
 from enum import StrEnum
 from typing import Annotated, Literal, Self
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, computed_field, model_validator
+
+from app.integrations.nbk_mock.localization import describe_result
 
 SyntheticIdentifier = Annotated[str, Field(pattern=r"^SYN-[A-Z0-9-]{1,40}$")]
 
@@ -61,3 +63,13 @@ class ExternalCheckOut(BaseModel):
     result: GatewayResult
     fresh: bool
     cache_hit: bool
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def description_ru(self) -> str:
+        return describe_result(self.result, "ru")
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def description_kk(self) -> str:
+        return describe_result(self.result, "kk")
