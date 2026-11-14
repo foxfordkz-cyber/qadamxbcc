@@ -17,10 +17,11 @@ from app.integrations.telegram import bot as polling
 from app.integrations.telegram.adapter import AiogramTelegramAdapter
 from app.integrations.telegram.worker import deliver_one
 from tests.integrations.conftest import IntegrationWorld
+from tests.integrations.test_durable_retry import make_due
 
 
 @pytest.mark.parametrize(
-    ("failures", "expected"), [(1, "NOTIFICATION_SENT"), (2, "DELIVERY_FAILED")]
+    ("failures", "expected"), [(1, "NOTIFICATION_SENT"), (3, "DELIVERY_FAILED")]
 )
 async def test_rejected_send_retries_once_without_duplicate(
     iw: IntegrationWorld, failures: int, expected: str
@@ -35,8 +36,12 @@ async def test_rejected_send_retries_once_without_duplicate(
     )
     bot.send_message.side_effect = [rejected] * failures + [success]
     adapter = AiogramTelegramAdapter(cast(Bot, bot), [123])
-    assert await deliver_one(iw.factory, adapter, iw.cfg)
-    assert bot.send_message.await_count == 2
+    attempts = min(failures + 1, 3)
+    for attempt in range(attempts):
+        assert await deliver_one(iw.factory, adapter, iw.cfg)
+        if attempt < attempts - 1:
+            await make_due(iw, row)
+    assert bot.send_message.await_count == attempts
     assert not await deliver_one(iw.factory, adapter, iw.cfg)
     response = await iw.client.get(
         f"/api/v1/trusted-contacts/transactions/{row['transaction_id']}/notifications",
@@ -52,7 +57,7 @@ async def test_rejected_send_retries_once_without_duplicate(
                 )
             )
         )
-        assert events.count("NOTIFICATION_RETRY") == 1
+        assert events.count("NOTIFICATION_RETRY") == attempts - 1
         assert events.count(expected) == 1
 
 

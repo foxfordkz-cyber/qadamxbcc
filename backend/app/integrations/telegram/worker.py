@@ -25,6 +25,8 @@ from app.integrations.telegram.schemas import ContactState, NotificationState
 from app.integrations.telegram.templates import ALERTS
 from app.models import Transaction, TransactionStatus
 
+MAX_ATTEMPTS = 3
+
 
 async def deliver_one(
     factory: async_sessionmaker[AsyncSession],
@@ -38,6 +40,11 @@ async def deliver_one(
             select(ContactNotification)
             .where(
                 ContactNotification.state == NotificationState.QUEUED,
+                or_(
+                    ContactNotification.next_attempt_at.is_(None),
+                    ContactNotification.next_attempt_at <= utcnow(),
+                    ContactNotification.expires_at <= utcnow(),
+                ),
                 or_(
                     ContactNotification.claimed_at.is_(None),
                     ContactNotification.claimed_at < utcnow() - timedelta(seconds=30),
@@ -57,6 +64,9 @@ async def deliver_one(
                 await session.commit()
             return False
         row.claimed_at = utcnow()
+        row.attempts += 1
+        row.next_attempt_at = None
+        row.error_code = None
         notification_id, contact_id = row.id, row.contact_id
         await session.commit()  # durable claim BEFORE any external side effect
     await _deliver(factory, adapter, cfg, notification_id, contact_id)
@@ -94,36 +104,39 @@ async def _deliver(
         else:
             try:
                 async with asyncio.timeout(cfg.adapter_timeout_seconds):
-                    for attempt in range(2):
-                        if row.expires_at <= utcnow():
-                            row.state = NotificationState.EXPIRED
-                            break
-                        try:
-                            row.message_id = await adapter.send(
-                                int(contact.telegram_chat_id),
-                                ALERTS[contact.language],
-                                row.id,
-                                contact.language,
-                            )
-                            row.state = NotificationState.SENT
-                            break
-                        except RejectedDeliveryError as exc:
-                            # Only explicit rejection is safe to retry. Never retry timeouts,
-                            # connection errors, 5xx, or ambiguous delivery after a crash.
-                            if attempt or not 0 <= exc.retry_after <= 1:
-                                raise
-                            record(
-                                session,
-                                row.owner_id,
-                                row.id,
-                                row.correlation_id,
-                                "NOTIFICATION_RETRY",
-                            )
-                            await asyncio.sleep(max(0.05, exc.retry_after))
+                    row.message_id = await adapter.send(
+                        int(contact.telegram_chat_id),
+                        ALERTS[contact.language],
+                        row.id,
+                        contact.language,
+                    )
+                    row.state = NotificationState.SENT
+            except RejectedDeliveryError as exc:
+                # A persisted explicit rejection is the ONLY retryable outcome.
+                # No locks/sleep across the delay. Each future claim rechecks consent/core.
+                if not 0 <= exc.retry_after <= 86400:
+                    row.state = NotificationState.FAILED
+                    row.error_code = "invalid_retry_after"
+                elif row.attempts >= MAX_ATTEMPTS:
+                    row.state = NotificationState.FAILED
+                    row.error_code = "retry_exhausted"
+                else:
+                    due = utcnow() + timedelta(seconds=max(1, exc.retry_after))
+                    if due >= row.expires_at:
+                        row.state = NotificationState.EXPIRED
+                        row.error_code = "retry_after_expiry"
+                    else:
+                        row.next_attempt_at = due
+                        row.claimed_at = None
+                        row.error_code = "telegram_rate_limited"
+                        record(
+                            session, row.owner_id, row.id, row.correlation_id, "NOTIFICATION_RETRY"
+                        )
             except Exception:  # isolation boundary: no provider exception text/secret is logged
                 row.state = NotificationState.FAILED
                 row.error_code = "delivery_failed_or_uncertain"
-        record(session, row.owner_id, row.id, row.correlation_id, row.state)
+        if row.state != NotificationState.QUEUED:
+            record(session, row.owner_id, row.id, row.correlation_id, row.state)
         await session.commit()
 
 
