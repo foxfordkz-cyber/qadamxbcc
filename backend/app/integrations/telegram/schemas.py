@@ -62,6 +62,8 @@ class NotificationOut(BaseModel):
     state: NotificationState
     expires_at: datetime
     error_code: str | None
+    attempts: int = 0
+    next_attempt_at: datetime | None = None
     advisory_only: Literal[True] = True
 
 
