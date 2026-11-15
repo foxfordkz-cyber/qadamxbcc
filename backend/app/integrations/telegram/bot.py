@@ -25,6 +25,7 @@ from app.integrations.config import get_integration_settings
 from app.integrations.errors import IntegrationError
 from app.integrations.telegram.guardian import build_router
 from app.integrations.telegram.handlers import process_update
+from app.integrations.telegram.polling_lock import PollingLock
 from app.integrations.telegram.schemas import SimulatedUpdate
 from app.integrations.telegram.service import TrustedContactService
 from app.integrations.telegram.templates import CONSENT, STATE_LABELS
@@ -154,9 +155,14 @@ async def run() -> None:
     )
     dispatcher = Dispatcher(storage=storage, events_isolation=storage.create_isolation())
     dispatcher.include_router(router)
+    polling_lock: PollingLock | None = None
     try:
+        polling_lock = PollingLock(bot.id)
+        polling_lock.acquire()
         await dispatcher.start_polling(bot, allowed_updates=["message", "callback_query"])
     finally:
+        if polling_lock:
+            polling_lock.close()
         await bot.session.close()
         await redis.aclose()
         await engine.dispose()

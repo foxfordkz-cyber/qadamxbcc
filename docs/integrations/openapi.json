@@ -1850,6 +1850,257 @@
         }
       }
     },
+    "/api/v1/integrations/soc/operations/notifications": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "integration operations and privacy"
+        ],
+        "summary": "Notifications",
+        "operationId": "notifications_api_v1_integrations_soc_operations_notifications_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          },
+          {
+            "name": "failed_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Failed Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/soc/operations/queue": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "integration operations and privacy"
+        ],
+        "summary": "Queue",
+        "operationId": "queue_api_v1_integrations_soc_operations_queue_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueSummary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/privacy/permissions": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "integration operations and privacy"
+        ],
+        "summary": "Permissions",
+        "operationId": "permissions_api_v1_integrations_privacy_permissions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/privacy/contacts/{contact_id}/history": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "integration operations and privacy"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_integrations_privacy_contacts__contact_id__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Contact Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionHistory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/integrations/transactions/{transaction_id}": {
       "post": {
         "tags": [
@@ -3925,6 +4176,148 @@
         ],
         "title": "InviteRequest"
       },
+      "JobOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Correlation Id"
+          },
+          "state": {
+            "$ref": "#/components/schemas/NotificationState"
+          },
+          "disposition": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "delayed",
+              "processing",
+              "ambiguous",
+              "retry_exhausted",
+              "terminal"
+            ],
+            "title": "Disposition"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "processing_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Age Seconds"
+          },
+          "queue_age_seconds": {
+            "type": "number",
+            "title": "Queue Age Seconds"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "retry_scheduled": {
+            "type": "boolean",
+            "title": "Retry Scheduled"
+          },
+          "manual_resend_supported": {
+            "type": "boolean",
+            "const": false,
+            "title": "Manual Resend Supported",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "correlation_id",
+          "state",
+          "disposition",
+          "attempts",
+          "created_at",
+          "expires_at",
+          "next_attempt_at",
+          "processing_age_seconds",
+          "queue_age_seconds",
+          "error_code",
+          "retry_scheduled"
+        ],
+        "title": "JobOut"
+      },
+      "JobPage": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/JobOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_after_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "items",
+          "next_after_id"
+        ],
+        "title": "JobPage"
+      },
       "MLContributorOut": {
         "properties": {
           "feature": {
@@ -4162,6 +4555,170 @@
         ],
         "title": "PartyOut"
       },
+      "PermissionEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "event",
+          "created_at"
+        ],
+        "title": "PermissionEvent"
+      },
+      "PermissionHistory": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "next_after_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events",
+          "next_after_id"
+        ],
+        "title": "PermissionHistory"
+      },
+      "PermissionOut": {
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Contact Id"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ContactState"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled"
+          },
+          "owner_consented_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Owner Consented At"
+          },
+          "last_contact_consent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Contact Consent At"
+          },
+          "consent_currently_valid": {
+            "type": "boolean",
+            "title": "Consent Currently Valid"
+          },
+          "delivery_identifiers_erased": {
+            "type": "boolean",
+            "title": "Delivery Identifiers Erased"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contact_id",
+          "state",
+          "language",
+          "notifications_enabled",
+          "owner_consented_at",
+          "last_contact_consent_at",
+          "consent_currently_valid",
+          "delivery_identifiers_erased"
+        ],
+        "title": "PermissionOut"
+      },
+      "PermissionPage": {
+        "properties": {
+          "exported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Exported At"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionOut"
+            },
+            "type": "array",
+            "title": "Permissions"
+          },
+          "next_after_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Id"
+          },
+          "active_contact_limit": {
+            "type": "integer",
+            "const": 3,
+            "title": "Active Contact Limit",
+            "default": 3
+          },
+          "recipients_per_notification": {
+            "type": "integer",
+            "const": 1,
+            "title": "Recipients Per Notification",
+            "default": 1
+          },
+          "retention_policy": {
+            "type": "string",
+            "const": "personal_fields_until_revoke_metadata_until_demo_database_removal",
+            "title": "Retention Policy",
+            "default": "personal_fields_until_revoke_metadata_until_demo_database_removal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exported_at",
+          "permissions",
+          "next_after_id"
+        ],
+        "title": "PermissionPage"
+      },
       "Position": {
         "properties": {
           "x": {
@@ -4207,6 +4764,67 @@
           "runs_pending"
         ],
         "title": "QueueCounts"
+      },
+      "QueueSummary": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By State"
+          },
+          "processing": {
+            "type": "integer",
+            "title": "Processing"
+          },
+          "oldest_processing_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Processing Age Seconds"
+          },
+          "oldest_queued_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Queued Age Seconds"
+          },
+          "retry_exhausted": {
+            "type": "integer",
+            "title": "Retry Exhausted"
+          },
+          "ambiguous_delivery": {
+            "type": "integer",
+            "title": "Ambiguous Delivery"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "by_state",
+          "processing",
+          "oldest_processing_age_seconds",
+          "oldest_queued_age_seconds",
+          "retry_exhausted",
+          "ambiguous_delivery"
+        ],
+        "title": "QueueSummary"
       },
       "ReportOut": {
         "properties": {
