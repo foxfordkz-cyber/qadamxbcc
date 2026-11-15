@@ -1,3 +1,5 @@
+> Guardian 2.0 follow-up (2026-11-14): see [current verification](../guardian/VERIFICATION.md) and [new frontend contract](../guardian/FRONTEND_HANDOFF.md). Historical counts/live acceptance below belong to the previous stage.
+
 # Bekzat — final integration verification, 2026-11-14
 
 Implementation checked: `84c793028accd21c293dd50be4630072c816e924`; baseline main `a02d20dcc857001de364e0b0f12a66ce72db0c12`.
