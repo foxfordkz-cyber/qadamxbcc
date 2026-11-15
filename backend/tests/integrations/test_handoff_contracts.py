@@ -6,7 +6,13 @@ import pytest
 from fastapi.routing import APIRoute
 from pydantic import TypeAdapter
 
-from app.api.v1 import external_checks, integration_insights, integrations, trusted_contacts
+from app.api.v1 import (
+    external_checks,
+    guardian_reports,
+    integration_insights,
+    integrations,
+    trusted_contacts,
+)
 from app.main import create_app
 
 DOCS = Path(__file__).resolve().parents[3] / "docs" / "integrations"
@@ -23,6 +29,7 @@ def test_frontend_examples_match_published_routes(example: dict[str, Any]) -> No
             (external_checks, "/api/v1"),
             (integrations, "/api/v1"),
             (integration_insights, "/api/v1/integrations"),
+            (guardian_reports, "/api/v1/integrations"),
         ]
         for route in module.router.routes
         if isinstance(route, APIRoute)

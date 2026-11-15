@@ -1,3 +1,5 @@
+> Guardian 2.0 follow-up (2026-11-14): see [current verification](../guardian/VERIFICATION.md) and [new frontend contract](../guardian/FRONTEND_HANDOFF.md). Historical counts/live acceptance below belong to the previous stage.
+
 # Bekzat — доказательный аудит готовности (2026-11-14)
 
 **99,50% по прежней матрице: 98 DONE, 0 PARTIAL, 2 BLOCKED, 0 MISSING.**

@@ -1,0 +1,90 @@
+{
+  "date_utc": "2026-11-14T12:45:51.652393+00:00",
+  "quantiles": "nearest rank",
+  "environment": "Windows Python 3.12.16, Docker Desktop PG16/Redis7, synthetic data",
+  "comparison": "single implementation, no speedup or regression claim",
+  "engine_only": {
+    "attempted": 500,
+    "successes": 500,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 2.6052,
+    "p95_ms": 4.8455,
+    "p99_ms": 6.3674,
+    "scope": "engine + graph + real Redis14; 30 warmups; excludes HTTP/SQL"
+  },
+  "http_database": {
+    "attempted": 100,
+    "successes": 100,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 92.8177,
+    "p95_ms": 339.3523,
+    "p99_ms": 794.1936,
+    "scope": "loopback HTTP + Docker FastAPI + engine + PG; 10 warmups; serial reused sender, risk outcomes may vary"
+  },
+  "integration_enqueue_http": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 70.1145,
+    "p95_ms": 126.5641,
+    "p99_ms": 176.1621
+  },
+  "queue_wait": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 4820.165,
+    "p95_ms": 9213.076,
+    "p99_ms": 9711.082
+  },
+  "integration_processing": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 22.846,
+    "p95_ms": 208.304,
+    "p99_ms": 286.243
+  },
+  "integration_total": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 4839.408,
+    "p95_ms": 9264.463,
+    "p99_ms": 9739.606
+  },
+  "integration_workload": "20 gateway-only fake jobs in a burst; one worker, 0.5s loop; persisted audit timestamps, not client polling delay; no Telegram; p99 is maximum at N=20",
+  "health_after": {
+    "status": "ok",
+    "checked_at": "2026-11-14T12:46:20.369509Z",
+    "cache_seconds": 5,
+    "database": "ok",
+    "redis": "ok",
+    "worker": "ok",
+    "telegram": "fake_enabled",
+    "gateway": "mock_ready",
+    "queue": {
+      "notifications_queued": 0,
+      "notifications_delayed": 0,
+      "notifications_failed": 0,
+      "runs_pending": 0
+    },
+    "last_successful_processing": "2026-11-14T12:46:20.224939Z",
+    "real_provider_probed": false
+  },
+  "timeline_codes": [
+    "TRANSFER_EVALUATED",
+    "DECISION_APPROVED",
+    "INTEGRATION_QUEUED",
+    "INTEGRATION_STARTED",
+    "MOCK_GATEWAY_REQUESTED",
+    "MOCK_GATEWAY_CLEAR",
+    "INTEGRATION_COMPLETE"
+  ]
+}

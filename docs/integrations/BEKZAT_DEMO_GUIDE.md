@@ -1,3 +1,5 @@
+> Guardian 2.0 follow-up (2026-11-14): see [current verification](../guardian/VERIFICATION.md) and [new frontend contract](../guardian/FRONTEND_HANDOFF.md). Historical counts/live acceptance below belong to the previous stage.
+
 # Bekzat — three synthetic hackathon demos
 
 Verified 2026-11-14 on source `84c793028accd21c293dd50be4630072c816e924`, [PR #4](https://github.com/foxfordkz-cyber/qadamxbcc/pull/4).

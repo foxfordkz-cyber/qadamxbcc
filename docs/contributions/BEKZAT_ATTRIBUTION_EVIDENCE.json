@@ -1,0 +1,545 @@
+{
+  "snapshot_head": "7d8791f1d8c07de9ec1cd81b64b055daab5a536c",
+  "main": "a02d20dcc857001de364e0b0f12a66ce72db0c12",
+  "commit_identity": [
+    {
+      "sha": "7d8791f1d8c07de9ec1cd81b64b055daab5a536c",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "14831db44d5e1e70e7a5c9cabef1281c7d59507e",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "8f98ad902bbc30019e71fd9d375c850c85843a9f",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "7f426e75ff64a7ac3536c818c4dafd06ccaf3878",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "4b4826adf453317a606c1dcf95a9591b341a6611",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "7f47709b9e3d78db07dab7430e53653d674a5a1e",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "84c793028accd21c293dd50be4630072c816e924",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "186255df1db8439b4a9473fdf5a1b30924be7206",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "4533b16769a04a71b3756bc77119b276752377cf",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "be7489d7bfb4f9e6a392d3c1088865a31c9db083",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "59550de781c146e517e082cada22f64bd4405e32",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "9a762443ff1219146c1ec54a0023f07881181e17",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "561afe6e3e4b3e6a8a435e960aba2132c34ec029",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "72a2e5b1dcf88701d52eeb81a887d98848d4adbb",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "a8f8ec4f3befb4669a4d80a401cd3273eaa0f148",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "052275073fb31a43f40c1fba4622359cf905bca9",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "04392a85474daf351d3e5490b331bc761b03247b",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "1ebfb6cfef8724ea52b7a2e7283b99254f048747",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "e23df31514553990b59b9c0181046aff2c1c63fa",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "444da144ceba358832409fccfc556a4077302c3b",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "cb63483b8fe50b0e4242ab184f6c43f33ca13c94",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "24e095abc67c22a6c10f00c3e4d33a60375a0c2d",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "71b1c3a64600020fc44c4c8df7613b103a15c0db",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "e7fdd171c0bf607439c678278c715f30dab44b1b",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "20e62cf8947e21bb4dafc2ff815c8b7f74a68ea6",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "a177120e95db722c1e87cf4b696d8dbfde256156",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "c905b68490abd7ccdcb628fe60efa6d529a0bc8c",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "179b0ca4c4ef79e38e81e99b486bdfd248890e90",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "3ab2dffdb835633ee15aeeb107af1ec5e86fd800",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "8d27c436a6d6114fdec44620b7660913376a02e8",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "fc4818571ab7ddc8197de4ba377c8ea537876437",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "dddbd9ce5a763bc8c5e6b5f282df520fa0b4641a",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "61a34d66af2b2fd1f5da23351cba62089b3b9e6e",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    },
+    {
+      "sha": "5a755f8923a3dbb1fe382456b293a77693fabcf7",
+      "author": "bekzatwr",
+      "committer": "bekzatwr",
+      "email_kind": "non_noreply"
+    }
+  ],
+  "integrity": {
+    "snapshot_head": "7d8791f1d8c07de9ec1cd81b64b055daab5a536c",
+    "owned_unique": 34,
+    "owned_non_merge": 23,
+    "owned_merge": 11,
+    "owned_in_main": 0,
+    "owned_outside_main": 34,
+    "distinct_owner_email_count": 1,
+    "all_author_and_committer_linked_to_owner": true,
+    "missing_from_stack_tip": [],
+    "empty_non_merge_commits": [],
+    "duplicate_non_merge_patch_groups": [],
+    "main_coauthor_name_counts": {
+      "Claude Opus 5.5": 11
+    },
+    "chain": [
+      {
+        "pr": 1,
+        "base_is_ancestor": true,
+        "incremental_commits": 5,
+        "author_owned_incremental": 5,
+        "files_changed": 41,
+        "main_is_ancestor": true
+      },
+      {
+        "pr": 2,
+        "base_is_ancestor": true,
+        "incremental_commits": 7,
+        "author_owned_incremental": 7,
+        "files_changed": 24,
+        "main_is_ancestor": true
+      },
+      {
+        "pr": 3,
+        "base_is_ancestor": true,
+        "incremental_commits": 13,
+        "author_owned_incremental": 13,
+        "files_changed": 42,
+        "main_is_ancestor": true
+      },
+      {
+        "pr": 4,
+        "base_is_ancestor": true,
+        "incremental_commits": 4,
+        "author_owned_incremental": 4,
+        "files_changed": 23,
+        "main_is_ancestor": true
+      },
+      {
+        "pr": 5,
+        "base_is_ancestor": true,
+        "incremental_commits": 1,
+        "author_owned_incremental": 1,
+        "files_changed": 7,
+        "main_is_ancestor": true
+      },
+      {
+        "pr": 6,
+        "base_is_ancestor": true,
+        "incremental_commits": 2,
+        "author_owned_incremental": 2,
+        "files_changed": 11,
+        "main_is_ancestor": true
+      },
+      {
+        "pr": 7,
+        "base_is_ancestor": true,
+        "incremental_commits": 2,
+        "author_owned_incremental": 2,
+        "files_changed": 47,
+        "main_is_ancestor": true
+      }
+    ],
+    "unrelated_branch": {
+      "ref": "origin/feat/mobile-client-cooling-flow",
+      "head": "e7f84c9dbdbd3c034cb6bb457f4ecbfc7c39dd82",
+      "author_login": "codex",
+      "counted_as_bekzat": false
+    }
+  },
+  "repository_policy": {
+    "repository_http": 200,
+    "repository": {
+      "default_branch": "main",
+      "allow_merge_commit": true,
+      "allow_squash_merge": true,
+      "allow_rebase_merge": true,
+      "allow_auto_merge": false,
+      "delete_branch_on_merge": false,
+      "permissions": {
+        "admin": false,
+        "maintain": false,
+        "push": true,
+        "triage": true,
+        "pull": true
+      }
+    },
+    "/branches/main": {
+      "http": 200,
+      "data": {
+        "name": "main",
+        "sha": "a02d20dcc857001de364e0b0f12a66ce72db0c12",
+        "protected": false
+      }
+    },
+    "/branches/main/protection": {
+      "http": 404,
+      "data": {
+        "message": "Not Found"
+      }
+    },
+    "/rules/branches/main": {
+      "http": 200,
+      "data": []
+    },
+    "/rulesets": {
+      "http": 200,
+      "data": []
+    },
+    "/contributors?per_page=100&anon=1": {
+      "http": 200,
+      "data": [
+        {
+          "login": "foxfordkz-cyber",
+          "type": "User",
+          "contributions": 13
+        }
+      ]
+    },
+    "/stats/contributors": {
+      "http": 200,
+      "data": [
+        {
+          "login": "claude",
+          "total": 11
+        },
+        {
+          "login": "foxfordkz-cyber",
+          "total": 13
+        }
+      ]
+    }
+  },
+  "private_email_verification": {
+    "http": 404,
+    "matched_account_email": null,
+    "matched_verified_email": null,
+    "current_local_identity_matches_audited_commits": true
+  },
+  "prs": [
+    {
+      "pr": 1,
+      "head": "59550de781c146e517e082cada22f64bd4405e32",
+      "base": "main",
+      "branch": "feature/bekzat-trusted-contact",
+      "mergeable": true,
+      "draft": true,
+      "ci": [
+        {
+          "id": 43563302792,
+          "name": "Integration verification",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 31,
+          "jobs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43563302792/jobs",
+          "logs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43563302792/logs",
+          "workflow_id": 417338162
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "pr": 2,
+      "head": "be7489d7bfb4f9e6a392d3c1088865a31c9db083",
+      "base": "feature/bekzat-trusted-contact",
+      "branch": "feature/bekzat-nbk-mock-gateway",
+      "mergeable": true,
+      "draft": true,
+      "ci": [
+        {
+          "id": 43563495541,
+          "name": "Integration verification",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 33,
+          "jobs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43563495541/jobs",
+          "logs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43563495541/logs",
+          "workflow_id": 417338162
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "pr": 3,
+      "head": "4533b16769a04a71b3756bc77119b276752377cf",
+      "base": "feature/bekzat-nbk-mock-gateway",
+      "branch": "feature/bekzat-integration-orchestrator",
+      "mergeable": true,
+      "draft": true,
+      "ci": [
+        {
+          "id": 43563561759,
+          "name": "Integration verification",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 35,
+          "jobs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43563561759/jobs",
+          "logs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43563561759/logs",
+          "workflow_id": 417338162
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "pr": 4,
+      "head": "7f47709b9e3d78db07dab7430e53653d674a5a1e",
+      "base": "feature/bekzat-integration-orchestrator",
+      "branch": "feature/bekzat-integration-observability",
+      "mergeable": true,
+      "draft": true,
+      "ci": [
+        {
+          "id": 43567054363,
+          "name": "Integration verification",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 39,
+          "jobs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43567054363/jobs",
+          "logs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43567054363/logs",
+          "workflow_id": 417338162
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "pr": 5,
+      "head": "4b4826adf453317a606c1dcf95a9591b341a6611",
+      "base": "feature/bekzat-integration-observability",
+      "branch": "feature/bekzat-guardian-bot-ux",
+      "mergeable": true,
+      "draft": true,
+      "ci": [
+        {
+          "id": 43569413419,
+          "name": "Integration verification",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 41,
+          "jobs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43569413419/jobs",
+          "logs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43569413419/logs",
+          "workflow_id": 417338162
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "pr": 6,
+      "head": "8f98ad902bbc30019e71fd9d375c850c85843a9f",
+      "base": "feature/bekzat-guardian-bot-ux",
+      "branch": "feature/bekzat-trusted-circle",
+      "mergeable": true,
+      "draft": true,
+      "ci": [
+        {
+          "id": 43571963009,
+          "name": "Integration verification",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 45,
+          "jobs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43571963009/jobs",
+          "logs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43571963009/logs",
+          "workflow_id": 417338162
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "pr": 7,
+      "head": "7d8791f1d8c07de9ec1cd81b64b055daab5a536c",
+      "base": "feature/bekzat-trusted-circle",
+      "branch": "feature/bekzat-incident-reporting",
+      "mergeable": true,
+      "draft": true,
+      "ci": [
+        {
+          "id": 43699812500,
+          "name": "Integration verification",
+          "status": "completed",
+          "conclusion": "success",
+          "run_number": 49,
+          "jobs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43699812500/jobs",
+          "logs_url": "https://api.github.com/repos/foxfordkz-cyber/qadamxbcc/actions/runs/43699812500/logs",
+          "workflow_id": 417338162
+        }
+      ],
+      "reviews": []
+    }
+  ],
+  "merge_tree_checks": [
+    {
+      "pr": 1,
+      "conflicts": false,
+      "result_matches_head_tree": true
+    },
+    {
+      "pr": 2,
+      "conflicts": false,
+      "result_matches_head_tree": true
+    },
+    {
+      "pr": 3,
+      "conflicts": false,
+      "result_matches_head_tree": true
+    },
+    {
+      "pr": 4,
+      "conflicts": false,
+      "result_matches_head_tree": true
+    },
+    {
+      "pr": 5,
+      "conflicts": false,
+      "result_matches_head_tree": true
+    },
+    {
+      "pr": 6,
+      "conflicts": false,
+      "result_matches_head_tree": true
+    },
+    {
+      "pr": 7,
+      "conflicts": false,
+      "result_matches_head_tree": true
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+[
+  {
+    "result": "PASS",
+    "scenario": "normal",
+    "transaction_id": "820f0cef-525e-455d-802d-59abe056bb6c",
+    "core_status": "approved",
+    "notifications": 0,
+    "gateway_source": null
+  },
+  {
+    "result": "PASS",
+    "scenario": "scam",
+    "transaction_id": "faa03507-2762-4882-a37a-7b3f01565fb8",
+    "correlation_id": "9405631a-ec50-49bc-82ac-b0728391e3f3",
+    "core_status": "cooling_off",
+    "notification": "SUSPICION_REPORTED",
+    "gateway_source": "MOCK"
+  },
+  {
+    "result": "PASS",
+    "scenario": "hub",
+    "transaction_id": "74eebe1d-f088-4c98-8e79-6e8274320339",
+    "core_status": "blocked",
+    "notifications": 0,
+    "gateway_source": "MOCK"
+  },
+  {
+    "result": "PASS",
+    "scenario": "guardian_report",
+    "report_id": "fea3af69-65bf-401c-9e19-baee9a79763b",
+    "status": "DEMO_ACKNOWLEDGED",
+    "events": 2,
+    "delivery": "local_demo_soc",
+    "scam_check_bot_flow": "covered separately by RU/KK dispatcher tests; no live Telegram"
+  }
+]

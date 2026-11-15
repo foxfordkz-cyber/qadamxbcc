@@ -11,7 +11,7 @@ Users may finish at any time. Results explain that no flagged answers cannot pro
 recommend independently using a familiar official banking channel, and can prepare a
 fixed-text draft for the user. No PIN/CVV/OTP/password/account data or arbitrary text is
 requested by this flow. Nothing is sent to SOC or an outside organization by the draft
-action. The separate incident workflow must require explicit submission and ownership.
+action. The separate incident workflow requires explicit submission and verified ownership.
 
 All questions, explanations, buttons and empty/stale states have RU/KK versions. Survey
 answers live only in bounded Redis FSM data, with 15-minute TTL and an explicit expiry

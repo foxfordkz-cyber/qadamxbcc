@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import utcnow
 from app.integrations.errors import IntegrationError
-from app.integrations.models import ContactNotification, IntegrationAudit
+from app.integrations.models import ContactNotification, GuardianReport, IntegrationAudit
 from app.integrations.nbk_mock.models import ExternalCheck
 from app.integrations.run_model import IntegrationRun
 from app.models import Transaction
@@ -52,6 +52,18 @@ class Cursor(BaseModel):
 
 # Importance is a display label derived from the saved event, not a new risk score.
 LABELS: dict[str, tuple[Category, Importance, str, str]] = {
+    "GUARDIAN_REPORT_SUBMITTED": (
+        "orchestration",
+        "attention",
+        "Получено демо-обращение",
+        "Демо-хабарлама алынды",
+    ),
+    "GUARDIAN_REPORT_DEMO_ACKNOWLEDGED": (
+        "orchestration",
+        "information",
+        "Демо-оператор отметил обращение",
+        "Демо операторы хабарламаны белгіледі",
+    ),
     "TRANSFER_EVALUATED": ("core", "information", "Перевод проверен", "Аударым тексерілді"),
     "DECISION_APPROVED": ("core", "information", "Решение: одобрен", "Шешім: мақұлданды"),
     "DECISION_COOLING_OFF": ("core", "attention", "Решение: период ожидания", "Шешім: күту кезеңі"),
@@ -239,6 +251,7 @@ async def timeline(
         select(ContactNotification.id).where(ContactNotification.transaction_id == tx.id),
         select(ExternalCheck.id).where(ExternalCheck.transaction_id == tx.id),
         select(IntegrationRun.id).where(IntegrationRun.transaction_id == tx.id),
+        select(GuardianReport.id).where(GuardianReport.transaction_id == tx.id),
     )
     audit_key = literal("audit:") + func.replace(cast(IntegrationAudit.id, String), "-", "")
     query = select(IntegrationAudit).where(
