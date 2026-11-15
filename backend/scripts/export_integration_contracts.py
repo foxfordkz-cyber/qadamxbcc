@@ -8,6 +8,7 @@ from pydantic import TypeAdapter
 
 from app.api.v1 import (
     external_checks,
+    guardian_cases,
     guardian_reports,
     integration_insights,
     integrations,
@@ -85,6 +86,7 @@ def export() -> None:
             (integrations, "/api/v1"),
             (integration_insights, "/api/v1/integrations"),
             (guardian_reports, "/api/v1/integrations"),
+            (guardian_cases, "/api/v1/integrations"),
         ]
         for route in module.router.routes
         if isinstance(route, APIRoute)

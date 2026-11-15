@@ -617,6 +617,327 @@
     "status": 200
   },
   {
+    "method": "POST",
+    "path": "/api/v1/integrations/guardian/soc/cases",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>",
+      "Idempotency-Key": "00000000-0000-4000-8000-000000000013"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": {
+      "report_id": "00000000-0000-4000-8000-000000000011"
+    },
+    "status": 201,
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "source": "owner_demo",
+      "category": "impersonation",
+      "state": "NEW",
+      "assignee": null,
+      "version": 1,
+      "created_at": "2026-11-15T09:00:00Z",
+      "status_since": "2026-11-15T09:00:00Z",
+      "expires_at": "2026-12-15T09:00:00Z",
+      "demonstration_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/guardian/soc/cases",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "report_id": "00000000-0000-4000-8000-000000000011",
+          "source": "owner_demo",
+          "category": "impersonation",
+          "state": "NEW",
+          "assignee": null,
+          "version": 1,
+          "created_at": "2026-11-15T09:00:00Z",
+          "status_since": "2026-11-15T09:00:00Z",
+          "expires_at": "2026-12-15T09:00:00Z",
+          "demonstration_only": true
+        }
+      ],
+      "next_cursor": null
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/guardian/soc/cases/analytics",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "as_of": "2026-11-15T09:00:00Z",
+      "total": 1,
+      "open": 1,
+      "closed": 0,
+      "by_state": {
+        "NEW": 1
+      },
+      "by_source": {
+        "owner_demo": 1
+      },
+      "escalated_cases": 0,
+      "manually_reviewed_cases": 0,
+      "manual_review_share": 0.0,
+      "oldest_current_status_seconds": {
+        "NEW": 0.0
+      },
+      "demonstration_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/guardian/soc/cases/{case_id}",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "source": "owner_demo",
+      "category": "impersonation",
+      "state": "NEW",
+      "assignee": null,
+      "version": 1,
+      "created_at": "2026-11-15T09:00:00Z",
+      "status_since": "2026-11-15T09:00:00Z",
+      "expires_at": "2026-12-15T09:00:00Z",
+      "demonstration_only": true
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/integrations/guardian/soc/cases/{case_id}/actions",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>",
+      "Idempotency-Key": "00000000-0000-4000-8000-000000000013"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": {
+      "action": "assign",
+      "expected_version": 1,
+      "assignee": "demo_analyst_a"
+    },
+    "status": 200,
+    "response": {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "source": "owner_demo",
+      "category": "impersonation",
+      "state": "NEW",
+      "assignee": "demo_analyst_a",
+      "version": 2,
+      "created_at": "2026-11-15T09:00:00Z",
+      "status_since": "2026-11-15T09:00:00Z",
+      "expires_at": "2026-12-15T09:00:00Z",
+      "demonstration_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/guardian/soc/cases/{case_id}/history",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "actor_id": "00000000-0000-4000-8000-000000000014",
+          "version": 1,
+          "code": "OPENED",
+          "actor_role": "soc",
+          "timestamp": "2026-11-15T09:00:00Z",
+          "state": "NEW",
+          "category": "impersonation",
+          "assignee": null,
+          "reason": null,
+          "description_ru": "Кейс открыт",
+          "description_kk": "Кейс ашылды"
+        }
+      ],
+      "next_after_version": null
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/guardian/soc/cases/{case_id}/notes",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "items": [],
+      "next_after_version": null
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/guardian/soc/cases/{case_id}/evidence",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "report_available": true,
+      "transaction_id": null,
+      "report_events": [],
+      "advisory_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/guardian/soc/cases/{case_id}/export",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "category": "impersonation",
+      "state": "NEW",
+      "source": "owner_demo",
+      "created_at": "2026-11-15T09:00:00Z",
+      "events": [
+        {
+          "code": "OPENED",
+          "state": "NEW",
+          "timestamp": "2026-11-15T09:00:00Z"
+        }
+      ],
+      "demonstration_only": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/guardian/reports/{report_id}/information-requests",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": [
+      {
+        "id": "00000000-0000-4000-8000-000000000012",
+        "question": "caller_request",
+        "description_ru": "Что просил сделать звонящий?",
+        "description_kk": "Қоңырау шалушы не істеуді сұрады?",
+        "created_at": "2026-11-15T09:00:00Z",
+        "answered": false
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/integrations/guardian/reports/{report_id}/information-requests/{request_id}",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>",
+      "Idempotency-Key": "00000000-0000-4000-8000-000000000013"
+    },
+    "path_parameters": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
+      "report_id": "00000000-0000-4000-8000-000000000011",
+      "request_id": "00000000-0000-4000-8000-000000000012"
+    },
+    "query_parameters": {},
+    "request": {
+      "body": "Synthetic caller requested remote access software.",
+      "confirmed_demo_submission": true
+    },
+    "status": 200,
+    "response": {
+      "request_id": "00000000-0000-4000-8000-000000000012",
+      "received": true
+    }
+  },
+  {
     "method": "GET",
     "path": "/api/v1/integrations/soc/transactions/{transaction_id}/timeline",
     "role": "soc",
