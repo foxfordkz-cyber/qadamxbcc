@@ -617,6 +617,123 @@
     "status": 200
   },
   {
+    "method": "GET",
+    "path": "/api/v1/integrations/soc/operations/notifications",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000020"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "as_of": "2026-11-15T09:00:00Z",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000020",
+          "correlation_id": "00000000-0000-4000-8000-000000000020",
+          "state": "DELIVERY_FAILED",
+          "disposition": "retry_exhausted",
+          "attempts": 3,
+          "created_at": "2026-11-15T09:00:00Z",
+          "expires_at": "2026-11-15T09:10:00Z",
+          "next_attempt_at": null,
+          "processing_age_seconds": null,
+          "queue_age_seconds": 0.0,
+          "error_code": "retry_exhausted",
+          "retry_scheduled": false,
+          "manual_resend_supported": false
+        }
+      ],
+      "next_after_id": null
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/soc/operations/queue",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000020"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "as_of": "2026-11-15T09:00:00Z",
+      "by_state": {
+        "DELIVERY_FAILED": 1
+      },
+      "processing": 0,
+      "oldest_processing_age_seconds": null,
+      "oldest_queued_age_seconds": null,
+      "retry_exhausted": 1,
+      "ambiguous_delivery": 0
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/privacy/permissions",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000020"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "exported_at": "2026-11-15T09:00:00Z",
+      "permissions": [
+        {
+          "contact_id": "00000000-0000-4000-8000-000000000020",
+          "state": "CONTACT_REVOKED",
+          "language": "kk",
+          "notifications_enabled": false,
+          "owner_consented_at": "2026-11-15T09:00:00Z",
+          "last_contact_consent_at": "2026-11-15T09:00:00Z",
+          "consent_currently_valid": false,
+          "delivery_identifiers_erased": true
+        }
+      ],
+      "next_after_id": null,
+      "active_contact_limit": 3,
+      "recipients_per_notification": 1,
+      "retention_policy": "personal_fields_until_revoke_metadata_until_demo_database_removal"
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/privacy/contacts/{contact_id}/history",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "contact_id": "00000000-0000-4000-8000-000000000020"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "events": [
+        {
+          "id": "00000000-0000-4000-8000-000000000020",
+          "event": "CONTACT_REVOKED",
+          "created_at": "2026-11-15T09:00:00Z"
+        }
+      ],
+      "next_after_id": null
+    }
+  },
+  {
     "method": "POST",
     "path": "/api/v1/integrations/guardian/soc/cases",
     "role": "soc",
