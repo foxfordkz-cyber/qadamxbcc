@@ -11,6 +11,7 @@ from app.api.v1 import (
     guardian_cases,
     guardian_reports,
     integration_insights,
+    integration_operations,
     integrations,
     trusted_contacts,
 )
@@ -87,6 +88,7 @@ def export() -> None:
             (integration_insights, "/api/v1/integrations"),
             (guardian_reports, "/api/v1/integrations"),
             (guardian_cases, "/api/v1/integrations"),
+            (integration_operations, "/api/v1/integrations"),
         ]
         for route in module.router.routes
         if isinstance(route, APIRoute)

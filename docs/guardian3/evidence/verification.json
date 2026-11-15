@@ -1,0 +1,69 @@
+{
+  "runtime_head": "b61b17d1f7358ecbf8d04d5d0bc1e33837cc0721",
+  "case_head": "a9e51f712fdea1991e4a6e6a7724089824796da4",
+  "case_run": 43704163941,
+  "operations_run": 43706232756,
+  "both_runs_all_jobs": "success",
+  "unique_backend": 271,
+  "new_backend_vs_guardian2": 37,
+  "portable": {
+    "passed": 259,
+    "skipped": 12,
+    "failed": 0
+  },
+  "postgres_redis": {
+    "passed": 223,
+    "skipped": 0,
+    "failed": 0
+  },
+  "frontend": {
+    "passed": 12,
+    "skipped": 0,
+    "failed": 0
+  },
+  "backend_pass_executions_per_release_run": 482,
+  "backend_total_executions_including_skips_per_release_run": 494,
+  "ruff_format_files": 130,
+  "mypy_sources": 129,
+  "docker_fake_scenarios": 6,
+  "sqlite_migration": "pass",
+  "postgres_migration": "pass",
+  "legacy_openapi_paths_schemas": "unchanged",
+  "main": "a02d20dcc857001de364e0b0f12a66ce72db0c12",
+  "live_telegram_sent": 0,
+  "prior_local_attempts": [
+    {
+      "suite": "case portable during export refresh",
+      "passed": 248,
+      "failed": 1,
+      "skipped": 11,
+      "resolved_by": "final contracts 34 passed and clean exact-head CI"
+    },
+    {
+      "suite": "operations PostgreSQL",
+      "passed": 222,
+      "failed": 1,
+      "skipped": 0,
+      "error": "Windows denied child process creation before lock code"
+    },
+    {
+      "suite": "operations portable first full",
+      "passed": 258,
+      "failed": 1,
+      "skipped": 12,
+      "error": "Windows denied child process creation before lock code"
+    }
+  ],
+  "final_local_verify": {
+    "backend_passed": 259,
+    "backend_skipped": 12,
+    "frontend_passed": 12,
+    "failed": 0,
+    "result": "ALL GREEN"
+  },
+  "windows_lock_standalone_rerun": {
+    "passed": 2,
+    "deselected": 5
+  },
+  "windows_policy": "only WinError 5 before child launch is an explicit skip; final local run did not skip it; Linux CI executes the crash test"
+}
