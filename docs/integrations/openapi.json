@@ -1179,6 +1179,677 @@
         }
       }
     },
+    "/api/v1/integrations/guardian/soc/cases": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_v1_integrations_guardian_soc_cases_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenCase"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "List Cases",
+        "operationId": "list_cases_api_v1_integrations_guardian_soc_cases_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/analytics": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Case Analytics",
+        "operationId": "case_analytics_api_v1_integrations_guardian_soc_cases_analytics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseAnalytics"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Read Case",
+        "operationId": "read_case_api_v1_integrations_guardian_soc_cases__case_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/actions": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Action",
+        "operationId": "action_api_v1_integrations_guardian_soc_cases__case_id__actions_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Transition"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Assign"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Categorize"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Note"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AskInformation"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "action",
+                  "mapping": {
+                    "transition": "#/components/schemas/Transition",
+                    "assign": "#/components/schemas/Assign",
+                    "categorize": "#/components/schemas/Categorize",
+                    "note": "#/components/schemas/Note",
+                    "request_information": "#/components/schemas/AskInformation"
+                  }
+                },
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/history": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_integrations_guardian_soc_cases__case_id__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "After Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/notes": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Notes",
+        "operationId": "notes_api_v1_integrations_guardian_soc_cases__case_id__notes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "After Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/evidence": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Evidence",
+        "operationId": "evidence_api_v1_integrations_guardian_soc_cases__case_id__evidence_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/export": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Export",
+        "operationId": "export_api_v1_integrations_guardian_soc_cases__case_id__export_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseExport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/reports/{report_id}/information-requests": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Information Requests",
+        "operationId": "information_requests_api_v1_integrations_guardian_reports__report_id__information_requests_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InformationOut"
+                  },
+                  "title": "Response Information Requests Api V1 Integrations Guardian Reports  Report Id  Information Requests Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/reports/{report_id}/information-requests/{request_id}": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Answer Information",
+        "operationId": "answer_information_api_v1_integrations_guardian_reports__report_id__information_requests__request_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Request Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerInformation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/integrations/transactions/{transaction_id}": {
       "post": {
         "tags": [
@@ -1370,6 +2041,116 @@
   },
   "components": {
     "schemas": {
+      "AnswerInformation": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Body"
+          },
+          "confirmed_demo_submission": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirmed Demo Submission"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "body",
+          "confirmed_demo_submission"
+        ],
+        "title": "AnswerInformation"
+      },
+      "AnswerReceipt": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "received": {
+            "type": "boolean",
+            "const": true,
+            "title": "Received",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id"
+        ],
+        "title": "AnswerReceipt"
+      },
+      "AskInformation": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "action": {
+            "type": "string",
+            "const": "request_information",
+            "title": "Action"
+          },
+          "question": {
+            "type": "string",
+            "enum": [
+              "caller_request",
+              "remote_access",
+              "secrecy_pressure"
+            ],
+            "title": "Question"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "action",
+          "question"
+        ],
+        "title": "AskInformation"
+      },
+      "Assign": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "action": {
+            "type": "string",
+            "const": "assign",
+            "title": "Action"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "demo_analyst_a",
+                  "demo_analyst_b"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "action",
+          "assignee"
+        ],
+        "title": "Assign"
+      },
       "AuditOut": {
         "properties": {
           "event": {
@@ -1394,6 +2175,299 @@
           "created_at"
         ],
         "title": "AuditOut"
+      },
+      "CaseAnalytics": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "open": {
+            "type": "integer",
+            "title": "Open"
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed"
+          },
+          "by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By State"
+          },
+          "by_source": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Source"
+          },
+          "escalated_cases": {
+            "type": "integer",
+            "title": "Escalated Cases"
+          },
+          "manually_reviewed_cases": {
+            "type": "integer",
+            "title": "Manually Reviewed Cases"
+          },
+          "manual_review_share": {
+            "type": "number",
+            "title": "Manual Review Share"
+          },
+          "oldest_current_status_seconds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Oldest Current Status Seconds"
+          },
+          "demonstration_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Demonstration Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "total",
+          "open",
+          "closed",
+          "by_state",
+          "by_source",
+          "escalated_cases",
+          "manually_reviewed_cases",
+          "manual_review_share",
+          "oldest_current_status_seconds"
+        ],
+        "title": "CaseAnalytics"
+      },
+      "CaseExport": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "owner_demo",
+              "trusted_contact"
+            ],
+            "title": "Source"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ExportEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "demonstration_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Demonstration Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "state",
+          "source",
+          "created_at",
+          "events"
+        ],
+        "title": "CaseExport"
+      },
+      "CaseOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "owner_demo",
+              "trusted_contact"
+            ],
+            "title": "Source"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "demo_analyst_a",
+                  "demo_analyst_b"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "status_since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Status Since"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "demonstration_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Demonstration Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "report_id",
+          "source",
+          "category",
+          "state",
+          "assignee",
+          "version",
+          "created_at",
+          "status_since",
+          "expires_at"
+        ],
+        "title": "CaseOut"
+      },
+      "CasePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CaseOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "CasePage"
+      },
+      "Categorize": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "action": {
+            "type": "string",
+            "const": "categorize",
+            "title": "Action"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "action",
+          "category"
+        ],
+        "title": "Categorize"
       },
       "ConsentFact": {
         "properties": {
@@ -1522,6 +2596,59 @@
         ],
         "title": "ContactsOut"
       },
+      "ContentOut": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Event Id"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "body",
+          "expires_at"
+        ],
+        "title": "ContentOut"
+      },
+      "ContentPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContentOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_after_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_after_version"
+        ],
+        "title": "ContentPage"
+      },
       "CoolingQuestionnaire": {
         "properties": {
           "caller_claims_bank_or_police": {
@@ -1626,6 +2753,212 @@
           "events"
         ],
         "title": "EnrichmentOut"
+      },
+      "EventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "actor_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Actor Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "actor_role": {
+            "type": "string",
+            "enum": [
+              "soc",
+              "owner"
+            ],
+            "title": "Actor Role"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "demo_analyst_a",
+                  "demo_analyst_b"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "description_ru": {
+            "type": "string",
+            "title": "Description Ru"
+          },
+          "description_kk": {
+            "type": "string",
+            "title": "Description Kk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "actor_id",
+          "version",
+          "code",
+          "actor_role",
+          "timestamp",
+          "state",
+          "category",
+          "assignee",
+          "reason",
+          "description_ru",
+          "description_kk"
+        ],
+        "title": "EventOut"
+      },
+      "EventPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EventOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_after_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_after_version"
+        ],
+        "title": "EventPage"
+      },
+      "EvidenceOut": {
+        "properties": {
+          "report_available": {
+            "type": "boolean",
+            "title": "Report Available"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Id"
+          },
+          "report_events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditOut"
+            },
+            "type": "array",
+            "title": "Report Events"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "title": "Advisory Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_available",
+          "transaction_id",
+          "report_events"
+        ],
+        "title": "EvidenceOut"
+      },
+      "ExportEvent": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "state",
+          "timestamp"
+        ],
+        "title": "ExportEvent"
       },
       "ExternalCheckOut": {
         "properties": {
@@ -2437,6 +3770,51 @@
         ],
         "title": "IncidentSummary"
       },
+      "InformationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "question": {
+            "type": "string",
+            "enum": [
+              "caller_request",
+              "remote_access",
+              "secrecy_pressure"
+            ],
+            "title": "Question"
+          },
+          "description_ru": {
+            "type": "string",
+            "title": "Description Ru"
+          },
+          "description_kk": {
+            "type": "string",
+            "title": "Description Kk"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "answered": {
+            "type": "boolean",
+            "title": "Answered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "question",
+          "description_ru",
+          "description_kk",
+          "created_at",
+          "answered"
+        ],
+        "title": "InformationOut"
+      },
       "IntegrationHealth": {
         "properties": {
           "status": {
@@ -2581,6 +3959,34 @@
         ],
         "title": "MLContributorOut"
       },
+      "Note": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Body"
+          },
+          "action": {
+            "type": "string",
+            "const": "note",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "body",
+          "action"
+        ],
+        "title": "Note"
+      },
       "NotificationOut": {
         "properties": {
           "id": {
@@ -2685,6 +4091,21 @@
           "NOTIFICATION_EXPIRED"
         ],
         "title": "NotificationState"
+      },
+      "OpenCase": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "report_id"
+        ],
+        "title": "OpenCase"
       },
       "OrchestrationRequest": {
         "properties": {
@@ -3682,6 +5103,52 @@
           "recipient_graph"
         ],
         "title": "TransferEvaluateResponse"
+      },
+      "Transition": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "action": {
+            "type": "string",
+            "const": "transition",
+            "title": "Action"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "review_started",
+              "needs_followup",
+              "review_complete",
+              "duplicate",
+              "reopened"
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "action",
+          "state",
+          "reason"
+        ],
+        "title": "Transition"
       },
       "UpdateOut": {
         "properties": {
