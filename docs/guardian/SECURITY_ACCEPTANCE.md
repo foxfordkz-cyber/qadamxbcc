@@ -33,3 +33,10 @@ status is not an emergency response guarantee. No production GO is claimed.
 
 Final measured QA evidence and exact source/CI references are recorded in
 VERIFICATION.md after execution; historical counts must not be presented as new passes.
+
+Inherited Compose is explicitly a demo: PostgreSQL synchronous_commit=off can lose recent
+commits on a host crash; Redis persistence is disabled. Process/connection restart tests
+do not establish host power-loss durability. Bot FSM drafts survive a process restart
+only while Redis data remains; a Redis-server restart clears drafts and requires a new
+flow. Persisted PostgreSQL reports/consent remain subject to the demo database durability
+limit. Production must use durable database/Redis configuration and receive owner review.

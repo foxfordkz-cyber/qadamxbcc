@@ -1,0 +1,46 @@
+{
+  "scope": "same Guardian image, database, owner, synthetic fixture and N=20; serial A then B; only pacing expression changed",
+  "warmup": "fresh heartbeat after >TTL plus one completed gateway job before each measured batch",
+  "control_sha256": "722b17abaea46c9c9d43e703c8432ed00fd78bb48d9b0e371b9a35f34639cdb5",
+  "limitations": "one pair; no production SLA; p99 is max at N=20; no inference about core performance",
+  "fixed_500ms": {
+    "queue_wait": {
+      "attempted": 20,
+      "successes": 20,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 4699.793,
+      "p95_ms": 8999.845,
+      "p99_ms": 9496.687
+    },
+    "processing": {
+      "attempted": 20,
+      "successes": 20,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 21.986,
+      "p95_ms": 30.794,
+      "p99_ms": 63.895
+    }
+  },
+  "bounded_fake_drain": {
+    "queue_wait": {
+      "attempted": 20,
+      "successes": 20,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 481.608,
+      "p95_ms": 815.767,
+      "p99_ms": 822.795
+    },
+    "processing": {
+      "attempted": 20,
+      "successes": 20,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 17.378,
+      "p95_ms": 85.956,
+      "p99_ms": 96.054
+    }
+  }
+}

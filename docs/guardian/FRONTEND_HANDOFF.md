@@ -1,6 +1,6 @@
 # Guardian / Trusted Circle handoff
 
-Dependencies: #4 observability → #5 Guardian UX → Trusted Circle. The bank UI is owned
+Dependencies: #4 observability → #5 Guardian UX → #6 Trusted Circle → #7 reports/SOC. The bank UI is owned
 by the frontend team and was not modified. Existing evaluate/resolve-cooling contracts
 remain unchanged. Telegram chat identity is never a source of owner capabilities.
 
