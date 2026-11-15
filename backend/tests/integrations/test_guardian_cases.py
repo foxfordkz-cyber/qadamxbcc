@@ -1,0 +1,367 @@
+import asyncio
+import os
+import uuid
+from datetime import timedelta
+from typing import Any
+
+import pytest
+from sqlalchemy import func, select
+
+from app.db.base import utcnow
+from app.integrations.cases.models import CaseContent, CaseEvent, FraudCase
+from app.integrations.cases.service import expire_cases
+from app.integrations.guardian_reports import ReportRequest, create_report
+from tests.integrations.conftest import IntegrationWorld
+
+ROOT = "/api/v1/integrations/guardian"
+CASES = ROOT + "/soc/cases"
+DESCRIPTION = "Synthetic caller demanded urgent confidential action."
+
+
+async def opened(iw: IntegrationWorld, *, contact: bool = False) -> dict[str, Any]:
+    cid = uuid.UUID(await iw.verified()) if contact else None
+    async with iw.factory() as session:
+        report = await create_report(
+            session,
+            iw.owner.id,
+            ReportRequest(
+                category="impersonation",
+                description=DESCRIPTION,
+                confirmed_demo_submission=True,
+            ),
+            uuid.uuid4(),
+            contact_id=cid,
+        )
+    response = await iw.client.post(
+        CASES,
+        headers={
+            **iw.auth("soc"),
+            "Idempotency-Key": str(uuid.uuid4()),
+        },
+        json={"report_id": str(report.id)},
+    )
+    assert response.status_code == 201, response.text
+    result: dict[str, Any] = response.json()
+    return result
+
+
+async def act(iw: IntegrationWorld, row: dict[str, Any], **body: Any) -> dict[str, Any]:
+    response = await iw.client.post(
+        f"{CASES}/{row['id']}/actions",
+        headers={
+            **iw.auth("soc"),
+            "Idempotency-Key": str(uuid.uuid4()),
+        },
+        json={"expected_version": row["version"], **body},
+    )
+    assert response.status_code == 200, response.text
+    result: dict[str, Any] = response.json()
+    return result
+
+
+async def test_case_lifecycle_history_export_analytics(iw: IntegrationWorld) -> None:
+    row = await opened(iw)
+    row = await act(iw, row, action="assign", assignee="demo_analyst_a")
+    row = await act(iw, row, action="categorize", category="remote_access")
+    row = await act(iw, row, action="note", body="Synthetic evidence was checked by an analyst.")
+    for state in ("IN_REVIEW", "ESCALATED", "RESOLVED", "CLOSED", "IN_REVIEW"):
+        row = await act(iw, row, action="transition", state=state, reason="reopened")
+    assert row["version"] == 9
+    history = (
+        await iw.client.get(f"{CASES}/{row['id']}/history?limit=3", headers=iw.auth("soc"))
+    ).json()
+    assert history["next_after_version"] == 3
+    assert all(e["description_ru"] and e["description_kk"] for e in history["items"])
+    tail = (
+        await iw.client.get(f"{CASES}/{row['id']}/history?after_version=3", headers=iw.auth("soc"))
+    ).json()
+    assert len(tail["items"]) == 6
+    assert tail["next_after_version"] is None
+    notes = await iw.client.get(f"{CASES}/{row['id']}/notes", headers=iw.auth("soc"))
+    assert len(notes.json()["items"]) == 1
+    exported = await iw.client.get(f"{CASES}/{row['id']}/export", headers=iw.auth("soc"))
+    assert exported.headers["Cache-Control"] == "no-store"
+    for private in (
+        row["id"],
+        row["report_id"],
+        str(iw.owner.id),
+        DESCRIPTION,
+        "analyst_a",
+        "body",
+    ):
+        assert private not in exported.text
+    assert len(exported.json()["events"]) == 9
+    metrics = (await iw.client.get(CASES + "/analytics", headers=iw.auth("soc"))).json()
+    assert metrics["total"] == metrics["open"] == metrics["manually_reviewed_cases"] == 1
+    assert metrics["escalated_cases"] == 1
+    assert metrics["manual_review_share"] == 1.0
+    assert metrics["oldest_current_status_seconds"]["IN_REVIEW"] >= 0
+    evidence = (await iw.client.get(f"{CASES}/{row['id']}/evidence", headers=iw.auth("soc"))).json()
+    assert evidence["report_available"]
+    assert len(evidence["report_events"]) == 1
+
+
+async def test_case_role_boundary_and_safe_validation(iw: IntegrationWorld) -> None:
+    row = await opened(iw)
+    for role in ("owner", "simulator"):
+        headers = iw.auth(role)
+        for path in (
+            CASES,
+            CASES + "/analytics",
+            f"{CASES}/{row['id']}",
+            f"{CASES}/{row['id']}/notes",
+            f"{CASES}/{row['id']}/export",
+        ):
+            assert (await iw.client.get(path, headers=headers)).status_code == 403
+        assert (
+            await iw.client.post(
+                f"{CASES}/{row['id']}/actions",
+                headers={
+                    **headers,
+                    "Idempotency-Key": str(uuid.uuid4()),
+                },
+                json={
+                    "action": "transition",
+                    "state": "IN_REVIEW",
+                    "reason": "review_started",
+                    "expected_version": 1,
+                },
+            )
+        ).status_code == 403
+    assert (await iw.client.get(CASES)).status_code == 401
+    invalid = "password SECRET_VALUE_123456"
+    response = await iw.client.post(
+        f"{CASES}/{row['id']}/actions",
+        headers={
+            **iw.auth("soc"),
+            "Idempotency-Key": str(uuid.uuid4()),
+        },
+        json={"action": "note", "body": invalid, "expected_version": 1},
+    )
+    assert response.status_code == 422
+    assert invalid not in response.text
+    assert response.headers["Cache-Control"] == "no-store"
+
+
+async def test_case_idempotency_version_and_actor_scope(iw: IntegrationWorld) -> None:
+    row = await opened(iw)
+    headers = {**iw.auth("soc"), "Idempotency-Key": str(uuid.uuid4())}
+    body = {
+        "action": "note",
+        "body": "A synthetic observation is retained briefly.",
+        "expected_version": 1,
+    }
+    path = f"{CASES}/{row['id']}/actions"
+    first = await iw.client.post(path, headers=headers, json=body)
+    assert first.status_code == 200
+    assert (await iw.client.post(path, headers=headers, json=body)).json() == first.json()
+    assert (
+        await iw.client.post(
+            path, headers=headers, json={**body, "body": "Different synthetic note."}
+        )
+    ).status_code == 409
+    assert (
+        await iw.client.post(
+            path, headers={**headers, **iw.auth("soc", iw.recipient.id)}, json=body
+        )
+    ).status_code == 409
+    stale = await iw.client.post(
+        path, headers={**headers, "Idempotency-Key": str(uuid.uuid4())}, json=body
+    )
+    assert stale.status_code == 409
+    assert "case_version_conflict" in stale.text
+    async with iw.factory() as session:
+        assert await session.scalar(select(func.count()).select_from(CaseEvent)) == 2
+        assert await session.scalar(select(func.count()).select_from(CaseContent)) == 1
+
+
+async def test_case_open_replay_and_nonexistent_source(iw: IntegrationWorld) -> None:
+    row = await opened(iw)
+    async with iw.factory() as session:
+        event = await session.scalar(select(CaseEvent).where(CaseEvent.version == 1))
+        assert event
+        key = event.key
+    replay = await iw.client.post(
+        CASES,
+        headers={
+            **iw.auth("soc"),
+            "Idempotency-Key": str(key),
+        },
+        json={"report_id": row["report_id"]},
+    )
+    assert replay.json() == row
+    for rid, expected in ((row["report_id"], 409), (str(uuid.uuid4()), 404)):
+        response = await iw.client.post(
+            CASES,
+            headers={
+                **iw.auth("soc"),
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+            json={"report_id": rid},
+        )
+        assert response.status_code == expected
+
+
+STATES = ("NEW", "IN_REVIEW", "NEEDS_INFORMATION", "ESCALATED", "RESOLVED", "CLOSED")
+ALLOWED = {
+    "NEW": {"IN_REVIEW", "ESCALATED", "CLOSED"},
+    "IN_REVIEW": {"ESCALATED", "RESOLVED", "CLOSED"},
+    "NEEDS_INFORMATION": {"IN_REVIEW", "ESCALATED", "CLOSED"},
+    "ESCALATED": {"IN_REVIEW", "RESOLVED", "CLOSED"},
+    "RESOLVED": {"IN_REVIEW", "CLOSED"},
+    "CLOSED": {"IN_REVIEW"},
+}
+
+
+@pytest.mark.parametrize("origin", STATES)
+async def test_case_state_matrix(iw: IntegrationWorld, origin: str) -> None:
+    row = await opened(iw)
+    for target in STATES:
+        async with iw.factory() as session:
+            stored = await session.get(FraudCase, uuid.UUID(row["id"]))
+            assert stored
+            stored.state = origin
+            await session.commit()
+            version = stored.version
+        response = await iw.client.post(
+            f"{CASES}/{row['id']}/actions",
+            headers={
+                **iw.auth("soc"),
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+            json={
+                "expected_version": version,
+                "action": "transition",
+                "state": target,
+                "reason": "reopened",
+            },
+        )
+        assert response.status_code == (200 if target in ALLOWED[origin] else 409), response.text
+
+
+async def test_case_allowed_information_channel_and_owner_isolation(iw: IntegrationWorld) -> None:
+    row = await opened(iw)
+    row = await act(iw, row, action="transition", state="IN_REVIEW", reason="review_started")
+    row = await act(iw, row, action="request_information", question="caller_request")
+    path = f"{ROOT}/reports/{row['report_id']}/information-requests"
+    assert (await iw.client.get(path, headers=iw.auth(subject=iw.recipient.id))).status_code == 404
+    questions = (await iw.client.get(path, headers=iw.auth())).json()
+    assert len(questions) == 1
+    assert not questions[0]["answered"]
+    request_id = questions[0]["id"]
+    headers = {**iw.auth(), "Idempotency-Key": str(uuid.uuid4())}
+    body = {
+        "body": "The caller asked to install remote access software.",
+        "confirmed_demo_submission": True,
+    }
+    response = await iw.client.post(path + "/" + request_id, headers=headers, json=body)
+    assert response.status_code == 200
+    assert (
+        await iw.client.post(path + "/" + request_id, headers=headers, json=body)
+    ).json() == response.json()
+    assert (
+        await iw.client.post(
+            path + "/" + request_id,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+            json=body,
+        )
+    ).status_code == 409
+    assert (await iw.client.get(path, headers=iw.auth())).json()[0]["answered"]
+    current = (await iw.client.get(f"{CASES}/{row['id']}", headers=iw.auth("soc"))).json()
+    assert current["state"] == "NEEDS_INFORMATION"
+    assert current["version"] == row["version"] + 1
+
+
+async def test_case_contact_information_does_not_reach_bank_owner(iw: IntegrationWorld) -> None:
+    row = await opened(iw, contact=True)
+    row = await act(iw, row, action="transition", state="IN_REVIEW", reason="review_started")
+    response = await iw.client.post(
+        f"{CASES}/{row['id']}/actions",
+        headers={
+            **iw.auth("soc"),
+            "Idempotency-Key": str(uuid.uuid4()),
+        },
+        json={"action": "request_information", "question": "caller_request", "expected_version": 2},
+    )
+    assert response.status_code == 409
+    assert "channel_unavailable" in response.text
+    assert (
+        await iw.client.get(
+            f"{ROOT}/reports/{row['report_id']}/information-requests", headers=iw.auth()
+        )
+    ).status_code == 404
+    assert iw.adapter.messages == {}
+
+
+async def test_case_cursor_authentication_and_stable_pagination(iw: IntegrationWorld) -> None:
+    first = await opened(iw)
+    async with iw.factory() as session:
+        session.add(
+            FraudCase(
+                id=uuid.uuid4(),
+                report_id=uuid.uuid4(),
+                source="owner_demo",
+                category="other",
+                state="NEW",
+                version=1,
+                expires_at=utcnow() + timedelta(days=30),
+            )
+        )
+        await session.commit()
+    page = (await iw.client.get(CASES + "?limit=1", headers=iw.auth("soc"))).json()
+    cursor = page["next_cursor"]
+    assert cursor
+    next_page = (
+        await iw.client.get(CASES, params={"cursor": cursor}, headers=iw.auth("soc"))
+    ).json()
+    assert next_page["items"][0]["id"] == first["id"]
+    assert next_page["next_cursor"] is None
+    for value, headers in (
+        (cursor + "x", iw.auth("soc")),
+        (cursor, iw.auth("soc", iw.recipient.id)),
+    ):
+        assert (
+            await iw.client.get(CASES, params={"cursor": value}, headers=headers)
+        ).status_code == 400
+
+
+async def test_case_retention_hides_content_then_purges_audit(iw: IntegrationWorld) -> None:
+    row = await opened(iw)
+    await act(iw, row, action="note", body="This synthetic note will expire soon.")
+    async with iw.factory() as session:
+        note = await session.scalar(select(CaseContent))
+        assert note
+        note.expires_at = utcnow() - timedelta(seconds=1)
+        await session.commit()
+    assert (await iw.client.get(f"{CASES}/{row['id']}/notes", headers=iw.auth("soc"))).json()[
+        "items"
+    ] == []
+    async with iw.factory() as session:
+        await expire_cases(session)
+        assert await session.scalar(select(func.count()).select_from(CaseContent)) == 0
+        stored = await session.get(FraudCase, uuid.UUID(row["id"]))
+        assert stored
+        stored.expires_at = utcnow() - timedelta(seconds=1)
+        await session.commit()
+    assert (await iw.client.get(f"{CASES}/{row['id']}", headers=iw.auth("soc"))).status_code == 410
+    async with iw.factory() as session:
+        await expire_cases(session)
+        assert await session.scalar(select(func.count()).select_from(CaseEvent)) == 0
+
+
+@pytest.mark.skipif(not os.getenv("BCC_TEST_DATABASE_URL"), reason="requires PostgreSQL row locks")
+async def test_case_concurrent_optimistic_updates_have_one_winner(iw: IntegrationWorld) -> None:
+    row = await opened(iw)
+
+    async def update() -> int:
+        response = await iw.client.post(
+            f"{CASES}/{row['id']}/actions",
+            headers={
+                **iw.auth("soc"),
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+            json={"action": "assign", "assignee": "demo_analyst_b", "expected_version": 1},
+        )
+        return response.status_code
+
+    assert sorted(await asyncio.gather(update(), update())) == [200, 409]

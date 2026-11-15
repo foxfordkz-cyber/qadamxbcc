@@ -39,7 +39,9 @@ jobs:
         env:
           BCC_TEST_DATABASE_URL: postgresql+asyncpg://bcc:bcc@localhost:5432/bcc_integration_test
           BCC_TEST_REDIS_URL: redis://localhost:6379/15
-        run: uv run --no-sync pytest tests/integrations
+        run: |
+          uv run --no-sync python -m scripts.verify_case_migrations
+          uv run --no-sync pytest tests/integrations
   compose-demo:
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -61,7 +63,7 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations up -d --wait --wait-timeout 120
       - name: Exercise fake end-to-end flow
         working-directory: backend
-        run: uv run --python 3.12 python -m scripts.demo_guardian
+        run: uv run --python 3.12 python -m scripts.demo_cases
       - name: Shutdown disposable stack
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations down -v

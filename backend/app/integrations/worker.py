@@ -10,6 +10,7 @@ from redis.asyncio import Redis
 
 from app.core.config import get_settings
 from app.db.session import build_engine, build_session_factory
+from app.integrations.cases.service import expire_cases
 from app.integrations.config import get_integration_settings
 from app.integrations.guardian_reports import expire_reports
 from app.integrations.nbk_mock.adapter import MockGatewayAdapter
@@ -53,6 +54,7 @@ async def run(*, once: bool = False, check_health: bool = False) -> None:
                     if time.monotonic() - last_cleanup >= 60:
                         async with factory() as session:
                             await expire_reports(session)
+                            await expire_cases(session)
                         last_cleanup = time.monotonic()
                     processed = await process_one(factory, redis, cfg, client)
                     delivered = await deliver_one(factory, adapter, cfg)
