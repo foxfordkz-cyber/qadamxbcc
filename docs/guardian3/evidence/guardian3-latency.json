@@ -1,0 +1,100 @@
+{
+  "date_utc": "2026-11-15T11:10:28.342512+00:00",
+  "quantiles": "nearest rank",
+  "environment": "Windows Python 3.12.16, Docker Desktop PG16/Redis7, synthetic data",
+  "comparison": "single implementation, no speedup or regression claim",
+  "engine_only": {
+    "attempted": 500,
+    "successes": 500,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 1.3443,
+    "p95_ms": 2.8988,
+    "p99_ms": 4.416,
+    "scope": "engine + graph + real Redis14; 30 warmups; excludes HTTP/SQL"
+  },
+  "http_database": {
+    "attempted": 100,
+    "successes": 100,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 74.7063,
+    "p95_ms": 120.4993,
+    "p99_ms": 202.6128,
+    "scope": "loopback HTTP + Docker FastAPI + engine + PG; 10 warmups; serial reused sender, risk outcomes may vary"
+  },
+  "integration_enqueue_http": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 62.5818,
+    "p95_ms": 82.1439,
+    "p99_ms": 103.7267
+  },
+  "queue_wait": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 346.786,
+    "p95_ms": 574.487,
+    "p99_ms": 578.421
+  },
+  "integration_processing": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 13.349,
+    "p95_ms": 29.037,
+    "p99_ms": 191.099
+  },
+  "integration_total": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 386.922,
+    "p95_ms": 592.501,
+    "p99_ms": 607.458
+  },
+  "integration_workload": "20 gateway-only fake jobs in a burst; one worker, bounded fake drain 0.01s/0.5s; persisted audit timestamps, not client polling delay; no Telegram; p99 is maximum at N=20",
+  "case_query_http": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 10.102,
+    "p95_ms": 19.1571,
+    "p99_ms": 19.1926,
+    "scope": "loopback HTTP + auth/Redis + PG retained-case page; one retained synthetic case; 3 warmups; N20 p99 is maximum"
+  },
+  "health_after": {
+    "status": "ok",
+    "checked_at": "2026-11-15T11:10:40.246245Z",
+    "cache_seconds": 5,
+    "database": "ok",
+    "redis": "ok",
+    "worker": "ok",
+    "telegram": "fake_enabled",
+    "gateway": "mock_ready",
+    "queue": {
+      "notifications_queued": 0,
+      "notifications_delayed": 0,
+      "notifications_failed": 0,
+      "runs_pending": 0
+    },
+    "last_successful_processing": "2026-11-15T11:10:39.889863Z",
+    "real_provider_probed": false
+  },
+  "timeline_codes": [
+    "TRANSFER_EVALUATED",
+    "DECISION_APPROVED",
+    "INTEGRATION_QUEUED",
+    "INTEGRATION_STARTED",
+    "MOCK_GATEWAY_REQUESTED",
+    "MOCK_GATEWAY_CLEAR",
+    "INTEGRATION_COMPLETE"
+  ]
+}
