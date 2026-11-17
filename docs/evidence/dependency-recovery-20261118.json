@@ -1,0 +1,70 @@
+{
+  "kind": "isolated_real_dependency_recovery",
+  "started_at_utc": "2026-11-17T19:29:38.465158+00:00",
+  "status": "PASS",
+  "synthetic_data_only": true,
+  "schema_setup": "SQLAlchemy metadata in a newly created random schema; migration not tested",
+  "cold_start_with_redis_down": "NOT TESTED; Resources.start still requires Redis",
+  "checks": [
+    {
+      "name": "real_postgresql_redis_api_ready",
+      "status": "PASS",
+      "http_status": 200
+    },
+    {
+      "name": "two_synthetic_holds_created",
+      "status": "PASS"
+    },
+    {
+      "name": "own_real_redis_stopped",
+      "status": "PASS"
+    },
+    {
+      "name": "persisted_detail_read_during_redis_outage",
+      "status": "PASS",
+      "http_status": 200
+    },
+    {
+      "name": "cancel_and_idempotent_repeat_during_redis_outage",
+      "status": "PASS"
+    },
+    {
+      "name": "durable_abandon_and_repeat_during_redis_outage",
+      "status": "PASS"
+    },
+    {
+      "name": "processed_intent_returns_current_cancelled_state",
+      "status": "PASS"
+    },
+    {
+      "name": "new_evaluate_and_expired_hold_release_fail_closed",
+      "status": "PASS",
+      "readiness_http": 503,
+      "evaluate_http": 500,
+      "release_http": 500
+    },
+    {
+      "name": "redis_restart_preserves_cancel_and_abandon_without_settlement",
+      "status": "PASS",
+      "late_execution_http": 409,
+      "cancelled_release_http": 409,
+      "cancellation_audit_count": 1
+    }
+  ],
+  "cleanup": {
+    "owned_api_stopped": true,
+    "own_temporary_schema_dropped": true,
+    "owned_redis_stopped_preserved": true
+  },
+  "redis_image": "sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe",
+  "postgres_image": "sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24",
+  "transport": "actual loopback HTTP to uvicorn",
+  "elapsed_seconds": 8.234,
+  "finished_at_utc": "2026-11-17T19:29:46.690983+00:00",
+  "source_sha256": {
+    "backend/app/services/transfers.py": "3e73440774176c207d7fc75ae09f3e7ff81df6fbc6ea976ca152dc69b2e5c52a",
+    "backend/app/services/projections.py": "1b45e2fe3d7a9d97e9eef2fb55b0d00c16ee4c059cb3471f3b461ae0809ce3cf",
+    "backend/app/main.py": "713fb89af3154c4db6802475b0b6f087ebc25e6de06633f96d4d9b1d674b2152"
+  },
+  "reproduction_scope": "Ad hoc local HTTP probe with disposable test schema and owned Redis; probe script is not a tracked portable harness. Tracked backend/tests/test_dependency_recovery.py covers the regression with isolated fixtures."
+}
