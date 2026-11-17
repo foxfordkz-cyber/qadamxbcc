@@ -84,6 +84,8 @@ class GraphStore:
         self._g: nx.DiGraph[str] = nx.DiGraph()
         self._device_accounts: dict[str, set[str]] = {}
         self._account_devices: dict[str, set[str]] = {}
+        self._registered_devices: dict[str, str] = {}
+        self._linked_devices: dict[str, set[str]] = {}
         self._applied_pending: set[str] = set()
 
     def mark_projected(self, transaction_ids: Iterable[str]) -> None:
@@ -96,17 +98,41 @@ class GraphStore:
     def add_account(
         self, account_id: str, *, label: str = "", device_id: str = "", flagged: bool = False
     ) -> None:
+        previous = self._registered_devices.pop(account_id, None)
+        # Replacement removes only current-registration evidence. An observed
+        # demo device or an explicit persisted shared-device link stays valid.
+        if (
+            previous
+            and previous != device_id
+            and previous not in self._linked_devices.get(account_id, set())
+        ):
+            members = self._device_accounts[previous]
+            members.discard(account_id)
+            if not members:
+                del self._device_accounts[previous]
+            devices = self._account_devices[account_id]
+            devices.discard(previous)
+            if not devices:
+                del self._account_devices[account_id]
         self._g.add_node(account_id, label=label or account_id[:8], device_id=device_id)
         self._g.nodes[account_id]["flagged"] = flagged
         if device_id:
-            self.link_device(account_id, device_id)
+            self._registered_devices[account_id] = device_id
+            self._associate_device(account_id, device_id)
 
     def set_flagged(self, account_id: str, flagged: bool = True) -> None:
         self._ensure(account_id)
         self._g.nodes[account_id]["flagged"] = flagged
 
     def link_device(self, account_id: str, device_id: str) -> None:
+        """Retain observed demo or explicit shared-edge evidence independently of registration."""
         self._ensure(account_id)
+        if not device_id:
+            return
+        self._linked_devices.setdefault(account_id, set()).add(device_id)
+        self._associate_device(account_id, device_id)
+
+    def _associate_device(self, account_id: str, device_id: str) -> None:
         self._device_accounts.setdefault(device_id, set()).add(account_id)
         self._account_devices.setdefault(account_id, set()).add(device_id)
 
@@ -158,6 +184,14 @@ class GraphStore:
         if len(accounts) > MAX_GRAPH_NEIGHBOURS:
             raise GraphCapacityError("Device cluster exceeds the supported graph capacity")
         return set(accounts)
+
+    def registered_accounts_on_device(self, device_id: str) -> set[str]:
+        """Bounded cached registrations that must be refreshed even after moving away."""
+        return {
+            account_id
+            for account_id in self.accounts_on_device(device_id)
+            if self._registered_devices.get(account_id) == device_id
+        }
 
     def device_peers(self, account_id: str) -> set[str]:
         peers: set[str] = set()
