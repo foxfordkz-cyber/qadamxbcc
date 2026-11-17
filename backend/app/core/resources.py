@@ -1,18 +1,15 @@
 """Process-wide resources (DB, Redis, resident graph, engine) owned by the app lifespan."""
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
 
 from redis.asyncio import Redis
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.db.session import build_engine, build_session_factory
-from app.models import Transaction, TransactionStatus
-from app.services.antifraud import AntifraudEngine, TransferContext
+from app.services.antifraud import AntifraudEngine
 from app.services.graph import GraphStore
-from app.services.transfers import hydrate_graph
+from app.services.projections import ProjectionCoordinator
 
 
 @dataclass(slots=True)
@@ -43,6 +40,7 @@ class Resources:
             timezone=settings.timezone,
             cooling_off_minutes=settings.cooling_off_minutes,
             allow_demo_overrides=settings.allow_demo_overrides,
+            allow_model_training=settings.environment != "pilot",
         )
         return cls(session_factory, redis_client, engine, db_engine, owns)
 
@@ -50,31 +48,9 @@ class Resources:
         # Open the Redis connection now (fail fast) so the first scored transfer
         # does not pay the connect cost inside its latency budget.
         await self.redis.ping()
-        async with self.session_factory() as session:
-            await hydrate_graph(session, self.engine.graph)
-            # Restore committed velocity after Redis loss or a crash between DB commit
-            # and the Redis hook. Transaction IDs make this replay idempotent.
-            settled_at = func.coalesce(Transaction.resolved_at, Transaction.created_at)
-            recent = await session.scalars(
-                select(Transaction).where(
-                    Transaction.status == TransactionStatus.APPROVED,
-                    settled_at >= datetime.now(UTC) - timedelta(hours=24),
-                )
-            )
-            for tx in recent:
-                at = tx.resolved_at or tx.created_at
-                if at.tzinfo is None:
-                    at = at.replace(tzinfo=UTC)
-                await self.engine.record_settled(
-                    TransferContext(
-                        tx_id=str(tx.id),
-                        sender_id=str(tx.sender_id),
-                        recipient_id=str(tx.recipient_id),
-                        amount=float(tx.amount),
-                        device_id=tx.device_id,
-                        occurred_at=at,
-                    )
-                )
+        coordinator = ProjectionCoordinator(self.session_factory, self.redis, self.engine)
+        await coordinator.start()
+        self.engine.synchronizer = coordinator.synchronize
 
     async def close(self) -> None:
         if self.owns_connections:

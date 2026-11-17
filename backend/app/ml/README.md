@@ -17,12 +17,16 @@ uv run python -m scripts.benchmark_antifraud
 uv run python -m scripts.benchmark_antifraud --redis-url redis://localhost:6379/0
 ```
 
-Docker trains `app/ml/fraud_model.joblib` at build time. Engine construction trains
-it if absent and caches it per process before accepting requests. Artifacts are
-written atomically and regenerated for changed feature/model/sklearn versions.
+Docker trains `app/ml/fraud_model.joblib` at build time. Local/demo engine construction
+trains it if absent and caches it per process before accepting requests. Artifacts are
+written atomically; local/demo mode regenerates changed feature/model/sklearn versions.
+Pilot startup requires an existing compatible artifact and never retrains a replacement.
 The generated binary is ignored by Git. Only load artifacts generated locally
 from trusted source; joblib uses pickle. Corrupt artifacts fail startup rather
 than silently serving a different scoring policy.
+Finite values, valid classes/probabilities, feature counts and bounded acyclic tree
+topology are validated before serving. The readiness probe also checks finite scores
+and contributor values.
 
 The serving representation copies fitted tree arrays once. Each request follows
 the trees and averages their leaf probabilities, matching sklearn `predict_proba`

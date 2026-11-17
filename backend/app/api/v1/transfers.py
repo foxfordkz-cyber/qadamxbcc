@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import EngineDep, SessionDep
 from app.schemas.transfers import (
+    AbandonRequestResponse,
     ResolveCoolingRequest,
     TransferEvaluateRequest,
     TransferEvaluateResponse,
@@ -26,6 +27,17 @@ def _http(exc: DomainError) -> HTTPException:
         InvalidTransferError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     }.get(type(exc), status.HTTP_400_BAD_REQUEST)
     return HTTPException(status_code=code, detail=str(exc))
+
+
+@router.post("/requests/{request_id}/abandon", response_model=AbandonRequestResponse)
+async def abandon_request(
+    request_id: uuid.UUID, session: SessionDep, engine: EngineDep
+) -> AbandonRequestResponse:
+    """Prevent a delayed unknown request from executing, or return its existing decision."""
+    try:
+        return await TransferService(session, engine).abandon(request_id)
+    except DomainError as exc:
+        raise _http(exc) from exc
 
 
 @router.post("/evaluate", response_model=TransferEvaluateResponse)

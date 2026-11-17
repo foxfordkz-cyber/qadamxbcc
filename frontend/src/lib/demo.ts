@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ids } from "./config";
-import type { Answers, Decision, Evaluation, Feed, FeedItem, Graph, GraphData, Party, Reason, Status, TransferInput } from "./contracts";
+import type { AbandonResult, Answers, Decision, Evaluation, Feed, FeedItem, Graph, GraphData, Party, Reason, Status, TransferInput } from "./contracts";
 
 const accounts = [
   { id: ids.sender, full_name: "Аружан С.", phone: "+77010000001", iban: "KZ000000000000000001" },
@@ -8,10 +8,11 @@ const accounts = [
   { id: ids.stranger, full_name: "Алексей К.", phone: "+77010000003", iban: "KZ000000000000000003" },
   { id: ids.hub, full_name: "Марат Т.", phone: "+77010000004", iban: "KZ000000000000000004" },
 ];
-const root = globalThis as typeof globalThis & { bccDemoTransfers?: FeedItem[]; bccDemoDetails?: Map<string, Evaluation>; bccDemoRequests?: Map<string, { body: string; result: Evaluation }> };
+const root = globalThis as typeof globalThis & { bccDemoTransfers?: FeedItem[]; bccDemoDetails?: Map<string, Evaluation>; bccDemoRequests?: Map<string, { body: string; result: Evaluation }>; bccDemoAbandoned?: Set<string> };
 const rows = () => root.bccDemoTransfers ??= [];
 const details = () => root.bccDemoDetails ??= new Map();
 const requests = () => root.bccDemoRequests ??= new Map();
+const abandoned = () => root.bccDemoAbandoned ??= new Set();
 export class DemoError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -27,12 +28,14 @@ function decision(status: Status, risk_score: number, transaction_id: string, re
   };
   return { transaction_id, status, risk_score, headline_kk: headlines[status][0], headline_ru: headlines[status][1], reasons_kk: reasons.map(r => r.reason_kk), reasons_ru: reasons.map(r => r.reason_ru) };
 }
-export function evaluateDemo(input: TransferInput, now = Date.now()): Evaluation {
+export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 5000): Evaluation {
+  if (input.request_id && abandoned().has(input.request_id)) throw new DemoError(409, "conflict");
   const replay = input.request_id ? requests().get(input.request_id) : undefined;
   if (replay) {
     if (replay.body !== JSON.stringify(input)) throw new DemoError(409, "conflict");
     return structuredClone(replay.result);
   }
+  if (details().size >= capacity || details().size + abandoned().size >= capacity * 2) throw new DemoError(503, "demoCapacity");
   const start = performance.now();
   const sender = accounts.find(a => a.id === input.sender_id);
   const recipient = accounts.find(a => a.id === input.recipient_id || a.phone === input.recipient_phone || a.iban === input.recipient_iban);
@@ -75,6 +78,12 @@ export function detailDemo(id: string, now = Date.now()): Evaluation {
   const result = details().get(id);
   if (!result) throw new DemoError(404, "notFound");
   return { ...structuredClone(result), server_time: new Date(now).toISOString() };
+}
+export function abandonDemo(id: string, now = Date.now(), capacity = 5000): AbandonResult {
+  if (details().has(id)) return { request_id: id, status: "processed", evaluation: detailDemo(id, now), server_time: new Date(now).toISOString() };
+  if (!abandoned().has(id) && details().size + abandoned().size >= capacity * 2) throw new DemoError(503, "demoCapacity");
+  abandoned().add(id);
+  return { request_id: id, status: "abandoned", server_time: new Date(now).toISOString() };
 }
 export function resolveDemo(id: string, answers: Answers, now = Date.now()): Evaluation {
   const row = rows().find(r => r.transaction_id === id);

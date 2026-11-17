@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { backendHeaders, checkAccess } from "../src/lib/server-access";
+import { accessConfiguration, backendHeaders, checkAccess } from "../src/lib/server-access";
 
 const env = {
   BCC_ENVIRONMENT: "pilot", BCC_PUBLIC_ORIGIN: "https://shield.example.kz",
   BCC_API_MODE: "live", BCC_DEMO_ACTIONS_ENABLED: "false", BCC_PILOT_USER: "officer",
-  BCC_PILOT_PASSWORD: "test-password-for-local-tests-only", BCC_API_KEY: "a".repeat(40), BCC_SOC_API_KEY: "b".repeat(40),
+  BCC_PILOT_PASSWORD: "test-password-for-local-tests-only",
+  BCC_API_KEY: "transfer-test-0123456789-ABCDEFGHIJKLM", BCC_SOC_API_KEY: "soc-test-9876543210-NOPQRSTUVWXYZabcd",
 };
 const auth = `Basic ${Buffer.from(`${env.BCC_PILOT_USER}:${env.BCC_PILOT_PASSWORD}`).toString("base64")}`;
 const request = (headers: Record<string, string> = {}, method = "GET") => ({ origin: "http://frontend:3000", method, headers: new Headers(headers) });
@@ -39,4 +40,30 @@ test("local requests use their actual loopback Host despite Next URL normalizati
   assert.equal(checkAccess(request({ ...headers, origin: "http://localhost:3105" }, "POST"), {})?.status, 403);
   assert.equal(checkAccess(request({ ...headers, host: "evil.example", origin: "https://evil.example" }, "POST"), {})?.status, 403);
   assert.equal(checkAccess(request({ ...headers, authorization: auth }, "POST"), env)?.status, 403);
+});
+
+test("unknown or missing environment cannot make a credentialed proxy anonymous", () => {
+  for (const environment of [undefined, "", "production", "PILOT", "local", "demo"]) {
+    const settings = { ...env, BCC_ENVIRONMENT: environment };
+    assert.equal(checkAccess(request(), settings)?.status, 503, String(environment));
+    assert.throws(() => backendHeaders("soc/feed", settings));
+    assert.throws(() => accessConfiguration(settings));
+  }
+  for (const credential of ["BCC_API_KEY", "BCC_SOC_API_KEY", "BCC_PILOT_USER", "BCC_PILOT_PASSWORD"]) {
+    for (const value of ["", " ", "secret"]) {
+      assert.equal(checkAccess(request(), { BCC_ENVIRONMENT: "demo", [credential]: value })?.status, 503);
+    }
+  }
+});
+
+test("credential-free local demos remain usable in production Next builds", () => {
+  for (const environment of [undefined, "local", "demo"]) {
+    const settings = { NODE_ENV: "production", BCC_ENVIRONMENT: environment, BCC_API_MODE: "live" };
+    assert.equal(checkAccess(request(), settings), null);
+    assert.deepEqual(backendHeaders("soc/feed", settings), { "Content-Type": "application/json" });
+  }
+  for (const environment of ["", "production", "PILOT"]) {
+    assert.equal(checkAccess(request(), { BCC_ENVIRONMENT: environment })?.status, 503);
+  }
+  assert.equal(checkAccess(request(), { BCC_API_MODE: "LIVE" })?.status, 503);
 });

@@ -8,18 +8,15 @@ import argparse
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 from fastapi import FastAPI
-from sqlalchemy import select
 
 from app.core.config import Settings
 from app.core.resources import Resources
 from app.db.session import build_engine, build_session_factory
-from app.models import Transaction
 from scripts.bootstrap_demo import is_empty
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -86,23 +83,6 @@ def create_demo_app(database_url: str) -> FastAPI:
                 print("Local demo: preserving existing SQLite data; seed skipped.", flush=True)
             resources = Resources.build(settings, session_factory=factory, redis=redis)
             await resources.start()
-            if not empty:
-                # fakeredis is ephemeral. Rebuild recent attempt velocity separately
-                # from committed money so restart preserves all three demo scenarios.
-                async with factory() as session:
-                    recent = await session.scalars(
-                        select(Transaction)
-                        .where(Transaction.created_at >= datetime.now(UTC) - timedelta(hours=24))
-                        .order_by(Transaction.created_at)
-                    )
-                    for tx in recent:
-                        await resources.engine.velocity.record_and_snapshot(
-                            tx_id=str(tx.id),
-                            sender_id=str(tx.sender_id),
-                            recipient_id=str(tx.recipient_id),
-                            amount=float(tx.amount),
-                            ts=tx.created_at.timestamp(),
-                        )
             application.state.resources = resources
             print("Local demo ready: one worker, real ML/graph, synthetic data only.", flush=True)
             yield

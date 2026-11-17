@@ -1,5 +1,6 @@
 """Shared training/serving feature contract; missing measurements use -1."""
 
+import math
 from dataclasses import dataclass
 from typing import Final
 
@@ -49,6 +50,26 @@ class Features:
     new_device: bool = False
 
     def vector(self) -> tuple[float, ...]:
+        numeric = (
+            self.amount_ratio,
+            self.fan_in_velocity,
+            self.transit_ratio,
+            self.typing_speed_cps,
+            self.hesitation_ms,
+            self.hesitation_count,
+        )
+        if not all(math.isfinite(value) for value in numeric):
+            raise ValueError("ML features must be finite")
+        flags = (
+            self.night_hour,
+            self.new_recipient,
+            self.active_call,
+            self.deposit_withdrawal,
+            self.paste_detected,
+            self.new_device,
+        )
+        if not all(isinstance(value, bool) for value in flags):
+            raise ValueError("ML context flags must be booleans")
         return (
             min(100.0, max(0.0, self.amount_ratio)),
             float(self.night_hour),

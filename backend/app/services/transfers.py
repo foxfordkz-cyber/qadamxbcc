@@ -6,7 +6,7 @@ import json
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import replace
+from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from weakref import WeakKeyDictionary
@@ -18,8 +18,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.ml.model import MODEL_VERSION
-from app.models import Account, EdgeType, GraphEdge, RiskEvent, Transaction, TransactionStatus
+from app.models import (
+    AbandonedRequest,
+    Account,
+    EdgeType,
+    GraphEdge,
+    ProjectionEvent,
+    RiskEvent,
+    Transaction,
+    TransactionStatus,
+)
 from app.schemas.transfers import (
+    AbandonRequestResponse,
     CoolingQuestionnaire,
     MLContributorOut,
     PartyOut,
@@ -250,6 +260,7 @@ class TransferService:
         return tx
 
     async def detail(self, tx_id: uuid.UUID) -> TransferEvaluateResponse:
+        await self.engine.ensure_consistent()
         tx = await self._load(tx_id)
         return transfer_detail(tx, tx.recipient, minutes=self.engine.cooling_off_minutes)
 
@@ -273,6 +284,7 @@ class TransferService:
         return account
 
     async def evaluate(self, req: TransferEvaluateRequest) -> TransferEvaluateResponse:
+        await self.engine.ensure_consistent()
         identity = req.request_id or uuid.uuid4()
         async with self._serialized(identity):
             payload = req.model_dump(mode="json", exclude={"request_id"})
@@ -281,6 +293,8 @@ class TransferService:
                 json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
             ).hexdigest()
             if req.request_id:
+                if await self.session.get(AbandonedRequest, req.request_id) is not None:
+                    raise ConflictError("request_id was abandoned and cannot execute")
                 existing = (
                     await self.session.execute(
                         select(Transaction).where(
@@ -313,7 +327,14 @@ class TransferService:
         register_account(self.engine.graph, sender)
         register_account(self.engine.graph, recipient)
         device_peers = await self.session.execute(
-            select(Account).where(Account.device_id.in_({recipient.device_id, device_id}))
+            select(Account).where(
+                Account.device_id.in_(
+                    {
+                        recipient.device_id,
+                        device_id if self.engine.allow_demo_overrides else sender.device_id,
+                    }
+                )
+            )
         )
         for peer in device_peers.scalars():
             register_account(self.engine.graph, peer)
@@ -404,10 +425,10 @@ class TransferService:
             await upsert_transfer_edge(
                 self.session, sender.id, recipient.id, ctx.amount, received_at
             )
+            self.session.add(ProjectionEvent(transaction_id=tx.id, created_at=received_at))
         await self.session.commit()
         if evaluation.decision is TransactionStatus.APPROVED:
-            self.engine.apply_transfer(ctx)
-            await self.engine.record_settled(replace(ctx, occurred_at=received_at))
+            await self.engine.ensure_consistent()
         return response
 
     def _evaluation_response(
@@ -465,6 +486,7 @@ class TransferService:
     async def resolve_cooling(
         self, tx_id: uuid.UUID, answers: CoolingQuestionnaire
     ) -> TransferEvaluateResponse:
+        await self.engine.ensure_consistent()
         async with self._serialized(tx_id):
             tx = await self._load(tx_id, locked=True)
             saved = answers.model_dump()
@@ -475,6 +497,7 @@ class TransferService:
 
             now = datetime.now(UTC)
             flags = red_flags(answers, active_call=tx.active_call, from_deposit=tx.from_deposit)
+            blocking_score = BLOCKED_AFTER_RED_FLAG_SCORE
             # Refresh DB-held SOC flag at the final authorization boundary.
             await self.session.refresh(tx.recipient)
             register_account(self.engine.graph, tx.recipient)
@@ -516,12 +539,35 @@ class TransferService:
                     await self.session.commit()
                 return transfer_detail(tx, tx.recipient)
             else:
-                kk, ru = explain.render("QUESTIONNAIRE_PASSED")
-                code = "QUESTIONNAIRE_PASSED"
-                final_status = TransactionStatus.APPROVED
+                recheck = await self._revalidate_release(tx, now)
+                if recheck.decision is TransactionStatus.BLOCKED:
+                    kk = "Қайта тексеру жаңа жоғары желілік тәуекелді анықтады. Аударым бұғатталды."
+                    ru = "Повторная проверка выявила высокий сетевой риск. Перевод заблокирован."
+                    code = "RELEASE_NETWORK_BLOCKED"
+                    final_status = TransactionStatus.BLOCKED
+                    blocking_score = recheck.score
+                    for reason in recheck.reasons:
+                        if reason.layer in {"velocity", "graph"} and reason.score_delta > 0:
+                            tx.risk_events.append(
+                                RiskEvent(
+                                    layer="revalidation",
+                                    rule_code=f"RECHECK_{reason.code}",
+                                    score_delta=0,
+                                    reason_kk=reason.reason_kk,
+                                    reason_ru=reason.reason_ru,
+                                    evidence=reason.evidence,
+                                    created_at=now,
+                                )
+                            )
+                else:
+                    # A completed hold and clean questionnaire may override behavioral
+                    # friction, but never current hard-blocking network evidence.
+                    kk, ru = explain.render("QUESTIONNAIRE_PASSED")
+                    code = "QUESTIONNAIRE_PASSED"
+                    final_status = TransactionStatus.APPROVED
 
             delta = (
-                max(0, BLOCKED_AFTER_RED_FLAG_SCORE - tx.risk_score)
+                max(0, blocking_score - tx.risk_score)
                 if final_status is TransactionStatus.BLOCKED
                 else 0
             )
@@ -547,21 +593,60 @@ class TransferService:
                 await upsert_transfer_edge(
                     self.session, tx.sender_id, tx.recipient_id, float(tx.amount), now
                 )
+                self.session.add(ProjectionEvent(transaction_id=tx.id, created_at=now))
             await self.session.commit()
             if tx.status is TransactionStatus.APPROVED:
-                ctx = TransferContext(
-                    tx_id=str(tx.id),
-                    sender_id=str(tx.sender_id),
-                    recipient_id=str(tx.recipient_id),
-                    amount=float(tx.amount),
-                    device_id=tx.device_id,
-                    occurred_at=now,
-                )
-                self.engine.apply_transfer(ctx)
-                await self.engine.record_settled(ctx)
+                await self.engine.ensure_consistent()
             return transfer_detail(tx, tx.recipient)
 
+    async def _revalidate_release(self, tx: Transaction, now: datetime) -> Evaluation:
+        sender = await self._get_account(tx.sender_id)
+        original = TransferContextIn.model_validate(tx.context_snapshot or {})
+        ctx = TransferContext(
+            tx_id=str(tx.id),
+            sender_id=str(tx.sender_id),
+            recipient_id=str(tx.recipient_id),
+            amount=float(tx.amount),
+            device_id=tx.device_id,
+            occurred_at=now,
+            sender_avg_amount=float(sender.avg_tx_amount),
+            active_call=tx.active_call,
+            from_deposit=tx.from_deposit,
+            is_new_device=tx.is_new_device,
+            pasted_recipient=original.pasted_recipient,
+            typing_duration_ms=original.typing_duration_ms,
+            hesitation_count=original.hesitation_count,
+            recipient_input_length=original.recipient_input_length,
+            hesitation_ms=original.hesitation_ms,
+        )
+        ctx = self.engine.trusted_context(ctx, known_device_id=sender.device_id)
+        evaluation = await self.engine.evaluate(ctx, record_attempt=False)
+        tx.risk_events.append(
+            RiskEvent(
+                layer="revalidation",
+                rule_code="RELEASE_REVALIDATED",
+                score_delta=0,
+                reason_kk=f"Жіберу алдындағы қайта тексеру: тәуекел {evaluation.score}/100.",
+                reason_ru=f"Повторная проверка перед отправкой: риск {evaluation.score}/100.",
+                evidence={
+                    "risk_score": evaluation.score,
+                    "status": evaluation.decision.value,
+                    "ml_score": evaluation.ml_score,
+                    "ml_base_score": evaluation.ml_base_score,
+                    "ml_model_version": MODEL_VERSION,
+                    "ml_contributors": [asdict(c) for c in evaluation.ml_contributors],
+                    "reasons": [asdict(r) for r in evaluation.reasons],
+                    "velocity": evaluation.velocity.as_dict(),
+                    "recipient_graph": asdict(evaluation.recipient_graph),
+                    "checked_at": now.isoformat(),
+                },
+                created_at=now,
+            )
+        )
+        return evaluation
+
     async def cancel(self, tx_id: uuid.UUID) -> TransferEvaluateResponse:
+        await self.engine.ensure_consistent()
         async with self._serialized(tx_id):
             tx = await self._load(tx_id, locked=True)
             if tx.status is TransactionStatus.CANCELLED and tx.resolution_action == "cancel":
@@ -588,8 +673,36 @@ class TransferService:
             await self.session.commit()
             return transfer_detail(tx, tx.recipient)
 
+    async def abandon(self, request_id: uuid.UUID) -> AbandonRequestResponse:
+        await self.engine.ensure_consistent()
+        async with self._serialized(request_id):
+            existing = (
+                await self.session.execute(
+                    select(Transaction)
+                    .where((Transaction.id == request_id) | (Transaction.request_id == request_id))
+                    .options(
+                        selectinload(Transaction.risk_events), selectinload(Transaction.recipient)
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                return AbandonRequestResponse(
+                    request_id=request_id,
+                    status="processed",
+                    evaluation=transfer_detail(existing, existing.recipient),
+                    server_time=datetime.now(UTC),
+                )
+            if await self.session.get(AbandonedRequest, request_id) is None:
+                self.session.add(AbandonedRequest(request_id=request_id))
+                await self.session.commit()
+            return AbandonRequestResponse(
+                request_id=request_id, status="abandoned", server_time=datetime.now(UTC)
+            )
 
-async def hydrate_graph(session: AsyncSession, graph: GraphStore) -> None:
+
+async def hydrate_graph(
+    session: AsyncSession, graph: GraphStore, *, include_observed_devices: bool = True
+) -> None:
     """Rebuild the resident money-flow graph from Postgres at startup."""
     for acc_id, name, device, flagged in await session.execute(
         select(Account.id, Account.full_name, Account.device_id, Account.is_flagged)
@@ -612,6 +725,9 @@ async def hydrate_graph(session: AsyncSession, graph: GraphStore) -> None:
             link = f"link:{min(str(src), str(dst))}:{max(str(src), str(dst))}"
             graph.link_device(str(src), link)
             graph.link_device(str(dst), link)
-    devices = await session.execute(select(Transaction.sender_id, Transaction.device_id).distinct())
-    for sender_id, device_id in devices:
-        graph.link_device(str(sender_id), device_id)
+    if include_observed_devices:
+        devices = await session.execute(
+            select(Transaction.sender_id, Transaction.device_id).distinct()
+        )
+        for sender_id, device_id in devices:
+            graph.link_device(str(sender_id), device_id)

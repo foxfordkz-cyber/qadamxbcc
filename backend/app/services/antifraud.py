@@ -23,6 +23,7 @@ before production use; they are not calibrated estimates of banking fraud rates.
 """
 
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any, Final
@@ -98,10 +99,13 @@ MULE_CORROBORATION: Final = frozenset(
     {
         "RECIPIENT_INSTANT_CASHOUT",
         "RECIPIENT_TRANSIT_RATIO",
-        "RECIPIENT_SHARED_DEVICE",
         "RECIPIENT_FLAGGED",
     }
 )
+# Attempts and shared family devices can justify a pause, never a hard block.
+# Sender pass-through is grounded in settled incoming money; ML still requires
+# recipient-side movement or a reviewed flag before lifting a score into BLOCKED.
+HARD_BLOCK_EVIDENCE: Final = MULE_CORROBORATION | {"SENDER_PASS_THROUGH"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -201,6 +205,7 @@ class AntifraudEngine:
         timezone: str = "Asia/Almaty",
         cooling_off_minutes: int = 15,
         allow_demo_overrides: bool = True,
+        allow_model_training: bool = True,
     ) -> None:
         self.graph = graph
         self.velocity = VelocityCounters(redis)
@@ -208,9 +213,19 @@ class AntifraudEngine:
         self.cooling_off_minutes = cooling_off_minutes
         self.allow_demo_overrides = allow_demo_overrides
         self._pending_settlements: dict[str, TransferContext] = {}
-        self.model = get_model()  # train/load once, outside the request latency budget
+        self.synchronizer: Callable[[], Awaitable[None]] | None = None
+        # Pilot startup validates the prebuilt artifact; it never silently trains
+        # a replacement model. Demo mode retains deterministic auto-training.
+        self.model = get_model() if allow_model_training else get_model(allow_training=False)
 
     # ------------------------------------------------------------------ public
+    async def ensure_consistent(self) -> None:
+        """Drain the durable projection queue before serving a new transfer operation."""
+        if self.synchronizer is not None:
+            await self.synchronizer()
+        else:
+            await self.flush_settlements()
+
     def trusted_context(self, ctx: TransferContext, *, known_device_id: str) -> TransferContext:
         """Derive authoritative time/relationship flags outside the demo environment.
 
@@ -247,7 +262,7 @@ class AntifraudEngine:
             )
             self._pending_settlements.pop(tx_id, None)
 
-    async def evaluate(self, ctx: TransferContext) -> Evaluation:
+    async def evaluate(self, ctx: TransferContext, *, record_attempt: bool = True) -> Evaluation:
         t0 = time.perf_counter()
         await self.flush_settlements()
 
@@ -259,19 +274,28 @@ class AntifraudEngine:
         behavioral = self._behavioral(ctx, is_new_recipient)
         t1 = time.perf_counter()
 
-        snapshot = await self.velocity.record_and_snapshot(
-            tx_id=ctx.tx_id,
-            sender_id=ctx.sender_id,
-            recipient_id=ctx.recipient_id,
-            amount=ctx.amount,
-            ts=ctx.occurred_at.timestamp(),
+        snapshot = (
+            await self.velocity.record_and_snapshot(
+                tx_id=ctx.tx_id,
+                sender_id=ctx.sender_id,
+                recipient_id=ctx.recipient_id,
+                amount=ctx.amount,
+                ts=ctx.occurred_at.timestamp(),
+            )
+            if record_attempt
+            else await self.velocity.snapshot(
+                sender_id=ctx.sender_id,
+                recipient_id=ctx.recipient_id,
+                ts=ctx.occurred_at.timestamp(),
+            )
         )
         velocity = self._velocity(ctx, snapshot)
         t2 = time.perf_counter()
 
         recipient_metrics = self.graph.metrics(ctx.recipient_id)
         graph = self._graph(ctx, recipient_metrics, is_new_recipient)
-        self.graph.link_device(ctx.sender_id, ctx.device_id)
+        if record_attempt and self.allow_demo_overrides:
+            self.graph.link_device(ctx.sender_id, ctx.device_id)
         t3 = time.perf_counter()
 
         network = _corroborate([*velocity, *graph])
@@ -300,8 +324,8 @@ class AntifraudEngine:
         # Bounded residual blend: preserve rule floors; weak synthetic probabilities
         # add no friction. ML can add at most 15 points and cannot itself justify a block.
         ml_delta = round(0.25 * max(0.0, prediction.score - 40.0))
-        network_evidence = bool(network)
-        rule_score = max(0, min(100 if network_evidence else BEHAVIORAL_ONLY_CAP, raw))
+        block_evidence = any(r.code in HARD_BLOCK_EVIDENCE for r in network)
+        rule_score = max(0, min(100 if block_evidence else BEHAVIORAL_ONLY_CAP, raw))
         # Preserve all rule floors, but ML may cross into BLOCKED only with
         # corroborated recipient-side mule evidence. A sender pass-through signal
         # by itself still gets the existing questionnaire, not an ML-only block.
@@ -349,7 +373,11 @@ class AntifraudEngine:
     def apply_transfer(self, ctx: TransferContext) -> None:
         """Commit a released (approved) transfer into the money-flow graph."""
         self.graph.add_transfer(
-            ctx.sender_id, ctx.recipient_id, ctx.amount, ts=ctx.occurred_at.timestamp()
+            ctx.sender_id,
+            ctx.recipient_id,
+            ctx.amount,
+            ts=ctx.occurred_at.timestamp(),
+            transaction_id=ctx.tx_id,
         )
 
     # --------------------------------------------------------------- layer 1
