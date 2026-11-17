@@ -1,7 +1,8 @@
 param(
     [ValidateRange(1, 65535)][int]$FrontendPort = 3000,
     [ValidateRange(1, 65535)][int]$BackendPort = 8000,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [switch]$FreshRehearsal
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,6 +16,14 @@ $startedProcesses = [System.Collections.Generic.List[System.Diagnostics.Process]
 $previousEnvironment = @{}
 $launchRecord = $null
 $recordPath = $null
+
+function Get-FreeLoopbackPort {
+    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+    try {
+        $listener.Start()
+        return ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+    } finally { $listener.Stop() }
+}
 
 function Assert-PortAvailable([int]$Port) {
     $listeners = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
@@ -40,7 +49,7 @@ function Set-ChildEnvironment([string]$Name, [AllowNull()][object]$Value) {
     }
 }
 
-function Wait-Healthy([System.Diagnostics.Process]$Child, [string]$Url, [int]$TimeoutSeconds = 180) {
+function Wait-Healthy([System.Diagnostics.Process]$Child, [string]$Url, [int]$TimeoutSeconds = 180, [string]$ExpectedStatus = 'ok') {
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     while ([DateTime]::UtcNow -lt $deadline) {
         $Child.Refresh()
@@ -49,7 +58,7 @@ function Wait-Healthy([System.Diagnostics.Process]$Child, [string]$Url, [int]$Ti
         }
         try {
             $response = Invoke-RestMethod -Uri $Url -TimeoutSec 3
-            if ($response.status -eq 'ok') { return }
+            if ($response.status -eq $ExpectedStatus) { return }
         } catch {
             # The process can take time to migrate, seed and load its model.
         }
@@ -59,6 +68,13 @@ function Wait-Healthy([System.Diagnostics.Process]$Child, [string]$Url, [int]$Ti
 }
 
 try {
+    if ($FreshRehearsal) {
+        # Separate ports give each rehearsal its own browser origin/recovery storage.
+        if (-not $PSBoundParameters.ContainsKey('FrontendPort')) { $FrontendPort = Get-FreeLoopbackPort }
+        if (-not $PSBoundParameters.ContainsKey('BackendPort')) {
+            do { $BackendPort = Get-FreeLoopbackPort } while ($BackendPort -eq $FrontendPort)
+        }
+    }
     if ($FrontendPort -eq $BackendPort) { throw 'FrontendPort and BackendPort must be different.' }
     Assert-PortAvailable $FrontendPort
     Assert-PortAvailable $BackendPort
@@ -129,14 +145,17 @@ try {
     $frontendOut = Join-Path $logPath "local-demo-$runId-frontend.out.log"
     $frontendErr = Join-Path $logPath "local-demo-$runId-frontend.err.log"
     $recordPath = Join-Path $logPath "local-demo-$runId.json"
-    $launchRecord = [ordered]@{ started_at = [DateTime]::UtcNow.ToString('o'); state = 'starting'; repository = $repoPath; backend = $null; frontend = $null }
+    $databasePath = if ($FreshRehearsal) { Join-Path $logPath "rehearsals\$runId.db" } else { Join-Path $logPath 'local-demo.db' }
+    $backendArguments = @('-m', 'scripts.run_local_demo', '--port', "$BackendPort", '--database', ('"' + $databasePath + '"'))
+    if ($FreshRehearsal) { $backendArguments += '--fresh' }
+    $launchRecord = [ordered]@{ started_at = [DateTime]::UtcNow.ToString('o'); state = 'starting'; repository = $repoPath; fresh_rehearsal = [bool]$FreshRehearsal; database = $databasePath; backend = $null; frontend = $null }
 
     Write-Host 'Starting local demo backend (SQLite, in-process Redis, real rules/graph/ML)...'
-    $backendProcess = Start-Process -FilePath $pythonPath -ArgumentList @('-m', 'scripts.run_local_demo', '--port', "$BackendPort") -WorkingDirectory $backendPath -WindowStyle Hidden -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -PassThru
+    $backendProcess = Start-Process -FilePath $pythonPath -ArgumentList $backendArguments -WorkingDirectory $backendPath -WindowStyle Hidden -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -PassThru
     $startedProcesses.Add($backendProcess)
     $launchRecord.backend = @{ pid = $backendProcess.Id; url = "http://127.0.0.1:$BackendPort"; stdout = $backendOut; stderr = $backendErr }
     $launchRecord | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $recordPath -Encoding UTF8
-    Wait-Healthy $backendProcess "http://127.0.0.1:$BackendPort/health"
+    Wait-Healthy $backendProcess "http://127.0.0.1:$BackendPort/ready" -ExpectedStatus 'ready'
 
     Write-Host 'Starting the bilingual frontend...'
     $frontendProcess = Start-Process -FilePath $nodeCommand.Source -ArgumentList @(('"' + $nextPath + '"'), 'start', '--hostname', '127.0.0.1', '--port', "$FrontendPort") -WorkingDirectory $frontendPath -WindowStyle Hidden -RedirectStandardOutput $frontendOut -RedirectStandardError $frontendErr -PassThru
@@ -150,7 +169,9 @@ try {
     Write-Host "BCC Shield ready: http://127.0.0.1:$FrontendPort"
     Write-Host "Backend PID: $($backendProcess.Id); frontend PID: $($frontendProcess.Id)"
     Write-Host "Logs and process record: $recordPath"
-    Write-Host 'Dedicated synthetic database: .local-checks/local-demo.db. Existing data are preserved.'
+    Write-Host "Dedicated synthetic database: $databasePath"
+    if ($FreshRehearsal) { Write-Host 'Fresh rehearsal: new synthetic history. Earlier demo databases are untouched.' }
+    else { Write-Host 'Existing demo data are preserved. Use -FreshRehearsal for a separate clean stage run.' }
 } catch {
     foreach ($child in $startedProcesses) {
         try {

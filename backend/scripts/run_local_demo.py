@@ -21,11 +21,27 @@ from scripts.bootstrap_demo import is_empty
 
 BACKEND = Path(__file__).resolve().parents[1]
 DEFAULT_DATABASE = BACKEND.parent / ".local-checks" / "local-demo.db"
+DEMO_STATE = DEFAULT_DATABASE.parent
 
 
 def require_demo_environment() -> None:
     if os.environ.get("BCC_ENVIRONMENT", "local").lower() not in {"local", "demo"}:
         raise RuntimeError("The SQLite/fakeredis runner is restricted to local/demo environments")
+
+
+def select_demo_database(path: Path, *, fresh: bool = False, state_root: Path = DEMO_STATE) -> Path:
+    """CLI database targets stay in the demo state directory; fresh never overwrites."""
+    require_demo_environment()
+    root = state_root.resolve()
+    selected = path.resolve()
+    if not selected.is_relative_to(root) or selected.suffix.lower() != ".db":
+        raise ValueError("Demo databases must be .db files inside the demo state directory")
+    selected.parent.mkdir(parents=True, exist_ok=True)
+    if fresh:
+        # Exclusive creation is the no-reset promise, including simultaneous launchers.
+        with selected.open("xb"):
+            pass
+    return selected
 
 
 def prepare_database(path: Path) -> str:
@@ -98,10 +114,16 @@ def main() -> None:
     require_demo_environment()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--database", type=Path, default=DEFAULT_DATABASE)
+    parser.add_argument("--fresh", action="store_true", help="Refuse an existing database file")
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error("port must be between 1 and 65535")
-    url = prepare_database(DEFAULT_DATABASE)
+    try:
+        selected = select_demo_database(args.database, fresh=args.fresh)
+    except (ValueError, FileExistsError) as exc:
+        parser.error(str(exc))
+    url = prepare_database(selected)
     application = create_demo_app(url)
     import uvicorn
 

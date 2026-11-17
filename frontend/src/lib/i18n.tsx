@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Lang } from "./contracts";
 
 const messages = {
+  pitchLink: ["Жобаны қорғау және пилот экономикасы", "Защита проекта и экономика пилота"],
   recoveryCenter: ["Аударым мәртебесін қалпына келтіру", "Восстановление статуса переводов"],
   recentReceipts: ["Соңғы нәтижелер", "Последние результаты"],
   recoveryStorageUnavailable: ["Браузер мәртебелерді сақтай алмады. Терезені жаппас бұрын аударым нәтижесін тексеріңіз.", "Браузер не смог сохранить статусы. Проверьте результат перевода перед закрытием окна."],

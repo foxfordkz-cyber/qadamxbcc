@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Activity, ArrowRight, CircleHelp, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
 import { api, transferSchema, type AbandonResult, type AppConfig, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { reconcileTraffic, type TrafficRecord } from "@/lib/traffic";
@@ -212,6 +213,7 @@ function App({ config }: { config: AppConfig }) {
     </header>
     <main className="shell">
       <section className="demo-bar" aria-label={t("presets")}><div className="flex items-center gap-2 text-sm"><CircleHelp size={16} /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "presets")}</span></div><div className="preset-buttons">{(["normal", "scam", "hub"] as const).map((key, index) => { const Icon = presetIcons[key]; return <button key={key} className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><span className="preset-number">0{index + 1}</span><Icon size={15} />{t(key)}</button>; })}</div></section>
+      {config.demoActionsEnabled !== false && <div className="mb-4 flex justify-end"><Link href="/pitch" className="inline-flex items-center gap-2 text-sm font-semibold text-bcc hover:underline">{t("pitchLink")}<ArrowRight size={16} /></Link></div>}
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
       {error && tab === "soc" && <p className="error" role="alert">{t(error)}</p>}

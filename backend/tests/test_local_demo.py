@@ -4,7 +4,12 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from scripts.run_local_demo import create_demo_app, prepare_database, require_demo_environment
+from scripts.run_local_demo import (
+    create_demo_app,
+    prepare_database,
+    require_demo_environment,
+    select_demo_database,
+)
 from scripts.seed_bcc import DEMO_PRESETS
 
 
@@ -14,6 +19,21 @@ def test_local_demo_refuses_pilot_and_external_database(monkeypatch: pytest.Monk
     monkeypatch.setenv("BCC_ENVIRONMENT", "pilot")
     with pytest.raises(RuntimeError, match="local/demo"):
         require_demo_environment()
+
+
+def test_fresh_rehearsal_is_exclusive_and_confined_to_demo_state(tmp_path: Path) -> None:
+    state = tmp_path / "state"
+    selected = state / "rehearsals" / "stage.db"
+    assert select_demo_database(selected, fresh=True, state_root=state) == selected
+    selected.write_bytes(b"existing rehearsal must survive")
+    with pytest.raises(FileExistsError):
+        select_demo_database(selected, fresh=True, state_root=state)
+    assert selected.read_bytes() == b"existing rehearsal must survive"
+    assert select_demo_database(selected, state_root=state) == selected
+    for rejected in (state / ".." / "outside.db", state / "not-a-database.txt"):
+        with pytest.raises(ValueError, match="demo state"):
+            select_demo_database(rejected, fresh=True, state_root=state)
+        assert not rejected.exists()
 
 
 async def test_local_demo_preserves_transfers_and_presets_across_restart(tmp_path: Path) -> None:

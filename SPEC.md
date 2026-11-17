@@ -1,5 +1,7 @@
 # SPEC.md — ITU Hackathon 2026: Bank CenterCredit (BCC) Fintech Case
 
+> **Source check, 17 November 2026:** the [official government announcement](https://beta.egov.kz/org/zhambyl-talas/press/news/details/1328207?lang=kk) lists registration/submissions on **6–20 November**, selection on 21–26 November and a 4 December final. The supplied brief below says 11 December, also present in a secondary organizer repost. **Treat 20 November as the submission deadline; the final date remains disputed.** The 5+3+2 format and criteria below are the supplied working brief, not independently verified official rules. See [source evidence](docs/HACKATHON_EVIDENCE.md).
+
 ## 1. Hackathon Context & Official Requirements
 - **Event:** V Regional ITU Hackathon-2026
 - **Case Provider:** Bank CenterCredit (BCC Bank, Kazakhstan)
