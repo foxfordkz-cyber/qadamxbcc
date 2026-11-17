@@ -16,6 +16,7 @@ from app.core.kz import make_kz_iban
 from app.core.resources import Resources
 from app.main import create_app
 from app.models import Account, EdgeType, GraphEdge, RiskEvent, Transaction, TransactionStatus
+from tests.clock import pin_server_clock
 
 API = "/api/v1"
 DAY = datetime(2026, 11, 13, 9, 0, tzinfo=UTC)
@@ -109,7 +110,7 @@ async def world(session_factory: async_sessionmaker[AsyncSession]) -> AsyncItera
 async def test_legit_p2p_approved_and_persisted(
     world: World, session_factory: async_sessionmaker[AsyncSession]
 ) -> None:
-    data = await world.evaluate("alice", "bob", 25_000)
+    data = await world.evaluate("alice", "bob", 25_000, occurred_at=DAY.isoformat())
 
     assert data["status"] == "approved"
     assert data["risk_score"] == 0
@@ -243,7 +244,12 @@ async def test_new_device_at_night_detected_from_device_id(world: World) -> None
     assert {"NEW_DEVICE", "NIGHT_HOURS", "ACCOUNT_TAKEOVER_PATTERN"} <= codes
 
 
-async def test_drop_hub_blocked_and_visible_in_soc(world: World) -> None:
+async def test_drop_hub_blocked_and_visible_in_soc(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # This scenario needs a daytime cashout to finish its hold and expose the hub.
+    # Pin settlement/release clocks too, so velocity windows retain the actual funds.
+    pin_server_clock(monkeypatch, DAY)
     start = datetime.now(UTC) - timedelta(minutes=28)
     for i in range(12):
         fed = await world.evaluate(
