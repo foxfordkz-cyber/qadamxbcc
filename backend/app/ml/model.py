@@ -23,7 +23,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 from app.ml.features import FEATURE_LABELS, FEATURE_NAMES, Features
 
-MODEL_VERSION: Final = "bcc-synthetic-rf-v1"
+MODEL_VERSION: Final = "bcc-synthetic-rf-v2"
 MODEL_PATH: Final = Path(__file__).with_name("fraud_model.joblib")
 MAX_TREES: Final = 128
 MAX_TREE_NODES: Final = 4095
