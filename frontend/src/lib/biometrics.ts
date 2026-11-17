@@ -48,7 +48,8 @@ export class BiometricSensor {
       }
       if (length === 0) { this.value.pasted_recipient = false; this.recipientCharacters = 0; this.durations.recipient = 0; }
     }
-    this.last[field] = now; this.lengths[field] = length;
+    if (field === "recipient" && length === 0) delete this.last[field]; else this.last[field] = now;
+    this.lengths[field] = length;
     // The backend character-count feature describes the recipient, not the amount.
     this.value.recipient_input_length = Math.min(128, this.recipientCharacters);
     return this.snapshot();

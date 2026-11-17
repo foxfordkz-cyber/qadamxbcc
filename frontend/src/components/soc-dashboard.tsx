@@ -13,7 +13,7 @@ import { countBlockedHubs } from "@/lib/feed-summary";
 
 const NetworkGraph = dynamic(() => import("./network-graph"), { ssr: false });
 function usePoll<T>(path: string | null, revision: number, interval: number) {
-  const [data, setData] = useState<{ path: string; value: T } | null>(null);
+  const [data, setData] = useState<{ path: string; value: T; receivedAt: number } | null>(null);
   const [error, setError] = useState<MessageKey | null>(null);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
@@ -28,7 +28,7 @@ function usePoll<T>(path: string | null, revision: number, interval: number) {
       setLoading(true);
       try {
         const value = await api<T>(path, { signal: controller.signal });
-        if (!disposed) { setData({ path, value }); setError(null); }
+        if (!disposed) { setData({ path, value, receivedAt: Date.now() }); setError(null); }
       } catch (e) { if (!disposed) setError(errorKey(e)); }
       finally {
         clearTimeout(timeout);
@@ -38,7 +38,7 @@ function usePoll<T>(path: string | null, revision: number, interval: number) {
     void poll();
     return () => { disposed = true; clearTimeout(timer); controller?.abort(); };
   }, [path, revision, interval]);
-  return { data: data?.path === path ? data.value : null, error, loading };
+  return { data: data?.path === path ? data.value : null, receivedAt: data?.path === path ? data.receivedAt : null, error, loading };
 }
 export function SocDashboard({ initialSelection, revision, evaluations, traffic, onTrafficSync, stream, onReview, busy }: { initialSelection: string | null; revision: number; evaluations: Record<string, Evaluation>; traffic: Record<string, TrafficRecord>; onTrafficSync: (items: FeedItem[]) => void; stream: TrafficStream; onReview: (id: string) => void; busy: boolean }) {
   const { lang, t } = useLocale();
@@ -50,9 +50,9 @@ export function SocDashboard({ initialSelection, revision, evaluations, traffic,
   useEffect(() => { if (feed.data) onTrafficSync(feed.data.items); }, [feed.data, onTrafficSync]);
   useEffect(() => { setSelection(initialSelection); setFilter("all"); }, [initialSelection]);
   const items = feed.data?.items ?? [];
-  const selected = items.find(i => i.transaction_id === selection) ?? items[0];
-  const graph = usePoll<Graph>(selected ? `soc/graph/${selected.recipient.id}` : null, revision + refresh, 6000);
   const visible = items.filter(i => filter === "all" || i.status === filter);
+  const selected = visible.find(i => i.transaction_id === selection) ?? visible[0];
+  const graph = usePoll<Graph>(selected ? `soc/graph/${selected.recipient.id}` : null, revision + refresh, 6000);
   const stats = feed.data?.stats;
   const loss = preventedLoss(traffic, items);
   const canStream = stream.canStart;
@@ -71,6 +71,7 @@ export function SocDashboard({ initialSelection, revision, evaluations, traffic,
     <div className="stats-grid">{metrics.map(({ key, label, hint, value, icon: Icon }) => <div className={`stat ${key}`} key={key}><div className="stat-title"><span>{t(label)}</span><i><Icon size={21} /></i></div><strong className="tabular-nums">{value ?? "—"}</strong><small>{t(hint)}</small></div>)}</div>
     <section className="panel feed-panel overflow-hidden"><div className="panel-heading"><div><h2><Activity size={20} />{t("feed")}</h2><p className="muted panel-subtitle">{t("liveFeed")}</p></div><span className="feed-connection"><span className={`live-dot ${feed.error ? "offline" : ""}`} />{t(feed.loading ? "refreshing" : "connected")}</span></div>
       {feed.error && <p role="alert" className="error mx-5">{t(feed.error)}</p>}
+      {feed.receivedAt !== null && <p className="muted mx-5 text-xs" role="status">{feed.error ? `${t("staleData")} · ` : ""}{t("lastUpdated")}: {new Date(feed.receivedAt).toLocaleTimeString(lang === "kk" ? "kk-KZ" : "ru-KZ")}</p>}
       <div className="filter-row">{(["all", "approved", "cooling_off", "blocked", "cancelled"] as const).map(key => <button key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => setFilter(key)}>{t(key)}</button>)}</div>
       <div className="overflow-x-auto"><table><thead><tr><th>{t("time")}</th><th>{t("route")}</th><th>{t("amount")}</th><th>{t("risk")}</th><th>{t("status")}</th><th>{t("latency")}</th></tr></thead><tbody>
         {visible.map(item => <tr key={item.transaction_id} className={selected?.transaction_id === item.transaction_id ? "selected" : ""}><td>{new Date(item.created_at).toLocaleTimeString(lang === "kk" ? "kk-KZ" : "ru-KZ", { timeZone: "Asia/Qyzylorda", hour: "2-digit", minute: "2-digit", second: "2-digit" })}</td><td><button className="row-select" onClick={() => setSelection(item.transaction_id)} aria-pressed={selected?.transaction_id === item.transaction_id}><strong>{item.sender.full_name} <span>→</span> {item.recipient.full_name}</strong><small>•••• {item.recipient.iban.slice(-4)}{traffic[item.transaction_id] && <> · {t("simulatedRoute")}: {t(traffic[item.transaction_id].from)} → {t(traffic[item.transaction_id].to)}</>}</small></button></td><td className="whitespace-nowrap font-semibold">{money(item.amount, lang)}</td><td><Gauge compact score={item.risk_score} /></td><td><Badge status={item.status} /></td><td>{item.latency_ms.toFixed(2)} {t("ms")}</td></tr>)}

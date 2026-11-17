@@ -27,11 +27,17 @@ function Assert-PortAvailable([int]$Port) {
     finally { $probe.Stop() }
 }
 
-function Set-ChildEnvironment([string]$Name, [AllowNull()][string]$Value) {
+function Set-ChildEnvironment([string]$Name, [AllowNull()][object]$Value) {
     if (-not $previousEnvironment.ContainsKey($Name)) {
         $previousEnvironment[$Name] = [Environment]::GetEnvironmentVariable($Name, 'Process')
     }
-    [Environment]::SetEnvironmentVariable($Name, $Value, 'Process')
+    # PowerShell's string/method binding can coerce $null to an empty string.
+    # NullString removes the key instead of leaving a defined empty credential.
+    if ($null -eq $Value) {
+        [Environment]::SetEnvironmentVariable($Name, [NullString]::Value, 'Process')
+    } else {
+        [Environment]::SetEnvironmentVariable($Name, [string]$Value, 'Process')
+    }
 }
 
 function Wait-Healthy([System.Diagnostics.Process]$Child, [string]$Url, [int]$TimeoutSeconds = 180) {
@@ -163,6 +169,10 @@ try {
     throw
 } finally {
     foreach ($name in $previousEnvironment.Keys) {
-        [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name], 'Process')
+        if ($null -eq $previousEnvironment[$name]) {
+            [Environment]::SetEnvironmentVariable($name, [NullString]::Value, 'Process')
+        } else {
+            [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name], 'Process')
+        }
     }
 }

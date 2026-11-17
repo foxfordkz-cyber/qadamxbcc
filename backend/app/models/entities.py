@@ -41,6 +41,26 @@ class EdgeType(enum.StrEnum):
     SHARED_DEVICE = "shared_device"
 
 
+class AbandonedRequest(Base):
+    """A durable no-execution promise for an unresolved client request UUID."""
+
+    __tablename__ = "abandoned_requests"
+
+    request_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class ProjectionEvent(Base):
+    """Committed approval awaiting idempotent graph/Redis projection."""
+
+    __tablename__ = "projection_outbox"
+
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("transactions.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
 def _enum_values(e: type[enum.StrEnum]) -> list[str]:
     return [m.value for m in e]
 

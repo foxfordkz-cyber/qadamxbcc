@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Any, Literal, Self
 from urllib.parse import urlparse
 
-from pydantic import SecretStr, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,9 +26,11 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
 
     # Decision engine tuning
-    cooling_off_minutes: int = 15
+    cooling_off_minutes: int = Field(15, ge=1, le=1440)
     timezone: str = "Asia/Almaty"
     latency_budget_ms: float = 15.0
+    max_request_bytes: int = Field(16_384, ge=1024, le=1_048_576)
+    request_rate_limit_per_minute: int = Field(120, ge=1, le=10_000)
 
     @model_validator(mode="before")
     @classmethod
@@ -39,6 +41,9 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_pilot(self) -> Self:
+        for key in (self.api_key, self.soc_api_key):
+            if key is not None and not key.get_secret_value().strip():
+                raise ValueError("Configured service keys must not be empty")
         if self.environment != "pilot":
             return self
         if self.allow_demo_overrides:

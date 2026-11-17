@@ -3,8 +3,8 @@ import { test } from "node:test";
 import { demoPresets, demoTrafficAccounts, ids } from "../src/lib/config";
 import { BiometricSensor, warningKeys } from "../src/lib/biometrics";
 import { preventedLoss, reconcileTraffic, trafficScenario, type TrafficRecord } from "../src/lib/traffic";
-import { transferSchema, type Answers, type Preset } from "../src/lib/contracts";
-import { cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "../src/lib/demo";
+import { ApiError, transferSchema, validateApiResponse, type Answers, type Preset } from "../src/lib/contracts";
+import { abandonDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "../src/lib/demo";
 import { readPending, remainingSeconds, TransferAttempt, writePending } from "../src/lib/transfer-session";
 import { countBlockedHubs } from "../src/lib/feed-summary";
 import { money } from "../src/lib/i18n";
@@ -63,6 +63,33 @@ test("request UUID replays exactly once, detects changed payloads, and detail re
   assert.equal(detailDemo(original.transaction_id).status, "cancelled");
   assert.equal(feedDemo().items.filter(row => row.transaction_id === original.transaction_id).length, 1);
   assert.throws(() => evaluateDemo({ ...input, amount: "100" }), (error: unknown) => error instanceof DemoError && error.status === 409);
+});
+test("abandonment tombstones late requests and never undoes an already processed transfer", () => {
+  const id = crypto.randomUUID();
+  assert.equal(abandonDemo(id).status, "abandoned");
+  assert.equal(abandonDemo(id, Date.now(), 0).status, "abandoned");
+  const input = transferSchema.parse({ request_id: id, sender_id: ids.sender, recipient_phone: demoPresets.normal.recipient, amount: "100", context: {} });
+  assert.throws(() => evaluateDemo(input), (error: unknown) => error instanceof DemoError && error.status === 409);
+  const approved = run("normal");
+  const receipt = abandonDemo(approved.transaction_id);
+  assert.equal(receipt.status, "processed"); assert.equal(receipt.evaluation?.status, "approved");
+});
+test("demo capacity rejects only new intents while preserving replay and existing holds", () => {
+  const input = transferSchema.parse({ request_id: crypto.randomUUID(), sender_id: ids.sender, recipient_phone: demoPresets.scam.recipient, amount: "900000", context: demoPresets.scam.context });
+  const evaluated = evaluateDemo(input);
+  const count = feedDemo().stats.total;
+  assert.deepEqual(evaluateDemo(input, Date.now(), 0), evaluated);
+  assert.throws(() => evaluateDemo({ ...input, request_id: crypto.randomUUID() }, Date.now(), 0), (error: unknown) => error instanceof DemoError && error.message === "demoCapacity");
+  assert.throws(() => abandonDemo(crypto.randomUUID(), Date.now(), 0), (error: unknown) => error instanceof DemoError && error.message === "demoCapacity");
+  assert.equal(feedDemo().stats.total, count);
+  assert.equal(resolveDemo(evaluated.transaction_id, clean).status, "cooling_off");
+  assert.equal(cancelDemo(evaluated.transaction_id).status, "cancelled");
+});
+test("malformed successful API responses fail safely, and nullable legacy ML stays supported", () => {
+  assert.throws(() => validateApiResponse("transfers/evaluate", {}), (error: unknown) => error instanceof ApiError && error.code === "invalidResponse");
+  const result = run("normal");
+  assert.doesNotThrow(() => validateApiResponse(`transfers/${result.transaction_id}`, { ...result, ml_score: null, ml_model_version: null, ml_contributors: [] }));
+  assert.throws(() => validateApiResponse(`transfers/requests/${result.transaction_id}/abandon`, { request_id: result.transaction_id, status: "processed", server_time: new Date().toISOString() }), ApiError);
 });
 test("hub graph has 12 incoming senders and a shared-device edge", () => {
   const graph = graphDemo(ids.hub);
@@ -135,6 +162,14 @@ test("clearing a pasted recipient removes that recipient's paste signal", () => 
   sensor.input("recipient", 1, "insertText", 1, 300);
   assert.equal(sensor.context().pasted_recipient, false);
   assert.equal(sensor.context().recipient_input_length, 1);
+});
+test("waiting after clearing a recipient is not counted as the new recipient's typing time", () => {
+  const sensor = new BiometricSensor();
+  sensor.input("recipient", 12, "insertFromPaste", 12, 100);
+  sensor.input("recipient", 0, "deleteContentBackward", 0, 200);
+  sensor.input("recipient", 1, "insertText", 1, 60000);
+  sensor.input("recipient", 2, "insertText", 1, 60500);
+  assert.equal(sensor.context().typing_duration_ms, 500);
 });
 test("select-all replacement starts fresh recipient cadence without retaining a paste flag", () => {
   const sensor = new BiometricSensor();

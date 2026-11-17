@@ -143,3 +143,10 @@ class ResolveCoolingRequest(BaseModel):
 
 class ResolveCoolingResponse(TransferEvaluateResponse):
     """Current authoritative transfer detail after a lifecycle action."""
+
+
+class AbandonRequestResponse(BaseModel):
+    request_id: uuid.UUID
+    status: Literal["abandoned", "processed"]
+    evaluation: TransferEvaluateResponse | None = None
+    server_time: datetime

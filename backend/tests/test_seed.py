@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -11,7 +12,7 @@ from app.core.config import Settings
 from app.core.kz import is_valid_iin, is_valid_kz_iban
 from app.core.resources import Resources
 from app.main import create_app
-from app.models import Account, EdgeType, GraphEdge, Transaction
+from app.models import AbandonedRequest, Account, EdgeType, GraphEdge, ProjectionEvent, Transaction
 from scripts.seed_bcc import (
     DEMO_ACCOUNTS,
     DEMO_PRESETS,
@@ -49,6 +50,13 @@ async def test_seed_is_idempotent_with_exact_demo_accounts(
     first = await seed(
         session_factory, redis, n_background_accounts=N_ACCOUNTS, n_background_transactions=N_TX
     )
+    abandoned_id = uuid.uuid4()
+    async with session_factory() as session:
+        transaction_id = await session.scalar(select(Transaction.id).limit(1))
+        assert transaction_id is not None
+        session.add(ProjectionEvent(transaction_id=transaction_id))
+        session.add(AbandonedRequest(request_id=abandoned_id))
+        await session.commit()
     second = await seed(
         session_factory, redis, n_background_accounts=N_ACCOUNTS, n_background_transactions=N_TX
     )
@@ -62,6 +70,8 @@ async def test_seed_is_idempotent_with_exact_demo_accounts(
 
     now = datetime.now(UTC)
     async with session_factory() as session:
+        assert await session.scalar(select(func.count()).select_from(ProjectionEvent)) == 0
+        assert await session.get(AbandonedRequest, abandoned_id) is not None
         accounts = {a.id: a for a in (await session.execute(select(Account))).scalars()}
         for spec in DEMO_ACCOUNTS:
             acc = accounts[spec.id]

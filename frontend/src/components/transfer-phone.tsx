@@ -14,12 +14,14 @@ interface Props {
   recipientType: RecipientType;
   setRecipientType: (type: RecipientType) => void;
   busy: boolean;
+  blocked?: boolean;
+  completed?: boolean;
   error: MessageKey | null;
   onSubmit: () => void;
   sensor: Biometrics;
 }
 
-export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, error, onSubmit, sensor }: Props) {
+export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, completed = false, error, onSubmit, sensor }: Props) {
   const { lang, t } = useLocale();
   const senderDetails = useRef<HTMLDetailsElement>(null);
   const contacts = [
@@ -36,7 +38,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
       <form className="phone-form" onSubmit={event => {
         event.preventDefault(); onSubmit();
       }} onInvalid={() => { if (senderDetails.current) senderDetails.current.open = true; }}>
-        <fieldset disabled={busy} className="phone-fields">
+        <fieldset disabled={busy || blocked} className="phone-fields">
           <div className="source-section"><p className="field-label">{t("sourceCard")}</p>
             <div className="source-card"><div className="source-top"><strong>bcc.kz</strong><span>#картакарта</span></div><div className="source-bottom"><CreditCard size={23} strokeWidth={1.3} /><div><span>•••• 4821</span><small>KZT · ₸</small></div><ShieldCheck size={20} /></div><span className="card-orbit" aria-hidden="true" /></div>
             <details ref={senderDetails} className="sender-details"><summary><span>{t("cardSettings")}</span><ChevronDown size={14} /></summary><label className="field">{t("sender")}<input required value={form.sender} onChange={e => { sensor.reset(); setForm(v => ({ ...v, sender: e.target.value })); }} placeholder="00000000-0000-4000-8000-000000000001" autoComplete="off" spellCheck={false} /></label></details>
@@ -63,7 +65,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             return <button className="toggle-row" type="button" role="switch" aria-checked={form.context[key]} key={key} onClick={() => setForm(v => ({ ...v, context: { ...v.context, [key]: !v.context[key] } }))}><span><Icon size={17} />{t(key)}</span><i className={form.context[key] ? "on" : ""}><b /></i></button>;
           })}</section>
           {error && <p className="error" role="alert">{t(error)}</p>}
-          <button className="primary transfer-cta" disabled={busy}>{busy ? <LoaderCircle className="animate-spin" size={18} /> : <LockKeyhole size={17} />}<span>{t(busy ? "evaluating" : "transferCta")}</span><ArrowRight size={18} /></button>
+          <button className="primary transfer-cta" disabled={busy || blocked || completed}>{busy ? <LoaderCircle className="animate-spin" size={18} /> : <LockKeyhole size={17} />}<span>{t(busy ? "evaluating" : blocked ? "checkPreviousTransfer" : completed ? "transferCompleted" : "transferCta")}</span><ArrowRight size={18} /></button>
         </fieldset>
         <p className="phone-security"><ShieldCheck size={13} />{t("protected")}</p>
       </form><div className="home-indicator" aria-hidden="true" />

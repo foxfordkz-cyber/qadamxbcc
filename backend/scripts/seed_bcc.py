@@ -40,7 +40,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config import get_settings
 from app.core.kz import iin_check_digit, make_kz_iban
 from app.db.session import build_engine, build_session_factory
-from app.models import Account, EdgeType, GraphEdge, RiskEvent, Transaction, TransactionStatus
+from app.models import (
+    Account,
+    EdgeType,
+    GraphEdge,
+    ProjectionEvent,
+    RiskEvent,
+    Transaction,
+    TransactionStatus,
+)
 from app.services import explain
 from app.services.antifraud import AntifraudEngine, Evaluation, TransferContext
 from app.services.graph import GraphStore
@@ -506,7 +514,9 @@ def _resolve_historic_cooling(
 
 
 async def _clear(session: AsyncSession, redis: Redis) -> int:
-    for model in (RiskEvent, Transaction, GraphEdge, Account):
+    # Explicit demo reset removes stale deliveries even with SQLite foreign keys disabled.
+    # Abandoned UUID promises survive resets so late old requests cannot execute.
+    for model in (ProjectionEvent, RiskEvent, Transaction, GraphEdge, Account):
         await session.execute(delete(model))
     await session.commit()
     keys = [k async for k in redis.scan_iter(match=f"{KEY_PREFIX}:*", count=1_000)]

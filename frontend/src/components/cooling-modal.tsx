@@ -16,10 +16,32 @@ export function CoolingModal({ result, context, onClose, onResolved }: { result:
   const [clock, setClock] = useState(() => ({ receivedAt: Date.now(), started: performance.now(), elapsed: 0 }));
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
+  const notify = useRef(onResolved);
+  notify.current = onResolved;
+  const dirty = useRef(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const seconds = remainingSeconds(result, clock.elapsed, clock.receivedAt);
   const unchanged = !!result.verification_answers && questions.every(q => result.verification_answers?.[q] === answers[q]);
   useEffect(() => { setClock({ receivedAt: Date.now(), started: performance.now(), elapsed: 0 }); }, [result.server_time]);
+  useEffect(() => { if (!dirty.current) setAnswers(result.verification_answers ?? {}); }, [result.verification_answers]);
+  useEffect(() => {
+    let disposed = false;
+    let refreshing = false;
+    const controller = new AbortController();
+    const refresh = async () => {
+      if (refreshing || inFlight.current || document.visibilityState !== "visible") return;
+      refreshing = true;
+      try {
+        const value = await api<Evaluation>(`transfers/${result.transaction_id}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]) });
+        if (!disposed && !inFlight.current) notify.current(value);
+      } catch { /* A read failure never releases a hold; explicit actions still verify on the server. */ }
+      finally { refreshing = false; }
+    };
+    const visible = () => void refresh();
+    const timer = setInterval(visible, 15000);
+    document.addEventListener("visibilitychange", visible); window.addEventListener("focus", visible);
+    return () => { disposed = true; clearInterval(timer); controller.abort(); document.removeEventListener("visibilitychange", visible); window.removeEventListener("focus", visible); };
+  }, [result.transaction_id]);
   useEffect(() => {
     const element = dialog.current;
     const previous = document.activeElement;
@@ -32,7 +54,7 @@ export function CoolingModal({ result, context, onClose, onResolved }: { result:
   async function submit(cancel = false) {
     if (inFlight.current || (!cancel && !questions.every(q => typeof answers[q] === "boolean"))) return;
     inFlight.current = true; setBusy(true); setError(null);
-    try { onResolved(await api<Evaluation>(`transfers/${result.transaction_id}/${cancel ? "cancel" : "resolve-cooling"}`, { method: "POST", body: JSON.stringify(cancel ? {} : { answers }) })); }
+    try { const value = await api<Evaluation>(`transfers/${result.transaction_id}/${cancel ? "cancel" : "resolve-cooling"}`, { method: "POST", body: JSON.stringify(cancel ? {} : { answers }) }); dirty.current = false; onResolved(value); }
     catch (e) {
       // A lost response or another operator's action must not leave a stale hold on screen.
       try { const current = await api<Evaluation>(`transfers/${result.transaction_id}`); if (current.status !== "cooling_off") { onResolved(current); return; } } catch { /* Keep the same transaction available for retry. */ }
@@ -52,7 +74,7 @@ export function CoolingModal({ result, context, onClose, onResolved }: { result:
     <div className="verification-progress"><span>{t("verificationProgress")}</span><strong>{questions.filter(q => typeof answers[q] === "boolean").length} / {questions.length}</strong></div>
     <form onSubmit={e => { e.preventDefault(); void submit(); }}>
       <fieldset disabled={busy} className="space-y-3 border-0 p-0">
-        {questions.map((q, index) => <fieldset key={q} className="question"><legend>{index + 1}. {t(q)}</legend><div className="flex gap-3">{[true, false].map(value => <label key={String(value)}><input type="radio" name={q} required checked={answers[q] === value} onChange={() => setAnswers(a => ({ ...a, [q]: value }))} />{t(value ? "yes" : "no")}</label>)}</div></fieldset>)}
+        {questions.map((q, index) => <fieldset key={q} className="question"><legend>{index + 1}. {t(q)}</legend><div className="flex gap-3">{[true, false].map(value => <label key={String(value)}><input type="radio" name={q} required checked={answers[q] === value} onChange={() => { dirty.current = true; setAnswers(a => ({ ...a, [q]: value })); }} />{t(value ? "yes" : "no")}</label>)}</div></fieldset>)}
       </fieldset>
       <p className="muted mt-4 text-xs" role="status">{t(unchanged && seconds > 0 ? "answersSaved" : "confirmNote")}</p>
       {error && <p role="alert" className="error">{t(error)}</p>}

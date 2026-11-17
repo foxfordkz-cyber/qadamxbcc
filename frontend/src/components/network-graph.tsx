@@ -22,7 +22,8 @@ function Controls() {
 }
 function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
   const { t, lang } = useLocale();
-  const [selected, setSelected] = useState<GraphData | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = graph.nodes.find(node => node.id === selectedId)?.data;
   const prepared = useMemo(() => {
     const suspicious = new Set(graph.nodes.filter(n => n.data.suspected_mule || n.data.flagged || n.data.role === "hub" || n.data.role === "mule").map(n => n.id));
     const hubs = new Set(graph.nodes.filter(n => n.data.role === "hub" || (n.data.suspected_mule && n.data.in_degree >= 5)).map(n => n.id));
@@ -47,7 +48,7 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
     };
   });
   return <><div className="graph-canvas"><ReactFlow<AccountNode> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange}
-    onNodeClick={(_, node) => setSelected(node.data)} onPaneClick={() => setSelected(null)} fitView minZoom={0.2} maxZoom={2} nodesConnectable={false} edgesFocusable={false} colorMode="light"
+    onNodeClick={(_, node) => setSelectedId(node.id)} onSelectionChange={({ nodes: selectedNodes }) => setSelectedId(selectedNodes[0]?.id ?? null)} onPaneClick={() => setSelectedId(null)} fitView minZoom={0.2} maxZoom={2} nodesConnectable={false} edgesFocusable={false} colorMode="light"
     ariaLabelConfig={{ "node.a11yDescription.default": t("graphKeyboard"), "node.a11yDescription.keyboardDisabled": t("graphKeyboard"), "node.a11yDescription.ariaLiveMessage": ({ x, y }) => `${t("account")}: ${x}, ${y}`, "edge.a11yDescription.default": t("graphKeyboard"), "handle.ariaLabel": t("account") }}>
     <Background color="#D0D5DD" gap={24} /><Controls />
   </ReactFlow></div>

@@ -7,13 +7,17 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
+from app.api.limits import RequestLimits
 from app.api.security import require_soc_access, require_transfer_access
 from app.api.v1 import soc, transfers
 from app.core.config import Settings, get_settings
 from app.core.resources import Resources
 from app.ml.features import Features
+from app.services.graph import GraphCapacityError
+from app.services.velocity import VelocityCapacityError
 
 
 def create_app(settings: Settings | None = None, resources: Resources | None = None) -> FastAPI:
@@ -41,6 +45,24 @@ def create_app(settings: Settings | None = None, resources: Resources | None = N
         openapi_url=None if cfg.environment == "pilot" else "/openapi.json",
     )
     app.state.settings = cfg
+
+    @app.exception_handler(GraphCapacityError)
+    @app.exception_handler(VelocityCapacityError)
+    async def scoring_capacity_error(
+        request: Request, exc: VelocityCapacityError | GraphCapacityError
+    ) -> JSONResponse:
+        return JSONResponse(
+            {"detail": "Risk history exceeds the supported scoring capacity"},
+            status_code=503,
+            headers={"Retry-After": "60", "Cache-Control": "no-store"},
+        )
+
+    app.add_middleware(
+        RequestLimits,
+        prefix=cfg.api_prefix,
+        max_bytes=cfg.max_request_bytes,
+        per_minute=cfg.request_rate_limit_per_minute,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cfg.cors_origins,
@@ -62,9 +84,19 @@ def create_app(settings: Settings | None = None, resources: Resources | None = N
                     await session.execute(text("SELECT 1"))
                 if not await res.redis.ping():
                     raise RuntimeError("Redis unavailable")
-                await res.engine.flush_settlements()
+                await res.engine.ensure_consistent()
                 prediction = res.engine.model.score(Features())
-                if not math.isfinite(prediction.score) or not 0 <= prediction.score <= 100:
+                numeric = [prediction.score, prediction.base_score]
+                numeric.extend(
+                    value
+                    for contributor in prediction.contributors
+                    for value in (contributor.value, contributor.contribution)
+                )
+                if (
+                    not all(math.isfinite(value) for value in numeric)
+                    or not 0 <= prediction.score <= 100
+                    or not 0 <= prediction.base_score <= 100
+                ):
                     raise RuntimeError("Invalid model result")
         except Exception as exc:
             # Never leak connection URLs, credentials or infrastructure errors.
