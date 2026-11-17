@@ -89,6 +89,8 @@ class MLContributorOut(BaseModel):
 
 class TransferEvaluateResponse(BaseModel):
     transaction_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
     status: TransactionStatus
     risk_score: int = Field(ge=0, le=100)
     ml_score: float | None = Field(None, ge=0, le=100)

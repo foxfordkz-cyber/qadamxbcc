@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { answersSchema, transferSchema } from "@/lib/contracts";
+import { answersSchema, feedQuerySchema, transferSchema } from "@/lib/contracts";
 import { appConfig, ids } from "@/lib/config";
 import { backendHeaders, checkAccess } from "@/lib/server-access";
 import { readBoundedJson, RequestBodyError } from "@/lib/request-body";
@@ -56,7 +56,7 @@ async function handle(request: NextRequest, context: RouteContext) {
     }
     if (cancel || abandon) body = z.object({}).strict().parse(await readBoundedJson(request));
     if (abandon && config.mode === "demo") return json(abandonDemo(path[2]));
-    if (config.mode === "demo") return json(cancel ? cancelDemo(path[1]) : detail ? detailDemo(path[1]) : feed ? feedDemo() : graphDemo(path[2]));
+    if (config.mode === "demo") return json(cancel ? cancelDemo(path[1]) : detail ? detailDemo(path[1]) : feed ? feedDemo(feedQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams))) : graphDemo(path[2]));
     const base = (process.env.BCC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
     const response = await fetch(`${base}/api/v1/${route}${request.nextUrl.search}`, {
       method: request.method, headers: backendHeaders(route),

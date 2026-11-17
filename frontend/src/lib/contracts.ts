@@ -57,11 +57,14 @@ export interface Evaluation extends Decision, MLDetails {
   verification_answers?: Answers | null;
   resolved_at?: string | null;
   red_flags?: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 export interface AbandonResult { request_id: string; status: "abandoned" | "processed"; evaluation?: Evaluation | null; server_time: string }
 export interface Party { id: string; full_name: string; iban: string }
 export interface FeedItem extends MLDetails {
   transaction_id: string; created_at: string; status: Status; risk_score: number;
+  updated_at?: string;
   amount: string | number; currency: string; latency_ms: number; sender: Party; recipient: Party;
   active_call: boolean; from_deposit: boolean; is_new_device: boolean; is_new_recipient: boolean;
   cooling_until: string | null; resolved_at: string | null; reasons: Reason[];
@@ -70,7 +73,8 @@ export interface FeedItem extends MLDetails {
 }
 export interface Feed {
   server_time: string; items: FeedItem[];
-  stats: { total: number; approved: number; cooling_off: number; blocked: number; cancelled?: number; blocked_amount?: string; held_amount?: string; cancelled_amount?: string; avg_latency_ms: number; max_latency_ms: number };
+  pagination: { total_filtered: number; offset: number; limit: number; has_more: boolean };
+  stats: { total: number; approved: number; cooling_off: number; blocked: number; blocked_hubs?: number; cancelled?: number; blocked_amount?: string; held_amount?: string; cancelled_amount?: string; avg_latency_ms: number; max_latency_ms: number };
 }
 export interface GraphData extends Record<string, unknown> {
   label: string; role: "center" | "hub" | "mule" | "normal"; depth: number; device_id: string;
@@ -92,6 +96,20 @@ export class ApiError extends Error {
   constructor(public code: string, public status = 0) { super(code); }
 }
 const statusSchema = z.enum(["approved", "cooling_off", "blocked", "cancelled"]);
+export const feedQuerySchema = z.object({
+  status: statusSchema.optional(), q: z.string().max(128).refine(value => !value.includes("\u0000")).transform(value => value.trim()).default(""),
+  min_score: z.coerce.number().int().min(0).max(100).default(0),
+  offset: z.coerce.number().int().min(0).max(100_000).default(0),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  since: z.iso.datetime({ offset: true }).optional(),
+});
+export type FeedQuery = z.infer<typeof feedQuerySchema>;
+// Null means an unknown browser override, not false. UI consumers already use
+// undefined for unknown optional context; normalize only that representation.
+const responseContextSchema = contextSchema.partial().extend({
+  is_new_device: z.boolean().nullable().optional().transform(value => value ?? undefined),
+  is_new_recipient: z.boolean().nullable().optional().transform(value => value ?? undefined),
+});
 const riskReasonSchema = z.object({ code: z.string(), layer: z.string(), score_delta: z.number(), reason_kk: z.string(), reason_ru: z.string() }).passthrough();
 const mlResponseSchema = z.object({
   ml_score: z.number().min(0).max(100).nullable().optional(), ml_base_score: z.number().nullable().optional(), ml_model_version: z.string().nullable().optional(), ml_explanation_method: z.string().nullable().optional(),
@@ -104,10 +122,23 @@ export const evaluationResponseSchema = mlResponseSchema.extend({
   cooling_off_until: z.iso.datetime({ offset: true }).nullable(), is_new_recipient: z.boolean(), is_new_device: z.boolean(),
   recipient: z.object({ id: z.uuid(), display_name: z.string(), iban_masked: z.string() }),
   amount: z.string().optional(), server_time: z.iso.datetime({ offset: true }).optional(), verification_answers: answersSchema.nullable().optional(),
+  created_at: z.iso.datetime({ offset: true }).optional(), updated_at: z.iso.datetime({ offset: true }).optional(),
+  resolved_at: z.iso.datetime({ offset: true }).nullable().optional(), context: responseContextSchema.optional(),
 }).passthrough();
 const abandonResponseSchema = z.object({ request_id: z.uuid(), status: z.enum(["abandoned", "processed"]), evaluation: evaluationResponseSchema.nullable().optional(), server_time: z.iso.datetime({ offset: true }) }).refine(value => value.status !== "processed" || !!value.evaluation);
 const partySchema = z.object({ id: z.uuid(), full_name: z.string(), iban: z.string() });
-const feedResponseSchema = z.object({ server_time: z.iso.datetime({ offset: true }), items: z.array(mlResponseSchema.extend({ transaction_id: z.uuid(), created_at: z.iso.datetime({ offset: true }), status: statusSchema, risk_score: z.number().min(0).max(100), amount: z.union([z.string(), z.number()]), currency: z.string(), latency_ms: z.number().nonnegative(), sender: partySchema, recipient: partySchema, reasons: z.array(riskReasonSchema) }).passthrough()), stats: z.object({ total: z.number().nonnegative(), approved: z.number().nonnegative(), cooling_off: z.number().nonnegative(), blocked: z.number().nonnegative(), avg_latency_ms: z.number().nonnegative(), max_latency_ms: z.number().nonnegative() }).passthrough() }).passthrough();
+const feedResponseSchema = z.object({
+  server_time: z.iso.datetime({ offset: true }),
+  items: z.array(mlResponseSchema.extend({
+    transaction_id: z.uuid(), created_at: z.iso.datetime({ offset: true }), updated_at: z.iso.datetime({ offset: true }).optional(),
+    status: statusSchema, risk_score: z.number().min(0).max(100), amount: z.union([z.string(), z.number()]),
+    currency: z.string(), latency_ms: z.number().nonnegative(), sender: partySchema, recipient: partySchema,
+    reasons: z.array(riskReasonSchema), context: responseContextSchema.optional(),
+    verification_answers: answersSchema.nullable().optional(), resolved_at: z.iso.datetime({ offset: true }).nullable().optional(),
+  }).passthrough()),
+  pagination: z.object({ total_filtered: z.number().int().nonnegative(), offset: z.number().int().min(0).max(100_000), limit: z.number().int().min(1).max(200), has_more: z.boolean() }),
+  stats: z.object({ total: z.number().nonnegative(), approved: z.number().nonnegative(), cooling_off: z.number().nonnegative(), blocked: z.number().nonnegative(), blocked_hubs: z.number().int().nonnegative().optional(), avg_latency_ms: z.number().nonnegative(), max_latency_ms: z.number().nonnegative() }).passthrough(),
+}).passthrough();
 const graphResponseSchema = z.object({ center: z.string(), depth: z.number(), nodes: z.array(z.object({ id: z.string(), type: z.string(), position: z.object({ x: z.number(), y: z.number() }), data: z.object({ label: z.string(), role: z.enum(["center", "hub", "mule", "normal"]), depth: z.number(), device_id: z.string(), flagged: z.boolean(), suspected_mule: z.boolean(), in_degree: z.number(), out_degree: z.number(), in_weight: z.number(), out_weight: z.number(), transit_ratio: z.number(), shared_device_accounts: z.number() }).passthrough() })), edges: z.array(z.object({ id: z.string(), source: z.string(), target: z.string(), type: z.string(), animated: z.boolean(), label: z.string().nullable(), data: z.object({ edge_type: z.enum(["transfer", "shared_device"]), weight: z.number(), tx_count: z.number(), highlight: z.boolean() }) })) });
 export function validateApiResponse(path: string, value: unknown) {
   const route = path.split("?")[0];
@@ -117,6 +148,10 @@ export function validateApiResponse(path: string, value: unknown) {
   if (!schema) return value;
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw new ApiError("invalidResponse", 502);
+  if (/^transfers\/[0-9a-f-]+$/i.test(route) && (!("transaction_id" in parsed.data) || typeof parsed.data.transaction_id !== "string"
+    || parsed.data.transaction_id.toLowerCase() !== route.split("/")[1].toLowerCase())) throw new ApiError("invalidResponse", 502);
+  if (route.startsWith("soc/graph/") && (!("center" in parsed.data) || typeof parsed.data.center !== "string"
+    || parsed.data.center.toLowerCase() !== route.split("/")[2].toLowerCase())) throw new ApiError("invalidResponse", 502);
   return parsed.data;
 }
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {

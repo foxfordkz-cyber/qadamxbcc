@@ -55,6 +55,7 @@ class FeedStats(BaseModel):
     approved: int = 0
     cooling_off: int = 0
     blocked: int = 0
+    blocked_hubs: int = 0
     cancelled: int = 0
     blocked_amount: Decimal = Decimal("0")
     held_amount: Decimal = Decimal("0")
@@ -63,10 +64,18 @@ class FeedStats(BaseModel):
     max_latency_ms: float = 0.0
 
 
+class FeedPagination(BaseModel):
+    total_filtered: int = Field(ge=0)
+    offset: int = Field(ge=0, le=100_000)
+    limit: int = Field(ge=1, le=200)
+    has_more: bool
+
+
 class FeedResponse(BaseModel):
     server_time: datetime
     items: list[FeedItem]
     stats: FeedStats
+    pagination: FeedPagination
 
 
 NodeRole = Literal["center", "hub", "mule", "normal"]

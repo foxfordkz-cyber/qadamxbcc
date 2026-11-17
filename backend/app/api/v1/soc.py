@@ -17,15 +17,30 @@ router = APIRouter(prefix="/soc", tags=["soc"])
 async def soc_feed(
     session: SessionDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    q: Annotated[
+        str | None,
+        Query(
+            max_length=128,
+            pattern=r"^[^\x00]*$",
+            description="Party name substring or exact transaction UUID",
+        ),
+    ] = None,
     since: Annotated[
         datetime | None, Query(description="Rows updated after this time; not a lossless cursor")
     ] = None,
     status_filter: Annotated[TransactionStatus | None, Query(alias="status")] = None,
     min_score: Annotated[int, Query(ge=0, le=100)] = 0,
 ) -> FeedResponse:
-    """Latest bounded SOC window. Refresh without since to see lifecycle changes."""
+    """Searchable SOC window; offset pages are not a snapshot or lossless event cursor."""
     return await soc.feed(
-        session, limit=limit, since=since, status=status_filter, min_score=min_score
+        session,
+        limit=limit,
+        offset=offset,
+        q=q,
+        since=since,
+        status=status_filter,
+        min_score=min_score,
     )
 
 
