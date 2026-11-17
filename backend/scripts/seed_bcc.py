@@ -599,6 +599,13 @@ async def seed(
                 settled = _resolve_historic_cooling(rng, tx, ev, t.at)
             if settled:
                 engine.apply_transfer(ctx)
+                await engine.velocity.record_settled(
+                    tx_id=ctx.tx_id,
+                    sender_id=ctx.sender_id,
+                    recipient_id=ctx.recipient_id,
+                    amount=ctx.amount,
+                    ts=(tx.resolved_at or t.at).timestamp(),
+                )
                 edges.add(t.sender.id, t.recipient.id, float(t.amount), t.at.timestamp())
             pending.append(tx)
             if len(pending) >= BATCH:
@@ -608,6 +615,13 @@ async def seed(
         for t in ring:
             tx_id = _new_id(rng)
             await engine.velocity.record_and_snapshot(
+                tx_id=str(tx_id),
+                sender_id=str(t.sender.id),
+                recipient_id=str(t.recipient.id),
+                amount=float(t.amount),
+                ts=t.at.timestamp(),
+            )
+            await engine.velocity.record_settled(
                 tx_id=str(tx_id),
                 sender_id=str(t.sender.id),
                 recipient_id=str(t.recipient.id),

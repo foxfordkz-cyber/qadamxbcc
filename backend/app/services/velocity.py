@@ -1,6 +1,8 @@
 """Redis sliding-window velocity counters (sorted sets, one round trip per evaluation).
 
-Each account owns two ZSETs: ``vel:out:{id}`` and ``vel:in:{id}``. A member is
+Attempts and settled funds use separate ZSETs. Attempt volume must never be used
+as evidence that a recipient has cashed out: held and blocked payments do not move money.
+A member is
 ``"{tx_id}:{counterparty_id}:{amount}"`` scored by the event's epoch seconds, so count,
 distinct counterparties and volume for any window up to 24h are derived from a single
 ``ZRANGEBYSCORE ... WITHSCORES``.
@@ -45,6 +47,10 @@ class VelocitySnapshot:
     sender_in: FlowStats
     recipient_in: FlowStats
     recipient_out: FlowStats
+    settled_sender_out: FlowStats = field(default_factory=FlowStats)
+    settled_sender_in: FlowStats = field(default_factory=FlowStats)
+    settled_recipient_in: FlowStats = field(default_factory=FlowStats)
+    settled_recipient_out: FlowStats = field(default_factory=FlowStats)
 
     def as_dict(self) -> dict[str, dict[str, dict[str, float]]]:
         return {
@@ -57,6 +63,10 @@ class VelocitySnapshot:
                 ("sender_in", self.sender_in),
                 ("recipient_in", self.recipient_in),
                 ("recipient_out", self.recipient_out),
+                ("settled_sender_out", self.settled_sender_out),
+                ("settled_sender_in", self.settled_sender_in),
+                ("settled_recipient_in", self.settled_recipient_in),
+                ("settled_recipient_out", self.settled_recipient_out),
             )
         }
 
@@ -117,13 +127,39 @@ class VelocityCounters:
         for key in (out_s, in_r):
             pipe.zremrangebyscore(key, "-inf", floor)
             pipe.expire(key, RETENTION_S + 3600)
-        for key in (out_s, in_s, in_r, out_r):
+        settled = (
+            _key("settled:out", sender_id),
+            _key("settled:in", sender_id),
+            _key("settled:in", recipient_id),
+            _key("settled:out", recipient_id),
+        )
+        for key in (out_s, in_s, in_r, out_r, *settled):
             pipe.zrangebyscore(key, floor, ts, withscores=True)
         res = await pipe.execute()
-        rows = res[-4:]
+        rows = res[-8:]
         return VelocitySnapshot(
             sender_out=_aggregate(rows[0], ts),
             sender_in=_aggregate(rows[1], ts),
             recipient_in=_aggregate(rows[2], ts),
             recipient_out=_aggregate(rows[3], ts),
+            settled_sender_out=_aggregate(rows[4], ts),
+            settled_sender_in=_aggregate(rows[5], ts),
+            settled_recipient_in=_aggregate(rows[6], ts),
+            settled_recipient_out=_aggregate(rows[7], ts),
         )
+
+    async def record_settled(
+        self, *, tx_id: str, sender_id: str, recipient_id: str, amount: float, ts: float
+    ) -> None:
+        """Record only committed money movement, idempotently for the immutable transfer."""
+        pipe = self._redis.pipeline(transaction=True)
+        for direction, account, counterparty in (
+            ("out", sender_id, recipient_id),
+            ("in", recipient_id, sender_id),
+        ):
+            key = _key(f"settled:{direction}", account)
+            # NX also preserves the original settlement time when the hook is retried.
+            pipe.zadd(key, {f"{tx_id}:{counterparty}:{amount:.2f}": ts}, nx=True)
+            pipe.zremrangebyscore(key, "-inf", ts - RETENTION_S)
+            pipe.expire(key, RETENTION_S + 3600)
+        await pipe.execute()

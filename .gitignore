@@ -6,6 +6,10 @@ __pycache__/
 .pytest_cache/
 *.db
 .env
+.env.pilot
+.env.pilot.local
+*.log
+.local-checks/
 node_modules/
 .next/
 .pytest_tmp/

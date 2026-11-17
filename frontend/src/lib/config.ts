@@ -20,8 +20,10 @@ export const demoTrafficAccounts: TrafficAccount[] = [
 ];
 const trafficAccountsSchema = z.array(z.object({ id: z.uuid(), city: z.enum(["astana", "almaty", "shymkent", "atyrau"]), role: z.enum(["normal", "scam", "hub"]) }).strict()).max(20).refine(accounts => new Set(accounts.map(a => a.id)).size === accounts.length);
 export function appConfig(): AppConfig {
-  const mode = process.env.BCC_API_MODE === "live" ? "live" : "demo";
-  if (mode === "demo") return { mode, presets: demoPresets, trafficAccounts: demoTrafficAccounts };
+  const pilot = process.env.BCC_ENVIRONMENT === "pilot";
+  const mode = pilot || process.env.BCC_API_MODE === "live" ? "live" : "demo";
+  const demoActionsEnabled = !pilot && process.env.BCC_DEMO_ACTIONS_ENABLED !== "false";
+  if (mode === "demo") return { mode, presets: demoPresets, trafficAccounts: demoTrafficAccounts, demoActionsEnabled };
   const names = { normal: "NORMAL", scam: "SCAM", hub: "HUB" } as const;
   const presets = { ...demoPresets };
   for (const key of Object.keys(names) as Preset[]) {
@@ -35,5 +37,5 @@ export function appConfig(): AppConfig {
     try { trafficAccounts = trafficAccountsSchema.parse(JSON.parse(process.env.BCC_TRAFFIC_ACCOUNTS)); }
     catch { trafficAccounts = []; }
   }
-  return { mode, presets, trafficAccounts };
+  return { mode, presets, trafficAccounts, demoActionsEnabled };
 }

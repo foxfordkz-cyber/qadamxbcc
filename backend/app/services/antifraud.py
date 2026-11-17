@@ -24,7 +24,7 @@ before production use; they are not calibrated estimates of banking fraud rates.
 
 import time
 from dataclasses import dataclass, field, replace
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Final
 from zoneinfo import ZoneInfo
 
@@ -200,16 +200,56 @@ class AntifraudEngine:
         *,
         timezone: str = "Asia/Almaty",
         cooling_off_minutes: int = 15,
+        allow_demo_overrides: bool = True,
     ) -> None:
         self.graph = graph
         self.velocity = VelocityCounters(redis)
         self._tz = ZoneInfo(timezone)
         self.cooling_off_minutes = cooling_off_minutes
+        self.allow_demo_overrides = allow_demo_overrides
+        self._pending_settlements: dict[str, TransferContext] = {}
         self.model = get_model()  # train/load once, outside the request latency budget
 
     # ------------------------------------------------------------------ public
+    def trusted_context(self, ctx: TransferContext, *, known_device_id: str) -> TransferContext:
+        """Derive authoritative time/relationship flags outside the demo environment.
+
+        Device identifiers still require a trusted upstream banking session in a real
+        deployment. A service API key does not authenticate the customer or their device.
+        Browser biometrics remain advisory inputs, never identity evidence.
+        """
+        if self.allow_demo_overrides:
+            return ctx
+        return replace(
+            ctx,
+            occurred_at=datetime.now(UTC),
+            is_new_recipient=not self.graph.has_transfer(ctx.sender_id, ctx.recipient_id),
+            is_new_device=not known_device_id or ctx.device_id != known_device_id,
+        )
+
+    async def record_settled(self, ctx: TransferContext) -> None:
+        """Persist committed movement; keep failed writes for fail-closed recovery.
+
+        The database is authoritative. Startup replays recent approved transactions,
+        and an in-process failed Redis write is retried before any further scoring.
+        """
+        self._pending_settlements.setdefault(ctx.tx_id, ctx)
+        await self.flush_settlements()
+
+    async def flush_settlements(self) -> None:
+        for tx_id, ctx in tuple(self._pending_settlements.items()):
+            await self.velocity.record_settled(
+                tx_id=ctx.tx_id,
+                sender_id=ctx.sender_id,
+                recipient_id=ctx.recipient_id,
+                amount=ctx.amount,
+                ts=ctx.occurred_at.timestamp(),
+            )
+            self._pending_settlements.pop(tx_id, None)
+
     async def evaluate(self, ctx: TransferContext) -> Evaluation:
         t0 = time.perf_counter()
+        await self.flush_settlements()
 
         is_new_recipient = (
             ctx.is_new_recipient
@@ -367,10 +407,10 @@ class AntifraudEngine:
         elif fan_in_1h >= FAN_IN_1H:
             out.append(_reason("FAN_IN_VELOCITY", LAYER_VELOCITY, W_FAN_IN, n=fan_in_1h))
 
-        r_in, r_out = snap.recipient_in.volume("1h"), snap.recipient_out.volume("1h")
-        r_in_prior = r_in - ctx.amount  # money that was already sitting with the recipient
-        if snap.recipient_in.distinct("1h") > PASS_THROUGH_MIN_IN and r_in_prior > 0:
-            ratio = r_out / r_in_prior
+        r_in = snap.settled_recipient_in.volume("1h")
+        r_out = snap.settled_recipient_out.volume("1h")
+        if snap.settled_recipient_in.distinct("1h") >= PASS_THROUGH_MIN_IN and r_in > 0:
+            ratio = r_out / r_in
             if ratio >= CASHOUT_RATIO:
                 out.append(
                     _reason(
@@ -381,9 +421,11 @@ class AntifraudEngine:
                     )
                 )
 
-        s_in_n, s_in = snap.sender_in.distinct("1h"), snap.sender_in.volume("1h")
+        s_in_n = snap.settled_sender_in.distinct("1h")
+        s_in = snap.settled_sender_in.volume("1h")
         if s_in_n >= PASS_THROUGH_MIN_IN and s_in > 0:
-            ratio = snap.sender_out.volume("1h") / s_in  # includes the current transfer
+            # Hypothetical cash-out includes this attempt, never other uncommitted attempts.
+            ratio = (snap.settled_sender_out.volume("1h") + ctx.amount) / s_in
             if ratio >= CASHOUT_RATIO:
                 out.append(
                     _reason(

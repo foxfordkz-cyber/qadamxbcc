@@ -1,0 +1,70 @@
+# Isolated internal-pilot stack. Never merge this file with the demo compose.
+# Terminate HTTPS and enforce bank SSO/MFA at the gateway before sharing access.
+name: bcc-shield-pilot
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bcc
+      POSTGRES_DB: bcc_shield
+      POSTGRES_PASSWORD: ${BCC_DB_PASSWORD:?Configure .env.pilot first}
+    volumes:
+      - pilot_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bcc -d bcc_shield"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - pilot_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    build: ./backend
+    environment:
+      BCC_ENVIRONMENT: pilot
+      BCC_ALLOW_DEMO_OVERRIDES: "false"
+      BCC_BOOTSTRAP_DEMO: "false"
+      BCC_DATABASE_URL: postgresql+asyncpg://bcc:${BCC_DB_PASSWORD:?Configure .env.pilot first}@postgres:5432/bcc_shield
+      BCC_REDIS_URL: redis://redis:6379/0
+      BCC_CORS_ORIGINS: '["${BCC_PUBLIC_ORIGIN:?Configure .env.pilot first}"]'
+      BCC_API_KEY: ${BCC_API_KEY:?Configure .env.pilot first}
+      BCC_SOC_API_KEY: ${BCC_SOC_API_KEY:?Configure .env.pilot first}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,urllib.request; urllib.request.urlopen(urllib.request.Request('http://localhost:8000/ready',headers={'X-BCC-SOC-Key':os.environ['BCC_SOC_API_KEY']}))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  frontend:
+    build: ./frontend
+    environment:
+      BCC_ENVIRONMENT: pilot
+      BCC_API_MODE: live
+      BCC_API_URL: http://backend:8000
+      BCC_DEMO_ACTIONS_ENABLED: "false"
+      BCC_PUBLIC_ORIGIN: ${BCC_PUBLIC_ORIGIN:?Configure .env.pilot first}
+      BCC_PILOT_USER: ${BCC_PILOT_USER:?Configure .env.pilot first}
+      BCC_PILOT_PASSWORD: ${BCC_PILOT_PASSWORD:?Configure .env.pilot first}
+      BCC_API_KEY: ${BCC_API_KEY:?Configure .env.pilot first}
+      BCC_SOC_API_KEY: ${BCC_SOC_API_KEY:?Configure .env.pilot first}
+    ports:
+      - "127.0.0.1:${BCC_PILOT_PORT:-3100}:3000"
+    depends_on:
+      backend: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+volumes:
+  pilot_pgdata:
+  pilot_redis:
