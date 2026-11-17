@@ -262,7 +262,7 @@ class TransferService:
         return tx
 
     async def detail(self, tx_id: uuid.UUID) -> TransferEvaluateResponse:
-        await self.engine.ensure_consistent()
+        # Persisted decisions remain readable while scoring projections are unavailable.
         tx = await self._load(tx_id)
         return transfer_detail(tx, tx.recipient, minutes=self.engine.cooling_off_minutes)
 
@@ -656,7 +656,8 @@ class TransferService:
         return evaluation
 
     async def cancel(self, tx_id: uuid.UUID) -> TransferEvaluateResponse:
-        await self.engine.ensure_consistent()
+        # Cancellation only removes permission to execute. It needs the SQL lifecycle
+        # lock, not Redis or delivery of unrelated approved-transfer projections.
         async with self._serialized(tx_id):
             tx = await self._load(tx_id, locked=True)
             if tx.status is TransactionStatus.CANCELLED and tx.resolution_action == "cancel":
@@ -684,7 +685,8 @@ class TransferService:
             return transfer_detail(tx, tx.recipient)
 
     async def abandon(self, request_id: uuid.UUID) -> AbandonRequestResponse:
-        await self.engine.ensure_consistent()
+        # The durable no-execution promise must remain available during a scoring
+        # outage. The same SQL lock as evaluate still decides which operation wins.
         async with self._serialized(request_id):
             existing = (
                 await self.session.execute(
