@@ -159,10 +159,11 @@ export function graphDemo(center: string): Graph {
   const nodes: Graph["nodes"] = [{ id: center, type: "account", position: { x: 0, y: 0 }, data: data(account, { role: "center", depth: 0, suspected_mule: isHub, in_degree: isHub ? 12 : 1, shared_device_accounts: isHub ? 2 : 0, transit_ratio: isHub ? 0.85 : 0 }) }];
   const edges: Graph["edges"] = [];
   const count = isHub ? 12 : 1;
+  const neighbour = accounts.find(party => party.id !== center)!;
   for (let i = 0; i < count; i++) {
-    const id = isHub ? `feeder-${i + 1}` : ids.sender;
+    const id = isHub ? `feeder-${i + 1}` : neighbour.id;
     const angle = (i / count) * Math.PI * 2;
-    nodes.push({ id, type: "account", position: { x: Math.cos(angle) * 440, y: Math.sin(angle) * 440 }, data: data({ id, full_name: isHub ? `•••• ${1101 + i}` : accounts[0].full_name, iban: "" }) });
+    nodes.push({ id, type: "account", position: { x: Math.cos(angle) * 440, y: Math.sin(angle) * 440 }, data: data({ id, full_name: isHub ? `•••• ${1101 + i}` : neighbour.full_name, iban: "" }) });
     edges.push({ id: `${id}-${center}`, source: id, target: center, type: "default", animated: isHub, label: isHub ? "90 000 ₸" : "25 000 ₸", data: { edge_type: "transfer", weight: isHub ? 90000 : 25000, tx_count: 1, highlight: isHub } });
   }
   if (isHub) {
