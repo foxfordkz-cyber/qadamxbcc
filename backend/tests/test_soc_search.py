@@ -158,8 +158,10 @@ async def test_feed_rejects_unbounded_or_invalid_queries(
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("prefix", ["", "RECHECK_"])
 async def test_global_hub_metric_deduplicates_recipients_and_excludes_scam_blocks(
     world: World,
+    prefix: str,
 ) -> None:
     ids = await history(world, 3)
     async with world.sessions() as session:
@@ -170,7 +172,7 @@ async def test_global_hub_metric_deduplicates_recipients_and_excludes_scam_block
             if index == 2:
                 tx.recipient_id = world.acc["scammer"].id
             for code in (
-                ("DROP_HUB_FAN_IN", "RECIPIENT_MANY_SENDERS")
+                (f"{prefix}DROP_HUB_FAN_IN", f"{prefix}RECIPIENT_MANY_SENDERS")
                 if index < 2
                 else ("SOCIAL_ENGINEERING_PATTERN",)
             ):
