@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import uuid
+from collections import Counter
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -11,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from weakref import WeakKeyDictionary
 
-from sqlalchemy import Connection, Engine, case, func, select
+from sqlalchemy import Connection, Engine, case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,7 +41,7 @@ from app.schemas.transfers import (
 )
 from app.services import explain
 from app.services.antifraud import AntifraudEngine, Evaluation, TransferContext
-from app.services.graph import GraphStore
+from app.services.graph import MAX_GRAPH_NEIGHBOURS, GraphCapacityError, GraphStore
 
 QUESTIONNAIRE_LAYER = "questionnaire"
 BLOCKED_AFTER_RED_FLAG_SCORE = 90
@@ -285,6 +286,45 @@ class TransferService:
             raise NotFoundError("recipient not found")
         return account
 
+    async def _refresh_device_peers(
+        self, sender: Account, recipient: Account, supplied_device: str
+    ) -> None:
+        """Load complete, bounded current rosters before either scoring boundary."""
+        graph = self.engine.graph
+        devices = {sender.device_id, recipient.device_id, supplied_device} - {""}
+        known_ids = {
+            uuid.UUID(identity)
+            for device in devices
+            for identity in graph.registered_accounts_on_device(device)
+        }
+        peers: list[Account] = []
+        if devices:
+            # Include cached members whose registration may have moved away. Loading
+            # only today's matching device values would leave those old links behind.
+            conditions = [Account.device_id.in_(devices)]
+            if known_ids:
+                conditions.append(Account.id.in_(known_ids))
+            row_limit = len(devices) * MAX_GRAPH_NEIGHBOURS + len(known_ids)
+            peers = list(
+                await self.session.scalars(
+                    select(Account)
+                    .where(or_(*conditions))
+                    .limit(row_limit + 1)
+                    .execution_options(populate_existing=True)
+                )
+            )
+            sizes = Counter(peer.device_id for peer in peers if peer.device_id in devices)
+            if len(peers) > row_limit or any(
+                size > MAX_GRAPH_NEIGHBOURS for size in sizes.values()
+            ):
+                raise GraphCapacityError("Device cluster exceeds the supported graph capacity")
+        # Validate the whole roster before applying rows; an incomplete view cannot
+        # authorize a release. Supplied IDs are queried, never linked to a pilot sender.
+        register_account(graph, sender)
+        register_account(graph, recipient)
+        for peer in peers:
+            register_account(graph, peer)
+
     async def evaluate(self, req: TransferEvaluateRequest) -> TransferEvaluateResponse:
         await self.engine.ensure_consistent()
         identity = req.request_id or uuid.uuid4()
@@ -329,23 +369,7 @@ class TransferService:
             raise InvalidTransferError("sender and recipient must differ")
 
         device_id = req.device_id or sender.device_id
-        # The resident graph only knows accounts hydrated at startup. Sync both parties and
-        # every account sharing a relevant device (indexed lookup) so device-cluster rules
-        # also see accounts created while the service is running.
-        register_account(self.engine.graph, sender)
-        register_account(self.engine.graph, recipient)
-        device_peers = await self.session.execute(
-            select(Account).where(
-                Account.device_id.in_(
-                    {
-                        recipient.device_id,
-                        device_id if self.engine.allow_demo_overrides else sender.device_id,
-                    }
-                )
-            )
-        )
-        for peer in device_peers.scalars():
-            register_account(self.engine.graph, peer)
+        await self._refresh_device_peers(sender, recipient, device_id)
 
         is_new_device = (
             req.context.is_new_device
@@ -611,6 +635,7 @@ class TransferService:
 
     async def _revalidate_release(self, tx: Transaction, now: datetime) -> Evaluation:
         sender = await self._get_account(tx.sender_id)
+        await self._refresh_device_peers(sender, tx.recipient, tx.device_id)
         original = TransferContextIn.model_validate(tx.context_snapshot or {})
         ctx = TransferContext(
             tx_id=str(tx.id),
