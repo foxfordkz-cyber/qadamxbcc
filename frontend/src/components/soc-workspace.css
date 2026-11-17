@@ -1,0 +1,20 @@
+.soc-search{padding:22px 24px 0;max-width:780px}
+.soc-search>label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650;color:#344054;margin-bottom:9px}
+.soc-search-input{position:relative}
+.soc-search-input input:not([type=radio]){padding-right:45px;background:#f9fafb}
+.soc-search-input input::-webkit-search-cancel-button{display:none}
+.soc-search-input>button{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:9px;color:#667085;border-radius:8px}
+.soc-search>p{font-size:11px;line-height:1.5;margin-top:7px}
+.soc-pagination{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 24px;border-top:1px solid #eaecf0}
+.soc-pagination>p{font-size:12px;color:#667085}
+.soc-pagination strong{color:#344054;font-weight:600}
+.soc-pagination>div{display:flex;align-items:center;gap:7px}
+.soc-pagination .secondary{padding:9px 12px;font-size:12px}
+.soc-selection-note{display:flex;align-items:center;gap:10px;background:#ecfdf3;border:1px solid #abefc6;border-radius:12px;padding:14px 18px;color:#067647;font-size:13px;line-height:1.5}
+.soc-selection-note>svg{flex-shrink:0}
+.soc-live-graph{font-size:10px;font-weight:650;white-space:nowrap;background:#f2f4f7;border:1px solid #eaecf0;border-radius:7px;padding:5px 8px;color:#475467}
+.soc-feed-time{display:flex;flex-direction:column;gap:5px;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}.soc-feed-time strong{font-weight:500;color:#344054}.soc-feed-time span{color:#667085}
+.soc-table-scroll{max-height:480px;overflow:auto}.soc-table-scroll th{position:sticky;top:0;z-index:1;background:#f9fafb;box-shadow:0 1px 0 #eaecf0}
+.soc-open-case{display:inline-flex;align-items:center;gap:6px;margin-left:14px;color:#008f4c;font-weight:650;white-space:nowrap}.soc-open-case:hover{text-decoration:underline}.soc-selection-note .soc-open-case{margin-left:auto}.soc-selection-note{flex-wrap:wrap}#soc-investigation{scroll-margin-top:24px}
+@media(max-width:600px){.soc-search{padding:18px 18px 0}.soc-pagination{padding:16px;align-items:flex-start;flex-direction:column;gap:12px}.soc-pagination>div{width:100%}.soc-pagination>div>button:first-child{margin-right:auto}.soc-live-graph{white-space:normal;text-align:center;max-width:78px}}
+.soc-bottom{align-items:start}

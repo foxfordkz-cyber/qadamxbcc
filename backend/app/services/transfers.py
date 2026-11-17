@@ -184,6 +184,8 @@ def transfer_detail(
     )
     snapshot.update(
         transaction_id=tx.id,
+        created_at=tx.created_at,
+        updated_at=tx.updated_at,
         status=tx.status,
         risk_score=tx.risk_score,
         headline_kk=headline[0],
@@ -309,7 +311,13 @@ class TransferService:
                         or existing.request_hash != request_hash
                     ):
                         raise ConflictError("request_id was already used with a different payload")
-                    return TransferEvaluateResponse.model_validate(existing.evaluation_snapshot)
+                    snapshot = dict(existing.evaluation_snapshot)
+                    # Earlier saved evaluations predate the additive timestamps.
+                    # A replay is the original decision; its update time is not
+                    # the timestamp of a later cancellation or questionnaire.
+                    snapshot.setdefault("created_at", existing.created_at)
+                    snapshot.setdefault("updated_at", existing.created_at)
+                    return TransferEvaluateResponse.model_validate(snapshot)
             return await self._evaluate(req, identity, request_hash)
 
     async def _evaluate(
@@ -437,6 +445,8 @@ class TransferService:
         rg = ev.recipient_graph
         return TransferEvaluateResponse(
             transaction_id=tx.id,
+            created_at=tx.created_at,
+            updated_at=tx.updated_at,
             status=ev.decision,
             risk_score=ev.score,
             ml_score=ev.ml_score,

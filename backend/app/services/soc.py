@@ -9,9 +9,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Account, Transaction, TransactionStatus
+from app.models import Account, RiskEvent, Transaction, TransactionStatus
 from app.schemas.soc import (
     FeedItem,
+    FeedPagination,
     FeedParty,
     FeedResponse,
     FeedStats,
@@ -37,28 +38,53 @@ async def feed(
     session: AsyncSession,
     *,
     limit: int = 50,
+    offset: int = 0,
+    q: str | None = None,
     since: datetime | None = None,
     status: TransactionStatus | None = None,
     min_score: int = 0,
 ) -> FeedResponse:
     watermark = datetime.now(UTC)
-    stmt = (
-        select(Transaction)
-        .options(
-            selectinload(Transaction.sender),
-            selectinload(Transaction.recipient),
-            selectinload(Transaction.risk_events),
-        )
-        .where(Transaction.updated_at <= watermark)
-        .order_by(Transaction.updated_at.desc(), Transaction.id)
-        .limit(limit)
-    )
+    stmt = select(Transaction).where(Transaction.updated_at <= watermark)
     if since is not None:
         stmt = stmt.where(Transaction.updated_at > since)
     if status is not None:
         stmt = stmt.where(Transaction.status == status)
     if min_score:
         stmt = stmt.where(Transaction.risk_score >= min_score)
+    search = (q or "").strip()
+    if search:
+        try:
+            identity = uuid.UUID(search)
+        except ValueError:
+            # SQLite's built-in lower/LIKE only handles ASCII. The local engine
+            # registers a Unicode UDF; PostgreSQL uses its Unicode-aware lower.
+            lowered = (
+                func.bcc_casefold(Account.full_name)
+                if session.get_bind().dialect.name == "sqlite"
+                else func.lower(Account.full_name)
+            )
+            name_matches = lowered.contains(search.casefold(), autoescape=True)
+            stmt = stmt.where(
+                Transaction.sender.has(name_matches) | Transaction.recipient.has(name_matches)
+            )
+        else:
+            stmt = stmt.where(Transaction.id == identity)
+    total_filtered = int(
+        await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    )
+    stmt = (
+        stmt.options(
+            selectinload(Transaction.sender),
+            selectinload(Transaction.recipient),
+            selectinload(Transaction.risk_events),
+        )
+        .order_by(
+            Transaction.updated_at.desc(), Transaction.created_at.desc(), Transaction.id.desc()
+        )
+        .offset(offset)
+        .limit(limit)
+    )
     rows = (await session.execute(stmt)).scalars().all()
 
     items = []
@@ -95,7 +121,17 @@ async def feed(
                 recipient_graph=detail.recipient_graph,
             )
         )
-    return FeedResponse(server_time=watermark, items=items, stats=await _stats(session))
+    return FeedResponse(
+        server_time=watermark,
+        items=items,
+        stats=await _stats(session),
+        pagination=FeedPagination(
+            total_filtered=total_filtered,
+            offset=offset,
+            limit=limit,
+            has_more=offset + len(items) < total_filtered,
+        ),
+    )
 
 
 async def _stats(session: AsyncSession) -> FeedStats:
@@ -124,6 +160,17 @@ async def _stats(session: AsyncSession) -> FeedStats:
             setattr(stats, amount_field, Decimal(str(amount)))
     if stats.total:
         stats.avg_latency_ms = round(weighted / stats.total, 3)
+    stats.blocked_hubs = int(
+        await session.scalar(
+            select(func.count(func.distinct(Transaction.recipient_id))).where(
+                Transaction.status == TransactionStatus.BLOCKED,
+                Transaction.risk_events.any(
+                    RiskEvent.rule_code.in_(("DROP_HUB_FAN_IN", "RECIPIENT_MANY_SENDERS"))
+                ),
+            )
+        )
+        or 0
+    )
     return stats
 
 

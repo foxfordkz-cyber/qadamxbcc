@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ids } from "./config";
+import { feedQuerySchema, type FeedQuery } from "./contracts";
+import { countBlockedHubs } from "./feed-summary";
 import type { AbandonResult, Answers, Decision, Evaluation, Feed, FeedItem, Graph, GraphData, Party, Reason, Status, TransferInput } from "./contracts";
 
 const accounts = [
@@ -64,12 +66,12 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
   const until = status === "cooling_off" ? new Date(now + 900000).toISOString() : null;
   const id = input.request_id ?? randomUUID();
   const latency = Math.round((performance.now() - start) * 1000) / 1000;
-  rows().unshift({ transaction_id: id, created_at: new Date(now).toISOString(), status, risk_score: score, amount: input.amount, currency: "KZT", latency_ms: latency, sender, recipient, ...ctx, context: ctx, is_new_recipient: isNew, cooling_until: until, resolved_at: null, reasons });
+  rows().unshift({ transaction_id: id, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(), status, risk_score: score, amount: input.amount, currency: "KZT", latency_ms: latency, sender, recipient, ...ctx, context: ctx, is_new_recipient: isNew, cooling_until: until, resolved_at: null, reasons });
   const result: Evaluation = { ...decision(status, score, id, reasons), reasons, latency_ms: latency,
     layer_latency_ms: { behavioral: t1 - start, graph: performance.now() - t1 },
     cooling_off_until: until, is_new_recipient: isNew, is_new_device: ctx.is_new_device,
     recipient: { id: recipient.id, display_name: recipient.full_name, iban_masked: `KZ** •••• ${recipient.iban.slice(-4)}` },
-    amount: input.amount, context: ctx, server_time: new Date(now).toISOString(), verification_answers: null, resolved_at: null, red_flags: [] };
+    amount: input.amount, context: ctx, server_time: new Date(now).toISOString(), created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(), verification_answers: null, resolved_at: null, red_flags: [] };
   details().set(id, structuredClone(result));
   if (input.request_id) requests().set(input.request_id, { body: JSON.stringify(input), result: structuredClone(result) });
   return result;
@@ -97,6 +99,8 @@ export function resolveDemo(id: string, answers: Answers, now = Date.now()): Eva
   const flagged = answers.caller_claims_bank_or_police || answers.asked_to_move_to_safe_account || answers.asked_to_keep_secret_or_install_app || !answers.initiated_by_customer || unknownUnderPressure;
   row.verification_answers = answers;
   detail.verification_answers = answers;
+  row.updated_at = new Date(now).toISOString();
+  detail.updated_at = row.updated_at;
   if (!flagged && row.cooling_until && now < Date.parse(row.cooling_until)) {
     details().set(id, detail);
     return detail;
@@ -118,16 +122,27 @@ export function cancelDemo(id: string, now = Date.now()): Evaluation {
   if (detail.status !== "cooling_off") throw new DemoError(409, "conflict");
   const row = rows().find(r => r.transaction_id === id)!;
   const reasons = [reason("CUSTOMER_CANCELLED", "decision", 0, "Клиент аударымнан бас тартты. Қаражат жіберілген жоқ.", "Клиент отменил перевод. Средства не отправлены.")];
-  row.status = "cancelled"; row.cooling_until = null; row.resolved_at = new Date(now).toISOString(); row.reasons = reasons;
-  const result = { ...detail, ...decision("cancelled", detail.risk_score, id, reasons), reasons, cooling_off_until: null, resolved_at: row.resolved_at };
+  row.status = "cancelled"; row.cooling_until = null; row.resolved_at = new Date(now).toISOString(); row.updated_at = row.resolved_at; row.reasons = reasons;
+  const result = { ...detail, ...decision("cancelled", detail.risk_score, id, reasons), reasons, cooling_off_until: null, resolved_at: row.resolved_at, updated_at: row.updated_at };
   details().set(id, result);
   return structuredClone(result);
 }
-export function feedDemo(): Feed {
+export function feedDemo(query: Partial<FeedQuery> = {}): Feed {
+  const { limit, offset, q, status, since, min_score } = feedQuerySchema.parse(query);
   const items = rows();
-  return { server_time: new Date().toISOString(), items: items.slice(0, 50), stats: {
+  const search = q.toLowerCase();
+  const compactId = search.replace(/-/g, "");
+  const uuidSearch = /^[0-9a-f]{32}$/.test(compactId) ? compactId : null;
+  const filtered = items.filter(row => (!status || row.status === status) && row.risk_score >= min_score
+    && (!since || Date.parse(row.updated_at ?? row.created_at) > Date.parse(since))
+    && (!search || row.sender.full_name.toLowerCase().includes(search) || row.recipient.full_name.toLowerCase().includes(search)
+      || (uuidSearch !== null && row.transaction_id.replace(/-/g, "") === uuidSearch)))
+    .sort((a, b) => Date.parse(b.updated_at ?? b.created_at) - Date.parse(a.updated_at ?? a.created_at)
+      || Date.parse(b.created_at) - Date.parse(a.created_at) || b.transaction_id.localeCompare(a.transaction_id));
+  return { server_time: new Date().toISOString(), items: filtered.slice(offset, offset + limit), pagination: { total_filtered: filtered.length, offset, limit, has_more: offset + limit < filtered.length }, stats: {
     total: items.length, approved: items.filter(r => r.status === "approved").length,
     cooling_off: items.filter(r => r.status === "cooling_off").length, blocked: items.filter(r => r.status === "blocked").length,
+    blocked_hubs: countBlockedHubs(items),
     cancelled: items.filter(r => r.status === "cancelled").length,
     blocked_amount: String(items.filter(r => r.status === "blocked").reduce((n, r) => n + Number(r.amount), 0)),
     held_amount: String(items.filter(r => r.status === "cooling_off").reduce((n, r) => n + Number(r.amount), 0)),

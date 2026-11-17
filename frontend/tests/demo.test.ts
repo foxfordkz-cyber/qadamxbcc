@@ -105,8 +105,8 @@ test("invalid amounts and ambiguous recipients are rejected", () => {
 });
 
 test("SOC hub KPI excludes scam blocks and deduplicates blocked hub recipients", () => {
-  run("hub");
-  const hub = feedDemo().items[0];
+  const result = run("hub");
+  const hub = feedDemo({ q: result.transaction_id }).items[0];
   const scam = { ...hub, recipient: { ...hub.recipient, id: ids.stranger }, reasons: [{ code: "QUESTIONNAIRE", layer: "questionnaire", score_delta: 90, reason_kk: "", reason_ru: "" }] };
   assert.equal(countBlockedHubs([scam]), 0);
   assert.equal(countBlockedHubs([hub, { ...hub, transaction_id: "repeat" }, scam]), 1);
