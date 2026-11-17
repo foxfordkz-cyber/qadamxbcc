@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { answersSchema, transferSchema } from "@/lib/contracts";
 import { appConfig, ids } from "@/lib/config";
-import { DemoError, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "@/lib/demo";
+import { backendHeaders, checkAccess } from "@/lib/server-access";
+import { cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "@/lib/demo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,13 +11,17 @@ type RouteContext = { params: Promise<{ path: string[] }> };
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
 async function handle(request: NextRequest, context: RouteContext) {
+  const access = checkAccess({ method: request.method, headers: request.headers, origin: request.nextUrl.origin, pathname: request.nextUrl.pathname });
+  if (access) return json({ error: access.error }, access.status);
   const { path } = await context.params;
   const route = path.join("/");
   const evaluate = request.method === "POST" && route === "transfers/evaluate";
   const resolve = request.method === "POST" && /^transfers\/[0-9a-f-]{36}\/resolve-cooling$/i.test(route);
+  const cancel = request.method === "POST" && /^transfers\/[0-9a-f-]{36}\/cancel$/i.test(route);
+  const detail = request.method === "GET" && /^transfers\/[0-9a-f-]{36}$/i.test(route);
   const feed = request.method === "GET" && route === "soc/feed";
   const graph = request.method === "GET" && /^soc\/graph\/[0-9a-f-]{36}$/i.test(route);
-  if (!evaluate && !resolve && !feed && !graph) return json({ error: "notFound" }, 404);
+  if (!evaluate && !resolve && !cancel && !detail && !feed && !graph) return json({ error: "notFound" }, 404);
   try {
     const config = appConfig();
     let body: unknown;
@@ -38,10 +43,11 @@ async function handle(request: NextRequest, context: RouteContext) {
       if (config.mode === "demo") return json(resolveDemo(path[1], parsed.answers));
       body = parsed;
     }
-    if (config.mode === "demo") return json(feed ? feedDemo() : graphDemo(path[2]));
+    if (cancel) body = z.object({}).strict().parse(await request.json());
+    if (config.mode === "demo") return json(cancel ? cancelDemo(path[1]) : detail ? detailDemo(path[1]) : feed ? feedDemo() : graphDemo(path[2]));
     const base = (process.env.BCC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
     const response = await fetch(`${base}/api/v1/${route}${request.nextUrl.search}`, {
-      method: request.method, headers: { "Content-Type": "application/json" },
+      method: request.method, headers: backendHeaders(route),
       body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) return json({ error: response.status === 404 ? "notFound" : response.status === 409 ? "conflict" : response.status === 422 ? "invalid" : "apiError" }, response.status);

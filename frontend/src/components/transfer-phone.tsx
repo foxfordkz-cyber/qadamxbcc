@@ -39,7 +39,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
         <fieldset disabled={busy} className="phone-fields">
           <div className="source-section"><p className="field-label">{t("sourceCard")}</p>
             <div className="source-card"><div className="source-top"><strong>bcc.kz</strong><span>#картакарта</span></div><div className="source-bottom"><CreditCard size={23} strokeWidth={1.3} /><div><span>•••• 4821</span><small>KZT · ₸</small></div><ShieldCheck size={20} /></div><span className="card-orbit" aria-hidden="true" /></div>
-            <details ref={senderDetails} className="sender-details"><summary><span>{t("cardSettings")}</span><ChevronDown size={14} /></summary><label className="field">{t("sender")}<input required value={form.sender} onChange={e => setForm(v => ({ ...v, sender: e.target.value }))} placeholder="00000000-0000-4000-8000-000000000001" autoComplete="off" spellCheck={false} /></label></details>
+            <details ref={senderDetails} className="sender-details"><summary><span>{t("cardSettings")}</span><ChevronDown size={14} /></summary><label className="field">{t("sender")}<input required value={form.sender} onChange={e => { sensor.reset(); setForm(v => ({ ...v, sender: e.target.value })); }} placeholder="00000000-0000-4000-8000-000000000001" autoComplete="off" spellCheck={false} /></label></details>
           </div>
           <section aria-labelledby="quick-contacts-label"><p id="quick-contacts-label" className="field-label">{t("quickContacts")}</p><div className="contact-list">
             {contacts.map(contact => {

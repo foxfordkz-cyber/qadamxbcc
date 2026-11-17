@@ -31,9 +31,9 @@ uv run --no-sync pytest
 if [[ -f "$ROOT/frontend/package.json" ]]; then
   cd "$ROOT/frontend"
   step "frontend: install"
-  if [[ -f package-lock.json ]]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
-  step "frontend: tsc --noEmit"
-  npx tsc --noEmit
+  if [[ -f package-lock.json ]]; then npm ci --prefer-offline --no-audit --no-fund; else npm install --prefer-offline --no-audit --no-fund; fi
+  step "frontend: type generation + tsc --noEmit"
+  npm run typecheck
   if npm pkg get scripts.test | grep -q tsx; then
     step "frontend: tests"
     npm test

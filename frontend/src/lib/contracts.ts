@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export type Lang = "kk" | "ru";
-export type Status = "approved" | "cooling_off" | "blocked";
+export type Status = "approved" | "cooling_off" | "blocked" | "cancelled";
 export type Preset = "normal" | "scam" | "hub";
 export const contextSchema = z.object({
   active_call: z.boolean().default(false),
@@ -15,6 +15,7 @@ export const contextSchema = z.object({
   hesitation_ms: z.number().int().min(0).max(300_000).nullable().optional(),
 }).strict();
 export const transferSchema = z.object({
+  request_id: z.uuid().optional(),
   sender_id: z.uuid(),
   recipient_id: z.uuid().optional(),
   recipient_phone: z.string().regex(/^\+7\d{10}$/).optional(),
@@ -40,16 +41,22 @@ export interface Decision {
   headline_kk: string; headline_ru: string; reasons_kk: string[]; reasons_ru: string[];
 }
 export interface MLDetails {
-  ml_score?: number;
-  ml_base_score?: number;
-  ml_model_version?: string;
-  ml_explanation_method?: string;
+  ml_score?: number | null;
+  ml_base_score?: number | null;
+  ml_model_version?: string | null;
+  ml_explanation_method?: string | null;
   ml_contributors?: { feature: string; value: number; contribution: number; label_kk: string; label_ru: string }[];
 }
 export interface Evaluation extends Decision, MLDetails {
   reasons: Reason[]; latency_ms: number; layer_latency_ms: Record<string, number>;
   cooling_off_until: string | null; is_new_recipient: boolean; is_new_device: boolean;
   recipient: { id: string; display_name: string; iban_masked: string };
+  amount?: string;
+  context?: Partial<Context>;
+  server_time?: string;
+  verification_answers?: Answers | null;
+  resolved_at?: string | null;
+  red_flags?: string[];
 }
 export interface Party { id: string; full_name: string; iban: string }
 export interface FeedItem extends MLDetails {
@@ -57,10 +64,12 @@ export interface FeedItem extends MLDetails {
   amount: string | number; currency: string; latency_ms: number; sender: Party; recipient: Party;
   active_call: boolean; from_deposit: boolean; is_new_device: boolean; is_new_recipient: boolean;
   cooling_until: string | null; resolved_at: string | null; reasons: Reason[];
+  context?: Partial<Context>;
+  verification_answers?: Answers | null;
 }
 export interface Feed {
   server_time: string; items: FeedItem[];
-  stats: { total: number; approved: number; cooling_off: number; blocked: number; avg_latency_ms: number; max_latency_ms: number };
+  stats: { total: number; approved: number; cooling_off: number; blocked: number; cancelled?: number; blocked_amount?: string; held_amount?: string; cancelled_amount?: string; avg_latency_ms: number; max_latency_ms: number };
 }
 export interface GraphData extends Record<string, unknown> {
   label: string; role: "center" | "hub" | "mule" | "normal"; depth: number; device_id: string;
@@ -76,10 +85,10 @@ export interface Graph {
 export interface PresetForm { sender: string; recipient: string; amount: string; context: Context }
 export type City = "astana" | "almaty" | "shymkent" | "atyrau";
 export interface TrafficAccount { id: string; city: City; role: "normal" | "scam" | "hub" }
-export interface AppConfig { mode: "demo" | "live"; presets: Record<Preset, PresetForm>; trafficAccounts?: TrafficAccount[] }
+export interface AppConfig { mode: "demo" | "live"; presets: Record<Preset, PresetForm>; trafficAccounts?: TrafficAccount[]; demoActionsEnabled?: boolean }
 
 export class ApiError extends Error {
-  constructor(public code: string) { super(code); }
+  constructor(public code: string, public status = 0) { super(code); }
 }
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/v1/${path}`, {
@@ -90,7 +99,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const body: unknown = await response.json().catch(() => null);
     const code = body && typeof body === "object" && "error" in body && typeof body.error === "string"
       ? body.error : response.status === 404 ? "notFound" : response.status === 409 ? "conflict" : "apiError";
-    throw new ApiError(code);
+    throw new ApiError(code, response.status);
   }
   return response.json() as Promise<T>;
 }

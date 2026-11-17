@@ -43,6 +43,7 @@ class TransferContextIn(BaseModel):
 class TransferEvaluateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    request_id: uuid.UUID | None = None
     sender_id: uuid.UUID
     recipient_id: uuid.UUID | None = None
     recipient_phone: str | None = Field(None, pattern=r"^\+7\d{10}$")
@@ -90,10 +91,10 @@ class TransferEvaluateResponse(BaseModel):
     transaction_id: uuid.UUID
     status: TransactionStatus
     risk_score: int = Field(ge=0, le=100)
-    ml_score: float = Field(ge=0, le=100)
-    ml_base_score: float = Field(ge=0, le=100)
-    ml_model_version: str
-    ml_explanation_method: Literal["tree_path_probability"] = "tree_path_probability"
+    ml_score: float | None = Field(None, ge=0, le=100)
+    ml_base_score: float | None = Field(None, ge=0, le=100)
+    ml_model_version: str | None = None
+    ml_explanation_method: Literal["tree_path_probability"] | None = "tree_path_probability"
     ml_contributors: list[MLContributorOut]
     headline_kk: str
     headline_ru: str
@@ -108,6 +109,12 @@ class TransferEvaluateResponse(BaseModel):
     recipient: PartyOut
     velocity: dict[str, dict[str, dict[str, float]]]
     recipient_graph: dict[str, float | int | bool]
+    amount: Decimal
+    context: TransferContextIn
+    server_time: datetime
+    verification_answers: "CoolingQuestionnaire | None" = None
+    resolved_at: datetime | None = None
+    red_flags: list[str] = Field(default_factory=list)
 
 
 class CoolingQuestionnaire(BaseModel):
@@ -134,13 +141,5 @@ class ResolveCoolingRequest(BaseModel):
     answers: CoolingQuestionnaire
 
 
-class ResolveCoolingResponse(BaseModel):
-    transaction_id: uuid.UUID
-    status: TransactionStatus
-    risk_score: int
-    headline_kk: str
-    headline_ru: str
-    red_flags: list[str]
-    reasons_kk: list[str]
-    reasons_ru: list[str]
-    resolved_at: datetime
+class ResolveCoolingResponse(TransferEvaluateResponse):
+    """Current authoritative transfer detail after a lifecycle action."""

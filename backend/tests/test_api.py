@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
@@ -7,14 +8,14 @@ from typing import Any
 import fakeredis
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.core.kz import make_kz_iban
 from app.core.resources import Resources
 from app.main import create_app
-from app.models import Account, EdgeType, GraphEdge, Transaction, TransactionStatus
+from app.models import Account, EdgeType, GraphEdge, RiskEvent, Transaction, TransactionStatus
 
 API = "/api/v1"
 DAY = datetime(2026, 11, 13, 9, 0, tzinfo=UTC)
@@ -29,9 +30,22 @@ CLEAN = {
 
 
 class World:
-    def __init__(self, client: AsyncClient, accounts: dict[str, Account]) -> None:
+    def __init__(
+        self,
+        client: AsyncClient,
+        accounts: dict[str, Account],
+        session_factory: async_sessionmaker[AsyncSession],
+    ) -> None:
         self.client = client
         self.acc = accounts
+        self.sessions = session_factory
+
+    async def expire_hold(self, transaction_id: str) -> None:
+        async with self.sessions() as session:
+            tx = await session.get(Transaction, uuid.UUID(transaction_id))
+            assert tx is not None
+            tx.cooling_until = datetime.now(UTC) - timedelta(seconds=1)
+            await session.commit()
 
     def id(self, name: str) -> str:
         return str(self.acc[name].id)
@@ -88,7 +102,7 @@ async def world(session_factory: async_sessionmaker[AsyncSession]) -> AsyncItera
     async with app.router.lifespan_context(app):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            yield World(client, accounts)
+            yield World(client, accounts, session_factory)
     await redis.aclose()
 
 
@@ -204,6 +218,13 @@ async def test_cooling_off_clean_questionnaire_releases_funds(world: World) -> N
         f"{API}/transfers/{data['transaction_id']}/resolve-cooling", json={"answers": CLEAN}
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "cooling_off"
+    assert resp.json()["verification_answers"] == CLEAN
+    await world.expire_hold(data["transaction_id"])
+    resp = await world.client.post(
+        f"{API}/transfers/{data['transaction_id']}/resolve-cooling", json={"answers": CLEAN}
+    )
+    assert resp.status_code == 200
     assert resp.json()["status"] == "approved"
     assert resp.json()["red_flags"] == []
 
@@ -233,16 +254,17 @@ async def test_drop_hub_blocked_and_visible_in_soc(world: World) -> None:
         )
         assert fed["status"] != "blocked"
         if fed["status"] == "cooling_off":
+            await world.expire_hold(fed["transaction_id"])
             await world.client.post(
                 f"{API}/transfers/{fed['transaction_id']}/resolve-cooling",
                 json={"answers": CLEAN},
             )
-    cash = await world.evaluate(
-        "hub", "cashout", 1_000_000, occurred_at=(start + timedelta(minutes=25)).isoformat()
-    )
+    # Settlements happen at server time, so the attempted cashout must follow those releases.
+    cash = await world.evaluate("hub", "cashout", 1_000_000)
     assert "SENDER_PASS_THROUGH" in {r["code"] for r in cash["reasons"]}
     assert cash["status"] == "cooling_off"
     # The coached mule clears the questionnaire: money actually leaves the hub.
+    await world.expire_hold(cash["transaction_id"])
     released = await world.client.post(
         f"{API}/transfers/{cash['transaction_id']}/resolve-cooling", json={"answers": CLEAN}
     )
@@ -393,3 +415,182 @@ async def test_accounts_created_after_startup_join_the_graph(
     assert next(n for n in lonely["nodes"] if n["id"] == str(late[1].id))["data"]["label"] == (
         "Late1 Mule"
     )
+
+
+async def test_concurrent_idempotency_replays_original_and_rejects_different_payload(
+    world: World,
+) -> None:
+    request_id = str(uuid.uuid4())
+    body = {
+        "request_id": request_id,
+        "sender_id": world.id("alice"),
+        "recipient_id": world.id("bob"),
+        "amount": "1000",
+    }
+    responses = await asyncio.gather(
+        *[world.client.post(f"{API}/transfers/evaluate", json=body) for _ in range(4)]
+    )
+    assert all(r.status_code == 200 for r in responses)
+    assert all(r.json() == responses[0].json() for r in responses)
+    assert responses[0].json()["transaction_id"] == request_id
+    async with world.sessions() as session:
+        assert await session.scalar(select(func.count()).select_from(Transaction)) == 1
+        edge = (
+            await session.execute(
+                select(GraphEdge).where(GraphEdge.source_id == world.acc["alice"].id)
+            )
+        ).scalar_one()
+        assert edge.tx_count == 3
+        assert edge.weight == 31_000
+    conflict = await world.client.post(f"{API}/transfers/evaluate", json=body | {"amount": "1001"})
+    assert conflict.status_code == 409
+
+
+async def test_audit_survives_detail_and_feed_with_original_ml_and_biometrics(world: World) -> None:
+    data = await world.evaluate(
+        "victim",
+        "scammer",
+        900_000,
+        context={
+            "active_call": True,
+            "pasted_recipient": True,
+            "typing_duration_ms": 1200,
+            "hesitation_count": 2,
+        },
+    )
+    detail = (await world.client.get(f"{API}/transfers/{data['transaction_id']}")).json()
+    item = (await world.client.get(f"{API}/soc/feed")).json()["items"][0]
+    for read in (detail, item):
+        assert read["ml_score"] == data["ml_score"]
+        assert read["ml_contributors"] == data["ml_contributors"]
+        assert read["context"]["pasted_recipient"] is True
+        assert read["context"]["typing_duration_ms"] == 1200
+        amount_reason = next(r for r in read["reasons"] if r["code"] == "AMOUNT_SPIKE")
+        assert amount_reason["evidence"]["ratio"]
+
+
+async def test_cancel_is_terminal_idempotent_and_feed_cursor_includes_lifecycle_change(
+    world: World,
+) -> None:
+    data = await world.evaluate(
+        "victim", "scammer", 900_000, context={"active_call": True, "from_deposit": True}
+    )
+    cursor = (await world.client.get(f"{API}/soc/feed")).json()["server_time"]
+    path = f"{API}/transfers/{data['transaction_id']}"
+    cancelled = await world.client.post(f"{path}/cancel")
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "cancelled"
+    assert cancelled.json()["cooling_off_until"] is None
+    again = await world.client.post(f"{path}/cancel")
+    assert again.status_code == 200
+    assert again.json()["resolved_at"] == cancelled.json()["resolved_at"]
+    assert (
+        await world.client.post(f"{path}/resolve-cooling", json={"answers": CLEAN})
+    ).status_code == 409
+    feed = (await world.client.get(f"{API}/soc/feed", params={"since": cursor})).json()
+    assert [i["transaction_id"] for i in feed["items"]] == [data["transaction_id"]]
+    assert feed["stats"]["cancelled"] == 1
+    assert feed["stats"]["cancelled_amount"] == "900000.00"
+    async with world.sessions() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(RiskEvent)
+                .where(RiskEvent.rule_code == "CUSTOMER_CANCELLED")
+            )
+            == 1
+        )
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(GraphEdge)
+                .where(GraphEdge.source_id == world.acc["victim"].id)
+            )
+            == 0
+        )
+
+
+async def test_hold_never_releases_early_and_final_resolution_replays_once(world: World) -> None:
+    data = await world.evaluate(
+        "victim", "scammer", 900_000, context={"active_call": True, "from_deposit": True}
+    )
+    path = f"{API}/transfers/{data['transaction_id']}/resolve-cooling"
+    for _ in range(2):
+        response = await world.client.post(path, json={"answers": CLEAN})
+        assert response.json()["status"] == "cooling_off"
+        assert response.json()["resolved_at"] is None
+    await world.expire_hold(data["transaction_id"])
+    responses = await asyncio.gather(
+        *[world.client.post(path, json={"answers": CLEAN}) for _ in range(2)]
+    )
+    assert all(r.json()["status"] == "approved" for r in responses)
+    assert responses[0].json()["resolved_at"] == responses[1].json()["resolved_at"]
+    async with world.sessions() as session:
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(RiskEvent)
+                .where(RiskEvent.rule_code == "QUESTIONNAIRE_VERIFIED")
+            )
+            == 1
+        )
+        edge = (
+            await session.execute(
+                select(GraphEdge).where(GraphEdge.source_id == world.acc["victim"].id)
+            )
+        ).scalar_one()
+        assert edge.tx_count == 1
+    changed = CLEAN | {"asked_to_move_to_safe_account": True}
+    assert (await world.client.post(path, json={"answers": changed})).status_code == 409
+
+
+async def test_new_soc_flag_prevents_release_after_deadline(world: World) -> None:
+    data = await world.evaluate(
+        "victim", "scammer", 900_000, context={"active_call": True, "from_deposit": True}
+    )
+    await world.expire_hold(data["transaction_id"])
+    async with world.sessions() as session:
+        recipient = await session.get(Account, world.acc["scammer"].id)
+        assert recipient is not None
+        recipient.is_flagged = True
+        await session.commit()
+    response = await world.client.post(
+        f"{API}/transfers/{data['transaction_id']}/resolve-cooling", json={"answers": CLEAN}
+    )
+    assert response.json()["status"] == "blocked"
+    assert response.json()["reasons"][0]["code"] == "RECIPIENT_FLAGGED_AT_RELEASE"
+
+
+async def test_request_id_cannot_collide_with_existing_non_idempotent_transaction(
+    world: World,
+) -> None:
+    data = await world.evaluate("alice", "bob", 1000)
+    response = await world.client.post(
+        f"{API}/transfers/evaluate",
+        json={
+            "request_id": data["transaction_id"],
+            "sender_id": world.id("alice"),
+            "recipient_id": world.id("bob"),
+            "amount": "1000",
+        },
+    )
+    assert response.status_code == 409
+
+
+async def test_unknown_recipient_is_contextual_questionnaire_signal(world: World) -> None:
+    pressured = await world.evaluate("victim", "scammer", 900_000, context={"active_call": True})
+    answers = CLEAN | {"knows_recipient_personally": False}
+    response = await world.client.post(
+        f"{API}/transfers/{pressured['transaction_id']}/resolve-cooling", json={"answers": answers}
+    )
+    assert response.json()["status"] == "blocked"
+    assert response.json()["red_flags"] == ["unknown_recipient_under_pressure"]
+    # Large new-device payment without a call/deposit does not turn unknown payees into fraud.
+    ordinary = await world.evaluate("dana", "bob", 900_000, context={"is_new_device": True})
+    assert ordinary["status"] == "cooling_off"
+    await world.expire_hold(ordinary["transaction_id"])
+    released = await world.client.post(
+        f"{API}/transfers/{ordinary['transaction_id']}/resolve-cooling", json={"answers": answers}
+    )
+    assert released.json()["status"] == "approved"
+    assert released.json()["red_flags"] == []
