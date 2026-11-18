@@ -368,6 +368,27 @@ async function main() {
     await phoneDialog.locator('.trusted-circle').scrollIntoViewIfNeeded();
     await phone.screenshot({ path: path.join(output, 'mobile-route-cooling-390-ru.png') }); report.screenshots.push(path.join(output, 'mobile-route-cooling-390-ru.png'));
     await phone.close();
+    // A jury phone opens http://<laptop Wi-Fi IP>/mobile: not a secure context, so no WebCrypto,
+    // randomUUID or Web Locks. Emulate that origin over the same server and mocked API.
+    const lanOrigin = 'http://192.168.77.1:3105';
+    await context.route(`${lanOrigin}/**`, async route => {
+      if (new URL(route.request().url()).pathname.startsWith('/api/v1/')) return route.fallback();
+      const response = await route.fetch({ url: route.request().url().replace(lanOrigin, new URL(target).origin) });
+      return route.fulfill({ response });
+    });
+    const lan = await context.newPage(); lan.setDefaultTimeout(15000);
+    lan.on('pageerror', error => report.errors.push(`lan: ${error.message}`));
+    await lan.setViewportSize({ width: 390, height: 844 });
+    await lan.goto(`${lanOrigin}/mobile`, { waitUntil: 'domcontentloaded' });
+    await lan.locator('.phone-stage.is-bare .phone-form, .phone-stage.is-bare .phone-receipt').first().waitFor(); await lan.waitForTimeout(500);
+    if (await lan.locator('.phone-receipt .receipt-new').isVisible()) await lan.locator('.phone-receipt .receipt-new').click();
+    const capabilities = await lan.evaluate(() => ({ secure: window.isSecureContext, subtle: !!crypto.subtle, locks: !!navigator.locks, uuid: typeof crypto.randomUUID }));
+    expectedPreset = 'normal';
+    await lan.locator('.contact').first().click(); await lan.locator('.phone-form .transfer-cta').click(); await lan.locator('.phone-confirm .transfer-confirm').click();
+    await lan.locator('.phone-receipt .badge.approved').waitFor();
+    const lanId = await lan.locator('.phone-receipt').getAttribute('data-transaction-id');
+    check('mobile_route_transfer_works_in_insecure_lan_context', !capabilities.secure && !capabilities.subtle && !capabilities.locks && /^[0-9a-f-]{36}$/.test(lanId) && records.get(lanId)?.status === 'approved', capabilities);
+    await lan.close();
     check('all_mutations_intercepted', report.mutations.length > 0 && report.mutations.every(m => m.intercepted));
     check('no_browser_runtime_errors', report.errors.length === 0, report.errors);
     report.success = true;

@@ -33,6 +33,10 @@ BCC_MOBILE_LAN=true npx next start -H 0.0.0.0 -p 3105
 
 Browser QA (`scripts/qa-mobile-soc.cjs`) checks `/mobile` at 390 px: phone-only layout, no bezel, no horizontal overflow, manifest link, language switch, the confirm button on screen, a transfer through the mocked API and the cooling sheet fitting the screen. Real-device checks still needed before the defence: iPhone Safari and Android Chrome — keyboard vs. "Продолжить", the cooling timer running, ҚАЗ/РУС, and the transfer appearing in the SOC feed on the laptop.
 
+### Plain-http LAN pages (jury phone, Android app)
+
+`http://192.168.x.x:3105/mobile` is not a secure context, so the browser withholds `crypto.randomUUID`, `crypto.subtle` and `navigator.locks`; before this fix every transfer from a real phone stopped with `recoveryUnavailable`. `src/lib/secure-fallback.ts` covers that case only: a v4 UUID from `getRandomValues`, a plain SHA-256 that yields the same draft key, and an in-page lock instead of the cross-tab Web Lock. In a secure context nothing changes, and a missing Web Lock there still fails closed. The limit: on a plain-http phone two tabs are not serialized against each other; server idempotency by `request_id` still prevents a repeated send of the same attempt. QA covers it with `mobile_route_transfer_works_in_insecure_lan_context`.
+
 ## Trusted contact in the cooling sheet (Bekzat's trusted-contacts API)
 
 While a transfer is `cooling_off`, `trusted-circle.tsx` (rendered in `cooling-modal.tsx`, so on `/` and `/mobile`) offers «Сообщить доверенному лицу» for each verified contact with notifications enabled, then shows the status from `ui_texts.json`: в очереди → сервис принял → получение подтверждено / контакт сообщил о подозрении (or доставка не подтверждена / срок истёк). Suspicion adds a red "do not confirm" warning; the block always states that the contact cannot approve or release the transfer. The contact is connected and consents in the Telegram bot; setup is not part of the phone UI.
