@@ -7,8 +7,10 @@ import enum
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     Enum,
@@ -31,11 +33,32 @@ class TransactionStatus(enum.StrEnum):
     APPROVED = "approved"
     COOLING_OFF = "cooling_off"
     BLOCKED = "blocked"
+    CANCELLED = "cancelled"
 
 
 class EdgeType(enum.StrEnum):
     TRANSFER = "transfer"
     SHARED_DEVICE = "shared_device"
+
+
+class AbandonedRequest(Base):
+    """A durable no-execution promise for an unresolved client request UUID."""
+
+    __tablename__ = "abandoned_requests"
+
+    request_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class ProjectionEvent(Base):
+    """Committed approval awaiting idempotent graph/Redis projection."""
+
+    __tablename__ = "projection_outbox"
+
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("transactions.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
 def _enum_values(e: type[enum.StrEnum]) -> list[str]:
@@ -65,6 +88,12 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    request_id: Mapped[uuid.UUID | None] = mapped_column(unique=True)
+    request_hash: Mapped[str | None] = mapped_column(String(64))
+    evaluation_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    context_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    verification_answers: Mapped[dict[str, bool] | None] = mapped_column(JSON)
+    resolution_action: Mapped[str | None] = mapped_column(String(16))
     sender_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("accounts.id", ondelete="RESTRICT"))
     recipient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("accounts.id", ondelete="RESTRICT"))
     amount: Mapped[Decimal] = mapped_column(MONEY)
@@ -87,6 +116,7 @@ class Transaction(Base):
     cooling_until: Mapped[datetime | None] = mapped_column()
     resolved_at: Mapped[datetime | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow, index=True)
 
     sender: Mapped[Account] = relationship(foreign_keys=[sender_id], lazy="raise")
     recipient: Mapped[Account] = relationship(foreign_keys=[recipient_id], lazy="raise")
@@ -118,6 +148,7 @@ class RiskEvent(Base):
     score_delta: Mapped[int] = mapped_column(Integer)
     reason_kk: Mapped[str] = mapped_column(String(512))
     reason_ru: Mapped[str] = mapped_column(String(512))
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     transaction: Mapped[Transaction] = relationship(back_populates="risk_events", lazy="raise")

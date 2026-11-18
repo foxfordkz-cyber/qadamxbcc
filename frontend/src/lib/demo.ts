@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { latencySummary } from "./latency-summary";
 import { ids } from "./config";
-import type { Answers, Decision, Evaluation, Feed, FeedItem, Graph, GraphData, Party, Reason, Status, TransferInput } from "./contracts";
+import { feedQuerySchema, type FeedQuery } from "./contracts";
+import { countBlockedHubs } from "./feed-summary";
+import type { AbandonResult, Answers, Decision, Evaluation, Feed, FeedItem, Graph, GraphData, Party, Reason, Status, TransferInput } from "./contracts";
 
 const accounts = [
   { id: ids.sender, full_name: "Аружан С.", phone: "+77010000001", iban: "KZ000000000000000001" },
@@ -8,8 +11,11 @@ const accounts = [
   { id: ids.stranger, full_name: "Алексей К.", phone: "+77010000003", iban: "KZ000000000000000003" },
   { id: ids.hub, full_name: "Марат Т.", phone: "+77010000004", iban: "KZ000000000000000004" },
 ];
-const root = globalThis as typeof globalThis & { bccDemoTransfers?: FeedItem[] };
+const root = globalThis as typeof globalThis & { bccDemoTransfers?: FeedItem[]; bccDemoDetails?: Map<string, Evaluation>; bccDemoRequests?: Map<string, { body: string; result: Evaluation }>; bccDemoAbandoned?: Set<string> };
 const rows = () => root.bccDemoTransfers ??= [];
+const details = () => root.bccDemoDetails ??= new Map();
+const requests = () => root.bccDemoRequests ??= new Map();
+const abandoned = () => root.bccDemoAbandoned ??= new Set();
 export class DemoError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -21,10 +27,18 @@ function decision(status: Status, risk_score: number, transaction_id: string, re
     approved: ["Аударым мақұлданды", "Перевод одобрен"],
     cooling_off: ["Аударым 15 минутқа кідіртілді", "Перевод приостановлен на 15 минут"],
     blocked: ["Қауіпті аударым бұғатталды", "Опасный перевод заблокирован"],
+    cancelled: ["Аударымнан бас тартылды", "Перевод отменён"],
   };
   return { transaction_id, status, risk_score, headline_kk: headlines[status][0], headline_ru: headlines[status][1], reasons_kk: reasons.map(r => r.reason_kk), reasons_ru: reasons.map(r => r.reason_ru) };
 }
-export function evaluateDemo(input: TransferInput): Evaluation {
+export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 5000): Evaluation {
+  if (input.request_id && abandoned().has(input.request_id)) throw new DemoError(409, "conflict");
+  const replay = input.request_id ? requests().get(input.request_id) : undefined;
+  if (replay) {
+    if (replay.body !== JSON.stringify(input)) throw new DemoError(409, "conflict");
+    return structuredClone(replay.result);
+  }
+  if (details().size >= capacity || details().size + abandoned().size >= capacity * 2) throw new DemoError(503, "demoCapacity");
   const start = performance.now();
   const sender = accounts.find(a => a.id === input.sender_id);
   const recipient = accounts.find(a => a.id === input.recipient_id || a.phone === input.recipient_phone || a.iban === input.recipient_iban);
@@ -50,41 +64,95 @@ export function evaluateDemo(input: TransferInput): Evaluation {
   );
   const score = Math.min(100, behavioral + reasons.filter(r => r.layer !== "behavioral").reduce((n, r) => n + r.score_delta, 0));
   const status: Status = score >= 75 ? "blocked" : score >= 40 ? "cooling_off" : "approved";
-  const now = Date.now();
   const until = status === "cooling_off" ? new Date(now + 900000).toISOString() : null;
-  const id = randomUUID();
+  const id = input.request_id ?? randomUUID();
   const latency = Math.round((performance.now() - start) * 1000) / 1000;
-  rows().unshift({ transaction_id: id, created_at: new Date(now).toISOString(), status, risk_score: score, amount: input.amount, currency: "KZT", latency_ms: latency, sender, recipient, ...ctx, is_new_recipient: isNew, cooling_until: until, resolved_at: null, reasons });
-  rows().splice(200);
-  return { ...decision(status, score, id, reasons), reasons, latency_ms: latency,
+  rows().unshift({ transaction_id: id, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(), status, risk_score: score, amount: input.amount, currency: "KZT", latency_ms: latency, sender, recipient, ...ctx, context: ctx, is_new_recipient: isNew, cooling_until: until, resolved_at: null, reasons });
+  const result: Evaluation = { ...decision(status, score, id, reasons), reasons, latency_ms: latency,
     layer_latency_ms: { behavioral: t1 - start, graph: performance.now() - t1 },
     cooling_off_until: until, is_new_recipient: isNew, is_new_device: ctx.is_new_device,
-    recipient: { id: recipient.id, display_name: recipient.full_name, iban_masked: `KZ** •••• ${recipient.iban.slice(-4)}` } };
+    recipient: { id: recipient.id, display_name: recipient.full_name, iban_masked: `KZ** •••• ${recipient.iban.slice(-4)}` },
+    amount: input.amount, context: ctx, server_time: new Date(now).toISOString(), created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(), verification_answers: null, resolved_at: null, red_flags: [] };
+  details().set(id, structuredClone(result));
+  if (input.request_id) requests().set(input.request_id, { body: JSON.stringify(input), result: structuredClone(result) });
+  return result;
 }
-export function resolveDemo(id: string, answers: Answers): Decision {
+export function detailDemo(id: string, now = Date.now()): Evaluation {
+  const result = details().get(id);
+  if (!result) throw new DemoError(404, "notFound");
+  return { ...structuredClone(result), server_time: new Date(now).toISOString() };
+}
+export function abandonDemo(id: string, now = Date.now(), capacity = 5000): AbandonResult {
+  if (details().has(id)) return { request_id: id, status: "processed", evaluation: detailDemo(id, now), server_time: new Date(now).toISOString() };
+  if (!abandoned().has(id) && details().size + abandoned().size >= capacity * 2) throw new DemoError(503, "demoCapacity");
+  abandoned().add(id);
+  return { request_id: id, status: "abandoned", server_time: new Date(now).toISOString() };
+}
+export function resolveDemo(id: string, answers: Answers, now = Date.now()): Evaluation {
   const row = rows().find(r => r.transaction_id === id);
   if (!row) throw new DemoError(404, "notFound");
-  if (row.status !== "cooling_off") throw new DemoError(409, "conflict");
-  const flagged = answers.caller_claims_bank_or_police || answers.asked_to_move_to_safe_account || answers.asked_to_keep_secret_or_install_app || !answers.initiated_by_customer;
+  const detail = detailDemo(id, now);
+  if (row.status !== "cooling_off") {
+    if (row.status !== "cancelled" && JSON.stringify(detail.verification_answers) === JSON.stringify(answers)) return detail;
+    throw new DemoError(409, "conflict");
+  }
+  const unknownUnderPressure = !answers.knows_recipient_personally && (row.active_call || row.from_deposit);
+  const flagged = answers.caller_claims_bank_or_police || answers.asked_to_move_to_safe_account || answers.asked_to_keep_secret_or_install_app || !answers.initiated_by_customer || unknownUnderPressure;
+  row.verification_answers = answers;
+  detail.verification_answers = answers;
+  row.updated_at = new Date(now).toISOString();
+  detail.updated_at = row.updated_at;
+  if (!flagged && row.cooling_until && now < Date.parse(row.cooling_until)) {
+    details().set(id, detail);
+    return detail;
+  }
   row.status = flagged ? "blocked" : "approved";
   row.risk_score = flagged ? 90 : 0;
-  row.resolved_at = new Date().toISOString();
+  row.resolved_at = new Date(now).toISOString();
   row.cooling_until = null;
   row.reasons = [reason("QUESTIONNAIRE", "questionnaire", flagged ? 90 : 0,
     flagged ? "Жауаптарда алаяқтық белгілері бар. Аударым бұғатталды." : "Қауіпсіздік тексеруі аяқталды. Аударым мақұлданды.",
     flagged ? "В ответах обнаружены признаки обмана. Перевод заблокирован." : "Проверка безопасности пройдена. Перевод одобрен.")];
-  return decision(row.status, row.risk_score, id, row.reasons);
+  const result = { ...detail, ...decision(row.status, row.risk_score, id, row.reasons), reasons: row.reasons, cooling_off_until: null, resolved_at: row.resolved_at };
+  details().set(id, result);
+  return structuredClone(result);
 }
-export function feedDemo(): Feed {
+export function cancelDemo(id: string, now = Date.now()): Evaluation {
+  const detail = detailDemo(id, now);
+  if (detail.status === "cancelled") return detail;
+  if (detail.status !== "cooling_off") throw new DemoError(409, "conflict");
+  const row = rows().find(r => r.transaction_id === id)!;
+  const reasons = [reason("CUSTOMER_CANCELLED", "decision", 0, "Клиент аударымнан бас тартты. Қаражат жіберілген жоқ.", "Клиент отменил перевод. Средства не отправлены.")];
+  row.status = "cancelled"; row.cooling_until = null; row.resolved_at = new Date(now).toISOString(); row.updated_at = row.resolved_at; row.reasons = reasons;
+  const result = { ...detail, ...decision("cancelled", detail.risk_score, id, reasons), reasons, cooling_off_until: null, resolved_at: row.resolved_at, updated_at: row.updated_at };
+  details().set(id, result);
+  return structuredClone(result);
+}
+export function feedDemo(query: Partial<FeedQuery> = {}): Feed {
+  const { limit, offset, q, status, since, min_score } = feedQuerySchema.parse(query);
   const items = rows();
-  return { server_time: new Date().toISOString(), items, stats: {
+  const search = q.toLowerCase();
+  const compactId = search.replace(/-/g, "");
+  const uuidSearch = /^[0-9a-f]{32}$/.test(compactId) ? compactId : null;
+  const filtered = items.filter(row => (!status || row.status === status) && row.risk_score >= min_score
+    && (!since || Date.parse(row.updated_at ?? row.created_at) > Date.parse(since))
+    && (!search || row.sender.full_name.toLowerCase().includes(search) || row.recipient.full_name.toLowerCase().includes(search)
+      || (uuidSearch !== null && row.transaction_id.replace(/-/g, "") === uuidSearch)))
+    .sort((a, b) => Date.parse(b.updated_at ?? b.created_at) - Date.parse(a.updated_at ?? a.created_at)
+      || Date.parse(b.created_at) - Date.parse(a.created_at) || b.transaction_id.localeCompare(a.transaction_id));
+  return { server_time: new Date().toISOString(), items: filtered.slice(offset, offset + limit), pagination: { total_filtered: filtered.length, offset, limit, has_more: offset + limit < filtered.length }, stats: {
     total: items.length, approved: items.filter(r => r.status === "approved").length,
     cooling_off: items.filter(r => r.status === "cooling_off").length, blocked: items.filter(r => r.status === "blocked").length,
+    blocked_hubs: countBlockedHubs(items), ...latencySummary(items),
+    cancelled: items.filter(r => r.status === "cancelled").length,
+    blocked_amount: String(items.filter(r => r.status === "blocked").reduce((n, r) => n + Number(r.amount), 0)),
+    held_amount: String(items.filter(r => r.status === "cooling_off").reduce((n, r) => n + Number(r.amount), 0)),
+    cancelled_amount: String(items.filter(r => r.status === "cancelled").reduce((n, r) => n + Number(r.amount), 0)),
     avg_latency_ms: items.length ? items.reduce((n, r) => n + r.latency_ms, 0) / items.length : 0,
     max_latency_ms: Math.max(0, ...items.map(r => r.latency_ms)),
   } };
 }
-export function graphDemo(center: string): Graph {
+export function graphDemo(center: string, depth = 2): Graph {
   const account = accounts.find(a => a.id === center);
   if (!account) throw new DemoError(404, "notFound");
   const isHub = center === ids.hub;
@@ -102,5 +170,5 @@ export function graphDemo(center: string): Graph {
     nodes.push({ id: "shared-account", type: "account", position: { x: 700, y: 0 }, data: data({ id: "shared-account", full_name: "•••• 9001", iban: "" }, { role: "mule", suspected_mule: true, shared_device_accounts: 2, device_id: "device-0004" }) });
     edges.push({ id: "shared-device", source: center, target: "shared-account", type: "straight", animated: false, label: null, data: { edge_type: "shared_device", weight: 0, tx_count: 0, highlight: true } });
   }
-  return { center, depth: 2, nodes, edges };
+  return { center, depth, nodes, edges };
 }

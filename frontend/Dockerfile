@@ -4,7 +4,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN npm ci --prefer-offline --no-audit --no-fund
 
 COPY . .
 RUN npm run build

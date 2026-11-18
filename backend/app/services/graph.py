@@ -4,6 +4,7 @@ Keeping the graph resident makes recipient metrics O(degree) instead of a DB rou
 which is what lets Layer 2 stay inside its ~25 ms budget.
 """
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 import networkx as nx
@@ -12,6 +13,12 @@ HUB_MIN_SENDERS = 10
 TRANSIT_MIN_SENDERS = 3
 TRANSIT_RATIO = 0.7
 SHARED_DEVICE_MIN = 2
+MAX_GRAPH_NEIGHBOURS = 4096
+MAX_SUBGRAPH_WORK = MAX_GRAPH_NEIGHBOURS * 4
+
+
+class GraphCapacityError(RuntimeError):
+    """The resident graph cannot safely evaluate this account within its bounded budget."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,10 +43,10 @@ class GraphMetrics:
     def suspected_mule(self) -> bool:
         """Mule evidence, mirroring the engine's corroboration rule.
 
-        Fan-in alone (many senders) is a collection, not a mule: a birthday host who
-        keeps the money and shares no device is never marked.
+        Fan-in and shared devices can describe a family collection. A mule label
+        requires independent money movement or a reviewed account flag.
         """
-        return self.flagged or self.is_transit or self.shared_device_accounts >= SHARED_DEVICE_MIN
+        return self.flagged or self.is_transit
 
     @property
     def is_hub(self) -> bool:
@@ -77,6 +84,13 @@ class GraphStore:
         self._g: nx.DiGraph[str] = nx.DiGraph()
         self._device_accounts: dict[str, set[str]] = {}
         self._account_devices: dict[str, set[str]] = {}
+        self._applied_pending: set[str] = set()
+
+    def mark_projected(self, transaction_ids: Iterable[str]) -> None:
+        self._applied_pending.update(transaction_ids)
+
+    def forget_projected(self, transaction_ids: Iterable[str]) -> None:
+        self._applied_pending.difference_update(transaction_ids)
 
     # ---------------------------------------------------------------- mutation
     def add_account(
@@ -97,8 +111,17 @@ class GraphStore:
         self._account_devices.setdefault(account_id, set()).add(device_id)
 
     def add_transfer(
-        self, source: str, target: str, amount: float, *, tx_count: int = 1, ts: float = 0.0
+        self,
+        source: str,
+        target: str,
+        amount: float,
+        *,
+        tx_count: int = 1,
+        ts: float = 0.0,
+        transaction_id: str | None = None,
     ) -> None:
+        if transaction_id is not None and transaction_id in self._applied_pending:
+            return
         self._ensure(source)
         self._ensure(target)
         if self._g.has_edge(source, target):
@@ -108,6 +131,8 @@ class GraphStore:
             data["last_ts"] = max(data["last_ts"], ts)
         else:
             self._g.add_edge(source, target, weight=amount, count=tx_count, last_ts=ts)
+        if transaction_id is not None:
+            self._applied_pending.add(transaction_id)
 
     def _ensure(self, account_id: str) -> None:
         if account_id not in self._g:
@@ -129,12 +154,23 @@ class GraphStore:
         return bool(self._g.has_edge(source, target))
 
     def accounts_on_device(self, device_id: str) -> set[str]:
-        return set(self._device_accounts.get(device_id, ()))
+        accounts = self._device_accounts.get(device_id, set())
+        if len(accounts) > MAX_GRAPH_NEIGHBOURS:
+            raise GraphCapacityError("Device cluster exceeds the supported graph capacity")
+        return set(accounts)
 
     def device_peers(self, account_id: str) -> set[str]:
         peers: set[str] = set()
-        for dev in self._account_devices.get(account_id, ()):
-            peers |= self._device_accounts.get(dev, set())
+        devices = self._account_devices.get(account_id, set())
+        if len(devices) > MAX_GRAPH_NEIGHBOURS:
+            raise GraphCapacityError("Device history exceeds the supported graph capacity")
+        work = 0
+        for dev in devices:
+            members = self._device_accounts.get(dev, set())
+            work += len(members)
+            if work > MAX_GRAPH_NEIGHBOURS:
+                raise GraphCapacityError("Device associations exceed the supported graph capacity")
+            peers |= members
         peers.discard(account_id)
         return peers
 
@@ -142,6 +178,7 @@ class GraphStore:
         if account_id not in self._g:
             return GraphMetrics(0, 0, 0.0, 0.0, 0, False)
         g = self._g
+        self._check_degree(account_id)
         in_w = sum(float(d["weight"]) for _, _, d in g.in_edges(account_id, data=True))
         out_w = sum(float(d["weight"]) for _, _, d in g.out_edges(account_id, data=True))
         return GraphMetrics(
@@ -153,17 +190,28 @@ class GraphStore:
             flagged=bool(g.nodes[account_id].get("flagged", False)),
         )
 
+    def _check_degree(self, account_id: str) -> int:
+        degree = int(self._g.in_degree(account_id)) + int(self._g.out_degree(account_id))
+        if degree > MAX_GRAPH_NEIGHBOURS:
+            raise GraphCapacityError("Account degree exceeds the supported graph capacity")
+        return degree
+
     def subgraph(self, center: str, *, depth: int = 2, max_nodes: int = 60) -> SubgraphView:
         """BFS (ignoring direction) around ``center``, plus shared-device links among the set."""
         if center not in self._g:
             return SubgraphView(center=center)
         depths: dict[str, int] = {center: 0}
         frontier = [center]
+        work = 0
         for d in range(1, depth + 1):
             nxt: list[str] = []
             for node in frontier:
+                peers = self.device_peers(node)
+                work += self._check_degree(node) + len(peers)
+                if work > MAX_SUBGRAPH_WORK:
+                    raise GraphCapacityError("Subgraph exceeds the supported graph work budget")
                 neighbours = set(self._g.successors(node)) | set(self._g.predecessors(node))
-                neighbours |= self.device_peers(node)
+                neighbours |= peers
                 weighted = [(-self._link_weight(node, nb), nb) for nb in neighbours - depths.keys()]
                 for _, nb in sorted(weighted):
                     if len(depths) >= max_nodes:
@@ -171,6 +219,9 @@ class GraphStore:
                     depths[nb] = d
                     nxt.append(nb)
             frontier = nxt
+
+        if sum(self._check_degree(node) for node in depths) > MAX_SUBGRAPH_WORK:
+            raise GraphCapacityError("Subgraph metrics exceed the supported graph work budget")
 
         nodes = [
             NodeView(

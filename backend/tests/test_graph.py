@@ -63,9 +63,13 @@ def test_birthday_host_is_not_a_hub_but_forwarding_hub_is() -> None:
     assert role("host") == "normal"
     assert role("hub") == "hub"
 
-    # One shared phone is not enough; a device cluster (2+ peers) corroborates.
+    # A household may share a tablet. Device overlap alone is not mule evidence.
     g.add_account("twin1", device_id="host-phone")
     assert not g.metrics("host").suspected_mule
     g.add_account("twin2", device_id="host-phone")
+    assert g.metrics("host").shared_device_accounts == 2
+    assert not g.metrics("host").suspected_mule
+    assert role("host") == "normal"
+    g.add_transfer("host", "cashout", 140_000)
     assert g.metrics("host").suspected_mule
     assert role("host") == "hub"

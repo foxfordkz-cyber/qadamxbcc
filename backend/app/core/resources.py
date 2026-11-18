@@ -9,7 +9,7 @@ from app.core.config import Settings
 from app.db.session import build_engine, build_session_factory
 from app.services.antifraud import AntifraudEngine
 from app.services.graph import GraphStore
-from app.services.transfers import hydrate_graph
+from app.services.projections import ProjectionCoordinator
 
 
 @dataclass(slots=True)
@@ -39,6 +39,8 @@ class Resources:
             GraphStore(),
             timezone=settings.timezone,
             cooling_off_minutes=settings.cooling_off_minutes,
+            allow_demo_overrides=settings.allow_demo_overrides,
+            allow_model_training=settings.environment != "pilot",
         )
         return cls(session_factory, redis_client, engine, db_engine, owns)
 
@@ -46,8 +48,9 @@ class Resources:
         # Open the Redis connection now (fail fast) so the first scored transfer
         # does not pay the connect cost inside its latency budget.
         await self.redis.ping()
-        async with self.session_factory() as session:
-            await hydrate_graph(session, self.engine.graph)
+        coordinator = ProjectionCoordinator(self.session_factory, self.redis, self.engine)
+        await coordinator.start()
+        self.engine.synchronizer = coordinator.synchronize
 
     async def close(self) -> None:
         if self.owns_connections:

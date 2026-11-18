@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: bcc
       POSTGRES_DB: bcc_shield
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${BCC_POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -25,7 +25,7 @@ services:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "no", "--save", ""]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${BCC_REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -36,11 +36,14 @@ services:
     build:
       context: ./backend
     environment:
+      BCC_ENVIRONMENT: demo
+      BCC_BOOTSTRAP_DEMO: "true"
+      BCC_ALLOW_DEMO_OVERRIDES: "true"
       BCC_DATABASE_URL: postgresql+asyncpg://bcc:bcc@postgres:5432/bcc_shield
       BCC_REDIS_URL: redis://redis:6379/0
       BCC_CORS_ORIGINS: '["http://localhost:3000"]'
     ports:
-      - "8000:8000"
+      - "127.0.0.1:${BCC_BACKEND_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,7 +53,8 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 3s
-      retries: 10
+      retries: 30
+      start_period: 60s
 
   frontend:
     build:
@@ -68,7 +72,7 @@ services:
       # simulator test cards only
       BCC_CARD_ACCOUNT_MAP: '{"4400000000000002":"00000000-0000-4000-8000-000000000002","4400000000000003":"00000000-0000-4000-8000-000000000003","4400000000000004":"00000000-0000-4000-8000-000000000004"}'
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${BCC_WEB_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_healthy

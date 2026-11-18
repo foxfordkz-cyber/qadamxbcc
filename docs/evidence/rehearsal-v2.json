@@ -1,0 +1,830 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-11-17T16:29:30.637519+00:00",
+  "run_id": "de92a4f8-6845-4820-bdfb-161fa705cf92",
+  "success": true,
+  "synthetic_data_only": true,
+  "database": "disposable SQLite",
+  "redis": "fakeredis (in-process)",
+  "transport": "ASGI in-process; no network server or preview requests",
+  "timing_scope": "functional rehearsal; not a Redis, network or banking-load benchmark",
+  "checks": [
+    {
+      "name": "health_and_dependencies",
+      "passed": true
+    },
+    {
+      "name": "normal_decision",
+      "passed": true
+    },
+    {
+      "name": "normal_local_ml",
+      "passed": true
+    },
+    {
+      "name": "normal_bilingual_explanation",
+      "passed": true
+    },
+    {
+      "name": "scam_decision",
+      "passed": true
+    },
+    {
+      "name": "scam_local_ml",
+      "passed": true
+    },
+    {
+      "name": "scam_bilingual_explanation",
+      "passed": true
+    },
+    {
+      "name": "hub_decision",
+      "passed": true
+    },
+    {
+      "name": "hub_local_ml",
+      "passed": true
+    },
+    {
+      "name": "hub_bilingual_explanation",
+      "passed": true
+    },
+    {
+      "name": "real_paste_signal_explained",
+      "passed": true
+    },
+    {
+      "name": "identical_request_replays_original",
+      "passed": true
+    },
+    {
+      "name": "only_three_new_operations",
+      "passed": true
+    },
+    {
+      "name": "soc_has_all_three_decisions",
+      "passed": true
+    },
+    {
+      "name": "dropper_graph_evidence",
+      "passed": true,
+      "incoming_accounts": 12,
+      "graph_nodes": 36
+    },
+    {
+      "name": "server_hold_is_fifteen_minutes",
+      "passed": true,
+      "seconds": 899.998873
+    },
+    {
+      "name": "clean_answers_never_release_early",
+      "passed": true
+    },
+    {
+      "name": "restart_ready",
+      "passed": true
+    },
+    {
+      "name": "hold_and_explanation_survive_restart",
+      "passed": true
+    },
+    {
+      "name": "customer_cancels_without_execution",
+      "passed": true
+    },
+    {
+      "name": "cancelled_hold_cannot_release",
+      "passed": true
+    },
+    {
+      "name": "unknown_intent_abandoned",
+      "passed": true
+    },
+    {
+      "name": "late_abandoned_intent_never_executes",
+      "passed": true
+    }
+  ],
+  "scenarios": [
+    {
+      "key": "normal",
+      "expected": "approved",
+      "status": "approved",
+      "risk_score": 0,
+      "ml_score": 0.0548,
+      "ml_model_version": "bcc-synthetic-rf-v2",
+      "ml_contributors": [
+        {
+          "feature": "amount_ratio",
+          "value": 1.0,
+          "contribution": -12.5938,
+          "label_kk": "Соманың әдеттегі сомаға қатынасы",
+          "label_ru": "Отношение суммы к обычной"
+        },
+        {
+          "feature": "fan_in_velocity",
+          "value": 1.0,
+          "contribution": -6.1927,
+          "label_kk": "30 минуттағы жіберушілер саны",
+          "label_ru": "Число отправителей за 30 минут"
+        },
+        {
+          "feature": "new_device",
+          "value": 0.0,
+          "contribution": -3.0091,
+          "label_kk": "Жаңа құрылғы",
+          "label_ru": "Новое устройство"
+        },
+        {
+          "feature": "transit_ratio",
+          "value": 2.425203323364258,
+          "contribution": 1.709,
+          "label_kk": "Транзиттік қатынас",
+          "label_ru": "Транзитное отношение"
+        },
+        {
+          "feature": "deposit_withdrawal",
+          "value": 0.0,
+          "contribution": -1.621,
+          "label_kk": "Депозиттен алу",
+          "label_ru": "Снятие с депозита"
+        }
+      ],
+      "recipient_graph": {
+        "in_degree": 1,
+        "out_degree": 5,
+        "in_weight": 123000.0,
+        "out_weight": 298300.0,
+        "transit_ratio": 2.425,
+        "shared_device_accounts": 0,
+        "flagged": false,
+        "suspected_mule": false
+      },
+      "velocity": {
+        "sender_out": {
+          "10m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "30m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "1h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "24h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          }
+        },
+        "sender_in": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "recipient_in": {
+          "10m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "30m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "1h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "24h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          }
+        },
+        "recipient_out": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "settled_sender_out": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "settled_sender_in": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "settled_recipient_in": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "settled_recipient_out": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        }
+      },
+      "scorer_latency_ms": 3.514,
+      "reason_codes": []
+    },
+    {
+      "key": "scam",
+      "expected": "cooling_off",
+      "status": "cooling_off",
+      "risk_score": 74,
+      "ml_score": 100.0,
+      "ml_model_version": "bcc-synthetic-rf-v2",
+      "ml_contributors": [
+        {
+          "feature": "amount_ratio",
+          "value": 36.0,
+          "contribution": 54.2609,
+          "label_kk": "Соманың әдеттегі сомаға қатынасы",
+          "label_ru": "Отношение суммы к обычной"
+        },
+        {
+          "feature": "deposit_withdrawal",
+          "value": 1.0,
+          "contribution": 8.5657,
+          "label_kk": "Депозиттен алу",
+          "label_ru": "Снятие с депозита"
+        },
+        {
+          "feature": "new_recipient",
+          "value": 1.0,
+          "contribution": 6.1083,
+          "label_kk": "Жаңа алушы",
+          "label_ru": "Новый получатель"
+        },
+        {
+          "feature": "active_call",
+          "value": 1.0,
+          "contribution": 5.494,
+          "label_kk": "Белсенді қоңырау",
+          "label_ru": "Активный звонок"
+        },
+        {
+          "feature": "transit_ratio",
+          "value": 0.0,
+          "contribution": 1.8554,
+          "label_kk": "Транзиттік қатынас",
+          "label_ru": "Транзитное отношение"
+        }
+      ],
+      "recipient_graph": {
+        "in_degree": 0,
+        "out_degree": 0,
+        "in_weight": 0,
+        "out_weight": 0,
+        "transit_ratio": 0.0,
+        "shared_device_accounts": 0,
+        "flagged": false,
+        "suspected_mule": false
+      },
+      "velocity": {
+        "sender_out": {
+          "10m": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 925000.0
+          },
+          "30m": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 925000.0
+          },
+          "1h": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 925000.0
+          },
+          "24h": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 925000.0
+          }
+        },
+        "sender_in": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "recipient_in": {
+          "10m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 900000.0
+          },
+          "30m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 900000.0
+          },
+          "1h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 900000.0
+          },
+          "24h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 900000.0
+          }
+        },
+        "recipient_out": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "settled_sender_out": {
+          "10m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "30m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "1h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "24h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          }
+        },
+        "settled_sender_in": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "settled_recipient_in": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "settled_recipient_out": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        }
+      },
+      "scorer_latency_ms": 3.505,
+      "reason_codes": [
+        "ACTIVE_CALL",
+        "AMOUNT_SPIKE",
+        "DEPOSIT_WITHDRAWAL",
+        "PASTED_DURING_CALL",
+        "NEW_RECIPIENT",
+        "SOCIAL_ENGINEERING_PATTERN"
+      ]
+    },
+    {
+      "key": "hub",
+      "expected": "blocked",
+      "status": "blocked",
+      "risk_score": 100,
+      "ml_score": 95.7175,
+      "ml_model_version": "bcc-synthetic-rf-v2",
+      "ml_contributors": [
+        {
+          "feature": "amount_ratio",
+          "value": 10.0,
+          "contribution": 64.1529,
+          "label_kk": "Соманың әдеттегі сомаға қатынасы",
+          "label_ru": "Отношение суммы к обычной"
+        },
+        {
+          "feature": "new_recipient",
+          "value": 1.0,
+          "contribution": 9.138,
+          "label_kk": "Жаңа алушы",
+          "label_ru": "Новый получатель"
+        },
+        {
+          "feature": "transit_ratio",
+          "value": 0.8500000238418579,
+          "contribution": 6.8398,
+          "label_kk": "Транзиттік қатынас",
+          "label_ru": "Транзитное отношение"
+        },
+        {
+          "feature": "new_device",
+          "value": 0.0,
+          "contribution": -4.2676,
+          "label_kk": "Жаңа құрылғы",
+          "label_ru": "Новое устройство"
+        },
+        {
+          "feature": "active_call",
+          "value": 0.0,
+          "contribution": -3.3244,
+          "label_kk": "Белсенді қоңырау",
+          "label_ru": "Активный звонок"
+        }
+      ],
+      "recipient_graph": {
+        "in_degree": 12,
+        "out_degree": 2,
+        "in_weight": 1180000.0,
+        "out_weight": 1003000.0,
+        "transit_ratio": 0.85,
+        "shared_device_accounts": 1,
+        "flagged": false,
+        "suspected_mule": true
+      },
+      "velocity": {
+        "sender_out": {
+          "10m": {
+            "count": 3.0,
+            "distinct": 3.0,
+            "volume": 1175000.0
+          },
+          "30m": {
+            "count": 3.0,
+            "distinct": 3.0,
+            "volume": 1175000.0
+          },
+          "1h": {
+            "count": 3.0,
+            "distinct": 3.0,
+            "volume": 1175000.0
+          },
+          "24h": {
+            "count": 3.0,
+            "distinct": 3.0,
+            "volume": 1175000.0
+          }
+        },
+        "sender_in": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "recipient_in": {
+          "10m": {
+            "count": 8.0,
+            "distinct": 8.0,
+            "volume": 925000.0
+          },
+          "30m": {
+            "count": 13.0,
+            "distinct": 13.0,
+            "volume": 1430000.0
+          },
+          "1h": {
+            "count": 13.0,
+            "distinct": 13.0,
+            "volume": 1430000.0
+          },
+          "24h": {
+            "count": 13.0,
+            "distinct": 13.0,
+            "volume": 1430000.0
+          }
+        },
+        "recipient_out": {
+          "10m": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 1003000.0
+          },
+          "30m": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 1003000.0
+          },
+          "1h": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 1003000.0
+          },
+          "24h": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 1003000.0
+          }
+        },
+        "settled_sender_out": {
+          "10m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "30m": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "1h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          },
+          "24h": {
+            "count": 1.0,
+            "distinct": 1.0,
+            "volume": 25000.0
+          }
+        },
+        "settled_sender_in": {
+          "10m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "30m": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "1h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          },
+          "24h": {
+            "count": 0.0,
+            "distinct": 0.0,
+            "volume": 0.0
+          }
+        },
+        "settled_recipient_in": {
+          "10m": {
+            "count": 7.0,
+            "distinct": 7.0,
+            "volume": 675000.0
+          },
+          "30m": {
+            "count": 12.0,
+            "distinct": 12.0,
+            "volume": 1180000.0
+          },
+          "1h": {
+            "count": 12.0,
+            "distinct": 12.0,
+            "volume": 1180000.0
+          },
+          "24h": {
+            "count": 12.0,
+            "distinct": 12.0,
+            "volume": 1180000.0
+          }
+        },
+        "settled_recipient_out": {
+          "10m": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 1003000.0
+          },
+          "30m": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 1003000.0
+          },
+          "1h": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 1003000.0
+          },
+          "24h": {
+            "count": 2.0,
+            "distinct": 2.0,
+            "volume": 1003000.0
+          }
+        }
+      },
+      "scorer_latency_ms": 2.498,
+      "reason_codes": [
+        "DROP_HUB_FAN_IN",
+        "AMOUNT_SPIKE",
+        "RECIPIENT_INSTANT_CASHOUT",
+        "RECIPIENT_MANY_SENDERS",
+        "RECIPIENT_TRANSIT_RATIO",
+        "NEW_RECIPIENT"
+      ]
+    }
+  ],
+  "elapsed_ms": 1691.4
+}

@@ -6,7 +6,12 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.models import TransactionStatus
-from app.schemas.transfers import RiskReasonOut
+from app.schemas.transfers import (
+    CoolingQuestionnaire,
+    MLContributorOut,
+    RiskReasonOut,
+    TransferContextIn,
+)
 
 
 class FeedParty(BaseModel):
@@ -18,6 +23,7 @@ class FeedParty(BaseModel):
 class FeedItem(BaseModel):
     transaction_id: uuid.UUID
     created_at: datetime
+    updated_at: datetime
     status: TransactionStatus
     risk_score: int
     amount: Decimal
@@ -32,6 +38,16 @@ class FeedItem(BaseModel):
     cooling_until: datetime | None
     resolved_at: datetime | None
     reasons: list[RiskReasonOut]
+    context: TransferContextIn
+    verification_answers: CoolingQuestionnaire | None = None
+    ml_score: float | None = None
+    ml_base_score: float | None = None
+    ml_model_version: str | None = None
+    ml_explanation_method: Literal["tree_path_probability"] | None = None
+    ml_contributors: list[MLContributorOut] = Field(default_factory=list)
+    layer_latency_ms: dict[str, float] = Field(default_factory=dict)
+    velocity: dict[str, dict[str, dict[str, float]]] = Field(default_factory=dict)
+    recipient_graph: dict[str, float | int | bool] = Field(default_factory=dict)
 
 
 class FeedStats(BaseModel):
@@ -39,14 +55,30 @@ class FeedStats(BaseModel):
     approved: int = 0
     cooling_off: int = 0
     blocked: int = 0
+    blocked_hubs: int = 0
+    cancelled: int = 0
+    blocked_amount: Decimal = Decimal("0")
+    held_amount: Decimal = Decimal("0")
+    cancelled_amount: Decimal = Decimal("0")
     avg_latency_ms: float = 0.0
     max_latency_ms: float = 0.0
+    p95_latency_ms: float | None = Field(None, ge=0)
+    latency_sample_size: int = Field(0, ge=0, le=500)
+    latency_sample_limit: int = 500
+
+
+class FeedPagination(BaseModel):
+    total_filtered: int = Field(ge=0)
+    offset: int = Field(ge=0, le=100_000)
+    limit: int = Field(ge=1, le=200)
+    has_more: bool
 
 
 class FeedResponse(BaseModel):
     server_time: datetime
     items: list[FeedItem]
     stats: FeedStats
+    pagination: FeedPagination
 
 
 NodeRole = Literal["center", "hub", "mule", "normal"]

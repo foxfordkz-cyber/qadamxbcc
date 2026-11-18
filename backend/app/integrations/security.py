@@ -47,6 +47,9 @@ def verify_token(token: str, key: str) -> Principal:
 
 def config(request: Request) -> IntegrationSettings:
     cfg: IntegrationSettings = request.app.state.integration_settings
+    # Demo capabilities are not bank IAM and must not open a second access path in pilot.
+    if request.app.state.settings.environment == "pilot":
+        raise HTTPException(503, "demo integrations unavailable in pilot")
     if not cfg.enabled:
         raise HTTPException(503, "integrations disabled")
     return cfg

@@ -12,6 +12,7 @@ from app.db.base import utcnow
 from app.integrations.health_details import HealthSampler
 from app.integrations.models import ContactNotification, IntegrationAudit
 from app.integrations.observability import HEARTBEAT
+from app.models import Transaction
 from tests.integrations.conftest import IntegrationWorld
 from tests.integrations.test_orchestration import enqueue, process
 
@@ -157,6 +158,46 @@ async def test_timeline_preserves_initial_cooling_after_core_resolution(
     assert "DECISION_COOLING_OFF" in codes
     assert "DECISION_BLOCKED" not in codes  # do not mislabel the historical initial decision
     assert "COOLING_RESOLVED" in codes
+
+
+@pytest.mark.parametrize("legacy_snapshot", [False, True])
+async def test_core_cancel_preserves_timeline_and_expires_queued_notification(
+    iw: IntegrationWorld,
+    legacy_snapshot: bool,
+) -> None:
+    queued = await iw.queue(await iw.verified())
+    tx_id = str(queued["transaction_id"])
+    response = await iw.client.post(f"/api/v1/transfers/{tx_id}/cancel")
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancelled"
+    async with iw.factory() as session:
+        tx = await session.get(Transaction, uuid.UUID(tx_id))
+        assert tx is not None
+        assert tx.cooling_until is None
+        if legacy_snapshot:
+            tx.evaluation_snapshot = {}
+            await session.commit()
+    await iw.deliver()
+    assert not iw.adapter.messages
+    async with iw.factory() as session:
+        notification = await session.get(ContactNotification, uuid.UUID(str(queued["id"])))
+        assert notification is not None
+        assert notification.state == "NOTIFICATION_EXPIRED"
+    response = await iw.client.get(
+        f"{ROOT}/soc/transactions/{tx_id}/timeline", headers=iw.auth("soc")
+    )
+    assert response.status_code == 200
+    events = response.json()["events"]
+    codes = [event["code"] for event in events]
+    assert codes.count("DECISION_COOLING_OFF") == 1
+    assert codes.count("COOLING_STARTED") == 1
+    assert codes.count("TRANSFER_CANCELLED") == 1
+    assert "DECISION_BLOCKED" not in codes
+    assert "COOLING_RESOLVED" not in codes
+    cancellation = next(event for event in events if event["code"] == "TRANSFER_CANCELLED")
+    assert cancellation["source"] == "persisted_core"
+    assert cancellation["description_ru"]
+    assert cancellation["description_kk"]
 
 
 async def test_health_counts_cache_and_no_secrets(
