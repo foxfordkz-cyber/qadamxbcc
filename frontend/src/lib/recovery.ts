@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sha256Hex } from "./secure-fallback";
 import type { Evaluation, PresetForm } from "./contracts";
 
 export const recoveryKey = "bcc-shield.recovery.v2";
@@ -50,9 +51,8 @@ export function draftIdentity(form: PresetForm, type: "phone" | "card" | "iban")
   return JSON.stringify([form.sender.trim().toLowerCase(), type, form.recipient.replace(/[\s()-]/g, "").toUpperCase(), Number(form.amount).toFixed(2), form.context.active_call, form.context.from_deposit, form.context.is_new_device]);
 }
 export async function digestDraft(identity: string): Promise<string> {
-  if (!crypto.subtle) throw new Error("recoveryUnavailable");
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
-  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+  // A non-secure LAN page has no WebCrypto; the plain SHA-256 yields the same key.
+  return sha256Hex(identity);
 }
 export function findDraftReceipt(records: RecoveryRecord[], draftKey: string) {
   return records.filter(record => record.draftKey === draftKey && record.state !== "abandoned").sort((a, b) => b.updatedAt - a.updatedAt)[0];

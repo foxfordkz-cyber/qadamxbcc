@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { api, ApiError, type Evaluation, type TransferInput } from "./contracts";
+import { randomId } from "./secure-fallback";
 
 const key = "bcc-shield.pending.v1";
 const idsSchema = z.array(z.uuid()).max(250);
@@ -14,7 +15,7 @@ export const isUnknownOutcome = (error: unknown) => !(error instanceof ApiError)
 /** Keep the same payload/UUID when a response is lost; never silently create a second transfer. */
 export class TransferAttempt {
   readonly input: TransferInput;
-  constructor(input: TransferInput, requestId = crypto.randomUUID()) { this.input = { ...input, request_id: input.request_id ?? requestId }; }
+  constructor(input: TransferInput, requestId = randomId()) { this.input = { ...input, request_id: input.request_id ?? requestId }; }
   async execute(): Promise<Evaluation> {
     const original = await api<Evaluation>("transfers/evaluate", { method: "POST", body: JSON.stringify(this.input) });
     // Idempotency replays the original evaluation; the transfer may already be resolved elsewhere.

@@ -19,6 +19,7 @@ import { useRecovery, withIntentLock } from "./use-recovery";
 import { RecoveryPanel } from "./recovery-panel";
 import { retainCoolingDraft } from "@/lib/cooling-flow";
 import { reconcileCoolingDrafts, shouldRestoreAttempt } from "@/lib/mobile-session";
+import { randomId } from "@/lib/secure-fallback";
 
 const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
 export type AppLayout = "full" | "phone";
@@ -171,7 +172,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
         if (records.some(record => record.state === "unknown") || records.filter(unresolved).length >= 250) return null;
         const previous = !chosen && !forceNext.current ? findDraftReceipt(records, hash) : undefined;
         if (previous) return { id: previous.id, existing: true };
-        const id = crypto.randomUUID();
+        const id = randomId();
         if (!recovery.record({ id, draftKey: hash, state: "unknown", updatedAt: Date.now() }, true)) throw new Error("recoveryUnavailable");
         return { id, existing: false };
       });
