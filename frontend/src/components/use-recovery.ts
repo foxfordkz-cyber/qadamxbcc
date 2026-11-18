@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { mergeRecovery, persistLegacyRecovery, readRecovery, recoveryKey, saveRecovery, type RecoveryRecord } from "@/lib/recovery";
 import { readPending } from "@/lib/transfer-session";
+import { insecureContext, pageLock } from "@/lib/secure-fallback";
 
 function browserStorage() { try { return window.localStorage; } catch { return undefined; } }
 export function useRecovery() {
@@ -51,7 +52,10 @@ export function useRecovery() {
 }
 
 /** Serializes intent reservation across tabs before any bank request is sent. */
-export async function withIntentLock<T>(operation: () => Promise<T> | T, manager: Pick<LockManager, "request"> | null = typeof navigator !== "undefined" ? navigator.locks ?? null : null): Promise<T> {
-  if (!manager) throw new Error("recoveryUnavailable");
+export async function withIntentLock<T>(operation: () => Promise<T> | T, manager: Pick<LockManager, "request"> | null = typeof navigator !== "undefined" ? navigator.locks ?? null : null, insecure = insecureContext()): Promise<T> {
+  // Web Locks exist only in secure contexts. A plain-http LAN page (jury phone,
+  // Android app) serializes within the page instead; elsewhere a missing lock
+  // still fails closed before any request is sent.
+  if (!manager) { if (insecure) return pageLock(operation); throw new Error("recoveryUnavailable"); }
   return manager.request("bcc-shield.transfer-intent.v2", operation);
 }
