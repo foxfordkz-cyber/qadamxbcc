@@ -61,9 +61,65 @@ After the Timeline fix, the boundary/insights suite passed **28/28**, including 
 new security boundary cases and both snapshot/legacy cancellation cases. SQLite and
 PostgreSQL each passed upgrades from `0003` and `0007_guardian_cases`, downgrade/upgrade,
 ORM parity and synthetic record preservation. Ruff and strict mypy passed the initial
-merged source; final full verification and browser evidence are recorded in the follow-up
-verification section once actually executed. Historical 15 November results are not used
-as proof of this merge.
+merged source. Historical 15 November results are not used as proof of this merge.
+
+### Completed full verification
+
+The runtime in merge commit `f415d5a8787bf659a18d7be792b949faa6157df9` passed
+[both CI jobs](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/44329289003).
+The later `83cfb9b` and `3d6806f` commits change only the CI harness.
+
+| Check | Observed result |
+|---|---|
+| Full local Windows `bash verify.sh`, integrations disabled | **ALL GREEN** |
+| Full portable backend, local and CI | **408 passed, 15 external-only skipped** |
+| PostgreSQL/Redis integrations + core PostgreSQL concurrency, CI | **238 passed, 0 skipped** |
+| Unique backend cases across both suites | **423**, repeated runs not added |
+| New integration regressions in this preparation | **12** (10 boundary cases + 2 cancellation cases) |
+| Existing frontend | **64 passed**, zero skipped; typecheck/build passed |
+| Ruff lint/format | **156 files**, PASS |
+| Strict mypy | **155 source files**, PASS |
+| PostgreSQL + SQLite migration rehearsal | Both source heads, round trips, ORM parity and sentinel preservation PASS |
+| Core OpenAPI compatibility | Nine existing paths and their schemas unchanged; 41 total paths |
+| Fake Compose E2E, CI | Six existing flows PASS |
+| Ignore rules | Private env files, test caches, logs/raw video excluded; `.env.example` remains publishable |
+
+The 423 includes the core owner's added tests; it is not a count of tests authored by
+Bekzat. The team plan lists 65 frontend tests; this audited main actually has 64 and
+the preparation has **zero frontend diff** against it. We do not claim the listed 65.
+The final serial local run passed the original p95 assertion without changing its budget.
+
+### Browser harness compatibility
+
+The first browser-enabled CI (`83cfb9b`, run 44330098394) passed verify and the six fake
+E2E flows, then failed **before browser tests**: ubuntu-latest had moved to Ubuntu 26.04,
+unsupported by pinned Playwright 1.56.1. The compose/browser job is now pinned to Ubuntu
+24.04, and uploads only the synthetic browser evidence folder (including that explicitly
+named hidden folder). No UI tests, assertions, timeouts or frontend code were changed.
+Browser result: **81/81 checks passed, zero browser runtime errors** in
+[run 44334535955](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/44334535955),
+tested head `3d6806f282db425a301b0431a4998177320b4842`; both jobs succeeded. The unchanged
+script in this main contains 81 checks, not the 82 listed in the team plan. All mutations
+were intercepted with synthetic API responses. Backend integration health separately
+returned 503 after disabling integrations. The suite covers all three presets, RU/KK,
+recovery/questionnaire flows, SOC stage mode and 320/390/768/1280 px viewports.
+
+[Browser report/screenshots artifact](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/44334535955/artifacts/14440249456)
+is retained through 25 November. Archive SHA256:
+`3cf78b9b9509ed669200166759729fb4b9256cc0d1ba71445734291fcbaea767`.
+The sanitized permanent check ledger is `main-merge-evidence-2026-11-18.json`.
+
+## Remaining external gates
+
+At final remote-ref verification, main remained `3d19e8e`; neither redesign `03cd8f3`
+nor recovery `b68b4a0` was its ancestor. The original top feature branch remains
+`0de50a3` and PR #9 still targets its original feature base. No main-target PR is
+claimed complete before the team's prerequisite merges. No merge into main, force push,
+author rewrite, new live Telegram message or production deployment was performed.
+
+This rehearsal is GO for review and synthetic demonstration on its tested commits.
+Final step-3 acceptance against the future combined main and joint frontend acceptance
+are **BLOCKED on the team's steps 1–2**, not replaced by these rehearsal results.
 
 Local logs are in ignored `.local-checks/`; no credentials, demo capabilities, chat IDs,
 raw Telegram updates, database dumps or videos belong in this report.
