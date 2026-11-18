@@ -44,3 +44,11 @@ the completed session's send grant is closed. Avoid concurrent pollers for the s
 Rotate the signing key to invalidate demo capabilities. Never expose the simulator
 credential to the mobile app. Disable integrations or use `telegram_mode=disabled`
 to stop delivery. Do not publish `.env`, bot tokens, invitation links or CLI outputs.
+
+Assistant feature branch, 18 November: the same polling process now registers localized
+private-chat commands after acquiring its lock. `/menu`, `/status`, `/notifications`,
+`/contacts`, `/check`, `/report`, `/reports`, `/safety`, `/privacy`, `/language`, `/cancel`
+and `/help` are available. See [features, privacy and acceptance scope](../guardian/BOT_ASSISTANT_2026_11_18.md).
+`/cancel` clears only the current draft; use `/contacts` and confirm to revoke consent.
+This code is tested through the real dispatcher with a fake Telegram transport. New real
+messages and unattended polling still require a fresh live-test grant, as described above.

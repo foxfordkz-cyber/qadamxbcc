@@ -1,10 +1,14 @@
 """Explicit recipient-authenticated demo reports. No owner capability is inferred."""
 
+import secrets
 import time
 import uuid
 from collections.abc import Awaitable, Callable
 
 from aiogram import F, Router
+from aiogram.dispatcher.event.bases import SkipHandler
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from pydantic import ValidationError
@@ -15,6 +19,8 @@ from app.db.base import utcnow
 from app.integrations.errors import IntegrationError
 from app.integrations.guardian_reports import ReportRequest, contact_identity, create_report
 from app.integrations.models import GuardianReport, TrustedContact
+from app.integrations.telegram.assistant_ui import language as preferred_language
+from app.integrations.telegram.recipient_pages import page_number, report_page
 
 COPY = {
     "ru": {
@@ -111,6 +117,19 @@ def build_report_router(
 ) -> Router:
     router = Router(name="guardian-reports")
 
+    @router.message(Command("report", "reports"))
+    async def report_command(message: Message, state: FSMContext, command: CommandObject) -> None:
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or message.from_user.id != message.chat.id
+            or not await admitted(message.chat.id)
+        ):
+            return
+        await render_report(
+            "begin" if command.command == "report" else "list", message, state, edit=False
+        )
+
     @router.callback_query(F.data.startswith("r:"))
     async def report_action(query: CallbackQuery, state: FSMContext) -> None:
         message = query.message
@@ -122,14 +141,29 @@ def build_report_router(
         ):
             return
         await query.answer()
+        try:
+            await render_report((query.data or "")[2:], message, state, edit=True)
+        except TelegramBadRequest:
+            # An unchanged/deleted message never justifies a fallback send.
+            return
+
+    async def render_report(
+        action: str, message: Message, state: FSMContext, *, edit: bool
+    ) -> None:
         data = await state.get_data()
-        lang = data.get("language", "ru")
+        lang = preferred_language(data.get("language"))
         t = COPY[lang]
-        action = (query.data or "")[2:]
+        reply = message.edit_text if edit else message.answer
         back = keys([(t["back"], "g:home")])
         try:
             async with factory() as session:
-                if action in {"begin", "list"}:
+                if action == "list" or action.startswith("list:"):
+                    page = page_number(action.split(":")[1]) if ":" in action else 0
+                    await state.set_data({"language": lang})
+                    text, markup = await report_page(session, message.chat.id, lang, page)
+                    await reply(text, reply_markup=markup, parse_mode=None)
+                    return
+                if action == "begin":
                     contacts = list(
                         await session.scalars(
                             select(TrustedContact)
@@ -138,14 +172,15 @@ def build_report_router(
                                 TrustedContact.state == "CONTACT_VERIFIED",
                                 TrustedContact.contact_consented_at.is_not(None),
                             )
+                            .order_by(TrustedContact.created_at, TrustedContact.id)
                             .limit(10)
                         )
                     )
                     await state.set_data({"language": lang})
                     if not contacts:
-                        await message.edit_text(t["empty"], reply_markup=back, parse_mode=None)
-                    elif action == "begin":
-                        await message.edit_text(
+                        await reply(t["empty"], reply_markup=back, parse_mode=None)
+                    else:
+                        await reply(
                             t["choose"],
                             reply_markup=keys(
                                 [
@@ -156,34 +191,14 @@ def build_report_router(
                             ),
                             parse_mode=None,
                         )
-                    else:
-                        rows = list(
-                            await session.scalars(
-                                select(GuardianReport)
-                                .where(
-                                    GuardianReport.contact_id.in_([c.id for c in contacts]),
-                                    GuardianReport.expires_at > utcnow(),
-                                )
-                                .order_by(GuardianReport.created_at.desc())
-                                .limit(10)
-                            )
-                        )
-                        text = "\n".join(
-                            str(r.id)
-                            + " · "
-                            + t["submitted" if r.state == "SUBMITTED" else "reviewed"]
-                            for r in rows
-                        )
-                        await message.edit_text(
-                            text or t["none"], reply_markup=back, parse_mode=None
-                        )
                     return
                 if action.startswith("status:"):
+                    await state.set_data({"language": lang})
                     row = await session.get(GuardianReport, uuid.UUID(action.split(":")[1]))
                     if row is None or row.contact_id is None or row.expires_at <= utcnow():
                         raise IntegrationError(404, "incident_not_found")
                     await contact_identity(session, row.contact_id, message.chat.id)
-                    await message.edit_text(
+                    await reply(
                         str(row.id)
                         + " · "
                         + t["submitted" if row.state == "SUBMITTED" else "reviewed"],
@@ -197,19 +212,20 @@ def build_report_router(
                     contact = await contact_identity(
                         session, uuid.UUID(action.split(":")[1]), message.chat.id
                     )
+                    report_key = str(uuid.uuid4())
                     await state.set_data(
                         {
                             "language": lang,
                             "report_contact": str(contact.id),
-                            "report_key": str(uuid.uuid4()),
+                            "report_key": report_key,
                             "report_expires": time.time() + 900,
                         }
                     )
-                    await message.edit_text(
+                    await reply(
                         t["category"],
                         reply_markup=keys(
                             [
-                                (t[c], "r:category:" + c)
+                                (t[c], "r:category:" + report_key[:8] + ":" + c)
                                 for c in ("impersonation", "safe_account", "remote_access", "other")
                             ]
                             + [(t["cancel"], "g:home")]
@@ -223,12 +239,29 @@ def build_report_router(
                     session, uuid.UUID(data["report_contact"]), message.chat.id
                 )
                 if action.startswith("category:"):
-                    category = action.split(":")[1]
+                    parts = action.split(":")
+                    if len(parts) != 3 or parts[1] != data["report_key"][:8]:
+                        raise ValueError
+                    category = parts[2]
                     if category not in {"impersonation", "safe_account", "remote_access", "other"}:
                         raise ValueError
-                    await state.update_data(report_category=category, report_waiting=True)
-                    await message.edit_text(t["describe"], reply_markup=back, parse_mode=None)
-                elif action == "submit":
+                    # A category change invalidates any previous preview and confirmation.
+                    await state.set_data(
+                        {
+                            k: data[k]
+                            for k in ("language", "report_contact", "report_key", "report_expires")
+                        }
+                        | {"report_category": category, "report_waiting": True}
+                    )
+                    await reply(t["describe"], reply_markup=back, parse_mode=None)
+                elif action.startswith("submit:"):
+                    confirmation = data.get("report_confirm", "")
+                    if (
+                        not confirmation
+                        or data.get("report_waiting") is not False
+                        or not secrets.compare_digest(action.split(":", 1)[1], confirmation)
+                    ):
+                        raise ValueError
                     body = ReportRequest.model_validate(
                         {
                             "category": data["report_category"],
@@ -244,15 +277,17 @@ def build_report_router(
                         contact_id=contact.id,
                     )
                     await state.set_data({"language": lang})
-                    await message.edit_text(
+                    await reply(
                         t["received"] + str(row.id),
                         reply_markup=keys(
                             [(t["status"], "r:status:" + str(row.id)), (t["back"], "g:home")]
                         ),
                         parse_mode=None,
                     )
+                else:
+                    raise ValueError
         except (IntegrationError, ValueError, KeyError):
-            await message.edit_text(t["error"], reply_markup=back, parse_mode=None)
+            await reply(t["error"], reply_markup=back, parse_mode=None)
 
     @router.message(F.text, ~F.text.startswith("/"))
     async def description(message: Message, state: FSMContext) -> None:
@@ -260,13 +295,14 @@ def build_report_router(
             message.chat.type != "private"
             or message.from_user is None
             or message.from_user.id != message.chat.id
-            or not await admitted(message.chat.id)
         ):
             return
         data = await state.get_data()
         if not data.get("report_waiting"):
+            raise SkipHandler
+        if not await admitted(message.chat.id):
             return
-        t = COPY[data.get("language", "ru")]
+        t = COPY[preferred_language(data.get("language"))]
         try:
             if time.time() >= data.get("report_expires", 0):
                 raise ValueError
@@ -282,11 +318,14 @@ def build_report_router(
         except (ValidationError, ValueError, KeyError, IntegrationError):
             await message.answer(t["invalid"], parse_mode=None)
             return
-        await state.update_data(report_description=body.description, report_waiting=False)
+        confirmation = secrets.token_hex(8)
+        await state.update_data(
+            report_description=body.description, report_waiting=False, report_confirm=confirmation
+        )
         await message.answer(
             t["preview"] + "\n\n" + body.description,
             parse_mode=None,
-            reply_markup=keys([(t["submit"], "r:submit"), (t["cancel"], "g:home")]),
+            reply_markup=keys([(t["submit"], "r:submit:" + confirmation), (t["cancel"], "g:home")]),
         )
 
     return router

@@ -9,6 +9,7 @@ from aiogram.types import Update
 from sqlalchemy import func, select
 
 from app.integrations.models import GuardianReport
+from app.integrations.telegram.assistant_ui import COPY as ASSISTANT
 from app.integrations.telegram.guardian import build_router
 from app.integrations.telegram.guardian_reports import COPY
 from tests.integrations.conftest import IntegrationWorld
@@ -62,28 +63,30 @@ async def test_bot_report_confirmation_soc_and_revocation(
         await feed("g:draft")
         await feed("r:begin")
         await feed("r:contact:" + cid)
-        await feed("r:category:other")
+        await feed(request.call_args.args[1].reply_markup.inline_keyboard[3][0].callback_data)
         await feed("g:help")
         calls_before_cancelled_text = request.call_count
         await feed(text="This cancelled draft must not be captured.")
-        assert request.call_count == calls_before_cancelled_text
+        assert request.call_count == calls_before_cancelled_text + 1
+        assert request.call_args.args[1].text == ASSISTANT[language]["fallback"]
         await feed("r:begin")
         await feed("r:contact:" + cid)
-        await feed("r:category:impersonation")
+        await feed(request.call_args.args[1].reply_markup.inline_keyboard[0][0].callback_data)
         await feed(text="The caller requested OTP 123456")
         assert request.call_args.args[1].text == COPY[language]["invalid"]
         description = "A caller claimed to work for the bank and requested urgent action."
         await feed(text=description)
         assert COPY[language]["preview"] in request.call_args.args[1].text
+        submit = request.call_args.args[1].reply_markup.inline_keyboard[0][0].callback_data
         async with iw.factory() as session:
             assert await session.scalar(select(func.count()).select_from(GuardianReport)) == 0
-        await feed("r:submit")
+        await feed(submit)
         async with iw.factory() as session:
             rows = list(await session.scalars(select(GuardianReport)))
             assert len(rows) == 1
             rid = str(rows[0].id)
             assert rows[0].description == description
-        await feed("r:submit")
+        await feed(submit)
         async with iw.factory() as session:
             assert await session.scalar(select(func.count()).select_from(GuardianReport)) == 1
         base = "/api/v1/integrations/guardian/reports/" + rid

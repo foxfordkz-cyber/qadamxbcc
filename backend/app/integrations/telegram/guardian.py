@@ -6,8 +6,8 @@ import uuid
 from collections.abc import Awaitable, Callable
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command
+from aiogram.dispatcher.event.bases import SkipHandler
+from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from sqlalchemy import select
@@ -16,7 +16,16 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.integrations.errors import IntegrationError
 from app.integrations.guardian_reports import contact_identity
 from app.integrations.models import ContactNotification, TrustedContact
+from app.integrations.telegram.assistant_ui import COPY as ASSISTANT
+from app.integrations.telegram.assistant_ui import display
+from app.integrations.telegram.assistant_ui import language as preferred_language
 from app.integrations.telegram.guardian_reports import build_report_router
+from app.integrations.telegram.recipient_pages import (
+    dashboard,
+    notification_detail,
+    notification_page,
+    page_number,
+)
 from app.integrations.telegram.schemas import ContactState
 from app.integrations.telegram.templates import STATE_LABELS
 
@@ -44,7 +53,7 @@ TEXT = {
         ),
         "help_text": (
             "Используйте личную ссылку приглашения и отдельно подтвердите "
-            "согласие. Отзыв: /revoke <идентификатор контакта из приглашения>."
+            "согласие. Отзыв доступен через /contacts без ввода идентификатора."
             " Для проверки обращения самостоятельно откройте официальный "
             "банковский канал, которым вы уже пользуетесь. Бот не одобряет "
             "переводы и не блокирует счета."
@@ -95,8 +104,8 @@ TEXT = {
             "жасайды. Telegram байланысы банк өкілеттігін бермейді."
         ),
         "help_text": (
-            "Жеке шақыру сілтемесін ашып, келісімді бөлек растаңыз. Қайтару: "
-            "/revoke <шақырудағы байланыс идентификаторы>. Өзіңіз пайдаланатын"
+            "Жеке шақыру сілтемесін ашып, келісімді бөлек растаңыз. Келісімді "
+            "/contacts арқылы идентификаторсыз қайтаруға болады. Өзіңіз пайдаланатын"
             " ресми банк арнасын өз бетіңізше ашыңыз. Бот аударымдарды "
             "мақұлдамайды және шоттарды бұғаттамайды."
         ),
@@ -168,12 +177,22 @@ def keyboard(rows: list[tuple[str, str]]) -> InlineKeyboardMarkup:
 
 
 def menu(language: str) -> InlineKeyboardMarkup:
-    return keyboard(
+    result = keyboard(
         [
             (TEXT[language][k], k)
             for k in ("security", "alerts", "contacts", "scam", "history", "language", "help")
         ]
     )
+    for key, action in (
+        ("report", "r:begin"),
+        ("reports", "r:list"),
+        ("safety", "g:safety"),
+        ("privacy", "g:privacy"),
+    ):
+        result.inline_keyboard.insert(
+            -2, [InlineKeyboardButton(text=ASSISTANT[language][key], callback_data=action)]
+        )
+    return result
 
 
 async def recipient_view(
@@ -232,8 +251,25 @@ def build_router(
     router = Router(name="guardian")
     router.include_router(build_report_router(factory, admitted))
 
-    @router.message(Command("start", "help", "menu"), ~F.text.contains(" "))
-    async def welcome(message: Message, state: FSMContext) -> None:
+    commands = {
+        "start": "home",
+        "menu": "home",
+        "help": "help",
+        "status": "security",
+        "notifications": "alerts",
+        "contacts": "contacts",
+        "revoke": "contacts",
+        "check": "scam",
+        "language": "language",
+        "privacy": "privacy",
+        "safety": "safety",
+        "cancel": "cancel",
+    }
+
+    @router.message(Command(*commands))
+    async def welcome(message: Message, state: FSMContext, command: CommandObject) -> None:
+        if command.command in {"start", "revoke"} and command.args:
+            raise SkipHandler
         if (
             message.chat.type != "private"
             or message.from_user is None
@@ -242,18 +278,14 @@ def build_router(
         ):
             return
         data = await state.get_data()
-        language = data.get("language", "ru")
-        if "language" not in data:
+        if "language" not in data and command.command == "start":
             await message.answer(
                 TEXT["ru"]["welcome"] + "\n\n" + TEXT["kk"]["welcome"],
                 reply_markup=keyboard([("Русский", "ru"), ("Қазақша", "kk")]),
                 parse_mode=None,
             )
             return
-        await state.set_data({"language": language})
-        await message.answer(
-            TEXT[language]["welcome"], reply_markup=menu(language), parse_mode=None
-        )
+        await render(commands[command.command], message, state, edit=False)
 
     @router.callback_query(F.data.startswith("g:"))
     async def navigate(query: CallbackQuery, state: FSMContext) -> None:
@@ -266,11 +298,13 @@ def build_router(
         ):
             return
         await query.answer()
+        await render((query.data or "")[2:], message, state, edit=True)
+
+    async def render(action: str, message: Message, state: FSMContext, *, edit: bool) -> None:
         data = await state.get_data()
-        language = data.get("language", "ru")
-        action = (query.data or "")[2:]
-        if "report_contact" in data:
-            # Leaving report navigation cancels its pending text input and removes the draft.
+        language = preferred_language(data.get("language"))
+        if not action.startswith("a:"):
+            # Leaving any draft clears it, including its confirmation nonce.
             data = {"language": language}
             await state.set_data(data)
         if action in {"ru", "kk"}:
@@ -281,41 +315,45 @@ def build_router(
         text, buttons = t["welcome"], menu(language)
         if action == "language":
             buttons = keyboard([("Русский", "ru"), ("Қазақша", "kk"), (t["back"], "home")])
-        elif action in {"security", "contacts", "alerts", "history"}:
+        elif action == "security":
+            text = await dashboard(factory, message.chat.id, language)
+            buttons = keyboard(
+                [(t["alerts"], "alerts"), (t["contacts"], "contacts"), (t["back"], "home")]
+            )
+        elif action in {"alerts", "history"} or action.startswith("notifications:"):
+            try:
+                page = page_number(action.split(":")[1]) if ":" in action else 0
+                text, buttons = await notification_page(factory, message.chat.id, language, page)
+            except ValueError:
+                text = ASSISTANT[language]["unavailable"]
+                buttons = keyboard([(t["back"], "home")])
+        elif action.startswith("notification:"):
+            text, buttons = await notification_detail(
+                factory, message.chat.id, language, action.split(":", 1)[1]
+            )
+        elif action == "contacts":
             text = await recipient_view(factory, message.chat.id, action, language)
             buttons = keyboard([(t["back"], "home")])
-            if action == "contacts":
-                async with factory() as session:
-                    contacts = list(
-                        await session.scalars(
-                            select(TrustedContact)
-                            .where(
-                                TrustedContact.telegram_chat_id == str(message.chat.id),
-                                TrustedContact.state == ContactState.VERIFIED,
-                                TrustedContact.contact_consented_at.is_not(None),
-                            )
-                            .limit(10)
+            async with factory() as session:
+                contacts = list(
+                    await session.scalars(
+                        select(TrustedContact)
+                        .where(
+                            TrustedContact.telegram_chat_id == str(message.chat.id),
+                            TrustedContact.state == ContactState.VERIFIED,
+                            TrustedContact.contact_consented_at.is_not(None),
                         )
+                        .order_by(TrustedContact.created_at.desc(), TrustedContact.id.desc())
+                        .limit(10)
                     )
-                for i, contact in enumerate(contacts):
-                    label = "Отозвать согласие " if language == "ru" else "Келісімді қайтару "
-                    buttons.inline_keyboard.insert(
-                        i,
-                        [
-                            InlineKeyboardButton(
-                                text=label + str(i + 1), callback_data="g:revoke:" + str(contact.id)
-                            )
-                        ],
-                    )
-            if action == "history":
+                )
+            for i, contact in enumerate(contacts):
+                label = "Отозвать согласие " if language == "ru" else "Келісімді қайтару "
                 buttons.inline_keyboard.insert(
-                    0,
+                    i,
                     [
                         InlineKeyboardButton(
-                            text="Мои демо-обращения"
-                            if language == "ru"
-                            else "Демо-хабарламаларым",
-                            callback_data="r:list",
+                            text=label + str(i + 1), callback_data="g:revoke:" + str(contact.id)
                         )
                     ],
                 )
@@ -347,6 +385,13 @@ def build_router(
             )
         elif action == "help":
             text, buttons = t["help_text"], keyboard([(t["back"], "home")])
+        elif action in {"privacy", "safety"}:
+            text = ASSISTANT[language][action + "_text"]
+            buttons = keyboard(
+                [(t["contacts"], "contacts"), (t["scam"], "scam"), (t["back"], "home")]
+            )
+        elif action == "cancel":
+            text, buttons = ASSISTANT[language]["cancelled"], menu(language)
         elif action == "scam" or action.startswith("a:"):
             if action == "scam":
                 data = {
@@ -406,11 +451,23 @@ def build_router(
             )
         else:
             await state.set_data({"language": language})
-        # Editing is never retried as a new send on an ambiguous provider result.
-        try:
-            await message.edit_text(text, reply_markup=buttons, parse_mode=None)
-        except TelegramBadRequest:
-            # Deleted/unchanged messages do not warrant a new notification.
+        await display(message, text, buttons, edit=edit)
+
+    fallback = Router(name="guardian-fallback")
+
+    @fallback.message()
+    async def unknown(message: Message, state: FSMContext) -> None:
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or message.from_user.id != message.chat.id
+            or not await admitted(message.chat.id)
+        ):
             return
+        lang = preferred_language((await state.get_data()).get("language"))
+        # Do not echo, persist, forward or download unsolicited text/media.
+        await message.answer(ASSISTANT[lang]["fallback"], reply_markup=menu(lang), parse_mode=None)
+
+    router.include_router(fallback)
 
     return router

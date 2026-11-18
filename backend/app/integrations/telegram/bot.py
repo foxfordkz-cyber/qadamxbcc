@@ -18,11 +18,13 @@ from aiogram.types import (
     Message,
 )
 from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import get_settings
 from app.db.session import build_engine, build_session_factory
-from app.integrations.config import get_integration_settings
+from app.integrations.config import IntegrationSettings, get_integration_settings
 from app.integrations.errors import IntegrationError
+from app.integrations.telegram.assistant_ui import configure_commands
 from app.integrations.telegram.guardian import build_router
 from app.integrations.telegram.handlers import process_update
 from app.integrations.telegram.polling_lock import PollingLock
@@ -31,15 +33,10 @@ from app.integrations.telegram.service import TrustedContactService
 from app.integrations.telegram.templates import CONSENT, STATE_LABELS
 
 
-async def run() -> None:
-    cfg = get_integration_settings()
-    if not cfg.enabled or cfg.telegram_mode != "test":
-        raise RuntimeError("polling requires explicitly configured test Telegram mode")
-    core = get_settings()
-    engine = build_engine(core.database_url)
-    factory = build_session_factory(engine)
-    redis: Redis = Redis.from_url(core.redis_url)
-    bot = Bot(cfg.telegram_token.get_secret_value())
+def build_ingress_router(
+    factory: async_sessionmaker[AsyncSession], redis: Redis, cfg: IntegrationSettings
+) -> Router:
+    """The same ingress is exercised offline by dispatcher tests and by authorized polling."""
     router = Router()
 
     @router.errors()
@@ -62,7 +59,7 @@ async def run() -> None:
 
     router.include_router(build_router(factory, admitted))
 
-    @router.message(Command("start", "revoke"), F.text.contains(" "))
+    @router.message(Command("start", "revoke"), F.text.regexp(r"^/\S+\s+\S"))
     async def command(message: Message) -> None:
         if (
             message.chat.type != "private"
@@ -150,15 +147,28 @@ async def run() -> None:
         with suppress(TelegramBadRequest):
             await message.edit_text(text, reply_markup=markup, parse_mode=None)
 
+    return router
+
+
+async def run() -> None:
+    cfg = get_integration_settings()
+    if not cfg.enabled or cfg.telegram_mode != "test":
+        raise RuntimeError("polling requires explicitly configured test Telegram mode")
+    core = get_settings()
+    engine = build_engine(core.database_url)
+    factory = build_session_factory(engine)
+    redis: Redis = Redis.from_url(core.redis_url)
+    bot = Bot(cfg.telegram_token.get_secret_value())
     storage = RedisStorage(
         redis, key_builder=DefaultKeyBuilder(with_bot_id=True), state_ttl=900, data_ttl=900
     )
     dispatcher = Dispatcher(storage=storage, events_isolation=storage.create_isolation())
-    dispatcher.include_router(router)
+    dispatcher.include_router(build_ingress_router(factory, redis, cfg))
     polling_lock: PollingLock | None = None
     try:
         polling_lock = PollingLock(bot.id)
         polling_lock.acquire()
+        await configure_commands(bot)
         await dispatcher.start_polling(bot, allowed_updates=["message", "callback_query"])
     finally:
         if polling_lock:

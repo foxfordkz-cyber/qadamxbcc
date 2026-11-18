@@ -24,3 +24,10 @@ not submitted automatically: a separate demo SOC flow chooses a verified consent
 category and short description, previews it, and requires explicit Submit. History opens
 current demo receipts. Every receipt read rechecks the same recipient's active consent.
 See INCIDENT_REPORTING.md for privacy, quotas, retention and error behavior.
+
+18 November extension: [Guardian assistant release](BOT_ASSISTANT_2026_11_18.md) adds
+twelve commands, direct report entry, paginated recipient histories, saved-fact dashboard,
+privacy, cancellation and a short action plan. Report category/submit callbacks are now
+bound to their draft/preview; the former unbound submit action is rejected. Unsupported
+input receives a menu hint without being retained or echoed. This supersedes the seven-action
+menu description above for the assistant feature branch; fresh live acceptance remains pending.
