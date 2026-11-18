@@ -45,7 +45,8 @@ jobs:
           uv run --no-sync python -m scripts.verify_case_migrations
           uv run --no-sync pytest tests/integrations tests/test_postgres_concurrency.py
   compose-demo:
-    runs-on: ubuntu-latest
+    # Pin the OS together with the browser harness; ubuntu-latest can change underneath it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       BCC_INTEGRATIONS_ENABLED: 'true'
@@ -84,6 +85,7 @@ jobs:
           name: integrations-disabled-browser-qa
           path: .local-checks/browser-ci/
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 7
       - name: Shutdown disposable stack
         if: always()
