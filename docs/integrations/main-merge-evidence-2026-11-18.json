@@ -1,0 +1,421 @@
+{
+  "date": "2026-11-18",
+  "scope": "isolated integration rehearsal; not the final combined team main",
+  "original_stack": "0de50a37b911b7d37ce6395bbde41266963307e0",
+  "audited_main": "3d19e8e4fd92431e936fa68eb7728448a85b7105",
+  "runtime_merge_commit": "f415d5a8787bf659a18d7be792b949faa6157df9",
+  "tested_browser_head": "3d6806f282db425a301b0431a4998177320b4842",
+  "ci_runs": [
+    {
+      "id": 44329289003,
+      "result": "success",
+      "scope": "full verify, PG/Redis, six fake E2E flows"
+    },
+    {
+      "id": 44330098394,
+      "result": "failure",
+      "scope": "browser installation incompatible with Ubuntu 26.04; verify and fake E2E passed"
+    },
+    {
+      "id": 44334535955,
+      "result": "success",
+      "scope": "full verify, PG/Redis, six fake E2E flows, browser on pinned Ubuntu 24.04"
+    }
+  ],
+  "portable_backend": {
+    "passed": 408,
+    "skipped_external_only": 15,
+    "failed": 0
+  },
+  "postgres_redis_and_core_concurrency": {
+    "passed": 238,
+    "skipped": 0,
+    "failed": 0
+  },
+  "unique_backend_cases": 423,
+  "new_integration_regression_cases": 12,
+  "frontend": {
+    "passed": 64,
+    "skipped": 0,
+    "failed": 0,
+    "typecheck": "PASS",
+    "build": "PASS",
+    "source_changed": false
+  },
+  "local_full_verify": "ALL GREEN; BCC_INTEGRATIONS_ENABLED=false",
+  "ruff_files": 156,
+  "mypy_source_files": 155,
+  "migration_checks": {
+    "databases": [
+      "SQLite",
+      "PostgreSQL"
+    ],
+    "starting_revisions": [
+      "0003",
+      "0007_guardian_cases"
+    ],
+    "single_head": "0008_core_integration_merge",
+    "roundtrips": "PASS",
+    "sentinel_preservation": "PASS",
+    "orm_parity": "PASS"
+  },
+  "core_openapi": {
+    "unchanged_paths": 9,
+    "path_differences": [],
+    "schema_differences": [],
+    "total_paths": 41
+  },
+  "initial_failures": {
+    "passed": 404,
+    "failed": 2,
+    "skipped": 15,
+    "timeline": "initial decision rewritten after core cleared cooling_until; fixed",
+    "engine_p95_ms": 21.816645,
+    "unchanged_budget_ms": 15,
+    "serial_final_budget_check": "PASS"
+  },
+  "browser": {
+    "passed": 81,
+    "failed": 0,
+    "runtime_errors": [],
+    "mocked_api": true,
+    "all_mutations_intercepted": true,
+    "checks": [
+      {
+        "name": "normal_preset_approved_receipt_inside_phone",
+        "passed": true
+      },
+      {
+        "name": "receipt_language_switch_keeps_transaction_without_reload",
+        "passed": true
+      },
+      {
+        "name": "receipt_kazakh_status",
+        "passed": true
+      },
+      {
+        "name": "browser_paste_and_typing_sensor_live",
+        "passed": true
+      },
+      {
+        "name": "browser_biometrics_reach_evaluation",
+        "passed": true
+      },
+      {
+        "name": "clipboard_contents_not_sent_as_biometrics",
+        "passed": true
+      },
+      {
+        "name": "scam_starts_15_minute_hold_intro",
+        "passed": true
+      },
+      {
+        "name": "safe_account_warning_matches_context_ru",
+        "passed": true
+      },
+      {
+        "name": "safe_account_warning_matches_context_kk",
+        "passed": true
+      },
+      {
+        "name": "missing_answer_disables_next",
+        "passed": true
+      },
+      {
+        "name": "question_heading_receives_keyboard_focus",
+        "passed": true
+      },
+      {
+        "name": "language_keeps_answer_and_question",
+        "passed": true
+      },
+      {
+        "name": "closing_modal_does_not_mutate_held_transfer",
+        "passed": true
+      },
+      {
+        "name": "reopening_keeps_in_memory_answer_progress",
+        "passed": true
+      },
+      {
+        "name": "review_lists_all_five_answers",
+        "passed": true
+      },
+      {
+        "name": "edit_returns_to_chosen_question",
+        "passed": true
+      },
+      {
+        "name": "clean_answers_saved_without_early_release",
+        "passed": true
+      },
+      {
+        "name": "reload_restores_server_saved_answers",
+        "passed": true
+      },
+      {
+        "name": "expired_countdown_never_auto_releases",
+        "passed": true
+      },
+      {
+        "name": "expired_hold_requires_explicit_confirmation",
+        "passed": true
+      },
+      {
+        "name": "explicit_confirmation_after_mock_deadline_approves",
+        "passed": true
+      },
+      {
+        "name": "new_transfer_does_not_reuse_questionnaire_draft",
+        "passed": true
+      },
+      {
+        "name": "failed_submission_keeps_answers_and_hold",
+        "passed": true
+      },
+      {
+        "name": "red_flag_blocks_after_retry",
+        "passed": true
+      },
+      {
+        "name": "explicit_cancel_terminal_receipt",
+        "passed": true
+      },
+      {
+        "name": "background_recovery_of_B_does_not_replace_open_A",
+        "passed": true
+      },
+      {
+        "name": "fresh_server_answers_replace_old_saved_snapshot",
+        "passed": true
+      },
+      {
+        "name": "actual_unsent_edits_survive_server_refresh",
+        "passed": true
+      },
+      {
+        "name": "hub_preset_shows_blocked_case_and_graph",
+        "passed": true
+      },
+      {
+        "name": "graph_defaults_to_explicit_direct_neighbor_depth",
+        "passed": true
+      },
+      {
+        "name": "direct_graph_control_and_counts_visible",
+        "passed": true
+      },
+      {
+        "name": "stage_mode_enters_and_hides_feed",
+        "passed": true
+      },
+      {
+        "name": "initial_stage_graph_fits_without_window_resize",
+        "passed": true
+      },
+      {
+        "name": "graph_node_is_draggable",
+        "passed": true
+      },
+      {
+        "name": "graph_canvas_is_pannable",
+        "passed": true
+      },
+      {
+        "name": "graph_center_selection_opens_node_details",
+        "passed": true
+      },
+      {
+        "name": "graph_zoom_pan_and_drag_survive_language_and_poll",
+        "passed": true
+      },
+      {
+        "name": "graph_center_selection_survives_language_and_poll",
+        "passed": true
+      },
+      {
+        "name": "expanded_graph_requests_depth_two_and_preserves_case",
+        "passed": true
+      },
+      {
+        "name": "expanded_graph_shows_all_returned_nodes_and_edges",
+        "passed": true
+      },
+      {
+        "name": "depth_change_purposefully_refits_graph",
+        "passed": true
+      },
+      {
+        "name": "graph_depth_controls_translate_and_keep_depth",
+        "passed": true
+      },
+      {
+        "name": "collapse_returns_to_direct_neighbors_and_refits",
+        "passed": true
+      },
+      {
+        "name": "stage_keeps_traffic_control_and_case",
+        "passed": true
+      },
+      {
+        "name": "stage_stream_starts_through_evaluation_API",
+        "passed": true
+      },
+      {
+        "name": "stage_stream_stop_prevents_new_dispatches",
+        "passed": true
+      },
+      {
+        "name": "p95_is_measurement_with_scope",
+        "passed": true
+      },
+      {
+        "name": "stage_and_selection_survive_language_change",
+        "passed": true
+      },
+      {
+        "name": "stage_feed_toggle_accessible",
+        "passed": true
+      },
+      {
+        "name": "escape_in_editable_does_not_exit_stage",
+        "passed": true
+      },
+      {
+        "name": "escape_outside_editable_exits_stage",
+        "passed": true
+      },
+      {
+        "name": "stage_reentry_graph_fits_without_window_resize",
+        "passed": true
+      },
+      {
+        "name": "stage_no_document_overflow_320",
+        "passed": true
+      },
+      {
+        "name": "stage_graph_has_width_320",
+        "passed": true
+      },
+      {
+        "name": "resize_observer_refits_graph_320",
+        "passed": true
+      },
+      {
+        "name": "stage_no_document_overflow_390",
+        "passed": true
+      },
+      {
+        "name": "stage_graph_has_width_390",
+        "passed": true
+      },
+      {
+        "name": "resize_observer_refits_graph_390",
+        "passed": true
+      },
+      {
+        "name": "stage_no_document_overflow_768",
+        "passed": true
+      },
+      {
+        "name": "stage_graph_has_width_768",
+        "passed": true
+      },
+      {
+        "name": "resize_observer_refits_graph_768",
+        "passed": true
+      },
+      {
+        "name": "stage_no_document_overflow_1280",
+        "passed": true
+      },
+      {
+        "name": "stage_graph_has_width_1280",
+        "passed": true
+      },
+      {
+        "name": "resize_observer_refits_graph_1280",
+        "passed": true
+      },
+      {
+        "name": "mobile_no_document_overflow_320",
+        "passed": true
+      },
+      {
+        "name": "phone_form_visible_320",
+        "passed": true
+      },
+      {
+        "name": "mobile_no_document_overflow_390",
+        "passed": true
+      },
+      {
+        "name": "phone_form_visible_390",
+        "passed": true
+      },
+      {
+        "name": "mobile_no_document_overflow_768",
+        "passed": true
+      },
+      {
+        "name": "phone_form_visible_768",
+        "passed": true
+      },
+      {
+        "name": "mobile_no_document_overflow_1280",
+        "passed": true
+      },
+      {
+        "name": "phone_form_visible_1280",
+        "passed": true
+      },
+      {
+        "name": "cooling_sheet_fits_320",
+        "passed": true
+      },
+      {
+        "name": "cooling_sheet_fits_390",
+        "passed": true
+      },
+      {
+        "name": "cooling_sheet_fits_768",
+        "passed": true
+      },
+      {
+        "name": "cooling_sheet_fits_1280",
+        "passed": true
+      },
+      {
+        "name": "missing_deadline_does_not_look_expired",
+        "passed": true
+      },
+      {
+        "name": "reduced_motion_preference_active",
+        "passed": true
+      },
+      {
+        "name": "reduced_motion_disables_sheet_animation",
+        "passed": true
+      },
+      {
+        "name": "all_mutations_intercepted",
+        "passed": true
+      },
+      {
+        "name": "no_browser_runtime_errors",
+        "passed": true
+      }
+    ],
+    "backend_disabled_probe_http_status": 503,
+    "artifact_id": 14440249456,
+    "artifact_sha256": "3cf78b9b9509ed669200166759729fb4b9256cc0d1ba71445734291fcbaea767"
+  },
+  "merge_gate": {
+    "redesign_in_main": false,
+    "recovery_in_main": false,
+    "main_merge_performed": false,
+    "original_feature_branch_changed": false,
+    "joint_frontend_acceptance": "PENDING"
+  },
+  "live_telegram_messages": 0
+}
