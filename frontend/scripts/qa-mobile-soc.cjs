@@ -10,6 +10,7 @@ const uuid = n => `20000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
 const questions = ['caller_claims_bank_or_police', 'asked_to_move_to_safe_account', 'asked_to_keep_secret_or_install_app', 'initiated_by_customer', 'knows_recipient_personally'];
 const clean = [false, false, false, true, true];
 const records = new Map();
+const trustedMock = { enabled: false, notifications: [], posts: 0, polls: [] };
 let expectedPreset = 'normal'; let nextId = 1; let resolveFailure = false; let detailFailure = false;
 const report = { target, started_at: new Date().toISOString(), mocked_api: true, checks: [], errors: [], requests: [], mutations: [], screenshots: [] };
 const check = (name, value, detail) => { report.checks.push({ name, passed: Boolean(value), ...(detail === undefined ? {} : { detail }) }); assert.ok(value, name); };
@@ -85,6 +86,14 @@ async function main() {
     if (detail && method === 'GET') {
       if (detailFailure) return route.fulfill({ status: 503, json: { error: 'apiError' } });
       const item = records.get(detail[1]); return route.fulfill(item ? { json: evaluation(item) } : { status: 404, json: { error: 'notFound' } });
+    }
+    const trusted = url.pathname.match(/\/trusted-circle\/([0-9a-f-]{36})$/i);
+    if (trusted) {
+      if (!trustedMock.enabled) return route.fulfill({ status: 404, json: { error: 'unavailable' } });
+      if (method === 'POST') { trustedMock.posts += 1; trustedMock.notifications = [{ id: uuid(900), contact_id: uuid(800), state: 'NOTIFICATION_QUEUED', expires_at: new Date(Date.now() + 900000).toISOString(), attempts: 0 }]; }
+      else if (url.searchParams.get('scope') === 'notifications') trustedMock.polls.push(Date.now());
+      const contacts = url.searchParams.get('scope') === 'notifications' ? {} : { contact_state: 'CONTACT_VERIFIED', contacts: [{ id: uuid(800), alias: 'QA Мама' }] };
+      return route.fulfill({ json: { ...contacts, notifications: trustedMock.notifications } });
     }
     return route.fulfill({ status: 404, json: { error: 'notFound' } });
   });
@@ -338,6 +347,25 @@ async function main() {
     const phoneDialog = phone.locator('dialog.mobile-cooling'); await phoneDialog.waitFor();
     const sheet = await phoneDialog.boundingBox();
     check('mobile_route_cooling_sheet_fits_390', sheet.x >= -1 && sheet.x + sheet.width <= 391 && sheet.height <= 845, sheet);
+    check('trusted_circle_hidden_when_integration_unavailable', await phoneDialog.locator('.trusted-circle').count() === 0);
+    // Trusted contact (advisory only): button -> queued -> sent -> suspicion; polling >= 2.1 s, stops at a terminal state.
+    trustedMock.enabled = true; await phoneDialog.locator('.sheet-close').click();
+    await phone.locator('.receipt-review').click(); await phoneDialog.waitFor();
+    await phoneDialog.locator('.trusted-notify').waitFor();
+    check('trusted_circle_offers_notify_button', (await phoneDialog.locator('.trusted-notify').innerText()).includes('Сообщить доверенному лицу') && (await phoneDialog.locator('.trusted-circle').innerText()).includes('не может одобрить'));
+    await phoneDialog.locator('.trusted-notify').click();
+    await phoneDialog.locator('.trusted-status[data-state="NOTIFICATION_QUEUED"]').waitFor();
+    check('trusted_circle_notify_posts_once_and_hides_button', trustedMock.posts === 1 && await phoneDialog.locator('.trusted-notify').count() === 0);
+    trustedMock.notifications[0].state = 'NOTIFICATION_SENT';
+    await phoneDialog.locator('.trusted-status[data-state="NOTIFICATION_SENT"]').waitFor({ timeout: 10000 });
+    trustedMock.notifications[0].state = 'SUSPICION_REPORTED';
+    await phoneDialog.locator('.trusted-status[data-state="SUSPICION_REPORTED"]').waitFor({ timeout: 10000 });
+    check('trusted_circle_shows_suspicion_warning', (await phoneDialog.locator('.trusted-suspicion').innerText()).includes('Не подтверждайте'));
+    const pollsAtTerminal = trustedMock.polls.length; await phone.waitForTimeout(5000);
+    const gaps = trustedMock.polls.slice(1).map((value, index) => value - trustedMock.polls[index]);
+    check('trusted_circle_polls_no_faster_than_2100ms_and_stops', gaps.every(gap => gap >= 2100) && trustedMock.polls.length === pollsAtTerminal, { gaps, polls: trustedMock.polls.length });
+    check('trusted_circle_no_capability_in_page', !/owner:[0-9a-f-]{36}:\d+:/.test(await phone.content()));
+    await phoneDialog.locator('.trusted-circle').scrollIntoViewIfNeeded();
     await phone.screenshot({ path: path.join(output, 'mobile-route-cooling-390-ru.png') }); report.screenshots.push(path.join(output, 'mobile-route-cooling-390-ru.png'));
     await phone.close();
     check('all_mutations_intercepted', report.mutations.length > 0 && report.mutations.every(m => m.intercepted));
