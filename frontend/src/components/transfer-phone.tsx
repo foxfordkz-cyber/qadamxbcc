@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type Dispatch, type SetStateAction } from "react";
-import { ArrowLeft, ArrowRight, BatteryFull, Check, ChevronDown, ChevronRight, Clock3, CreditCard, Landmark, LoaderCircle, LockKeyhole, PhoneCall, ShieldCheck, ShieldX, Signal, Smartphone, Wifi, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight, BatteryFull, Check, ChevronDown, ChevronRight, Clock3, CreditCard, History, House, Landmark, LoaderCircle, LockKeyhole, Menu, PhoneCall, ReceiptText, ShieldCheck, ShieldX, Signal, Smartphone, Wifi, XCircle } from "lucide-react";
 import type { AppConfig, Evaluation, Preset, PresetForm } from "@/lib/contracts";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
@@ -44,8 +44,12 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   return <div className="phone-stage">
     <div className="phone-caption"><Smartphone size={15} />bcc.kz <span>{t("simulator")}</span></div>
     <section className="phone-frame" aria-label={t("mobile")}>
-      <div className="phone-status" aria-hidden="true"><span>9:41</span><i /><div><Signal size={15} /><Wifi size={15} /><BatteryFull size={20} /></div></div>
-      <div className="phone-heading"><ArrowLeft size={21} aria-hidden="true" /><h2>{receipt ? m("receiptTitle") : t("transfer")}</h2><ShieldCheck size={22} className="text-bcc" aria-hidden="true" /></div>
+      <div className="phone-appbar">
+        <div className="phone-status" aria-hidden="true"><span>9:41</span><i /><div><Signal size={15} /><Wifi size={15} /><BatteryFull size={20} /></div></div>
+        <div className="phone-heading"><span className="appbar-icon" aria-hidden="true"><ArrowLeft size={19} /></span><h2>{receipt ? m("receiptTitle") : t("transfer")}</h2><span className="appbar-icon" aria-hidden="true"><ShieldCheck size={19} /></span></div>
+        <p className="appbar-note"><ShieldCheck size={13} aria-hidden="true" />{t("protected")}</p>
+      </div>
+      <div className="phone-sheet">
       {receipt ? <section className={`phone-receipt receipt-${receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
         <div className="receipt-symbol" aria-hidden="true"><ReceiptIcon size={36} strokeWidth={1.6} /></div>
         <Badge status={receipt.status} />
@@ -90,8 +94,9 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           {error && <p className="error" role="alert">{t(error)}</p>}
           <button className="primary transfer-cta" disabled={busy || blocked || completed}>{busy ? <LoaderCircle className="animate-spin" size={18} /> : <LockKeyhole size={17} />}<span>{t(busy ? "evaluating" : blocked ? "checkPreviousTransfer" : completed ? "transferCompleted" : "transferCta")}</span><ArrowRight size={18} /></button>
         </fieldset>
-        <p className="phone-security"><ShieldCheck size={13} />{t("protected")}</p>
-      </form>}<div className="home-indicator" aria-hidden="true" />
+      </form>}</div>
+      <nav className="phone-tabbar" aria-hidden="true">{([["tabHome", House], ["tabPayments", ReceiptText], ["tabTransfers", ArrowLeftRight], ["tabHistory", History], ["tabMore", Menu]] as const).map(([key, Icon]) => <span key={key} className={key === "tabTransfers" ? "active" : ""}><Icon size={20} strokeWidth={key === "tabTransfers" ? 2.2 : 1.7} />{m(key)}</span>)}</nav>
+      <div className="home-indicator" aria-hidden="true" />
     </section>
   </div>;
 }

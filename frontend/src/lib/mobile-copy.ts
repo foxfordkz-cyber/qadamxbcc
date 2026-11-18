@@ -24,5 +24,7 @@ export const mobileCopy = {
   coolingSummary: ["Кідірістегі аударым", "Перевод на удержании"],
   coolingIntroStep: ["Тоқтау", "Пауза"], coolingQuestionsStep: ["Сұрақтар", "Вопросы"], coolingReviewStep: ["Тексеру", "Проверка"],
   coolingMissing: ["Кідіріс уақыты расталмады. Мәртебені қайта тексеріңіз; ақша автоматты жіберілмейді.", "Срок удержания не подтверждён. Перепроверьте статус; деньги автоматически не отправляются."],
+  tabHome: ["Басты", "Главная"], tabPayments: ["Төлемдер", "Платежи"], tabTransfers: ["Аударымдар", "Переводы"],
+  tabHistory: ["Тарих", "История"], tabMore: ["Тағы", "Ещё"],
 } as const;
 export const mobileText = (lang: Lang, key: keyof typeof mobileCopy) => mobileCopy[key][lang === "kk" ? 0 : 1];
