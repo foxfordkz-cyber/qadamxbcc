@@ -12,3 +12,9 @@
 4. `APPLY_THEME=<pptx skill>/scripts/apply_theme.js node build.js /tmp/deckbuild/img frontend/src/content/pitch.json deliverables` (нужен `pptxgenjs`).
 
 После пересборки откройте все 20 слайдов: проверьте переносы казахского текста и что картинки не наезжают на колонтитул.
+
+## HTML-нұсқа (қазақша, анимациямен)
+
+`deliverables/BCC-Shield-pitch-kk.html` — бір файл, суреттер ішінде (WebP), интернетсіз ашылады. Басқару: ← → / бос орын / свайп / басу, F — толық экран, N — баяндамашы жазбалары. Әр слайдтың өз өтуі бар (zoom, slide, rise, flip), элементтер кезекпен шығады. Жүйеде «азырақ қозғалыс» қосулы болса, анимациялар өшеді.
+
+Пересборка: `prep.py`-дан кейін суреттерді WebP-ке айналдырып `/tmp/deckbuild/web`-ке салыңыз, содан соң `python3 html_build.py frontend/src/content/pitch.json deliverables/BCC-Shield-pitch-kk.html` (`template.html` жанында болуы керек).
