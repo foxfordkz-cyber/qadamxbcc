@@ -241,3 +241,21 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 /* Keep the focused field and the primary button above the on-screen keyboard. */
 .phone-stage.is-bare input, .phone-stage.is-bare .transfer-cta, .phone-stage.is-bare .transfer-confirm { scroll-margin-bottom: 96px; }
 .phone-stage.is-bare .sender-field input { font-size: 16px; } /* iOS zooms into inputs below 16px. */
+
+/* Trusted contact inside the cooling sheet (advisory only: the contact never releases funds). */
+.trusted-circle { display: grid; gap: 10px; margin-top: 16px; padding: 14px 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; }
+.trusted-circle h3 { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; color: var(--ink); }
+.trusted-circle h3 svg { color: var(--emerald-dark); }
+.trusted-circle.has-suspicion { background: var(--red-soft); border-color: var(--red-line); }
+.trusted-statuses { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.trusted-status { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.trusted-status svg { flex-shrink: 0; margin-top: 2px; color: var(--subtle); }
+.trusted-status span { display: grid; min-width: 0; }
+.trusted-status b { font-weight: 650; color: var(--ink); overflow-wrap: anywhere; }
+.trusted-status.state-contact_acknowledged svg { color: var(--emerald-dark); }
+.trusted-status.state-suspicion_reported, .trusted-status.state-suspicion_reported svg { color: var(--red-ink); }
+.trusted-suspicion { display: flex; gap: 8px; font-size: 13px; font-weight: 600; line-height: 1.45; color: var(--red-ink); }
+.trusted-suspicion svg { flex-shrink: 0; margin-top: 2px; }
+.trusted-note { font-size: 12px; line-height: 1.5; color: var(--muted); }
+.trusted-actions { display: grid; gap: 8px; }
+.trusted-notify { width: 100%; min-height: 48px; }
