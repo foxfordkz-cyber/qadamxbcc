@@ -130,3 +130,6 @@
   .phone-receipt, .cooling-step-content, .phone-frame .contact .avatar i { animation: none; }
   .phone-frame .contact .avatar, .phone-frame .toggle-row i b, .cooling-progress::-webkit-progress-value { transition: none; }
 }
+.sheet-mark { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; color: #FFFFFF; background: linear-gradient(145deg, #2BC37A, #00A859 45%, #00703B); box-shadow: 0 6px 14px -8px #00703B; }
+.mobile-cooling .cooling-transfer { background: linear-gradient(135deg, #FFF8E6, #FFFCF4 60%); box-shadow: 0 10px 22px -18px #B5470899; }
+.mobile-cooling .cooling-wide.primary, .mobile-cooling .cooling-navigation .primary { border-radius: 16px; box-shadow: 0 10px 20px -12px #00A859; }
