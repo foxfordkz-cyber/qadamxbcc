@@ -13,6 +13,7 @@ Redis, NetworkX и локальная ML-модель. Интерфейс сти
 [Комплект для заявки и предложение банку](docs/HACKATHON_HANDOFF.md),
 [презентация RU](deliverables/BCC-Shield-ru.pptx),
 [презентация KK](deliverables/BCC-Shield-kk.pptx),
+питч со скриншотами на 10 слайдов ([RU](deliverables/BCC-Shield-pitch-ru.pptx), [KK](deliverables/BCC-Shield-pitch-kk.pptx)),
 [источники и проверка сроков](docs/HACKATHON_EVIDENCE.md).
 [Резервное Full HD-видео](deliverables/demo/BCC-Shield-demo.webm) с субтитрами
 на двух языках: [запись и проверенные ограничения](docs/DEMO_VIDEO.md).
