@@ -1,0 +1,1431 @@
+{
+  "report_version": 1,
+  "model_version": "bcc-synthetic-rf-v2",
+  "artifact_sha256": "07db53ef14d5c10ed33ee6a9cc1705ac98f330fc92a58f349046fe1c53dd8c71",
+  "sklearn_version": "1.9.1",
+  "feature_names": [
+    "amount_ratio",
+    "night_hour",
+    "new_recipient",
+    "active_call",
+    "deposit_withdrawal",
+    "fan_in_velocity",
+    "transit_ratio",
+    "paste_detected",
+    "typing_speed_cps",
+    "hesitation_ms",
+    "hesitation_count",
+    "new_device"
+  ],
+  "training_seed": 20261113,
+  "evaluation_seed": 20261117,
+  "generator_version": "v2-cumulative-transit-overlap",
+  "frozen_v1_comparison": {
+    "model_version": "bcc-synthetic-rf-v1",
+    "artifact_sha256": "13351ad8b9e2f37c3a692b681fceabb296131aa728b5994e62aec586e2f4b66b",
+    "comparison": "Both frozen artifacts scored the SAME corrected-generator input rows",
+    "thresholds": {
+      "40": {
+        "threshold": 40,
+        "sample_count": 10000,
+        "positives": 2410,
+        "negatives": 7590,
+        "tp": 2372,
+        "fp": 2548,
+        "fn": 38,
+        "tn": 5042,
+        "precision": 0.4821138211382114,
+        "recall": 0.9842323651452282,
+        "false_positive_rate": 0.33570487483530964,
+        "false_negative_rate": 0.015767634854771784,
+        "alert_rate": 0.492,
+        "false_positive_rate_interval_95": [
+          0.32516638506416373,
+          0.34640958692257406
+        ]
+      },
+      "50": {
+        "threshold": 50,
+        "sample_count": 10000,
+        "positives": 2410,
+        "negatives": 7590,
+        "tp": 2364,
+        "fp": 2533,
+        "fn": 46,
+        "tn": 5057,
+        "precision": 0.4827445374719216,
+        "recall": 0.9809128630705394,
+        "false_positive_rate": 0.33372859025032936,
+        "false_negative_rate": 0.019087136929460582,
+        "alert_rate": 0.4897,
+        "false_positive_rate_interval_95": [
+          0.3232066606402003,
+          0.34441874164308994
+        ]
+      },
+      "75": {
+        "threshold": 75,
+        "sample_count": 10000,
+        "positives": 2410,
+        "negatives": 7590,
+        "tp": 2240,
+        "fp": 2452,
+        "fn": 170,
+        "tn": 5138,
+        "precision": 0.4774083546462063,
+        "recall": 0.9294605809128631,
+        "false_positive_rate": 0.3230566534914361,
+        "false_negative_rate": 0.07053941908713693,
+        "alert_rate": 0.4692,
+        "false_positive_rate_interval_95": [
+          0.31262779010687175,
+          0.3336645357778025
+        ]
+      }
+    },
+    "engine_scenario_panel": {
+      "case_count": 10,
+      "cases": [
+        {
+          "id": "ordinary_p2p",
+          "title_ru": "Обычный знакомый получатель",
+          "title_kk": "Таныс алушыға аударым",
+          "synthetic_fraud_label": 0,
+          "expected_full_hybrid_status": "approved",
+          "variants": {
+            "full_hybrid": {
+              "status": "approved",
+              "risk_score": 0,
+              "ml_score": 0.0152,
+              "reason_codes": [],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_ml": {
+              "status": "approved",
+              "risk_score": 0,
+              "ml_score": null,
+              "reason_codes": [],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_browser_biometrics": {
+              "status": "approved",
+              "risk_score": 0,
+              "ml_score": 0.0152,
+              "reason_codes": [],
+              "ml_uplift": 0,
+              "matches_expected": true
+            }
+          }
+        },
+        {
+          "id": "paste_without_pressure",
+          "title_ru": "Вставка реквизитов без давления",
+          "title_kk": "Қысымсыз реквизиттерді қою",
+          "synthetic_fraud_label": 0,
+          "expected_full_hybrid_status": "approved",
+          "variants": {
+            "full_hybrid": {
+              "status": "approved",
+              "risk_score": 0,
+              "ml_score": 0.045,
+              "reason_codes": [],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_ml": {
+              "status": "approved",
+              "risk_score": 0,
+              "ml_score": null,
+              "reason_codes": [],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_browser_biometrics": {
+              "status": "approved",
+              "risk_score": 0,
+              "ml_score": 0.0152,
+              "reason_codes": [],
+              "ml_uplift": 0,
+              "matches_expected": true
+            }
+          }
+        },
+        {
+          "id": "benign_call",
+          "title_ru": "Обычный звонок во время перевода",
+          "title_kk": "Аударым кезіндегі әдеттегі қоңырау",
+          "synthetic_fraud_label": 0,
+          "expected_full_hybrid_status": "approved",
+          "variants": {
+            "full_hybrid": {
+              "status": "approved",
+              "risk_score": 25,
+              "ml_score": 0.0624,
+              "reason_codes": [
+                "ACTIVE_CALL"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_ml": {
+              "status": "approved",
+              "risk_score": 25,
+              "ml_score": null,
+              "reason_codes": [
+                "ACTIVE_CALL"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_browser_biometrics": {
+              "status": "approved",
+              "risk_score": 25,
+              "ml_score": 0.0624,
+              "reason_codes": [
+                "ACTIVE_CALL"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            }
+          }
+        },
+        {
+          "id": "family_tablet",
+          "title_ru": "Общий семейный планшет",
+          "title_kk": "Ортақ отбасылық планшет",
+          "synthetic_fraud_label": 0,
+          "expected_full_hybrid_status": "approved",
+          "variants": {
+            "full_hybrid": {
+              "status": "approved",
+              "risk_score": 15,
+              "ml_score": 0.0152,
+              "reason_codes": [
+                "RECIPIENT_SHARED_DEVICE"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_ml": {
+              "status": "approved",
+              "risk_score": 15,
+              "ml_score": null,
+              "reason_codes": [
+                "RECIPIENT_SHARED_DEVICE"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_browser_biometrics": {
+              "status": "approved",
+              "risk_score": 15,
+              "ml_score": 0.0152,
+              "reason_codes": [
+                "RECIPIENT_SHARED_DEVICE"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            }
+          }
+        },
+        {
+          "id": "birthday_collection",
+          "title_ru": "Сбор с 12 отправителей без вывода",
+          "title_kk": "12 жіберушіден жиналған қаражат, шығару жоқ",
+          "synthetic_fraud_label": 0,
+          "expected_full_hybrid_status": "approved",
+          "variants": {
+            "full_hybrid": {
+              "status": "approved",
+              "risk_score": 25,
+              "ml_score": 0.0152,
+              "reason_codes": [
+                "DROP_HUB_FAN_IN",
+                "NEW_RECIPIENT",
+                "RECIPIENT_MANY_SENDERS",
+                "FAN_IN_UNCORROBORATED"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_ml": {
+              "status": "approved",
+              "risk_score": 25,
+              "ml_score": null,
+              "reason_codes": [
+                "DROP_HUB_FAN_IN",
+                "NEW_RECIPIENT",
+                "RECIPIENT_MANY_SENDERS",
+                "FAN_IN_UNCORROBORATED"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_browser_biometrics": {
+              "status": "approved",
+              "risk_score": 25,
+              "ml_score": 0.0152,
+              "reason_codes": [
+                "DROP_HUB_FAN_IN",
+                "NEW_RECIPIENT",
+                "RECIPIENT_MANY_SENDERS",
+                "FAN_IN_UNCORROBORATED"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            }
+          }
+        },
+        {
+          "id": "legitimate_but_ambiguous",
+          "title_ru": "Законный перевод с теми же тревожными сигналами",
+          "title_kk": "Дәл сондай қауіп белгілері бар заңды аударым",
+          "synthetic_fraud_label": 0,
+          "expected_full_hybrid_status": "cooling_off",
+          "variants": {
+            "full_hybrid": {
+              "status": "cooling_off",
+              "risk_score": 74,
+              "ml_score": 99.3056,
+              "reason_codes": [
+                "ACTIVE_CALL",
+                "AMOUNT_SPIKE",
+                "DEPOSIT_WITHDRAWAL",
+                "PASTED_DURING_CALL",
+                "NEW_RECIPIENT",
+                "SOCIAL_ENGINEERING_PATTERN"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_ml": {
+              "status": "cooling_off",
+              "risk_score": 74,
+              "ml_score": null,
+              "reason_codes": [
+                "ACTIVE_CALL",
+                "AMOUNT_SPIKE",
+                "DEPOSIT_WITHDRAWAL",
+                "PASTED_DURING_CALL",
+                "NEW_RECIPIENT",
+                "SOCIAL_ENGINEERING_PATTERN"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_browser_biometrics": {
+              "status": "cooling_off",
+              "risk_score": 74,
+              "ml_score": 100.0,
+              "reason_codes": [
+                "ACTIVE_CALL",
+                "AMOUNT_SPIKE",
+                "DEPOSIT_WITHDRAWAL",
+                "NEW_RECIPIENT",
+                "SOCIAL_ENGINEERING_PATTERN"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            }
+          }
+        },
+        {
+          "id": "phone_coercion",
+          "title_ru": "Телефонное принуждение и вывод депозита",
+          "title_kk": "Телефон қысымы және депозиттен алу",
+          "synthetic_fraud_label": 1,
+          "expected_full_hybrid_status": "cooling_off",
+          "variants": {
+            "full_hybrid": {
+              "status": "cooling_off",
+              "risk_score": 74,
+              "ml_score": 99.3056,
+              "reason_codes": [
+                "ACTIVE_CALL",
+                "AMOUNT_SPIKE",
+                "DEPOSIT_WITHDRAWAL",
+                "PASTED_DURING_CALL",
+                "NEW_RECIPIENT",
+                "SOCIAL_ENGINEERING_PATTERN"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_ml": {
+              "status": "cooling_off",
+              "risk_score": 74,
+              "ml_score": null,
+              "reason_codes": [
+                "ACTIVE_CALL",
+                "AMOUNT_SPIKE",
+                "DEPOSIT_WITHDRAWAL",
+                "PASTED_DURING_CALL",
+                "NEW_RECIPIENT",
+                "SOCIAL_ENGINEERING_PATTERN"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_browser_biometrics": {
+              "status": "cooling_off",
+              "risk_score": 74,
+              "ml_score": 100.0,
+              "reason_codes": [
+                "ACTIVE_CALL",
+                "AMOUNT_SPIKE",
+                "DEPOSIT_WITHDRAWAL",
+                "NEW_RECIPIENT",
+                "SOCIAL_ENGINEERING_PATTERN"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            }
+          }
+        },
+        {
+          "id": "subtle_coercion",
+          "title_ru": "Звонок, рост суммы и длительные паузы",
+          "title_kk": "Қоңырау, соманың өсуі және ұзақ кідірістер",
+          "synthetic_fraud_label": 1,
+          "expected_full_hybrid_status": "cooling_off",
+          "variants": {
+            "full_hybrid": {
+              "status": "approved",
+              "risk_score": 37,
+              "ml_score": 47.6434,
+              "reason_codes": [
+                "ACTIVE_CALL",
+                "AMOUNT_SPIKE",
+                "ML_RISK_UPLIFT"
+              ],
+              "ml_uplift": 2,
+              "matches_expected": false
+            },
+            "without_ml": {
+              "status": "approved",
+              "risk_score": 35,
+              "ml_score": null,
+              "reason_codes": [
+                "ACTIVE_CALL",
+                "AMOUNT_SPIKE"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": false
+            },
+            "without_browser_biometrics": {
+              "status": "approved",
+              "risk_score": 35,
+              "ml_score": 39.5251,
+              "reason_codes": [
+                "ACTIVE_CALL",
+                "AMOUNT_SPIKE"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": false
+            }
+          }
+        },
+        {
+          "id": "takeover_context",
+          "title_ru": "Ночь и новое устройство",
+          "title_kk": "Түн және жаңа құрылғы",
+          "synthetic_fraud_label": 1,
+          "expected_full_hybrid_status": "cooling_off",
+          "variants": {
+            "full_hybrid": {
+              "status": "cooling_off",
+              "risk_score": 74,
+              "ml_score": 98.5294,
+              "reason_codes": [
+                "AMOUNT_SPIKE",
+                "NEW_DEVICE",
+                "ACCOUNT_TAKEOVER_PATTERN",
+                "NEW_RECIPIENT",
+                "NIGHT_HOURS",
+                "ML_RISK_UPLIFT"
+              ],
+              "ml_uplift": 9,
+              "matches_expected": true
+            },
+            "without_ml": {
+              "status": "cooling_off",
+              "risk_score": 65,
+              "ml_score": null,
+              "reason_codes": [
+                "AMOUNT_SPIKE",
+                "NEW_DEVICE",
+                "ACCOUNT_TAKEOVER_PATTERN",
+                "NEW_RECIPIENT",
+                "NIGHT_HOURS"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_browser_biometrics": {
+              "status": "cooling_off",
+              "risk_score": 74,
+              "ml_score": 98.5294,
+              "reason_codes": [
+                "AMOUNT_SPIKE",
+                "NEW_DEVICE",
+                "ACCOUNT_TAKEOVER_PATTERN",
+                "NEW_RECIPIENT",
+                "NIGHT_HOURS",
+                "ML_RISK_UPLIFT"
+              ],
+              "ml_uplift": 9,
+              "matches_expected": true
+            }
+          }
+        },
+        {
+          "id": "transit_drop_hub",
+          "title_ru": "12 входящих и подтверждённый быстрый транзит",
+          "title_kk": "12 кіріс және расталған жылдам транзит",
+          "synthetic_fraud_label": 1,
+          "expected_full_hybrid_status": "blocked",
+          "variants": {
+            "full_hybrid": {
+              "status": "blocked",
+              "risk_score": 100,
+              "ml_score": 100.0,
+              "reason_codes": [
+                "DROP_HUB_FAN_IN",
+                "RECIPIENT_INSTANT_CASHOUT",
+                "RECIPIENT_MANY_SENDERS",
+                "RECIPIENT_SHARED_DEVICE",
+                "RECIPIENT_TRANSIT_RATIO",
+                "NEW_RECIPIENT"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_ml": {
+              "status": "blocked",
+              "risk_score": 100,
+              "ml_score": null,
+              "reason_codes": [
+                "DROP_HUB_FAN_IN",
+                "RECIPIENT_INSTANT_CASHOUT",
+                "RECIPIENT_MANY_SENDERS",
+                "RECIPIENT_SHARED_DEVICE",
+                "RECIPIENT_TRANSIT_RATIO",
+                "NEW_RECIPIENT"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            },
+            "without_browser_biometrics": {
+              "status": "blocked",
+              "risk_score": 100,
+              "ml_score": 100.0,
+              "reason_codes": [
+                "DROP_HUB_FAN_IN",
+                "RECIPIENT_INSTANT_CASHOUT",
+                "RECIPIENT_MANY_SENDERS",
+                "RECIPIENT_SHARED_DEVICE",
+                "RECIPIENT_TRANSIT_RATIO",
+                "NEW_RECIPIENT"
+              ],
+              "ml_uplift": 0,
+              "matches_expected": true
+            }
+          }
+        }
+      ],
+      "summaries": {
+        "full_hybrid": {
+          "intervention_at_40": {
+            "threshold": 40,
+            "sample_count": 10,
+            "positives": 4,
+            "negatives": 6,
+            "tp": 3,
+            "fp": 1,
+            "fn": 1,
+            "tn": 5,
+            "precision": 0.75,
+            "recall": 0.75,
+            "false_positive_rate": 0.16666666666666666,
+            "false_negative_rate": 0.25,
+            "alert_rate": 0.4,
+            "false_positive_rate_interval_95": [
+              0.030053369748306635,
+              0.5635028221864702
+            ]
+          },
+          "hard_block_at_75": {
+            "threshold": 75,
+            "sample_count": 10,
+            "positives": 4,
+            "negatives": 6,
+            "tp": 1,
+            "fp": 0,
+            "fn": 3,
+            "tn": 6,
+            "precision": 1.0,
+            "recall": 0.25,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.75,
+            "alert_rate": 0.1,
+            "false_positive_rate_interval_95": [
+              2.7755575615628914e-17,
+              0.3903342879021653
+            ]
+          },
+          "expected_policy_matches": 9
+        },
+        "without_ml": {
+          "intervention_at_40": {
+            "threshold": 40,
+            "sample_count": 10,
+            "positives": 4,
+            "negatives": 6,
+            "tp": 3,
+            "fp": 1,
+            "fn": 1,
+            "tn": 5,
+            "precision": 0.75,
+            "recall": 0.75,
+            "false_positive_rate": 0.16666666666666666,
+            "false_negative_rate": 0.25,
+            "alert_rate": 0.4,
+            "false_positive_rate_interval_95": [
+              0.030053369748306635,
+              0.5635028221864702
+            ]
+          },
+          "hard_block_at_75": {
+            "threshold": 75,
+            "sample_count": 10,
+            "positives": 4,
+            "negatives": 6,
+            "tp": 1,
+            "fp": 0,
+            "fn": 3,
+            "tn": 6,
+            "precision": 1.0,
+            "recall": 0.25,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.75,
+            "alert_rate": 0.1,
+            "false_positive_rate_interval_95": [
+              2.7755575615628914e-17,
+              0.3903342879021653
+            ]
+          },
+          "expected_policy_matches": 9
+        },
+        "without_browser_biometrics": {
+          "intervention_at_40": {
+            "threshold": 40,
+            "sample_count": 10,
+            "positives": 4,
+            "negatives": 6,
+            "tp": 3,
+            "fp": 1,
+            "fn": 1,
+            "tn": 5,
+            "precision": 0.75,
+            "recall": 0.75,
+            "false_positive_rate": 0.16666666666666666,
+            "false_negative_rate": 0.25,
+            "alert_rate": 0.4,
+            "false_positive_rate_interval_95": [
+              0.030053369748306635,
+              0.5635028221864702
+            ]
+          },
+          "hard_block_at_75": {
+            "threshold": 75,
+            "sample_count": 10,
+            "positives": 4,
+            "negatives": 6,
+            "tp": 1,
+            "fp": 0,
+            "fn": 3,
+            "tn": 6,
+            "precision": 1.0,
+            "recall": 0.25,
+            "false_positive_rate": 0.0,
+            "false_negative_rate": 0.75,
+            "alert_rate": 0.1,
+            "false_positive_rate_interval_95": [
+              2.7755575615628914e-17,
+              0.3903342879021653
+            ]
+          },
+          "expected_policy_matches": 9
+        }
+      }
+    }
+  },
+  "population": {
+    "source": "Independent-seed synthetic draws from the same generator; no customer data",
+    "is_temporal_holdout": false,
+    "sample_count": 10000,
+    "positive_labels": 2410,
+    "synthetic_prevalence": 0.241,
+    "frozen_model_only": {
+      "roc_auc": 0.9976332147015893,
+      "brier_score": 0.014731526967432075,
+      "thresholds": {
+        "40": {
+          "threshold": 40,
+          "sample_count": 10000,
+          "positives": 2410,
+          "negatives": 7590,
+          "tp": 2361,
+          "fp": 149,
+          "fn": 49,
+          "tn": 7441,
+          "precision": 0.9406374501992032,
+          "recall": 0.9796680497925311,
+          "false_positive_rate": 0.019631093544137022,
+          "false_negative_rate": 0.02033195020746888,
+          "alert_rate": 0.251,
+          "false_positive_rate_interval_95": [
+            0.016744433509125994,
+            0.023003757239587558
+          ]
+        },
+        "50": {
+          "threshold": 50,
+          "sample_count": 10000,
+          "positives": 2410,
+          "negatives": 7590,
+          "tp": 2346,
+          "fp": 101,
+          "fn": 64,
+          "tn": 7489,
+          "precision": 0.9587249693502248,
+          "recall": 0.9734439834024896,
+          "false_positive_rate": 0.013306982872200264,
+          "false_negative_rate": 0.026556016597510373,
+          "alert_rate": 0.2447,
+          "false_positive_rate_interval_95": [
+            0.01096425052979206,
+            0.016142117167889745
+          ]
+        },
+        "75": {
+          "threshold": 75,
+          "sample_count": 10000,
+          "positives": 2410,
+          "negatives": 7590,
+          "tp": 2152,
+          "fp": 37,
+          "fn": 258,
+          "tn": 7553,
+          "precision": 0.983097304705345,
+          "recall": 0.8929460580912864,
+          "false_positive_rate": 0.004874835309617918,
+          "false_negative_rate": 0.10705394190871369,
+          "alert_rate": 0.2189,
+          "false_positive_rate_interval_95": [
+            0.0035388842205594227,
+            0.006711719409080051
+          ]
+        }
+      }
+    },
+    "missing_browser_sensitivity_at_50": {
+      "description": "Same frozen model and labels; browser measurements set to missing",
+      "metrics": {
+        "threshold": 50,
+        "sample_count": 10000,
+        "positives": 2410,
+        "negatives": 7590,
+        "tp": 2312,
+        "fp": 96,
+        "fn": 98,
+        "tn": 7494,
+        "precision": 0.9601328903654485,
+        "recall": 0.9593360995850623,
+        "false_positive_rate": 0.012648221343873518,
+        "false_negative_rate": 0.04066390041493776,
+        "alert_rate": 0.2408,
+        "false_positive_rate_interval_95": [
+          0.010369256616242155,
+          0.01542025451362384
+        ]
+      }
+    }
+  },
+  "engine_scenario_panel": {
+    "case_count": 10,
+    "cases": [
+      {
+        "id": "ordinary_p2p",
+        "title_ru": "Обычный знакомый получатель",
+        "title_kk": "Таныс алушыға аударым",
+        "synthetic_fraud_label": 0,
+        "expected_full_hybrid_status": "approved",
+        "variants": {
+          "full_hybrid": {
+            "status": "approved",
+            "risk_score": 0,
+            "ml_score": 0.0618,
+            "reason_codes": [],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_ml": {
+            "status": "approved",
+            "risk_score": 0,
+            "ml_score": null,
+            "reason_codes": [],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_browser_biometrics": {
+            "status": "approved",
+            "risk_score": 0,
+            "ml_score": 0.0618,
+            "reason_codes": [],
+            "ml_uplift": 0,
+            "matches_expected": true
+          }
+        }
+      },
+      {
+        "id": "paste_without_pressure",
+        "title_ru": "Вставка реквизитов без давления",
+        "title_kk": "Қысымсыз реквизиттерді қою",
+        "synthetic_fraud_label": 0,
+        "expected_full_hybrid_status": "approved",
+        "variants": {
+          "full_hybrid": {
+            "status": "approved",
+            "risk_score": 0,
+            "ml_score": 0.0684,
+            "reason_codes": [],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_ml": {
+            "status": "approved",
+            "risk_score": 0,
+            "ml_score": null,
+            "reason_codes": [],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_browser_biometrics": {
+            "status": "approved",
+            "risk_score": 0,
+            "ml_score": 0.0618,
+            "reason_codes": [],
+            "ml_uplift": 0,
+            "matches_expected": true
+          }
+        }
+      },
+      {
+        "id": "benign_call",
+        "title_ru": "Обычный звонок во время перевода",
+        "title_kk": "Аударым кезіндегі әдеттегі қоңырау",
+        "synthetic_fraud_label": 0,
+        "expected_full_hybrid_status": "approved",
+        "variants": {
+          "full_hybrid": {
+            "status": "approved",
+            "risk_score": 25,
+            "ml_score": 0.123,
+            "reason_codes": [
+              "ACTIVE_CALL"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_ml": {
+            "status": "approved",
+            "risk_score": 25,
+            "ml_score": null,
+            "reason_codes": [
+              "ACTIVE_CALL"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_browser_biometrics": {
+            "status": "approved",
+            "risk_score": 25,
+            "ml_score": 0.123,
+            "reason_codes": [
+              "ACTIVE_CALL"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          }
+        }
+      },
+      {
+        "id": "family_tablet",
+        "title_ru": "Общий семейный планшет",
+        "title_kk": "Ортақ отбасылық планшет",
+        "synthetic_fraud_label": 0,
+        "expected_full_hybrid_status": "approved",
+        "variants": {
+          "full_hybrid": {
+            "status": "approved",
+            "risk_score": 15,
+            "ml_score": 0.0618,
+            "reason_codes": [
+              "RECIPIENT_SHARED_DEVICE"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_ml": {
+            "status": "approved",
+            "risk_score": 15,
+            "ml_score": null,
+            "reason_codes": [
+              "RECIPIENT_SHARED_DEVICE"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_browser_biometrics": {
+            "status": "approved",
+            "risk_score": 15,
+            "ml_score": 0.0618,
+            "reason_codes": [
+              "RECIPIENT_SHARED_DEVICE"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          }
+        }
+      },
+      {
+        "id": "birthday_collection",
+        "title_ru": "Сбор с 12 отправителей без вывода",
+        "title_kk": "12 жіберушіден жиналған қаражат, шығару жоқ",
+        "synthetic_fraud_label": 0,
+        "expected_full_hybrid_status": "approved",
+        "variants": {
+          "full_hybrid": {
+            "status": "approved",
+            "risk_score": 25,
+            "ml_score": 0.02,
+            "reason_codes": [
+              "DROP_HUB_FAN_IN",
+              "NEW_RECIPIENT",
+              "RECIPIENT_MANY_SENDERS",
+              "FAN_IN_UNCORROBORATED"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_ml": {
+            "status": "approved",
+            "risk_score": 25,
+            "ml_score": null,
+            "reason_codes": [
+              "DROP_HUB_FAN_IN",
+              "NEW_RECIPIENT",
+              "RECIPIENT_MANY_SENDERS",
+              "FAN_IN_UNCORROBORATED"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_browser_biometrics": {
+            "status": "approved",
+            "risk_score": 25,
+            "ml_score": 0.02,
+            "reason_codes": [
+              "DROP_HUB_FAN_IN",
+              "NEW_RECIPIENT",
+              "RECIPIENT_MANY_SENDERS",
+              "FAN_IN_UNCORROBORATED"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          }
+        }
+      },
+      {
+        "id": "legitimate_but_ambiguous",
+        "title_ru": "Законный перевод с теми же тревожными сигналами",
+        "title_kk": "Дәл сондай қауіп белгілері бар заңды аударым",
+        "synthetic_fraud_label": 0,
+        "expected_full_hybrid_status": "cooling_off",
+        "variants": {
+          "full_hybrid": {
+            "status": "cooling_off",
+            "risk_score": 74,
+            "ml_score": 100.0,
+            "reason_codes": [
+              "ACTIVE_CALL",
+              "AMOUNT_SPIKE",
+              "DEPOSIT_WITHDRAWAL",
+              "PASTED_DURING_CALL",
+              "NEW_RECIPIENT",
+              "SOCIAL_ENGINEERING_PATTERN"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_ml": {
+            "status": "cooling_off",
+            "risk_score": 74,
+            "ml_score": null,
+            "reason_codes": [
+              "ACTIVE_CALL",
+              "AMOUNT_SPIKE",
+              "DEPOSIT_WITHDRAWAL",
+              "PASTED_DURING_CALL",
+              "NEW_RECIPIENT",
+              "SOCIAL_ENGINEERING_PATTERN"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_browser_biometrics": {
+            "status": "cooling_off",
+            "risk_score": 74,
+            "ml_score": 100.0,
+            "reason_codes": [
+              "ACTIVE_CALL",
+              "AMOUNT_SPIKE",
+              "DEPOSIT_WITHDRAWAL",
+              "NEW_RECIPIENT",
+              "SOCIAL_ENGINEERING_PATTERN"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          }
+        }
+      },
+      {
+        "id": "phone_coercion",
+        "title_ru": "Телефонное принуждение и вывод депозита",
+        "title_kk": "Телефон қысымы және депозиттен алу",
+        "synthetic_fraud_label": 1,
+        "expected_full_hybrid_status": "cooling_off",
+        "variants": {
+          "full_hybrid": {
+            "status": "cooling_off",
+            "risk_score": 74,
+            "ml_score": 100.0,
+            "reason_codes": [
+              "ACTIVE_CALL",
+              "AMOUNT_SPIKE",
+              "DEPOSIT_WITHDRAWAL",
+              "PASTED_DURING_CALL",
+              "NEW_RECIPIENT",
+              "SOCIAL_ENGINEERING_PATTERN"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_ml": {
+            "status": "cooling_off",
+            "risk_score": 74,
+            "ml_score": null,
+            "reason_codes": [
+              "ACTIVE_CALL",
+              "AMOUNT_SPIKE",
+              "DEPOSIT_WITHDRAWAL",
+              "PASTED_DURING_CALL",
+              "NEW_RECIPIENT",
+              "SOCIAL_ENGINEERING_PATTERN"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_browser_biometrics": {
+            "status": "cooling_off",
+            "risk_score": 74,
+            "ml_score": 100.0,
+            "reason_codes": [
+              "ACTIVE_CALL",
+              "AMOUNT_SPIKE",
+              "DEPOSIT_WITHDRAWAL",
+              "NEW_RECIPIENT",
+              "SOCIAL_ENGINEERING_PATTERN"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          }
+        }
+      },
+      {
+        "id": "subtle_coercion",
+        "title_ru": "Звонок, рост суммы и длительные паузы",
+        "title_kk": "Қоңырау, соманың өсуі және ұзақ кідірістер",
+        "synthetic_fraud_label": 1,
+        "expected_full_hybrid_status": "cooling_off",
+        "variants": {
+          "full_hybrid": {
+            "status": "approved",
+            "risk_score": 38,
+            "ml_score": 53.3342,
+            "reason_codes": [
+              "ACTIVE_CALL",
+              "AMOUNT_SPIKE",
+              "ML_RISK_UPLIFT"
+            ],
+            "ml_uplift": 3,
+            "matches_expected": false
+          },
+          "without_ml": {
+            "status": "approved",
+            "risk_score": 35,
+            "ml_score": null,
+            "reason_codes": [
+              "ACTIVE_CALL",
+              "AMOUNT_SPIKE"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": false
+          },
+          "without_browser_biometrics": {
+            "status": "approved",
+            "risk_score": 36,
+            "ml_score": 43.1572,
+            "reason_codes": [
+              "ACTIVE_CALL",
+              "AMOUNT_SPIKE",
+              "ML_RISK_UPLIFT"
+            ],
+            "ml_uplift": 1,
+            "matches_expected": false
+          }
+        }
+      },
+      {
+        "id": "takeover_context",
+        "title_ru": "Ночь и новое устройство",
+        "title_kk": "Түн және жаңа құрылғы",
+        "synthetic_fraud_label": 1,
+        "expected_full_hybrid_status": "cooling_off",
+        "variants": {
+          "full_hybrid": {
+            "status": "cooling_off",
+            "risk_score": 74,
+            "ml_score": 99.8188,
+            "reason_codes": [
+              "AMOUNT_SPIKE",
+              "NEW_DEVICE",
+              "ACCOUNT_TAKEOVER_PATTERN",
+              "NEW_RECIPIENT",
+              "NIGHT_HOURS",
+              "ML_RISK_UPLIFT"
+            ],
+            "ml_uplift": 9,
+            "matches_expected": true
+          },
+          "without_ml": {
+            "status": "cooling_off",
+            "risk_score": 65,
+            "ml_score": null,
+            "reason_codes": [
+              "AMOUNT_SPIKE",
+              "NEW_DEVICE",
+              "ACCOUNT_TAKEOVER_PATTERN",
+              "NEW_RECIPIENT",
+              "NIGHT_HOURS"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_browser_biometrics": {
+            "status": "cooling_off",
+            "risk_score": 74,
+            "ml_score": 99.8188,
+            "reason_codes": [
+              "AMOUNT_SPIKE",
+              "NEW_DEVICE",
+              "ACCOUNT_TAKEOVER_PATTERN",
+              "NEW_RECIPIENT",
+              "NIGHT_HOURS",
+              "ML_RISK_UPLIFT"
+            ],
+            "ml_uplift": 9,
+            "matches_expected": true
+          }
+        }
+      },
+      {
+        "id": "transit_drop_hub",
+        "title_ru": "12 входящих и подтверждённый быстрый транзит",
+        "title_kk": "12 кіріс және расталған жылдам транзит",
+        "synthetic_fraud_label": 1,
+        "expected_full_hybrid_status": "blocked",
+        "variants": {
+          "full_hybrid": {
+            "status": "blocked",
+            "risk_score": 100,
+            "ml_score": 60.7795,
+            "reason_codes": [
+              "DROP_HUB_FAN_IN",
+              "RECIPIENT_INSTANT_CASHOUT",
+              "RECIPIENT_MANY_SENDERS",
+              "RECIPIENT_SHARED_DEVICE",
+              "RECIPIENT_TRANSIT_RATIO",
+              "NEW_RECIPIENT"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_ml": {
+            "status": "blocked",
+            "risk_score": 100,
+            "ml_score": null,
+            "reason_codes": [
+              "DROP_HUB_FAN_IN",
+              "RECIPIENT_INSTANT_CASHOUT",
+              "RECIPIENT_MANY_SENDERS",
+              "RECIPIENT_SHARED_DEVICE",
+              "RECIPIENT_TRANSIT_RATIO",
+              "NEW_RECIPIENT"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          },
+          "without_browser_biometrics": {
+            "status": "blocked",
+            "risk_score": 100,
+            "ml_score": 60.7795,
+            "reason_codes": [
+              "DROP_HUB_FAN_IN",
+              "RECIPIENT_INSTANT_CASHOUT",
+              "RECIPIENT_MANY_SENDERS",
+              "RECIPIENT_SHARED_DEVICE",
+              "RECIPIENT_TRANSIT_RATIO",
+              "NEW_RECIPIENT"
+            ],
+            "ml_uplift": 0,
+            "matches_expected": true
+          }
+        }
+      }
+    ],
+    "summaries": {
+      "full_hybrid": {
+        "intervention_at_40": {
+          "threshold": 40,
+          "sample_count": 10,
+          "positives": 4,
+          "negatives": 6,
+          "tp": 3,
+          "fp": 1,
+          "fn": 1,
+          "tn": 5,
+          "precision": 0.75,
+          "recall": 0.75,
+          "false_positive_rate": 0.16666666666666666,
+          "false_negative_rate": 0.25,
+          "alert_rate": 0.4,
+          "false_positive_rate_interval_95": [
+            0.030053369748306635,
+            0.5635028221864702
+          ]
+        },
+        "hard_block_at_75": {
+          "threshold": 75,
+          "sample_count": 10,
+          "positives": 4,
+          "negatives": 6,
+          "tp": 1,
+          "fp": 0,
+          "fn": 3,
+          "tn": 6,
+          "precision": 1.0,
+          "recall": 0.25,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 0.75,
+          "alert_rate": 0.1,
+          "false_positive_rate_interval_95": [
+            2.7755575615628914e-17,
+            0.3903342879021653
+          ]
+        },
+        "expected_policy_matches": 9
+      },
+      "without_ml": {
+        "intervention_at_40": {
+          "threshold": 40,
+          "sample_count": 10,
+          "positives": 4,
+          "negatives": 6,
+          "tp": 3,
+          "fp": 1,
+          "fn": 1,
+          "tn": 5,
+          "precision": 0.75,
+          "recall": 0.75,
+          "false_positive_rate": 0.16666666666666666,
+          "false_negative_rate": 0.25,
+          "alert_rate": 0.4,
+          "false_positive_rate_interval_95": [
+            0.030053369748306635,
+            0.5635028221864702
+          ]
+        },
+        "hard_block_at_75": {
+          "threshold": 75,
+          "sample_count": 10,
+          "positives": 4,
+          "negatives": 6,
+          "tp": 1,
+          "fp": 0,
+          "fn": 3,
+          "tn": 6,
+          "precision": 1.0,
+          "recall": 0.25,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 0.75,
+          "alert_rate": 0.1,
+          "false_positive_rate_interval_95": [
+            2.7755575615628914e-17,
+            0.3903342879021653
+          ]
+        },
+        "expected_policy_matches": 9
+      },
+      "without_browser_biometrics": {
+        "intervention_at_40": {
+          "threshold": 40,
+          "sample_count": 10,
+          "positives": 4,
+          "negatives": 6,
+          "tp": 3,
+          "fp": 1,
+          "fn": 1,
+          "tn": 5,
+          "precision": 0.75,
+          "recall": 0.75,
+          "false_positive_rate": 0.16666666666666666,
+          "false_negative_rate": 0.25,
+          "alert_rate": 0.4,
+          "false_positive_rate_interval_95": [
+            0.030053369748306635,
+            0.5635028221864702
+          ]
+        },
+        "hard_block_at_75": {
+          "threshold": 75,
+          "sample_count": 10,
+          "positives": 4,
+          "negatives": 6,
+          "tp": 1,
+          "fp": 0,
+          "fn": 3,
+          "tn": 6,
+          "precision": 1.0,
+          "recall": 0.25,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": 0.75,
+          "alert_rate": 0.1,
+          "false_positive_rate_interval_95": [
+            2.7755575615628914e-17,
+            0.3903342879021653
+          ]
+        },
+        "expected_policy_matches": 9
+      }
+    }
+  },
+  "decision_sensitivity_grid": {
+    "case_count": 192,
+    "has_ground_truth_labels": false,
+    "scope": "Fixed Cartesian grid of context flags; no settled recipient network",
+    "dimensions": {
+      "amount_ratio": [
+        1,
+        4,
+        12
+      ],
+      "binary": [
+        "call",
+        "new_recipient",
+        "paste",
+        "slow_cadence",
+        "night",
+        "new_device"
+      ]
+    },
+    "transitions_from_without_ml_to_hybrid": {
+      "approved->approved": 65,
+      "cooling_off->cooling_off": 118,
+      "approved->cooling_off": 9
+    },
+    "illustrative_approved_to_hold_examples": [
+      {
+        "amount_ratio": 1,
+        "active_call": true,
+        "new_recipient": false,
+        "pasted_recipient": false,
+        "slow_typing_and_pauses": true,
+        "night_hour": true,
+        "new_device": false,
+        "rules_graph_biometric_floor": 35,
+        "hybrid_score": 40,
+        "ml_score": 61.9759,
+        "ml_uplift": 5,
+        "reason_codes": [
+          "ACTIVE_CALL",
+          "NIGHT_HOURS",
+          "ML_RISK_UPLIFT"
+        ]
+      },
+      {
+        "amount_ratio": 4,
+        "active_call": false,
+        "new_recipient": true,
+        "pasted_recipient": false,
+        "slow_typing_and_pauses": false,
+        "night_hour": false,
+        "new_device": true,
+        "rules_graph_biometric_floor": 35,
+        "hybrid_score": 48,
+        "ml_score": 93.8506,
+        "ml_uplift": 13,
+        "reason_codes": [
+          "NEW_DEVICE",
+          "ML_RISK_UPLIFT",
+          "AMOUNT_SPIKE",
+          "NEW_RECIPIENT"
+        ]
+      },
+      {
+        "amount_ratio": 4,
+        "active_call": false,
+        "new_recipient": true,
+        "pasted_recipient": false,
+        "slow_typing_and_pauses": true,
+        "night_hour": false,
+        "new_device": true,
+        "rules_graph_biometric_floor": 35,
+        "hybrid_score": 46,
+        "ml_score": 83.4903,
+        "ml_uplift": 11,
+        "reason_codes": [
+          "NEW_DEVICE",
+          "ML_RISK_UPLIFT",
+          "AMOUNT_SPIKE",
+          "NEW_RECIPIENT"
+        ]
+      }
+    ],
+    "interpretation": "Decision changes demonstrate ML influence, NOT fraud recall improvement"
+  },
+  "limitations": [
+    "Synthetic metrics measure agreement with generator labels, not bank fraud detection.",
+    "The evaluation seed is independent; generator assumptions are shared with training.",
+    "Not a temporal, customer-disjoint or real-world holdout; no calibrated bank FPR.",
+    "ML-only cutoffs are fixed illustrations, not deployed transfer thresholds.",
+    "The selected engine panel is an acceptance suite, not a population accuracy estimate.",
+    "without_ml retains every production rule, including the pasted-during-call rule.",
+    "without_browser_biometrics removes observations; it is not model retraining.",
+    "A legitimate ambiguous case gets a hold; observable signals do not prove intent.",
+    "fakeredis isolates cases; latency is excluded and must be benchmarked separately."
+  ]
+}

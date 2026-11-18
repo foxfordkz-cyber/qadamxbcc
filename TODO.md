@@ -9,3 +9,10 @@
 - [x] **T07: Bilingual Frontend (`kk` / `ru`).** Build Next.js UI in `frontend/` with a global `ҚАЗ / РУС` switcher:
   - Tab 1: **BCC Mobile Transfer Simulator** (amount in ₸, recipient phone/card, context toggles: "Active Phone Call / Белсенді қоңырау", "From Deposit / Депозиттен", "New Device / Жаңа құрылғы", plus interactive Cooling-Off warning modal in KZ/RU).
   - Tab 2: **BCC SOC Officer Dashboard** (live risk feed, interactive React Flow drop-network graph, and bilingual Explainable AI risk breakdown card).
+
+- [x] **T08: Hybrid ML & Browser Biometrics.** Deterministic local model, tree-path contributions, real paste/cadence/hesitation signals, live synthetic traffic and light BCC visual system.
+- [x] **T09: Durable Decision Lifecycle.** Persist ML/context/evidence, idempotent request IDs, atomic graph aggregates, strict 15-minute hold, questionnaire persistence, cancellation and recovery from SOC/reload. Separate attempted velocity from settled funds.
+- [x] **T10: Reproducible Demo & Internal Pilot Profile.** Empty-database bootstrap, launch scripts, role service keys, protected operator interface, server trust boundary, dependency readiness, separate storage and disabled demo actions in pilot.
+- [x] **T11: Defense & Rehearsal Package.** Bilingual `/pitch` console, eight-slide editable decks, timer, three-minute demo, assumption-based pilot economics, jury answers, isolated rehearsal launcher and machine-readable end-to-end preflight.
+- [x] **T12: SOC Investigation Workspace.** Server-side history search and pagination, global distinct hub metric, stable case selection, authoritative lifecycle refresh, explicit live/historical evidence, bilingual timestamps and allowlisted JSON reports.
+- [ ] **Bank acceptance gates (external dependencies).** Customer/account authorization, authoritative device/deposit feeds, payment outbox adapter, real-data ML validation, SSO/MFA, immutable audit, HA/load testing and policy approval. See `docs/PILOT.md`; these require bank systems and sign-off, not synthetic demo credentials.

@@ -1,0 +1,50 @@
+{
+  "recorded_at": "2026-11-17T18:17:44.1998859Z",
+  "scope": "500 warmed synthetic scorer evaluations; real Redis; excludes HTTP and SQL; not a bank-load SLO",
+  "docker_vm": {
+    "shared_with_other_projects": true,
+    "memory_gib": 3.826,
+    "result": {
+      "redis": "real",
+      "samples": 500.0,
+      "ml_p95_ms": 0.45153250000000006,
+      "engine_p50_ms": 3.5601089999999997,
+      "engine_p95_ms": 15.8813446
+    },
+    "cpus": 2,
+    "exit_code": 1
+  },
+  "windows_host": {
+    "exit_code": 0,
+    "result": {
+      "redis": "real",
+      "samples": 500.0,
+      "ml_p95_ms": 0.24657,
+      "engine_p50_ms": 5.73595,
+      "engine_p95_ms": 9.588280000000001
+    }
+  },
+  "earlier_host_during_image_export": "Redis timeout; no valid latency summary",
+  "earlier_docker_video_scorer_observations_ms": [
+    54.135,
+    47.452,
+    41.821
+  ],
+  "final_video": {
+    "recorded_at": "2026-11-18T05:35:47.596Z",
+    "scorer_observations_ms": [
+      3.332,
+      9.068,
+      7.636
+    ],
+    "video_sha256": "abcc3d5d78804d2adc003948e27e621e5f630ce3aaa52d865bd82fbc48e384fa",
+    "runtime": "Native FastAPI and Next.js; real PostgreSQL16 and Redis7 in isolated Docker project"
+  },
+  "failed_docker_rerecord": {
+    "stored_scorer_ms": 4902.501,
+    "request_id": "a7d23e6a-e77d-4f76-aa91-63988542399d",
+    "observation": "Stored decision recovered by retrying the original UUID; no duplicate transfer",
+    "same_id_replay_status": "approved",
+    "http_status": 502
+  }
+}

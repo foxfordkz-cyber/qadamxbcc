@@ -1,12 +1,12 @@
 "use client";
 
-import { BrainCircuit, Check, Clock3, ShieldX } from "lucide-react";
+import { BrainCircuit, Check, Clock3, ShieldX, X } from "lucide-react";
 import type { Status } from "@/lib/contracts";
 import { useLocale } from "@/lib/i18n";
 
 export function Badge({ status }: { status: Status }) {
   const { t } = useLocale();
-  const Icon = status === "approved" ? Check : status === "blocked" ? ShieldX : Clock3;
+  const Icon = status === "approved" ? Check : status === "blocked" ? ShieldX : status === "cancelled" ? X : Clock3;
   return <span className={`badge ${status}`}><Icon size={13} aria-hidden />{t(status)}</span>;
 }
 export function Gauge({ score, compact = false }: { score: number; compact?: boolean }) {

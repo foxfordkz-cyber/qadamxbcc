@@ -1,0 +1,309 @@
+/* Browser integration QA. Every /api/v1 request is intercepted; no real transfers are created. */
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core');
+const target = process.argv[2];
+assert.ok(target && ['127.0.0.1', 'localhost'].includes(new URL(target).hostname), 'Pass an explicit localhost preview URL');
+const output = path.resolve(process.env.QA_OUTPUT || path.join(__dirname, '../../.local-checks', `mobile-soc-${Date.now()}`));
+const uuid = n => `20000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
+const questions = ['caller_claims_bank_or_police', 'asked_to_move_to_safe_account', 'asked_to_keep_secret_or_install_app', 'initiated_by_customer', 'knows_recipient_personally'];
+const clean = [false, false, false, true, true];
+const records = new Map();
+let expectedPreset = 'normal'; let nextId = 1; let resolveFailure = false; let detailFailure = false;
+const report = { target, started_at: new Date().toISOString(), mocked_api: true, checks: [], errors: [], requests: [], mutations: [], screenshots: [] };
+const check = (name, value, detail) => { report.checks.push({ name, passed: Boolean(value), ...(detail === undefined ? {} : { detail }) }); assert.ok(value, name); };
+const timestamp = () => new Date().toISOString();
+const party = (id, full_name) => ({ id, full_name, iban: `KZ11${'0'.repeat(12)}${id.slice(-4)}` });
+function create(input) {
+  const status = expectedPreset === 'hub' ? 'blocked' : input.context.active_call ? 'cooling_off' : 'approved';
+  const id = input.request_id || uuid(nextId++);
+  if (records.has(id)) return records.get(id);
+  const recipient = party(uuid(100 + nextId++), status === 'blocked' ? 'QA Drop Hub' : 'QA Получатель');
+  const reason = { code: status === 'blocked' ? 'DROP_HUB_FAN_IN' : 'ACTIVE_CALL', layer: status === 'blocked' ? 'graph' : 'behavioral', score_delta: 20, reason_kk: 'QA: тәуекел белгісі', reason_ru: 'QA: сигнал риска' };
+  const item = {
+    transaction_id: id, created_at: timestamp(), updated_at: timestamp(), status,
+    risk_score: status === 'blocked' ? 90 : status === 'cooling_off' ? 65 : 10,
+    amount: input.amount, currency: 'KZT', latency_ms: 2.1,
+    sender: party(input.sender_id, 'QA Жіберуші'), recipient,
+    active_call: input.context.active_call, from_deposit: input.context.from_deposit,
+    is_new_device: input.context.is_new_device, is_new_recipient: true,
+    cooling_until: status === 'cooling_off' ? new Date(Date.now() + 900000).toISOString() : null,
+    resolved_at: null, reasons: status === 'approved' ? [] : [reason], context: input.context,
+    verification_answers: null, ml_score: 71, ml_base_score: 40,
+    ml_model_version: 'qa-synthetic-v2', ml_explanation_method: 'tree_path_probability',
+    ml_contributors: [{ feature: 'amount_ratio', value: 4, contribution: 31, label_kk: 'Сома қатынасы', label_ru: 'Отношение суммы' }],
+    layer_latency_ms: { behavioral: 0.2, graph: 0.1, velocity: 0.2, ml: 0.2 },
+  };
+  records.set(id, item); return item;
+}
+const evaluation = item => ({ ...item, headline_kk: 'QA: бағалау нәтижесі', headline_ru: 'QA: результат оценки', reasons_kk: item.reasons.map(r => r.reason_kk), reasons_ru: item.reasons.map(r => r.reason_ru), cooling_off_until: item.cooling_until, recipient: { id: item.recipient.id, display_name: item.recipient.full_name, iban_masked: '•••• 4821' }, server_time: timestamp() });
+function graphFor(center, depth) {
+  const node = (id, role, x, y) => ({ id, type: 'account', position: { x, y }, data: { label: role === 'hub' ? 'QA Drop Hub' : role === 'mule' ? 'QA Shared Device' : 'QA Account', role, depth: role === 'hub' ? 0 : 1, device_id: 'qa-device', flagged: role === 'hub', suspected_mule: role === 'mule', in_degree: role === 'hub' ? 12 : 1, out_degree: 1, in_weight: 900000, out_weight: 850000, transit_ratio: 0.94, shared_device_accounts: role === 'mule' ? 2 : 0 } });
+  const nodes = [node(center, 'hub', 300, 100), node(uuid(501), 'normal', 0, 0), node(uuid(502), 'normal', 0, 230), node(uuid(503), 'mule', 580, 100)];
+  if (depth > 1) nodes.push(...[node(uuid(504), 'normal', -280, 0), node(uuid(505), 'normal', -280, 230)].map(n => ({ ...n, data: { ...n.data, depth: 2 } })));
+  const edges = nodes.slice(1).map((n, i) => ({ id: `qa-edge-${i}`, source: n.id, target: i > 2 ? uuid(501 + i - 3) : center, type: 'default', animated: true, label: null, data: { edge_type: i === 2 ? 'shared_device' : 'transfer', weight: 300000, tx_count: 3, highlight: true } }));
+  return { center, depth, nodes, edges };
+}
+async function main() {
+  await fs.mkdir(output, { recursive: true });
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE, headless: true });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'ru-KZ', reducedMotion: 'reduce', serviceWorkers: 'block' });
+  await context.addInitScript(() => { if (!localStorage.getItem('bcc-shield.locale')) localStorage.setItem('bcc-shield.locale', 'ru'); });
+  // A second boundary blocks any future mutation outside the mocked API surface.
+  await context.route('**/*', route => ['GET', 'HEAD', 'OPTIONS'].includes(route.request().method()) ? route.continue() : route.abort('blockedbyclient'));
+  await context.route('**/api/v1/**', async route => {
+    const request = route.request(); const url = new URL(request.url()); const method = request.method();
+    report.requests.push({ method, path: url.pathname, search: url.search });
+    if (method === 'POST') report.mutations.push({ path: url.pathname, intercepted: true });
+    if (url.pathname.endsWith('/transfers/evaluate') && method === 'POST') return route.fulfill({ json: evaluation(create(request.postDataJSON())) });
+    const action = url.pathname.match(/\/transfers\/([0-9a-f-]+)\/(resolve-cooling|cancel)$/i);
+    if (action && method === 'POST') {
+      if (resolveFailure) return route.fulfill({ status: 503, json: { error: 'apiError' } });
+      const item = records.get(action[1]); if (!item) return route.fulfill({ status: 404, json: { error: 'notFound' } });
+      if (item.status === 'cooling_off') {
+        if (action[2] === 'cancel') item.status = 'cancelled';
+        else {
+          const answers = request.postDataJSON().answers; item.verification_answers = answers;
+          if (questions.some((key, i) => answers[key] !== clean[i])) item.status = 'blocked';
+          else if (Date.now() >= Date.parse(item.cooling_until)) item.status = 'approved';
+        }
+        item.updated_at = timestamp();
+        if (item.status !== 'cooling_off') { item.resolved_at = timestamp(); item.cooling_until = null; }
+      }
+      return route.fulfill({ json: evaluation(item) });
+    }
+    if (url.pathname.endsWith('/soc/feed') && method === 'GET') {
+      const items = [...records.values()].reverse(); const filter = url.searchParams.get('status'); const query = (url.searchParams.get('q') || '').toLowerCase();
+      const filtered = items.filter(item => (!filter || item.status === filter) && (!query || `${item.sender.full_name} ${item.recipient.full_name} ${item.transaction_id}`.toLowerCase().includes(query)));
+      const offset = Number(url.searchParams.get('offset') || 0); const limit = Number(url.searchParams.get('limit') || 25);
+      const count = status => items.filter(item => item.status === status).length;
+      return route.fulfill({ json: { server_time: timestamp(), items: filtered.slice(offset, offset + limit), pagination: { total_filtered: filtered.length, offset, limit, has_more: offset + limit < filtered.length }, stats: { total: items.length, approved: count('approved'), cooling_off: count('cooling_off'), blocked: count('blocked'), cancelled: count('cancelled'), blocked_hubs: count('blocked'), avg_latency_ms: 2.1, max_latency_ms: 2.1, p95_latency_ms: items.length ? 2.1 : null, latency_sample_size: items.length, latency_sample_limit: 500 } } });
+    }
+    if (url.pathname.includes('/soc/graph/') && method === 'GET') return route.fulfill({ json: graphFor(url.pathname.split('/').at(-1), Number(url.searchParams.get('depth') || 2)) });
+    const detail = url.pathname.match(/\/transfers\/([0-9a-f-]+)$/i);
+    if (detail && method === 'GET') {
+      if (detailFailure) return route.fulfill({ status: 503, json: { error: 'apiError' } });
+      const item = records.get(detail[1]); return route.fulfill(item ? { json: evaluation(item) } : { status: 404, json: { error: 'notFound' } });
+    }
+    return route.fulfill({ status: 404, json: { error: 'notFound' } });
+  });
+  const page = await context.newPage(); page.setDefaultTimeout(15000);
+  page.on('pageerror', error => report.errors.push(error.message));
+  const dialog = page.locator('dialog.mobile-cooling');
+  const language = async (lang, inModal = false) => (inModal ? dialog : page.locator('.topbar')).getByRole('button', { name: lang === 'kk' ? 'ҚАЗ' : 'РУС', exact: true }).click();
+  const preset = async kind => { expectedPreset = kind; await page.locator('.preset').nth(['normal', 'scam', 'hub'].indexOf(kind)).click(); };
+  const screenshot = async name => { const file = path.join(output, `${name}.png`); await page.screenshot({ path: file, fullPage: true }); report.screenshots.push(file); };
+  const answer = async (index, value) => { await dialog.locator(`input[name="${questions[index]}"]`).nth(value ? 0 : 1).check(); await dialog.locator('.cooling-next').click(); };
+  const close = () => dialog.locator('.sheet-close').click();
+  const reopen = async () => { await page.locator('.telemetry-panel .review-button').click(); await dialog.waitFor(); };
+  const settle = () => page.waitForTimeout(250);
+  const overflow = () => page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+  const graphGeometry = (expectedCount = 4) => page.locator('.graph-canvas').evaluate((element, expected) => {
+    const canvas = element.getBoundingClientRect(); const viewport = element.querySelector('.react-flow__viewport');
+    const nodes = [...element.querySelectorAll('.react-flow__node')].map(node => { const box = node.getBoundingClientRect(); return { left: box.left - canvas.left, top: box.top - canvas.top, width: box.width, height: box.height }; });
+    return { width: canvas.width, height: canvas.height, scale: new DOMMatrix(getComputedStyle(viewport).transform).a, fitted: nodes.length === expected && nodes.every(box => box.left >= -1 && box.left + box.width <= canvas.width + 1 && box.top >= -1 && box.top + box.height <= canvas.height + 1), nodes };
+  }, expectedCount);
+  try {
+    await page.goto(target, { waitUntil: 'domcontentloaded' }); await language('ru');
+    await preset('normal'); await page.locator('.phone-receipt .badge.approved').waitFor();
+    const normalId = await page.locator('.phone-receipt').getAttribute('data-transaction-id');
+    check('normal_preset_approved_receipt_inside_phone', await page.locator('.phone-frame .phone-receipt').isVisible() && records.get(normalId)?.status === 'approved');
+    await page.evaluate(() => { window.__qaNoReload = 'retained'; }); await language('kk');
+    check('receipt_language_switch_keeps_transaction_without_reload', await page.locator('.phone-receipt').getAttribute('data-transaction-id') === normalId && await page.evaluate(() => window.__qaNoReload) === 'retained');
+    check('receipt_kazakh_status', (await page.locator('.phone-receipt').innerText()).includes('Мақұлданды'));
+    await language('ru');
+    await page.locator('.receipt-new').click();
+    await page.locator('#recipient').fill('');
+    await page.locator('#recipient').evaluate(element => { const clipboard = new DataTransfer(); clipboard.setData('text/plain', 'QA_CLIPBOARD_CONTENT_NOT_FOR_API'); element.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData: clipboard })); });
+    await page.locator('#recipient').fill('+77010000002');
+    await page.locator('#recipient').pressSequentially('0', { delay: 80 });
+    await page.waitForTimeout(1600); await page.locator('#recipient').press('Backspace');
+    check('browser_paste_and_typing_sensor_live', await page.locator('.biometric-sensor.paste-detected').count() === 1 && (await page.locator('.sensor-readings').innerText()).includes('Обнаружена вставка'));
+    await page.locator('#transfer-amount').fill('5000');
+    await page.locator('.phone-form .transfer-cta').click();
+    await page.locator('.phone-receipt').waitFor();
+    const biometric = records.get(await page.locator('.phone-receipt').getAttribute('data-transaction-id')).context;
+    check('browser_biometrics_reach_evaluation', biometric.pasted_recipient === true && biometric.typing_duration_ms >= 1500 && biometric.hesitation_count >= 2, biometric);
+    check('clipboard_contents_not_sent_as_biometrics', !JSON.stringify(biometric).includes('QA_CLIPBOARD_CONTENT_NOT_FOR_API'));
+    await preset('scam'); await dialog.waitFor();
+    const heldId = [...records.keys()].at(-1);
+    check('scam_starts_15_minute_hold_intro', await dialog.getAttribute('data-step') === 'intro' && /^1[45]:/.test(await dialog.locator('.cooling-clock strong').innerText()));
+    check('safe_account_warning_matches_context_ru', (await dialog.locator('.ai-warning').innerText()).includes('безопасный счёт'));
+    await language('kk', true);
+    check('safe_account_warning_matches_context_kk', (await dialog.locator('.ai-warning').innerText()).includes('Қауіпсіз') || (await dialog.locator('.ai-warning').innerText()).includes('қауіпсіз'));
+    await dialog.locator('.cooling-start').click();
+    check('missing_answer_disables_next', await dialog.locator('.cooling-next').isDisabled());
+    check('question_heading_receives_keyboard_focus', await page.evaluate(() => document.activeElement?.id) === 'cooling-title');
+    await dialog.locator(`input[name="${questions[0]}"]`).nth(1).check(); await language('ru', true);
+    check('language_keeps_answer_and_question', await dialog.locator(`input[name="${questions[0]}"]`).nth(1).isChecked() && await dialog.getAttribute('data-step') === 'question');
+    await dialog.locator('.cooling-next').click(); await close();
+    check('closing_modal_does_not_mutate_held_transfer', records.get(heldId).status === 'cooling_off' && !records.get(heldId).verification_answers);
+    await reopen();
+    check('reopening_keeps_in_memory_answer_progress', await dialog.locator(`input[name="${questions[1]}"]`).count() === 2);
+    for (let i = 1; i < questions.length; i++) await answer(i, clean[i]);
+    check('review_lists_all_five_answers', await dialog.locator('.cooling-review-list li').count() === 5);
+    await dialog.locator('.cooling-edit').nth(2).click();
+    check('edit_returns_to_chosen_question', await dialog.locator(`input[name="${questions[2]}"]`).nth(1).isChecked());
+    await dialog.locator('.cooling-next').click();
+    const mutationsBeforeSave = report.mutations.length;
+    const savedResponse = page.waitForResponse(response => response.url().endsWith(`/transfers/${heldId}/resolve-cooling`) && response.request().method() === 'POST');
+    await dialog.locator('.cooling-submit').click();
+    await savedResponse;
+    await page.waitForFunction(() => document.querySelector('.cooling-submit')?.disabled === true);
+    check('clean_answers_saved_without_early_release', records.get(heldId).status === 'cooling_off' && questions.every((q, i) => records.get(heldId).verification_answers[q] === clean[i]) && report.mutations.length === mutationsBeforeSave + 1);
+    await screenshot('cooling-review-ru');
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    if (!await dialog.isVisible()) await page.locator('.recovery-list li').filter({ hasText: heldId.slice(-8) }).getByRole('button', { name: 'Открыть перевод' }).click();
+    await dialog.waitFor();
+    check('reload_restores_server_saved_answers', await dialog.getAttribute('data-step') === 'review' && await dialog.locator('.cooling-review-list li').count() === 5 && await dialog.locator('.cooling-submit').isDisabled());
+    const beforeExpiry = report.mutations.length; records.get(heldId).cooling_until = new Date(Date.now() - 1000).toISOString();
+    await close(); await reopen();
+    await page.waitForFunction(() => document.querySelector('.cooling-clock strong')?.textContent === '00:00');
+    check('expired_countdown_never_auto_releases', report.mutations.length === beforeExpiry && records.get(heldId).status === 'cooling_off');
+    check('expired_hold_requires_explicit_confirmation', await dialog.locator('.cooling-submit').isEnabled() && (await dialog.locator('.cooling-submit').innerText()).includes('Подтвердить перевод'));
+    await dialog.locator('.cooling-submit').click(); await dialog.waitFor({ state: 'hidden' });
+    check('explicit_confirmation_after_mock_deadline_approves', records.get(heldId).status === 'approved');
+    await preset('scam'); await dialog.waitFor(); const riskyId = [...records.keys()].at(-1);
+    check('new_transfer_does_not_reuse_questionnaire_draft', await dialog.getAttribute('data-step') === 'intro');
+    await dialog.locator('.cooling-start').click();
+    for (let i = 0; i < questions.length; i++) await answer(i, i === 0 ? true : clean[i]);
+    resolveFailure = true; detailFailure = true;
+    await dialog.locator('.cooling-submit').click(); await dialog.locator('[role="alert"]').waitFor();
+    check('failed_submission_keeps_answers_and_hold', records.get(riskyId).status === 'cooling_off' && await dialog.locator('.cooling-review-list li').count() === 5 && await dialog.locator('.cooling-submit').isEnabled());
+    resolveFailure = false; detailFailure = false;
+    await dialog.locator('.cooling-submit').click(); await dialog.waitFor({ state: 'hidden' });
+    check('red_flag_blocks_after_retry', records.get(riskyId).status === 'blocked');
+    await preset('scam'); await dialog.waitFor(); const cancelId = [...records.keys()].at(-1);
+    await dialog.locator('.danger-button').click(); await dialog.waitFor({ state: 'hidden' });
+    check('explicit_cancel_terminal_receipt', records.get(cancelId).status === 'cancelled' && await page.locator('.phone-receipt .badge.cancelled').isVisible());
+    await preset('scam'); await dialog.waitFor(); const holdA = [...records.keys()].at(-1);
+    await dialog.locator('.cooling-start').click();
+    for (let i = 0; i < questions.length; i++) await answer(i, clean[i]);
+    const savedA = page.waitForResponse(response => response.url().endsWith(`/transfers/${holdA}/resolve-cooling`));
+    await dialog.locator('.cooling-submit').click(); await savedA;
+    await page.waitForFunction(() => document.querySelector('.cooling-submit')?.disabled === true);
+    await close(); await preset('scam'); await dialog.waitFor(); const holdB = [...records.keys()].at(-1); await close();
+    await page.locator('.recovery-list li').filter({ hasText: holdA.slice(-8) }).getByRole('button', { name: 'Открыть перевод' }).click(); await dialog.waitFor();
+    // Wait for the actual recovery interval, so the last attempt B is read while A is selected.
+    await page.waitForResponse(response => response.url().endsWith(`/transfers/${holdB}`), { timeout: 20000 }); await settle();
+    check('background_recovery_of_B_does_not_replace_open_A', await page.locator('.phone-receipt').getAttribute('data-transaction-id') === holdA && await dialog.isVisible());
+    // Adversarial answer snapshots test UI provenance, not backend fraud policy.
+    records.get(holdA).verification_answers = { ...records.get(holdA).verification_answers, [questions[0]]: true };
+    await close(); await reopen();
+    check('fresh_server_answers_replace_old_saved_snapshot', await dialog.locator('.cooling-review-list li strong').first().innerText() === 'Да');
+    await dialog.locator('.cooling-edit').nth(1).click(); await answer(1, true);
+    records.get(holdA).verification_answers = Object.fromEntries(questions.map((q, i) => [q, clean[i]]));
+    await close(); await reopen();
+    check('actual_unsent_edits_survive_server_refresh', await dialog.locator('.cooling-review-list li strong').nth(1).innerText() === 'Да');
+    await dialog.locator('.danger-button').click(); await dialog.waitFor({ state: 'hidden' });
+    await preset('hub'); await page.locator('#tab-soc[aria-selected="true"]').waitFor();
+    const hubId = [...records.keys()].at(-1);
+    await page.locator(`.case-panel[data-transaction-id="${hubId}"] .investigation-id code`).waitFor();
+    await page.locator('.react-flow__node').first().waitFor();
+    check('hub_preset_shows_blocked_case_and_graph', records.get(hubId).status === 'blocked' && await page.locator('.react-flow__node').count() === 4);
+    check('graph_defaults_to_explicit_direct_neighbor_depth', report.requests.some(request => request.path.endsWith(`/soc/graph/${records.get(hubId).recipient.id}`) && new URLSearchParams(request.search).get('depth') === '1'));
+    check('direct_graph_control_and_counts_visible', await page.locator('.graph-depth-controls button').first().getAttribute('aria-pressed') === 'true' && /4\s*\/\s*3/.test(await page.getByText('Показано счетов / связей', { exact: false }).innerText()));
+    await page.locator('.soc-stage-toggle').click();
+    check('stage_mode_enters_and_hides_feed', await page.locator('.soc-dashboard.is-stage').count() === 1 && !await page.locator('.feed-panel').isVisible());
+    await settle(); const initialStageGraph = await graphGeometry();
+    check('initial_stage_graph_fits_without_window_resize', initialStageGraph.fitted && initialStageGraph.scale > 0.4, initialStageGraph);
+    await page.locator('.graph-controls button').first().click(); await settle();
+    const draggable = page.locator(`.react-flow__node[data-id="${uuid(501)}"]`);
+    await draggable.scrollIntoViewIfNeeded(); const beforeDrag = await draggable.evaluate(element => element.style.transform);
+    const dragBox = await draggable.boundingBox();
+    await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2); await page.mouse.down();
+    await page.mouse.move(dragBox.x + dragBox.width / 2 + 35, dragBox.y + dragBox.height / 2 + 25, { steps: 6 }); await page.mouse.up(); await settle();
+    const draggedStyle = await draggable.evaluate(element => element.style.transform);
+    check('graph_node_is_draggable', draggedStyle !== beforeDrag);
+    await page.locator('.graph-canvas').scrollIntoViewIfNeeded();
+    const panBox = await page.locator('.graph-canvas').boundingBox();
+    const beforePan = await page.locator('.react-flow__viewport').getAttribute('style');
+    const panX = panBox.x + panBox.width - 45; const panY = panBox.y + panBox.height - 95;
+    await page.mouse.move(panX, panY); await page.mouse.down();
+    await page.mouse.move(panX - 35, panY + 20, { steps: 6 }); await page.mouse.up(); await settle();
+    check('graph_canvas_is_pannable', await page.locator('.react-flow__viewport').getAttribute('style') !== beforePan);
+    const centerId = records.get(hubId).recipient.id;
+    await page.locator(`.react-flow__node[data-id="${centerId}"]`).click(); await settle();
+    check('graph_center_selection_opens_node_details', await page.locator('.node-detail strong').innerText() === 'QA Drop Hub');
+    const retainedViewport = await page.locator('.react-flow__viewport').getAttribute('style');
+    const polledGraph = page.waitForResponse(response => response.url().includes('/soc/graph/'), { timeout: 10000 });
+    await language('kk'); await polledGraph; await settle();
+    check('graph_zoom_pan_and_drag_survive_language_and_poll', await draggable.evaluate(element => element.style.transform) === draggedStyle && await page.locator('.react-flow__viewport').getAttribute('style') === retainedViewport);
+    check('graph_center_selection_survives_language_and_poll', await page.locator('.node-detail strong').innerText() === 'QA Drop Hub' && await page.locator(`.react-flow__node.selected[data-id="${centerId}"]`).count() === 1 && await page.locator(`.case-panel[data-transaction-id="${hubId}"]`).isVisible());
+    await language('ru');
+    const expandedResponse = page.waitForResponse(response => response.url().includes(`/soc/graph/${centerId}`) && new URL(response.url()).searchParams.get('depth') === '2');
+    await page.locator('.graph-depth-controls button').nth(1).click(); await expandedResponse;
+    await page.waitForFunction(() => document.querySelectorAll('.react-flow__node').length === 6); await settle();
+    check('expanded_graph_requests_depth_two_and_preserves_case', await page.locator('.graph-depth-controls button').nth(1).getAttribute('aria-pressed') === 'true' && await page.locator(`.case-panel[data-transaction-id="${hubId}"]`).isVisible());
+    check('expanded_graph_shows_all_returned_nodes_and_edges', await page.locator('.react-flow__edge').count() === 5 && /6\s*\/\s*5/.test(await page.getByText('Показано счетов / связей', { exact: false }).innerText()));
+    const expandedGeometry = await graphGeometry(6);
+    check('depth_change_purposefully_refits_graph', expandedGeometry.fitted, expandedGeometry);
+    await language('kk');
+    check('graph_depth_controls_translate_and_keep_depth', await page.locator('.graph-depth-controls button').nth(1).innerText() === 'Кеңейтілген желі' && await page.locator('.graph-depth-controls button').nth(1).getAttribute('aria-pressed') === 'true' && /6\s*\/\s*5/.test(await page.getByText('Көрсетілген шоттар / байланыстар', { exact: false }).innerText()));
+    const directResponse = page.waitForResponse(response => response.url().includes(`/soc/graph/${centerId}`) && new URL(response.url()).searchParams.get('depth') === '1');
+    await page.locator('.graph-depth-controls button').first().click(); await directResponse;
+    await page.waitForFunction(() => document.querySelectorAll('.react-flow__node').length === 4); await settle();
+    const directGeometry = await graphGeometry();
+    check('collapse_returns_to_direct_neighbors_and_refits', directGeometry.fitted && await page.locator('.graph-depth-controls button').first().getAttribute('aria-pressed') === 'true' && await page.locator(`.case-panel[data-transaction-id="${hubId}"]`).isVisible(), directGeometry);
+    await language('ru');
+    check('stage_keeps_traffic_control_and_case', await page.locator('.traffic-button').isVisible() && await page.locator(`.case-panel[data-transaction-id="${hubId}"]`).isVisible());
+    expectedPreset = 'normal';
+    const streamed = page.waitForResponse(response => response.url().endsWith('/transfers/evaluate') && response.request().method() === 'POST');
+    await page.locator('.traffic-button').click(); await streamed;
+    check('stage_stream_starts_through_evaluation_API', await page.locator('.traffic-button').getAttribute('aria-pressed') === 'true');
+    await page.locator('.traffic-button').click();
+    const stoppedCount = report.mutations.filter(item => item.path.endsWith('/evaluate')).length;
+    await page.waitForTimeout(2800);
+    check('stage_stream_stop_prevents_new_dispatches', report.mutations.filter(item => item.path.endsWith('/evaluate')).length === stoppedCount && await page.locator('.traffic-button').getAttribute('aria-pressed') === 'false');
+    check('p95_is_measurement_with_scope', /2[,.]10/.test(await page.locator('.stat.scorer-latency strong').innerText()) && (await page.locator('#soc-latency-scope').innerText()).includes('Без HTTP и SQL'));
+    await language('kk');
+    check('stage_and_selection_survive_language_change', await page.locator('.soc-dashboard.is-stage').count() === 1 && await page.locator(`.case-panel[data-transaction-id="${hubId}"]`).isVisible());
+    await page.locator('.soc-stage-feed-toggle').click();
+    check('stage_feed_toggle_accessible', await page.locator('.feed-panel').isVisible());
+    await page.locator('#soc-search').focus(); await page.keyboard.press('Escape');
+    check('escape_in_editable_does_not_exit_stage', await page.locator('.soc-dashboard.is-stage').count() === 1);
+    await page.locator('.soc-stage-toggle').focus(); await page.keyboard.press('Escape');
+    check('escape_outside_editable_exits_stage', await page.locator('.soc-dashboard.is-stage').count() === 0);
+    await page.locator('.soc-stage-toggle').click(); await settle();
+    const restoredStageGraph = await graphGeometry();
+    check('stage_reentry_graph_fits_without_window_resize', restoredStageGraph.fitted && restoredStageGraph.scale > 0.4, restoredStageGraph);
+    await screenshot('soc-stage-kk');
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 }); await settle();
+      const sizes = await overflow(); check(`stage_no_document_overflow_${width}`, sizes.document <= width + 1 && sizes.body <= width + 1, sizes);
+      check(`stage_graph_has_width_${width}`, (await page.locator('.graph-canvas').boundingBox()).width > 200);
+      const fitted = await page.locator('.graph-canvas').evaluate(element => { const canvas = element.getBoundingClientRect(); return [...element.querySelectorAll('.react-flow__node')].every(node => { const box = node.getBoundingClientRect(); return box.left >= canvas.left - 1 && box.right <= canvas.right + 1 && box.top >= canvas.top - 1 && box.bottom <= canvas.bottom + 1; }); });
+      check(`resize_observer_refits_graph_${width}`, fitted);
+      if (width === 320) await screenshot('soc-stage-320-kk');
+    }
+    await screenshot('soc-stage-resized-desktop-kk');
+    await page.locator('#tab-mobile').click(); await page.locator('.receipt-new').click();
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 }); await settle(); const sizes = await overflow();
+      check(`mobile_no_document_overflow_${width}`, sizes.document <= width + 1 && sizes.body <= width + 1, sizes);
+      check(`phone_form_visible_${width}`, await page.locator('.phone-frame #recipient').isVisible() && await page.locator('#transfer-amount').isVisible());
+      if (width === 320) await screenshot('phone-form-320-kk');
+    }
+    await preset('scam'); await dialog.waitFor();
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 720 }); await settle();
+      const box = await dialog.boundingBox(); check(`cooling_sheet_fits_${width}`, box.x >= -1 && box.x + box.width <= width + 1 && box.y >= -1 && box.height <= 721, box);
+      if (width === 320) { const file = path.join(output, 'cooling-intro-320-kk.png'); await page.screenshot({ path: file }); report.screenshots.push(file); }
+    }
+    const missingDeadlineId = [...records.keys()].at(-1); records.get(missingDeadlineId).cooling_until = null;
+    const beforeMissing = report.mutations.length; await close(); await reopen();
+    check('missing_deadline_does_not_look_expired', (await dialog.locator('.cooling-clock strong').innerText()) === '—' && (await dialog.locator('.cooling-time-note').innerText()).includes('Кідіріс уақыты расталмады') && report.mutations.length === beforeMissing);
+    check('reduced_motion_preference_active', await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches));
+    check('reduced_motion_disables_sheet_animation', await dialog.locator('.cooling-step-content').evaluate(element => getComputedStyle(element).animationName) === 'none');
+    check('all_mutations_intercepted', report.mutations.length > 0 && report.mutations.every(m => m.intercepted));
+    check('no_browser_runtime_errors', report.errors.length === 0, report.errors);
+    report.success = true;
+  } catch (error) {
+    report.success = false; report.failure = String(error.stack || error); await screenshot('failure').catch(() => {}); throw error;
+  } finally {
+    report.finished_at = timestamp(); await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2));
+    await browser.close(); console.log(JSON.stringify({ output, success: report.success, checks: report.checks.length, errors: report.errors }));
+  }
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });

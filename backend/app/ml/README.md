@@ -9,20 +9,33 @@ records are used. Holdout performance measures the simulator, not real fraud
 detection accuracy; scores need calibration and validation on representative bank
 data before production deployment.
 
+Version `bcc-synthetic-rf-v2` adds benign cumulative-transit overlap: ordinary
+reciprocal spending and legitimate collection payouts can have high outgoing /
+incoming ratios. This fixes an observed normal-preset raw-model false positive;
+the serving feature is cumulative and is not itself proof of rapid cash-out.
+The mixture proportions are simulation assumptions. Policy thresholds and forest
+architecture remain unchanged. See [evaluation evidence](../../../docs/MODEL_EVALUATION.md)
+for the preserved baseline, same-sample comparisons, retained miss and tradeoffs.
+
 From `backend/`:
 
 ```sh
 uv run python -m scripts.train_fraud_model
 uv run python -m scripts.benchmark_antifraud
 uv run python -m scripts.benchmark_antifraud --redis-url redis://localhost:6379/0
+uv run python -m scripts.evaluate_fraud_model --output ../.local-checks/model-evaluation.json
 ```
 
-Docker trains `app/ml/fraud_model.joblib` at build time. Engine construction trains
-it if absent and caches it per process before accepting requests. Artifacts are
-written atomically and regenerated for changed feature/model/sklearn versions.
+Docker trains `app/ml/fraud_model.joblib` at build time. Local/demo engine construction
+trains it if absent and caches it per process before accepting requests. Artifacts are
+written atomically; local/demo mode regenerates changed feature/model/sklearn versions.
+Pilot startup requires an existing compatible artifact and never retrains a replacement.
 The generated binary is ignored by Git. Only load artifacts generated locally
 from trusted source; joblib uses pickle. Corrupt artifacts fail startup rather
 than silently serving a different scoring policy.
+Finite values, valid classes/probabilities, feature counts and bounded acyclic tree
+topology are validated before serving. The readiness probe also checks finite scores
+and contributor values.
 
 The serving representation copies fitted tree arrays once. Each request follows
 the trees and averages their leaf probabilities, matching sklearn `predict_proba`
@@ -39,8 +52,8 @@ final = min(policy_cap, original_rule_score + uplift)
 
 Existing rule decisions are floors. Behavioral-only evidence remains capped at
 74. ML cannot newly block a transfer without recipient mule corroboration
-(cash-out, transit, shared devices, or a SOC flag). A collection or sender
-pass-through signal alone cannot justify an ML-induced block. An applied uplift
+(cash-out, transit, or a SOC flag). Shared devices alone never corroborate a mule.
+A collection or sender pass-through signal alone cannot justify an ML-induced block. An applied uplift
 adds the bilingual `ML_RISK_UPLIFT` reason, persisted in the existing risk events.
 
 `POST /api/v1/transfers/evaluate` accepts these additional context fields:

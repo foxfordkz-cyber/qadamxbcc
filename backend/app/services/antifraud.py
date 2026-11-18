@@ -23,8 +23,9 @@ before production use; they are not calibrated estimates of banking fraud rates.
 """
 
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Final
 from zoneinfo import ZoneInfo
 
@@ -98,10 +99,13 @@ MULE_CORROBORATION: Final = frozenset(
     {
         "RECIPIENT_INSTANT_CASHOUT",
         "RECIPIENT_TRANSIT_RATIO",
-        "RECIPIENT_SHARED_DEVICE",
         "RECIPIENT_FLAGGED",
     }
 )
+# Attempts and shared family devices can justify a pause, never a hard block.
+# Sender pass-through is grounded in settled incoming money; ML still requires
+# recipient-side movement or a reviewed flag before lifting a score into BLOCKED.
+HARD_BLOCK_EVIDENCE: Final = MULE_CORROBORATION | {"SENDER_PASS_THROUGH"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,16 +204,67 @@ class AntifraudEngine:
         *,
         timezone: str = "Asia/Almaty",
         cooling_off_minutes: int = 15,
+        allow_demo_overrides: bool = True,
+        allow_model_training: bool = True,
     ) -> None:
         self.graph = graph
         self.velocity = VelocityCounters(redis)
         self._tz = ZoneInfo(timezone)
         self.cooling_off_minutes = cooling_off_minutes
-        self.model = get_model()  # train/load once, outside the request latency budget
+        self.allow_demo_overrides = allow_demo_overrides
+        self._pending_settlements: dict[str, TransferContext] = {}
+        self.synchronizer: Callable[[], Awaitable[None]] | None = None
+        # Pilot startup validates the prebuilt artifact; it never silently trains
+        # a replacement model. Demo mode retains deterministic auto-training.
+        self.model = get_model() if allow_model_training else get_model(allow_training=False)
 
     # ------------------------------------------------------------------ public
-    async def evaluate(self, ctx: TransferContext) -> Evaluation:
+    async def ensure_consistent(self) -> None:
+        """Drain the durable projection queue before serving a new transfer operation."""
+        if self.synchronizer is not None:
+            await self.synchronizer()
+        else:
+            await self.flush_settlements()
+
+    def trusted_context(self, ctx: TransferContext, *, known_device_id: str) -> TransferContext:
+        """Derive authoritative time/relationship flags outside the demo environment.
+
+        Device identifiers still require a trusted upstream banking session in a real
+        deployment. A service API key does not authenticate the customer or their device.
+        Browser biometrics remain advisory inputs, never identity evidence.
+        """
+        if self.allow_demo_overrides:
+            return ctx
+        return replace(
+            ctx,
+            occurred_at=datetime.now(UTC),
+            is_new_recipient=not self.graph.has_transfer(ctx.sender_id, ctx.recipient_id),
+            is_new_device=not known_device_id or ctx.device_id != known_device_id,
+        )
+
+    async def record_settled(self, ctx: TransferContext) -> None:
+        """Persist committed movement; keep failed writes for fail-closed recovery.
+
+        The database is authoritative. Startup replays recent approved transactions,
+        and an in-process failed Redis write is retried before any further scoring.
+        """
+        self._pending_settlements.setdefault(ctx.tx_id, ctx)
+        await self.flush_settlements()
+
+    async def flush_settlements(self) -> None:
+        for tx_id, ctx in tuple(self._pending_settlements.items()):
+            await self.velocity.record_settled(
+                tx_id=ctx.tx_id,
+                sender_id=ctx.sender_id,
+                recipient_id=ctx.recipient_id,
+                amount=ctx.amount,
+                ts=ctx.occurred_at.timestamp(),
+            )
+            self._pending_settlements.pop(tx_id, None)
+
+    async def evaluate(self, ctx: TransferContext, *, record_attempt: bool = True) -> Evaluation:
         t0 = time.perf_counter()
+        await self.flush_settlements()
 
         is_new_recipient = (
             ctx.is_new_recipient
@@ -219,19 +274,28 @@ class AntifraudEngine:
         behavioral = self._behavioral(ctx, is_new_recipient)
         t1 = time.perf_counter()
 
-        snapshot = await self.velocity.record_and_snapshot(
-            tx_id=ctx.tx_id,
-            sender_id=ctx.sender_id,
-            recipient_id=ctx.recipient_id,
-            amount=ctx.amount,
-            ts=ctx.occurred_at.timestamp(),
+        snapshot = (
+            await self.velocity.record_and_snapshot(
+                tx_id=ctx.tx_id,
+                sender_id=ctx.sender_id,
+                recipient_id=ctx.recipient_id,
+                amount=ctx.amount,
+                ts=ctx.occurred_at.timestamp(),
+            )
+            if record_attempt
+            else await self.velocity.snapshot(
+                sender_id=ctx.sender_id,
+                recipient_id=ctx.recipient_id,
+                ts=ctx.occurred_at.timestamp(),
+            )
         )
         velocity = self._velocity(ctx, snapshot)
         t2 = time.perf_counter()
 
         recipient_metrics = self.graph.metrics(ctx.recipient_id)
         graph = self._graph(ctx, recipient_metrics, is_new_recipient)
-        self.graph.link_device(ctx.sender_id, ctx.device_id)
+        if record_attempt and self.allow_demo_overrides:
+            self.graph.link_device(ctx.sender_id, ctx.device_id)
         t3 = time.perf_counter()
 
         network = _corroborate([*velocity, *graph])
@@ -260,8 +324,8 @@ class AntifraudEngine:
         # Bounded residual blend: preserve rule floors; weak synthetic probabilities
         # add no friction. ML can add at most 15 points and cannot itself justify a block.
         ml_delta = round(0.25 * max(0.0, prediction.score - 40.0))
-        network_evidence = bool(network)
-        rule_score = max(0, min(100 if network_evidence else BEHAVIORAL_ONLY_CAP, raw))
+        block_evidence = any(r.code in HARD_BLOCK_EVIDENCE for r in network)
+        rule_score = max(0, min(100 if block_evidence else BEHAVIORAL_ONLY_CAP, raw))
         # Preserve all rule floors, but ML may cross into BLOCKED only with
         # corroborated recipient-side mule evidence. A sender pass-through signal
         # by itself still gets the existing questionnaire, not an ML-only block.
@@ -309,7 +373,11 @@ class AntifraudEngine:
     def apply_transfer(self, ctx: TransferContext) -> None:
         """Commit a released (approved) transfer into the money-flow graph."""
         self.graph.add_transfer(
-            ctx.sender_id, ctx.recipient_id, ctx.amount, ts=ctx.occurred_at.timestamp()
+            ctx.sender_id,
+            ctx.recipient_id,
+            ctx.amount,
+            ts=ctx.occurred_at.timestamp(),
+            transaction_id=ctx.tx_id,
         )
 
     # --------------------------------------------------------------- layer 1
@@ -367,10 +435,10 @@ class AntifraudEngine:
         elif fan_in_1h >= FAN_IN_1H:
             out.append(_reason("FAN_IN_VELOCITY", LAYER_VELOCITY, W_FAN_IN, n=fan_in_1h))
 
-        r_in, r_out = snap.recipient_in.volume("1h"), snap.recipient_out.volume("1h")
-        r_in_prior = r_in - ctx.amount  # money that was already sitting with the recipient
-        if snap.recipient_in.distinct("1h") > PASS_THROUGH_MIN_IN and r_in_prior > 0:
-            ratio = r_out / r_in_prior
+        r_in = snap.settled_recipient_in.volume("1h")
+        r_out = snap.settled_recipient_out.volume("1h")
+        if snap.settled_recipient_in.distinct("1h") >= PASS_THROUGH_MIN_IN and r_in > 0:
+            ratio = r_out / r_in
             if ratio >= CASHOUT_RATIO:
                 out.append(
                     _reason(
@@ -381,9 +449,11 @@ class AntifraudEngine:
                     )
                 )
 
-        s_in_n, s_in = snap.sender_in.distinct("1h"), snap.sender_in.volume("1h")
+        s_in_n = snap.settled_sender_in.distinct("1h")
+        s_in = snap.settled_sender_in.volume("1h")
         if s_in_n >= PASS_THROUGH_MIN_IN and s_in > 0:
-            ratio = snap.sender_out.volume("1h") / s_in  # includes the current transfer
+            # Hypothetical cash-out includes this attempt, never other uncommitted attempts.
+            ratio = (snap.settled_sender_out.volume("1h") + ctx.amount) / s_in
             if ratio >= CASHOUT_RATIO:
                 out.append(
                     _reason(

@@ -56,6 +56,7 @@ def ctx(
 async def run(engine: AntifraudEngine, c: TransferContext) -> Evaluation:
     result = await engine.evaluate(c)
     if result.decision is TransactionStatus.APPROVED:
+        await engine.record_settled(c)
         engine.apply_transfer(c)
     return result
 

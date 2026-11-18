@@ -69,6 +69,12 @@ LABELS: dict[str, tuple[Category, Importance, str, str]] = {
     "DECISION_COOLING_OFF": ("core", "attention", "Решение: период ожидания", "Шешім: күту кезеңі"),
     "DECISION_BLOCKED": ("core", "attention", "Решение: заблокирован", "Шешім: бұғатталды"),
     "COOLING_STARTED": ("core", "attention", "Начат период ожидания", "Күту кезеңі басталды"),
+    "TRANSFER_CANCELLED": (
+        "core",
+        "information",
+        "Клиент отменил перевод",
+        "Клиент аударымды тоқтатты",
+    ),
     "COOLING_RESOLVED": (
         "core",
         "information",
@@ -230,17 +236,27 @@ async def timeline(
         raise IntegrationError(404, "transaction_not_found")
     position = decode_cursor(cursor, tx.id, key) if cursor else None
     as_of = position.as_of if position else utcnow()
-    # A resolved cooling transfer retains cooling_until. Do not rewrite its initial
-    # decision using today's mutable status; no new historical decision is invented.
-    initial = "cooling_off" if tx.cooling_until is not None else tx.status.value
-    events = [
-        event(f"core:0:{tx.id.hex}", tx.created_at, "TRANSFER_EVALUATED", None),
-        event(f"core:1:{tx.id.hex}", tx.created_at, f"DECISION_{initial.upper()}", None),
-    ]
-    if tx.cooling_until is not None:
+    # Core now clears cooling_until on resolution/cancellation. Its immutable
+    # evaluation snapshot is the source of the original decision. Legacy rows may
+    # lack a snapshot; a saved cooling deadline or lifecycle action also proves hold.
+    initial = (tx.evaluation_snapshot or {}).get("status")
+    decisions = {"approved", "cooling_off", "blocked"}
+    if initial not in decisions:
+        initial = (
+            "cooling_off"
+            if tx.cooling_until is not None or tx.resolution_action in {"resolve", "cancel"}
+            else tx.status.value
+        )
+    events = [event(f"core:0:{tx.id.hex}", tx.created_at, "TRANSFER_EVALUATED", None)]
+    if initial in decisions:
+        events.append(
+            event(f"core:1:{tx.id.hex}", tx.created_at, f"DECISION_{initial.upper()}", None)
+        )
+    if initial == "cooling_off":
         events.append(event(f"core:2:{tx.id.hex}", tx.created_at, "COOLING_STARTED", None))
     if tx.resolved_at is not None:
-        events.append(event(f"core:3:{tx.id.hex}", tx.resolved_at, "COOLING_RESOLVED", None))
+        code = "TRANSFER_CANCELLED" if tx.resolution_action == "cancel" else "COOLING_RESOLVED"
+        events.append(event(f"core:3:{tx.id.hex}", tx.resolved_at, code, None))
     events = [
         e
         for e in events

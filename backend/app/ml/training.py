@@ -4,6 +4,9 @@ Labels are latent scenarios (ordinary P2P, collections, scam, mule, takeover),
 not copies of the production rule score. Cohorts overlap, include benign calls,
 paste, deposit withdrawals and busy collection accounts, and randomly omit browser
 measurements. The independent holdout measures simulation fit only.
+
+Version 2 covers ordinary reciprocal spending and legitimate collection payouts:
+the serving transit ratio is cumulative, so a high ratio alone is not mule proof.
 """
 
 from typing import Any
@@ -56,6 +59,15 @@ def synthetic_data(
     speed[rng.random(n) < 0.35] = -1
     hesitation[rng.random(n) < 0.45] = -1
     pauses[rng.random(n) < 0.35] = 0
+    # The graph feature is cumulative outgoing/incoming money, not a confirmed
+    # rapid cash-out rate. Salary-funded spending and reciprocal household flows
+    # can legitimately exceed 1. Cover this serving domain instead of teaching
+    # the forest that almost every high-ratio account is a mule. These mixture
+    # proportions are simulation assumptions, not measured Kazakhstani rates.
+    ordinary_spending = (cohort == 0) & (rng.random(n) < 0.45)
+    transit[ordinary_spending] = rng.uniform(0.25, 3.0, int(ordinary_spending.sum()))
+    collection_payout = (cohort == 1) & (rng.random(n) < 0.10)
+    transit[collection_payout] = rng.uniform(0.35, 1.25, int(collection_payout.sum()))
     x = np.column_stack(
         (
             amount_kzt / average_kzt,
@@ -100,6 +112,7 @@ def train() -> dict[str, Any]:
         "sklearn_version": sklearn.__version__,
         "feature_names": FEATURE_NAMES,
         "seed": SEED,
+        "generator_version": "v2-cumulative-transit-overlap",
         "estimator": estimator,
         "training_rows": len(x_train),
         "holdout_rows": len(x_test),

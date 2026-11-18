@@ -1,0 +1,338 @@
+{
+  "recorded_at": "2026-11-17T18:28:43.822Z",
+  "synthetic": true,
+  "mocked_api": true,
+  "browser_assertions": 81,
+  "browser_errors": 0,
+  "backend_tests": 188,
+  "postgres_concurrency_tests_included": true,
+  "frontend_tests": 64,
+  "typecheck": "pass",
+  "production_build": "pass",
+  "checks": [
+    {
+      "name": "normal_preset_approved_receipt_inside_phone",
+      "passed": true
+    },
+    {
+      "name": "receipt_language_switch_keeps_transaction_without_reload",
+      "passed": true
+    },
+    {
+      "name": "receipt_kazakh_status",
+      "passed": true
+    },
+    {
+      "name": "browser_paste_and_typing_sensor_live",
+      "passed": true
+    },
+    {
+      "name": "browser_biometrics_reach_evaluation",
+      "passed": true
+    },
+    {
+      "name": "clipboard_contents_not_sent_as_biometrics",
+      "passed": true
+    },
+    {
+      "name": "scam_starts_15_minute_hold_intro",
+      "passed": true
+    },
+    {
+      "name": "safe_account_warning_matches_context_ru",
+      "passed": true
+    },
+    {
+      "name": "safe_account_warning_matches_context_kk",
+      "passed": true
+    },
+    {
+      "name": "missing_answer_disables_next",
+      "passed": true
+    },
+    {
+      "name": "question_heading_receives_keyboard_focus",
+      "passed": true
+    },
+    {
+      "name": "language_keeps_answer_and_question",
+      "passed": true
+    },
+    {
+      "name": "closing_modal_does_not_mutate_held_transfer",
+      "passed": true
+    },
+    {
+      "name": "reopening_keeps_in_memory_answer_progress",
+      "passed": true
+    },
+    {
+      "name": "review_lists_all_five_answers",
+      "passed": true
+    },
+    {
+      "name": "edit_returns_to_chosen_question",
+      "passed": true
+    },
+    {
+      "name": "clean_answers_saved_without_early_release",
+      "passed": true
+    },
+    {
+      "name": "reload_restores_server_saved_answers",
+      "passed": true
+    },
+    {
+      "name": "expired_countdown_never_auto_releases",
+      "passed": true
+    },
+    {
+      "name": "expired_hold_requires_explicit_confirmation",
+      "passed": true
+    },
+    {
+      "name": "explicit_confirmation_after_mock_deadline_approves",
+      "passed": true
+    },
+    {
+      "name": "new_transfer_does_not_reuse_questionnaire_draft",
+      "passed": true
+    },
+    {
+      "name": "failed_submission_keeps_answers_and_hold",
+      "passed": true
+    },
+    {
+      "name": "red_flag_blocks_after_retry",
+      "passed": true
+    },
+    {
+      "name": "explicit_cancel_terminal_receipt",
+      "passed": true
+    },
+    {
+      "name": "background_recovery_of_B_does_not_replace_open_A",
+      "passed": true
+    },
+    {
+      "name": "fresh_server_answers_replace_old_saved_snapshot",
+      "passed": true
+    },
+    {
+      "name": "actual_unsent_edits_survive_server_refresh",
+      "passed": true
+    },
+    {
+      "name": "hub_preset_shows_blocked_case_and_graph",
+      "passed": true
+    },
+    {
+      "name": "graph_defaults_to_explicit_direct_neighbor_depth",
+      "passed": true
+    },
+    {
+      "name": "direct_graph_control_and_counts_visible",
+      "passed": true
+    },
+    {
+      "name": "stage_mode_enters_and_hides_feed",
+      "passed": true
+    },
+    {
+      "name": "initial_stage_graph_fits_without_window_resize",
+      "passed": true
+    },
+    {
+      "name": "graph_node_is_draggable",
+      "passed": true
+    },
+    {
+      "name": "graph_canvas_is_pannable",
+      "passed": true
+    },
+    {
+      "name": "graph_center_selection_opens_node_details",
+      "passed": true
+    },
+    {
+      "name": "graph_zoom_pan_and_drag_survive_language_and_poll",
+      "passed": true
+    },
+    {
+      "name": "graph_center_selection_survives_language_and_poll",
+      "passed": true
+    },
+    {
+      "name": "expanded_graph_requests_depth_two_and_preserves_case",
+      "passed": true
+    },
+    {
+      "name": "expanded_graph_shows_all_returned_nodes_and_edges",
+      "passed": true
+    },
+    {
+      "name": "depth_change_purposefully_refits_graph",
+      "passed": true
+    },
+    {
+      "name": "graph_depth_controls_translate_and_keep_depth",
+      "passed": true
+    },
+    {
+      "name": "collapse_returns_to_direct_neighbors_and_refits",
+      "passed": true
+    },
+    {
+      "name": "stage_keeps_traffic_control_and_case",
+      "passed": true
+    },
+    {
+      "name": "stage_stream_starts_through_evaluation_API",
+      "passed": true
+    },
+    {
+      "name": "stage_stream_stop_prevents_new_dispatches",
+      "passed": true
+    },
+    {
+      "name": "p95_is_measurement_with_scope",
+      "passed": true
+    },
+    {
+      "name": "stage_and_selection_survive_language_change",
+      "passed": true
+    },
+    {
+      "name": "stage_feed_toggle_accessible",
+      "passed": true
+    },
+    {
+      "name": "escape_in_editable_does_not_exit_stage",
+      "passed": true
+    },
+    {
+      "name": "escape_outside_editable_exits_stage",
+      "passed": true
+    },
+    {
+      "name": "stage_reentry_graph_fits_without_window_resize",
+      "passed": true
+    },
+    {
+      "name": "stage_no_document_overflow_320",
+      "passed": true
+    },
+    {
+      "name": "stage_graph_has_width_320",
+      "passed": true
+    },
+    {
+      "name": "resize_observer_refits_graph_320",
+      "passed": true
+    },
+    {
+      "name": "stage_no_document_overflow_390",
+      "passed": true
+    },
+    {
+      "name": "stage_graph_has_width_390",
+      "passed": true
+    },
+    {
+      "name": "resize_observer_refits_graph_390",
+      "passed": true
+    },
+    {
+      "name": "stage_no_document_overflow_768",
+      "passed": true
+    },
+    {
+      "name": "stage_graph_has_width_768",
+      "passed": true
+    },
+    {
+      "name": "resize_observer_refits_graph_768",
+      "passed": true
+    },
+    {
+      "name": "stage_no_document_overflow_1280",
+      "passed": true
+    },
+    {
+      "name": "stage_graph_has_width_1280",
+      "passed": true
+    },
+    {
+      "name": "resize_observer_refits_graph_1280",
+      "passed": true
+    },
+    {
+      "name": "mobile_no_document_overflow_320",
+      "passed": true
+    },
+    {
+      "name": "phone_form_visible_320",
+      "passed": true
+    },
+    {
+      "name": "mobile_no_document_overflow_390",
+      "passed": true
+    },
+    {
+      "name": "phone_form_visible_390",
+      "passed": true
+    },
+    {
+      "name": "mobile_no_document_overflow_768",
+      "passed": true
+    },
+    {
+      "name": "phone_form_visible_768",
+      "passed": true
+    },
+    {
+      "name": "mobile_no_document_overflow_1280",
+      "passed": true
+    },
+    {
+      "name": "phone_form_visible_1280",
+      "passed": true
+    },
+    {
+      "name": "cooling_sheet_fits_320",
+      "passed": true
+    },
+    {
+      "name": "cooling_sheet_fits_390",
+      "passed": true
+    },
+    {
+      "name": "cooling_sheet_fits_768",
+      "passed": true
+    },
+    {
+      "name": "cooling_sheet_fits_1280",
+      "passed": true
+    },
+    {
+      "name": "missing_deadline_does_not_look_expired",
+      "passed": true
+    },
+    {
+      "name": "reduced_motion_preference_active",
+      "passed": true
+    },
+    {
+      "name": "reduced_motion_disables_sheet_animation",
+      "passed": true
+    },
+    {
+      "name": "all_mutations_intercepted",
+      "passed": true
+    },
+    {
+      "name": "no_browser_runtime_errors",
+      "passed": true
+    }
+  ]
+}

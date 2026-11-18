@@ -1,0 +1,18 @@
+{
+  "source": "frontend/src/content/pitch.json",
+  "sourceHashEncoding": "UTF-8 JSON.stringify(JSON.parse(sourceText))",
+  "sourceSha256": "e5761f6b28ea82a15401c594919097cbff44edaf35722689788829a659edefde",
+  "slidesPerDeck": 8,
+  "decks": [
+    {
+      "language": "ru",
+      "file": "BCC-Shield-ru.pptx",
+      "sha256": "4b048e5c2a6c03d569c9421c57827ce7039c000d00014a31d08cffd3af488bdd"
+    },
+    {
+      "language": "kk",
+      "file": "BCC-Shield-kk.pptx",
+      "sha256": "309e104a007ef996ba958e8cc80619929c608e462481c3d8468b703505872077"
+    }
+  ]
+}
