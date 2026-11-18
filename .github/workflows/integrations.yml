@@ -53,6 +53,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - name: Generate ephemeral demo key
         run: |
           python -c "import os,secrets; key=secrets.token_hex(32); print('::add-mask::'+key); open(os.environ['GITHUB_ENV'],'a').write('BCC_INTEGRATIONS_SIGNING_KEY='+key+'\n')"
@@ -66,6 +69,22 @@ jobs:
       - name: Exercise fake end-to-end flow
         working-directory: backend
         run: uv run --python 3.12 python -m scripts.demo_operations
+      - name: Verify existing browser demo with integrations disabled
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations stop integrations-worker
+          BCC_INTEGRATIONS_ENABLED=false docker compose -f docker-compose.yml -f docker-compose.integrations.yml up -d --no-deps --wait --wait-timeout 120 backend
+          test "$(curl --silent --output /tmp/integrations-disabled.json --write-out '%{http_code}' http://127.0.0.1:8000/api/v1/integrations/health)" = 503
+          npm install --prefix /tmp/bcc-browser-qa --no-save --package-lock=false --no-audit --no-fund playwright@1.56.1
+          node /tmp/bcc-browser-qa/node_modules/playwright/cli.js install --with-deps chromium
+          PLAYWRIGHT_MODULE=/tmp/bcc-browser-qa/node_modules/playwright QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/browser-ci" node frontend/scripts/qa-mobile-soc.cjs http://127.0.0.1:3000
+      - name: Save synthetic browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrations-disabled-browser-qa
+          path: .local-checks/browser-ci/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Shutdown disposable stack
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations down -v
