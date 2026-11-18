@@ -1,0 +1,12 @@
+{
+  "verified_at": "2026-11-18T05:37:16.7055959Z",
+  "container_duration_seconds": 174.76,
+  "width": 1920,
+  "height": 1080,
+  "fps": 25,
+  "codec": "VP9",
+  "verified_with": "FFmpeg media metadata and decoded frame at135s",
+  "audio": false,
+  "subtitle_offset_seconds": 0.745775100000003,
+  "sha256": "abcc3d5d78804d2adc003948e27e621e5f630ce3aaa52d865bd82fbc48e384fa"
+}

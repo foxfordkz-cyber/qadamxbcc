@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Activity, ArrowRight, CircleHelp, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
-import { api, transferSchema, type AbandonResult, type AppConfig, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
+import { api, transferSchema, type AbandonResult, type Answers, type AppConfig, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { reconcileTraffic, type TrafficRecord } from "@/lib/traffic";
 import type { FeedItem } from "@/lib/contracts";
 import { useBiometrics } from "./use-biometrics";
@@ -17,6 +17,8 @@ import { isUnknownOutcome, TransferAttempt } from "@/lib/transfer-session";
 import { acceptsEvaluation, digestDraft, draftIdentity, findDraftReceipt, receipt, recoveryBatch, unresolved } from "@/lib/recovery";
 import { useRecovery, withIntentLock } from "./use-recovery";
 import { RecoveryPanel } from "./recovery-panel";
+import { retainCoolingDraft } from "@/lib/cooling-flow";
+import { reconcileCoolingDrafts, shouldRestoreAttempt } from "@/lib/mobile-session";
 
 const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
 function App({ config }: { config: AppConfig }) {
@@ -32,6 +34,7 @@ function App({ config }: { config: AppConfig }) {
   const interacted = useRef(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const [modal, setModal] = useState(false);
+  const [coolingDrafts, setCoolingDrafts] = useState<Record<string, Partial<Answers>>>({});
   const [revision, setRevision] = useState(0);
   const [preset, setPreset] = useState<Preset | null>(null);
   const sensor = useBiometrics();
@@ -64,6 +67,7 @@ function App({ config }: { config: AppConfig }) {
     if (!acceptsEvaluation(evaluation, stored, previous)) return previous && acceptsEvaluation(previous, stored) ? previous : null;
     const next = Object.fromEntries([...Object.entries(latestEvaluations.current).filter(([id]) => id !== evaluation.transaction_id).slice(-399), [evaluation.transaction_id, evaluation]]);
     latestEvaluations.current = next; setEvaluations(next);
+    setCoolingDrafts(drafts => reconcileCoolingDrafts(drafts, evaluation));
     recovery.record(receipt(evaluation, stored));
     return evaluation;
   }, [recovery.record, recovery.get]);
@@ -95,7 +99,12 @@ function App({ config }: { config: AppConfig }) {
       await Promise.allSettled(batch.records.map(async record => {
         const value = remember(await api<Evaluation>(`transfers/${record.id}`));
         if (!value) return;
-        if (attempt.current?.input.request_id === value.transaction_id) { setUnknown(false); setCompletedIdentity(attemptIdentity.current); setError(null); setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {}); }
+        if (attempt.current?.input.request_id === value.transaction_id) {
+          setUnknown(false); setCompletedIdentity(attemptIdentity.current); setError(null);
+          if (shouldRestoreAttempt(value.transaction_id, attempt.current.input.request_id ?? null, currentResultId.current)) {
+            setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {});
+          }
+        }
         setResult(previous => previous?.transaction_id === value.transaction_id ? value : previous);
         if (currentResultId.current === value.transaction_id && value.status !== "cooling_off") setModal(false);
         if (!interacted.current) { interacted.current = true; setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {}); }
@@ -207,6 +216,11 @@ function App({ config }: { config: AppConfig }) {
     finally { lock.current = false; setBusy(false); }
   }
   function changeTab(value: "mobile" | "soc") { if (value === "mobile") stream.stop(); setTab(value); }
+  function freshTransfer() {
+    if (lock.current || hasUnknown) return;
+    interacted.current = true; forceNext.current = true; attempt.current = null;
+    setCompletedIdentity(null); sensor.reset(); setResult(null); setPreset(null); setError(null);
+  }
   return <>
     <header className="topbar"><div className="brand"><div className="brand-mark"><ShieldCheck size={25} /></div><div><strong>bcc<span> shield</span></strong><small>{t("tagline")}</small></div></div>
       <div className="header-right"><span className="mode"><span className="live-dot" />{t(config.mode)}</span><div className="language" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div></div>
@@ -222,14 +236,14 @@ function App({ config }: { config: AppConfig }) {
         {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} /> : <>
           <div className="section-heading"><div><p className="eyebrow">{t("eyebrow")}</p><h1>{t("title")}</h1><p className="muted max-w-2xl">{t("intro")}</p></div><span className="security-seal"><ShieldCheck size={20} />BCC Shield</span></div>
           <div className="transfer-grid">
-            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={() => void evaluate(form)} />
-            <div><Telemetry result={result} amount={resultAmount} roundtrip={roundtrip} busy={busy} error={error} sensor={sensor} onReview={() => result && void review(result.transaction_id)} />{result && !hasUnknown && <button className="secondary mt-4" disabled={busy} onClick={() => { interacted.current = true; forceNext.current = true; attempt.current = null; setCompletedIdentity(null); sensor.reset(); setResult(null); setPreset(null); setError(null); }}>{t("freshTransfer")}</button>}</div>
+            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={() => void evaluate(form)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} />
+            <Telemetry result={result} amount={resultAmount} roundtrip={roundtrip} busy={busy} error={error} sensor={sensor} onReview={() => result && void review(result.transaction_id)} />
           </div>
         </>}
       </div>
       <footer><span>BCC Shield · ITU Hackathon 2026</span><span>{config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
     </main>
-    {modal && result?.status === "cooling_off" && <CoolingModal key={result.transaction_id} result={result} context={resultContext} onClose={() => setModal(false)} onResolved={resolved} />}
+    {modal && result?.status === "cooling_off" && <CoolingModal key={result.transaction_id} result={result} context={resultContext} answers={coolingDrafts[result.transaction_id] ?? result.verification_answers ?? {}} onAnswersChange={answers => setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers))} onClose={() => setModal(false)} onResolved={resolved} />}
   </>;
 }
 export default function ShieldApp({ config }: { config: AppConfig }) {

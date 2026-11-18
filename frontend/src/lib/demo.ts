@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { latencySummary } from "./latency-summary";
 import { ids } from "./config";
 import { feedQuerySchema, type FeedQuery } from "./contracts";
 import { countBlockedHubs } from "./feed-summary";
@@ -142,7 +143,7 @@ export function feedDemo(query: Partial<FeedQuery> = {}): Feed {
   return { server_time: new Date().toISOString(), items: filtered.slice(offset, offset + limit), pagination: { total_filtered: filtered.length, offset, limit, has_more: offset + limit < filtered.length }, stats: {
     total: items.length, approved: items.filter(r => r.status === "approved").length,
     cooling_off: items.filter(r => r.status === "cooling_off").length, blocked: items.filter(r => r.status === "blocked").length,
-    blocked_hubs: countBlockedHubs(items),
+    blocked_hubs: countBlockedHubs(items), ...latencySummary(items),
     cancelled: items.filter(r => r.status === "cancelled").length,
     blocked_amount: String(items.filter(r => r.status === "blocked").reduce((n, r) => n + Number(r.amount), 0)),
     held_amount: String(items.filter(r => r.status === "cooling_off").reduce((n, r) => n + Number(r.amount), 0)),
@@ -151,7 +152,7 @@ export function feedDemo(query: Partial<FeedQuery> = {}): Feed {
     max_latency_ms: Math.max(0, ...items.map(r => r.latency_ms)),
   } };
 }
-export function graphDemo(center: string): Graph {
+export function graphDemo(center: string, depth = 2): Graph {
   const account = accounts.find(a => a.id === center);
   if (!account) throw new DemoError(404, "notFound");
   const isHub = center === ids.hub;
@@ -169,5 +170,5 @@ export function graphDemo(center: string): Graph {
     nodes.push({ id: "shared-account", type: "account", position: { x: 700, y: 0 }, data: data({ id: "shared-account", full_name: "•••• 9001", iban: "" }, { role: "mule", suspected_mule: true, shared_device_accounts: 2, device_id: "device-0004" }) });
     edges.push({ id: "shared-device", source: center, target: "shared-account", type: "straight", animated: false, label: null, data: { edge_type: "shared_device", weight: 0, tx_count: 0, highlight: true } });
   }
-  return { center, depth: 2, nodes, edges };
+  return { center, depth, nodes, edges };
 }

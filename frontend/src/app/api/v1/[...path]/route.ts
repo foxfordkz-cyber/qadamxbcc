@@ -56,7 +56,7 @@ async function handle(request: NextRequest, context: RouteContext) {
     }
     if (cancel || abandon) body = z.object({}).strict().parse(await readBoundedJson(request));
     if (abandon && config.mode === "demo") return json(abandonDemo(path[2]));
-    if (config.mode === "demo") return json(cancel ? cancelDemo(path[1]) : detail ? detailDemo(path[1]) : feed ? feedDemo(feedQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams))) : graphDemo(path[2]));
+    if (config.mode === "demo") return json(cancel ? cancelDemo(path[1]) : detail ? detailDemo(path[1]) : feed ? feedDemo(feedQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams))) : graphDemo(path[2], z.coerce.number().int().min(1).max(3).parse(request.nextUrl.searchParams.get("depth") ?? 2)));
     const base = (process.env.BCC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
     const response = await fetch(`${base}/api/v1/${route}${request.nextUrl.search}`, {
       method: request.method, headers: backendHeaders(route),

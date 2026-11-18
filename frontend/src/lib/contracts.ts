@@ -74,7 +74,7 @@ export interface FeedItem extends MLDetails {
 export interface Feed {
   server_time: string; items: FeedItem[];
   pagination: { total_filtered: number; offset: number; limit: number; has_more: boolean };
-  stats: { total: number; approved: number; cooling_off: number; blocked: number; blocked_hubs?: number; cancelled?: number; blocked_amount?: string; held_amount?: string; cancelled_amount?: string; avg_latency_ms: number; max_latency_ms: number };
+  stats: { total: number; approved: number; cooling_off: number; blocked: number; blocked_hubs?: number; cancelled?: number; blocked_amount?: string; held_amount?: string; cancelled_amount?: string; avg_latency_ms: number; max_latency_ms: number; p95_latency_ms?: number | null; latency_sample_size?: number; latency_sample_limit?: number };
 }
 export interface GraphData extends Record<string, unknown> {
   label: string; role: "center" | "hub" | "mule" | "normal"; depth: number; device_id: string;
@@ -137,7 +137,7 @@ const feedResponseSchema = z.object({
     verification_answers: answersSchema.nullable().optional(), resolved_at: z.iso.datetime({ offset: true }).nullable().optional(),
   }).passthrough()),
   pagination: z.object({ total_filtered: z.number().int().nonnegative(), offset: z.number().int().min(0).max(100_000), limit: z.number().int().min(1).max(200), has_more: z.boolean() }),
-  stats: z.object({ total: z.number().nonnegative(), approved: z.number().nonnegative(), cooling_off: z.number().nonnegative(), blocked: z.number().nonnegative(), blocked_hubs: z.number().int().nonnegative().optional(), avg_latency_ms: z.number().nonnegative(), max_latency_ms: z.number().nonnegative() }).passthrough(),
+  stats: z.object({ total: z.number().nonnegative(), approved: z.number().nonnegative(), cooling_off: z.number().nonnegative(), blocked: z.number().nonnegative(), blocked_hubs: z.number().int().nonnegative().optional(), avg_latency_ms: z.number().nonnegative(), max_latency_ms: z.number().nonnegative(), p95_latency_ms: z.number().nonnegative().nullable().optional(), latency_sample_size: z.number().int().min(0).max(500).optional(), latency_sample_limit: z.literal(500).optional() }).passthrough(),
 }).passthrough();
 const graphResponseSchema = z.object({ center: z.string(), depth: z.number(), nodes: z.array(z.object({ id: z.string(), type: z.string(), position: z.object({ x: z.number(), y: z.number() }), data: z.object({ label: z.string(), role: z.enum(["center", "hub", "mule", "normal"]), depth: z.number(), device_id: z.string(), flagged: z.boolean(), suspected_mule: z.boolean(), in_degree: z.number(), out_degree: z.number(), in_weight: z.number(), out_weight: z.number(), transit_ratio: z.number(), shared_device_accounts: z.number() }).passthrough() })), edges: z.array(z.object({ id: z.string(), source: z.string(), target: z.string(), type: z.string(), animated: z.boolean(), label: z.string().nullable(), data: z.object({ edge_type: z.enum(["transfer", "shared_device"]), weight: z.number(), tx_count: z.number(), highlight: z.boolean() }) })) });
 export function validateApiResponse(path: string, value: unknown) {
@@ -152,6 +152,9 @@ export function validateApiResponse(path: string, value: unknown) {
     || parsed.data.transaction_id.toLowerCase() !== route.split("/")[1].toLowerCase())) throw new ApiError("invalidResponse", 502);
   if (route.startsWith("soc/graph/") && (!("center" in parsed.data) || typeof parsed.data.center !== "string"
     || parsed.data.center.toLowerCase() !== route.split("/")[2].toLowerCase())) throw new ApiError("invalidResponse", 502);
+  const requestedDepth = new URLSearchParams(path.split("?")[1]).get("depth");
+  if (route.startsWith("soc/graph/") && requestedDepth !== null && (!("depth" in parsed.data)
+    || parsed.data.depth !== Number(requestedDepth))) throw new ApiError("invalidResponse", 502);
   return parsed.data;
 }
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
