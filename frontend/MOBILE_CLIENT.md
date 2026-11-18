@@ -36,3 +36,18 @@ Browser QA (`scripts/qa-mobile-soc.cjs`) checks `/mobile` at 390 px: phone-only 
 ### Plain-http LAN pages (jury phone, Android app)
 
 `http://192.168.x.x:3105/mobile` is not a secure context, so the browser withholds `crypto.randomUUID`, `crypto.subtle` and `navigator.locks`; before this fix every transfer from a real phone stopped with `recoveryUnavailable`. `src/lib/secure-fallback.ts` covers that case only: a v4 UUID from `getRandomValues`, a plain SHA-256 that yields the same draft key, and an in-page lock instead of the cross-tab Web Lock. In a secure context nothing changes, and a missing Web Lock there still fails closed. The limit: on a plain-http phone two tabs are not serialized against each other; server idempotency by `request_id` still prevents a repeated send of the same attempt. QA covers it with `mobile_route_transfer_works_in_insecure_lan_context`.
+
+## Trusted contact in the cooling sheet (Bekzat's trusted-contacts API)
+
+While a transfer is `cooling_off`, `trusted-circle.tsx` (rendered in `cooling-modal.tsx`, so on `/` and `/mobile`) offers «Сообщить доверенному лицу» for each verified contact with notifications enabled, then shows the status from `ui_texts.json`: в очереди → сервис принял → получение подтверждено / контакт сообщил о подозрении (or доставка не подтверждена / срок истёк). Suspicion adds a red "do not confirm" warning; the block always states that the contact cannot approve or release the transfer. The contact is connected and consents in the Telegram bot; setup is not part of the phone UI.
+
+The browser only calls `GET|POST /api/v1/trusted-circle/{transaction_id}` through the existing `api<T>`. That Next.js route (`src/app/api/v1/trusted-circle/[transactionId]/route.ts`) is the only place that talks to the integration API:
+
+- the owner is the transaction's sender from the server-side SOC record, not a value sent by the browser;
+- it mints a 5-minute owner capability with `BCC_INTEGRATIONS_SIGNING_KEY` (same key and format as `scripts.integration_token`); the key and capability never reach the bundle, storage or the page;
+- responses are reduced to contact id/alias and notification id/state/expiry; correlation IDs, error codes and chat addresses are dropped;
+- it is off (404 → the block is hidden) in the pilot, in the in-process demo mode, without the signing key, and when the backend has integrations disabled or lacks the routes.
+
+Polling: one owner (this component), every 4 s while a notification is queued or sent, only while the sheet is open and the page visible; it stops at a terminal state and pauses 15 s on 429. That is above the 2.1 s floor and inside the 30/min per-owner budget.
+
+To enable on the demo laptop (after Bekzat's backend is in `main`): run the backend with `BCC_INTEGRATIONS_ENABLED=true` and a signing key of at least 32 characters, and start the frontend with the same `BCC_INTEGRATIONS_SIGNING_KEY` and `BCC_API_MODE=live`.
