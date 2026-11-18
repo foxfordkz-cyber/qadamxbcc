@@ -21,7 +21,8 @@ import { retainCoolingDraft } from "@/lib/cooling-flow";
 import { reconcileCoolingDrafts, shouldRestoreAttempt } from "@/lib/mobile-session";
 
 const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
-function App({ config }: { config: AppConfig }) {
+export type AppLayout = "full" | "phone";
+function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayout }) {
   const { lang, setLang, t } = useLocale();
   const [tab, setTab] = useState<"mobile" | "soc">("mobile");
   const [form, setForm] = useState<PresetForm>(config.presets.normal);
@@ -221,10 +222,25 @@ function App({ config }: { config: AppConfig }) {
     interacted.current = true; forceNext.current = true; attempt.current = null;
     setCompletedIdentity(null); sensor.reset(); setResult(null); setPreset(null); setError(null);
   }
+  const cooling = modal && result?.status === "cooling_off" && <CoolingModal key={result.transaction_id} result={result} context={resultContext} answers={coolingDrafts[result.transaction_id] ?? result.verification_answers ?? {}} onAnswersChange={answers => setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers))} onClose={() => setModal(false)} onResolved={resolved} />;
+  const languageSwitch = <div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>;
+  // /mobile: the same client logic on a real smartphone — no bezel, decision panel or SOC tab.
+  if (layout === "phone") return <>
+    <header className="topbar mobile-topbar"><div className="topbar-inner">
+      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span><div><strong>bcc<span> shield</span></strong></div></div>
+      {languageSwitch}
+    </div></header>
+    <main className="mobile-shell">
+      <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
+      {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
+      <TransferPhone bare config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={() => void evaluate(form)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} />
+    </main>
+    {cooling}
+  </>;
   return <>
     <header className="topbar"><div className="topbar-inner">
       <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>bcc<span> shield</span></strong><small>{t("tagline")}</small></div></div>
-      <div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span><div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div></div>
+      <div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span>{languageSwitch}</div>
     </div></header>
     <main className="shell">
       <section className="demo-bar" aria-label={t("presets")}>
@@ -249,9 +265,9 @@ function App({ config }: { config: AppConfig }) {
       </div>
       <footer className="page-footer"><span>BCC Shield · ITU Hackathon 2026</span><span>{config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
     </main>
-    {modal && result?.status === "cooling_off" && <CoolingModal key={result.transaction_id} result={result} context={resultContext} answers={coolingDrafts[result.transaction_id] ?? result.verification_answers ?? {}} onAnswersChange={answers => setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers))} onClose={() => setModal(false)} onResolved={resolved} />}
+    {cooling}
   </>;
 }
-export default function ShieldApp({ config }: { config: AppConfig }) {
-  return <LocaleProvider><App config={config} /></LocaleProvider>;
+export default function ShieldApp({ config, layout = "full" }: { config: AppConfig; layout?: AppLayout }) {
+  return <LocaleProvider><App config={config} layout={layout} /></LocaleProvider>;
 }

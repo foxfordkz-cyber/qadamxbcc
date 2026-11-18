@@ -1,5 +1,6 @@
 // Server-only access boundary for an internal pilot console, not customer authentication.
 import { createHash, timingSafeEqual } from "node:crypto";
+import { isPrivateLanHost, lanDemoEnabled } from "./mobile-link";
 
 type AccessRequest = { method: string; headers: Headers; origin: string; pathname?: string };
 type AccessFailure = { status: number; error: string; authenticate?: boolean };
@@ -12,7 +13,8 @@ export function accessConfiguration(env: Environment = process.env): AccessConfi
   const environment = env.BCC_ENVIRONMENT ?? "local";
   if (!["local", "demo", "pilot"].includes(environment) ||
     (env.BCC_API_MODE !== undefined && !["live", "demo"].includes(env.BCC_API_MODE)) ||
-    (env.BCC_DEMO_ACTIONS_ENABLED !== undefined && !["true", "false"].includes(env.BCC_DEMO_ACTIONS_ENABLED))) {
+    (env.BCC_DEMO_ACTIONS_ENABLED !== undefined && !["true", "false"].includes(env.BCC_DEMO_ACTIONS_ENABLED)) ||
+    (env.BCC_MOBILE_LAN !== undefined && !["true", "false"].includes(env.BCC_MOBILE_LAN))) {
     throw new Error("Invalid service access configuration");
   }
   const protectedValues = ["BCC_API_KEY", "BCC_SOC_API_KEY", "BCC_PILOT_USER", "BCC_PILOT_PASSWORD", "BCC_PUBLIC_ORIGIN"];
@@ -48,8 +50,10 @@ export function checkAccess(request: AccessRequest, env: Environment = process.e
   let trustedOrigin = request.origin;
   // Next normalizes loopback URLs internally. Use the actual, strictly loopback
   // Host for local demos; the pilot always uses its configured HTTPS origin.
+  // With BCC_MOBILE_LAN=true a local demo also trusts its own private Wi-Fi IP,
+  // so a jury phone can open /mobile; the Origin must still equal that Host.
   const host = request.headers.get("host");
-  if (!pilot && host && /^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host)) {
+  if (!pilot && host && (/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host) || (lanDemoEnabled(env) && isPrivateLanHost(host)))) {
     trustedOrigin = `${new URL(request.origin).protocol}//${host}`;
   }
   if (pilot) {

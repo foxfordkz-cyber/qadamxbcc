@@ -67,3 +67,15 @@ test("credential-free local demos remain usable in production Next builds", () =
   }
   assert.equal(checkAccess(request(), { BCC_API_MODE: "LIVE" })?.status, 503);
 });
+
+test("LAN demo trusts only its own private Wi-Fi Host, and only when enabled", () => {
+  const headers = { host: "192.168.1.23:3105", origin: "http://192.168.1.23:3105", "content-type": "application/json" };
+  assert.equal(checkAccess(request(headers, "POST"), {})?.status, 403);
+  assert.equal(checkAccess(request(headers, "POST"), { BCC_MOBILE_LAN: "true" }), null);
+  assert.equal(checkAccess(request({ ...headers, origin: "http://192.168.1.24:3105" }, "POST"), { BCC_MOBILE_LAN: "true" })?.status, 403);
+  assert.equal(checkAccess(request({ ...headers, host: "8.8.8.8:3105", origin: "http://8.8.8.8:3105" }, "POST"), { BCC_MOBILE_LAN: "true" })?.status, 403);
+  assert.equal(checkAccess(request({ ...headers, host: "shield.evil:3105", origin: "http://shield.evil:3105" }, "POST"), { BCC_MOBILE_LAN: "true" })?.status, 403);
+  assert.equal(checkAccess(request({ ...headers, "sec-fetch-site": "cross-site" }, "POST"), { BCC_MOBILE_LAN: "true" })?.status, 403);
+  assert.equal(checkAccess(request(), { BCC_MOBILE_LAN: "yes" })?.status, 503);
+  assert.equal(checkAccess(request({ ...headers, authorization: auth }, "POST"), { ...env, BCC_MOBILE_LAN: "true" })?.status, 403);
+});

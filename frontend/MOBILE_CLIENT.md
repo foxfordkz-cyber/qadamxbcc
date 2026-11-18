@@ -13,3 +13,22 @@ Unsent answers are retained per operation ID in a bounded in-memory parent cache
 Stable QA selectors: `.phone-form .transfer-cta`, `.phone-confirm .transfer-confirm`, `.transfer-edit`, `.phone-receipt[data-transaction-id]`, `.receipt-review`, `.receipt-new`, `dialog.mobile-cooling[data-step="intro|question|review"]`, `.cooling-start`, `.cooling-next`, `.cooling-back`, `.cooling-review-list`, `.cooling-edit`, `.cooling-submit`, `.sheet-close`. Radio names match the five API questionnaire keys. The labelled countdown uses `role="timer"`.
 
 Focused regression tests in `tests/cooling-flow.test.ts` and `tests/mobile-session.test.ts` cover explicit negative answers, incomplete questionnaires, reopening drafts, operation isolation, safe field filtering, bounded retention, active-case pinning, saved-answer provenance and cancellation reconciliation. Run the full `npm run typecheck`, `npm run test`, and `npm run build` before release. Browser QA should additionally exercise clean answers through the strict hold, red flags, cancellation, response loss, reload, live language switching, keyboard-only navigation, and narrow screens against isolated test data.
+
+## /mobile — the phone on a real smartphone
+
+`/mobile` renders the same `App` from `shield-app.tsx` with `layout="phone"`: only the phone screen at full width, without the bezel, the fake status bar, the "Решение BCC Shield" panel, the demo presets and the SOC tab. Logic is not duplicated: recovery, the cooling sheet, drafts and ҚАЗ/РУС work exactly as on `/`. `TransferPhone` takes `bare` for this mode; styles are the `.phone-stage.is-bare` / `.mobile-shell` block at the end of `mobile-client.css` (safe areas, sticky tab bar, `interactive-widget=resizes-content` so the keyboard does not cover "Продолжить").
+
+`src/app/manifest.ts` (start URL `/mobile`, theme `#00A859`, icons in `public/icons/`, `apple-icon.png`) lets the page be added to the home screen and open full-screen.
+
+The SOC header has a QR button ("Открыть на телефоне"). It encodes `<this origin>/mobile`; when the SOC is opened on `localhost`, it asks `GET /mobile/link` for the laptop's private Wi-Fi address. In the pilot it uses `BCC_PUBLIC_ORIGIN`.
+
+Demo on the defence (phone and laptop on the same Wi-Fi):
+
+```bash
+# from frontend/, after npm run build; backend running as usual
+BCC_MOBILE_LAN=true npx next start -H 0.0.0.0 -p 3105
+```
+
+`BCC_MOBILE_LAN=true` (local/demo only, ignored in the pilot) does two things: `/mobile/link` returns the laptop's RFC 1918 addresses, and the CSRF check in `server-access.ts` also trusts the laptop's own private IP as Host — the request `Origin` must still equal that Host, cross-site requests are still refused. Without the flag the phone can open the page but every transfer is rejected with 403. Windows may ask to allow Node.js in the firewall for private networks; guest/hotel Wi-Fi with client isolation will not work — use a phone hotspot instead.
+
+Browser QA (`scripts/qa-mobile-soc.cjs`) checks `/mobile` at 390 px: phone-only layout, no bezel, no horizontal overflow, manifest link, language switch, the confirm button on screen, a transfer through the mocked API and the cooling sheet fitting the screen. Real-device checks still needed before the defence: iPhone Safari and Android Chrome — keyboard vs. "Продолжить", the cooling timer running, ҚАЗ/РУС, and the transfer appearing in the SOC feed on the laptop.
