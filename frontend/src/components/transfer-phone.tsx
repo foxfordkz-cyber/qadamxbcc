@@ -27,6 +27,8 @@ interface Props {
   amount: string;
   onReview: () => void;
   onNewTransfer: () => void;
+  /** Full-screen on a real smartphone (/mobile): no bezel, fake status bar or caption. */
+  bare?: boolean;
 }
 
 /** Synthetic balance of the demo card. It is labelled as a demo value wherever it is shown. */
@@ -44,7 +46,7 @@ function maskRecipient(value: string, type: RecipientType) {
   return value;
 }
 
-export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onNewTransfer }: Props) {
+export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onNewTransfer, bare = false }: Props) {
   const { lang, t } = useLocale();
   const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const contextDetails = useRef<HTMLDetailsElement>(null);
@@ -66,9 +68,9 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const title = receipt ? m("receiptTitle") : step === "confirm" ? m("stepConfirm") : t("transfer");
   const showUnknown = blocked && !receipt;
 
-  return <div className="phone-stage">
+  return <div className={`phone-stage${bare ? " is-bare" : ""}`}>
     <section className="phone-frame" aria-label={t("mobile")}>
-      <div className="phone-status" aria-hidden="true"><span>9:41</span><i /><div><Signal size={14} /><Wifi size={14} /><BatteryFull size={19} /></div></div>
+      {!bare && <div className="phone-status" aria-hidden="true"><span>9:41</span><i /><div><Signal size={14} /><Wifi size={14} /><BatteryFull size={19} /></div></div>}
       <header className="phone-appbar">
         {step === "confirm" && !receipt
           ? <button type="button" className="appbar-back" disabled={busy} onClick={() => setStep("details")} aria-label={m("editCta")}><ArrowLeft size={20} /></button>
@@ -167,8 +169,8 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
         </form>}
       </div>
       <nav className="phone-tabbar" aria-hidden="true">{([["tabHome", House], ["tabPayments", ReceiptText], ["tabTransfers", ArrowLeftRight], ["tabHistory", History], ["tabMore", Menu]] as const).map(([key, Icon]) => <span key={key} className={key === "tabTransfers" ? "active" : ""}><Icon size={20} strokeWidth={key === "tabTransfers" ? 2.2 : 1.7} />{m(key)}</span>)}</nav>
-      <div className="home-indicator" aria-hidden="true" />
+      {!bare && <div className="home-indicator" aria-hidden="true" />}
     </section>
-    <p className="phone-caption">{m("phoneCaption")}</p>
+    {!bare && <p className="phone-caption">{m("phoneCaption")}</p>}
   </div>;
 }

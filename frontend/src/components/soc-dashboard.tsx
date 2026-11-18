@@ -13,6 +13,7 @@ import { MLInspector } from "./ml-inspector";
 import { countBlockedHubs } from "@/lib/feed-summary";
 import { useSocPoll } from "./use-soc-poll";
 import { CaseInspector } from "./case-inspector";
+import { MobileQr } from "./mobile-qr";
 
 const NetworkGraph = dynamic(() => import("./network-graph"), { ssr: false });
 export function SocDashboard({ initialSelection, revision, traffic, onTrafficSync, stream, onReview, busy }: { initialSelection: string | null; revision: number; evaluations: Record<string, Evaluation>; traffic: Record<string, TrafficRecord>; onTrafficSync: (items: FeedItem[]) => void; stream: TrafficStream; onReview: (id: string) => void; busy: boolean }) {
@@ -83,6 +84,7 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
     <div className="section-heading soc-heading"><div><h1>{t("socTitle")}</h1><p className="muted">{t(stage ? "stageHint" : "socIntro")}</p></div><div className="soc-actions">
       <button className={streaming ? "traffic-button active" : "traffic-button"} aria-pressed={streaming} disabled={!streaming && (!canStream || stream.inFlight)} onClick={stream.toggle}>{streaming ? <Square size={15} /> : <Play size={15} />}{t(streaming ? "trafficStop" : "liveTraffic")}</button>
       <button ref={stageToggle} className="secondary soc-stage-toggle" aria-pressed={stage} aria-keyshortcuts={stage ? "Escape" : undefined} onClick={toggleStage}>{stage ? <Minimize2 size={16} /> : <Presentation size={16} />}{t(stage ? "stageExit" : "stageMode")}</button>
+      <MobileQr />
       <button className="secondary icon-button" onClick={() => setRefresh(n => n + 1)} disabled={feed.loading} aria-label={t("refresh")} title={t("refresh")}><RefreshCw size={16} className={feed.loading ? "animate-spin" : ""} /></button>
     </div></div>
     <div className="traffic-strip"><span className={`live-dot ${streaming ? "" : "offline"}`} /><p>{t(stream.inFlight && !streaming ? "trafficDraining" : canStream ? "trafficHint" : "trafficMissing")}</p><span className="tabular-nums">{t("trafficSession")}: {Object.keys(traffic).length}</span></div>

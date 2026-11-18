@@ -530,3 +530,17 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
   .react-flow__edge.animated path { animation: none !important; }
 }
+
+/* SOC: QR for opening /mobile on a jury phone. */
+.mobile-qr { position: relative; display: flex; }
+.mobile-qr > summary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; list-style: none; cursor: pointer; font-size: 14px; }
+.mobile-qr > summary::-webkit-details-marker { display: none; }
+.mobile-qr-card { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; display: grid; justify-items: center; gap: 10px; width: min(300px, calc(100vw - 32px)); padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); text-align: center; font-size: 13px; line-height: 1.45; }
+.mobile-qr-code { width: 220px; max-width: 100%; aspect-ratio: 1; }
+.mobile-qr-code svg { display: block; width: 100%; height: 100%; }
+.mobile-qr-url { font-weight: 650; color: var(--emerald-ink); word-break: break-all; }
+.mobile-qr-missing { color: var(--amber-deep); }
+.soc-dashboard.is-stage .mobile-qr-code { width: 280px; }
+.soc-dashboard.is-stage .mobile-qr-card { width: min(340px, calc(100vw - 32px)); }
+@media (max-width: 600px) { .mobile-qr-card { right: -52px; } }
+.mobile-qr-card strong { font-size: 15px; color: var(--ink); }
