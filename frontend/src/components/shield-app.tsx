@@ -222,26 +222,32 @@ function App({ config }: { config: AppConfig }) {
     setCompletedIdentity(null); sensor.reset(); setResult(null); setPreset(null); setError(null);
   }
   return <>
-    <header className="topbar"><div className="brand"><div className="brand-mark"><ShieldCheck size={25} /></div><div><strong>bcc<span> shield</span></strong><small>{t("tagline")}</small></div></div>
-      <div className="header-right"><span className="mode"><span className="live-dot" />{t(config.mode)}</span><div className="language" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div></div>
-    </header>
+    <header className="topbar"><div className="topbar-inner">
+      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>bcc<span> shield</span></strong><small>{t("tagline")}</small></div></div>
+      <div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span><div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div></div>
+    </div></header>
     <main className="shell">
-      <section className="demo-bar" aria-label={t("presets")}><div className="flex items-center gap-2 text-sm"><CircleHelp size={16} /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "presets")}</span></div><div className="preset-buttons">{(["normal", "scam", "hub"] as const).map((key, index) => { const Icon = presetIcons[key]; return <button key={key} className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><span className="preset-number">0{index + 1}</span><Icon size={15} />{t(key)}</button>; })}</div></section>
-      {config.demoActionsEnabled !== false && <div className="mb-4 flex justify-end"><Link href="/pitch" className="inline-flex items-center gap-2 text-sm font-semibold text-bcc hover:underline">{t("pitchLink")}<ArrowRight size={16} /></Link></div>}
+      <section className="demo-bar" aria-label={t("presets")}>
+        <div className="demo-bar-label"><CircleHelp size={16} aria-hidden="true" /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "demoScenarios")}</span></div>
+        <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map((key, index) => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><span className="preset-number tabular-nums">0{index + 1}</span><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
+        {config.demoActionsEnabled !== false && <Link href="/pitch" className="pitch-link">{t("pitchLink")}<ArrowRight size={15} aria-hidden="true" /></Link>}
+      </section>
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
       {error && tab === "soc" && <p className="error" role="alert">{t(error)}</p>}
-      <div className="tabs" role="tablist" aria-label="BCC Shield">{(["mobile", "soc"] as const).map(key => { const Icon = key === "mobile" ? Smartphone : Activity; return <button key={key} role="tab" id={`tab-${key}`} aria-selected={tab === key} aria-controls={`panel-${key}`} tabIndex={tab === key ? 0 : -1} onKeyDown={e => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); const next = e.key === "Home" ? "mobile" : e.key === "End" ? "soc" : key === "mobile" ? "soc" : "mobile"; changeTab(next); document.getElementById(`tab-${next}`)?.focus(); } }} onClick={() => changeTab(key)}><Icon size={17} />{t(key)}</button>; })}</div>
+      <div className="tabs" role="tablist" aria-label="BCC Shield">{(["mobile", "soc"] as const).map(key => { const Icon = key === "mobile" ? Smartphone : Activity; return <button key={key} type="button" role="tab" id={`tab-${key}`} aria-selected={tab === key} aria-controls={`panel-${key}`} tabIndex={tab === key ? 0 : -1} onKeyDown={e => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); const next = e.key === "Home" ? "mobile" : e.key === "End" ? "soc" : key === "mobile" ? "soc" : "mobile"; changeTab(next); document.getElementById(`tab-${next}`)?.focus(); } }} onClick={() => changeTab(key)}><Icon size={17} />{t(key === "mobile" ? "tabMobile" : "tabSoc")}</button>; })}</div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} /> : <>
-          <div className="section-heading"><div><p className="eyebrow">{t("eyebrow")}</p><h1>{t("title")}</h1><p className="muted max-w-2xl">{t("intro")}</p></div><span className="security-seal"><ShieldCheck size={20} />BCC Shield</span></div>
+          <div className="client-wrap">
+          <div className="section-heading"><div><h1>{t("heroTitle")}</h1><p className="muted">{t("heroIntro")}</p></div></div>
           <div className="transfer-grid">
             <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={() => void evaluate(form)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} />
-            <Telemetry result={result} amount={resultAmount} roundtrip={roundtrip} busy={busy} error={error} sensor={sensor} onReview={() => result && void review(result.transaction_id)} />
+            <Telemetry result={result} amount={resultAmount} roundtrip={roundtrip} busy={busy} error={error} sensor={sensor} sender={form.sender} onReview={() => result && void review(result.transaction_id)} />
+          </div>
           </div>
         </>}
       </div>
-      <footer><span>BCC Shield · ITU Hackathon 2026</span><span>{config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
+      <footer className="page-footer"><span>BCC Shield · ITU Hackathon 2026</span><span>{config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
     </main>
     {modal && result?.status === "cooling_off" && <CoolingModal key={result.transaction_id} result={result} context={resultContext} answers={coolingDrafts[result.transaction_id] ?? result.verification_answers ?? {}} onAnswersChange={answers => setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers))} onClose={() => setModal(false)} onResolved={resolved} />}
   </>;

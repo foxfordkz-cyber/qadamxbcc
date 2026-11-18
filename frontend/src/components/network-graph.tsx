@@ -11,7 +11,7 @@ type AccountNode = Node<GraphData & { tone: string; caption: string }, "account"
 function Account({ data, selected }: NodeProps<AccountNode>) {
   return <div className={`account-node ${data.tone} ${selected ? "selected" : ""}`}>
     <Handle type="target" position={Position.Left} />
-    <div className="flex items-center gap-2">{data.shared_device_accounts > 0 ? <Smartphone size={18} /> : <UserRound size={18} />}<strong title={data.label}>{data.label}</strong></div><small title={data.caption}>{data.caption}</small>
+    <span className="account-icon" aria-hidden="true">{data.shared_device_accounts > 0 ? <Smartphone size={16} /> : <UserRound size={16} />}</span><span className="account-text"><strong title={data.label}>{data.label}</strong><small title={data.caption}>{data.caption}</small></span>
     <Handle type="source" position={Position.Right} />
   </div>;
 }
@@ -19,7 +19,7 @@ const nodeTypes = { account: Account };
 function Controls() {
   const { t } = useLocale();
   const flow = useReactFlow();
-  return <Panel position="bottom-left"><div className="graph-controls"><button aria-label={t("zoomIn")} title={t("zoomIn")} onClick={() => void flow.zoomIn()}><Plus size={16} /></button><button aria-label={t("zoomOut")} title={t("zoomOut")} onClick={() => void flow.zoomOut()}><Minus size={16} /></button><button aria-label={t("fit")} title={t("fit")} onClick={() => void flow.fitView({ padding: 0.2 })}><Maximize2 size={16} /></button></div></Panel>;
+  return <Panel position="bottom-left"><div className="graph-controls"><button aria-label={t("zoomIn")} title={t("zoomIn")} onClick={() => void flow.zoomIn()}><Plus size={16} /></button><button aria-label={t("zoomOut")} title={t("zoomOut")} onClick={() => void flow.zoomOut()}><Minus size={16} /></button><button aria-label={t("fit")} title={t("fit")} onClick={() => void flow.fitView({ padding: 0.2, maxZoom: 1.1 })}><Maximize2 size={16} /></button></div></Panel>;
 }
 function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
   const { t, lang } = useLocale();
@@ -46,7 +46,7 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
       // container resize, so polling, language changes and dragging keep the view.
       timer = setTimeout(() => {
         frame = requestAnimationFrame(() => {
-          if (!disposed) void fitView({ padding: 0.2 });
+          if (!disposed) void fitView({ padding: 0.2, maxZoom: 1.1 });
         });
       }, 100);
     });
@@ -77,20 +77,21 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
   const edges = graph.edges.map(edge => {
     const shared = edge.data.edge_type === "shared_device";
     const risky = edge.data.highlight || prepared.some(n => n.id === edge.target && n.data.tone === "danger");
-    const color = shared ? "#F79009" : risky ? "#F04438" : "#00A859";
+    const color = shared ? "#DC6803" : risky ? "#D92D20" : "#079455";
     return { ...edge, ariaLabel: shared ? t("shared") : t("transfer"), label: shared ? t("shared") : edge.label ?? undefined, animated: !shared && (risky || streaming),
       style: { stroke: color, strokeWidth: 1.8, strokeDasharray: shared ? "6 5" : undefined },
       markerEnd: shared ? undefined : { type: MarkerType.ArrowClosed, color },
-      labelStyle: { fill: "#344054", fontSize: 11, fontWeight: 600 }, labelBgStyle: { fill: "#FFFFFF", fillOpacity: 0.96 },
+      labelStyle: { fill: "#344054", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }, labelBgStyle: { fill: "#FFFFFF", fillOpacity: 0.96 },
     };
   });
   return <><div className="graph-canvas" data-depth={graph.depth} ref={container}><ReactFlow<AccountNode> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange}
-    onNodeClick={(_, node) => setSelectedId(node.id)} onSelectionChange={({ nodes: selectedNodes }) => setSelectedId(selectedNodes[0]?.id ?? null)} onPaneClick={() => setSelectedId(null)} fitView minZoom={0.2} maxZoom={2} nodesConnectable={false} edgesFocusable={false} colorMode="light"
+    onNodeClick={(_, node) => setSelectedId(node.id)} onSelectionChange={({ nodes: selectedNodes }) => setSelectedId(selectedNodes[0]?.id ?? null)} onPaneClick={() => setSelectedId(null)} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1.1 }} minZoom={0.2} maxZoom={2} nodesConnectable={false} edgesFocusable={false} colorMode="light"
     ariaLabelConfig={{ "node.a11yDescription.default": t("graphKeyboard"), "node.a11yDescription.keyboardDisabled": t("graphKeyboard"), "node.a11yDescription.ariaLiveMessage": ({ x, y }) => `${t("account")}: ${x}, ${y}`, "edge.a11yDescription.default": t("graphKeyboard"), "handle.ariaLabel": t("account") }}>
-    <Background color="#D0D5DD" gap={24} /><Controls />
+    <Background color="#E4E7EC" gap={22} size={1.2} /><Controls />
+    {graph.depth === 1 && <Panel position="top-center"><div className="graph-columns" aria-hidden="true"><span>{t("legendIncoming")}</span><b>{t("legendHub")}</b><span>{t("legendOutgoing")}</span></div></Panel>}
   </ReactFlow></div>
-    <div className="graph-legend"><span><i className="legend-danger" />{t("hub")}</span><span><i className="legend-warning" />{t("victim")}</span><span><Smartphone size={14} />{t("shared")}</span><span><i className="legend-safe" />{t("safeAccount")}</span></div>
-    {selected && <div className="node-detail"><strong>{selected.label}</strong><span>{t("incoming")}: {selected.in_degree}</span><span>{t("outgoing")}: {selected.out_degree}</span><span>{t("device")}: {selected.device_id || "—"}</span></div>}
+    <div className="graph-legend"><span><i className="legend-warning" />{t("legendIncoming")}</span><span><i className="legend-danger" />{t("legendHub")}</span><span><i className="legend-safe" />{t("legendOutgoing")}</span><span><i className="legend-shared" />{t("shared")}</span></div>
+    {selected && <div className="node-detail"><strong>{selected.label}</strong><span>{t("incoming")}: <b className="tabular-nums">{selected.in_degree}</b></span><span>{t("outgoing")}: <b className="tabular-nums">{selected.out_degree}</b></span><span>{t("device")}: <code>{selected.device_id || "—"}</code></span></div>}
   </>;
 }
 export default function NetworkGraph({ graph, streaming = false }: { graph: Graph; streaming?: boolean }) {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@fontsource-variable/inter";
 import "@xyflow/react/dist/style.css";
 import "./globals.css";
 
