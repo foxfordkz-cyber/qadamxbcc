@@ -1,29 +1,36 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Clock3, LoaderCircle, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock3, LoaderCircle, ShieldCheck, X } from "lucide-react";
 import { api, type Answers, type Context, type Evaluation } from "@/lib/contracts";
 import { warningKeys } from "@/lib/biometrics";
 import { remainingSeconds } from "@/lib/transfer-session";
-import { errorKey, useLocale, type MessageKey } from "@/lib/i18n";
+import { completeCoolingAnswers, coolingQuestions as questions, firstCoolingStep } from "@/lib/cooling-flow";
+import { mobileText } from "@/lib/mobile-copy";
+import { errorKey, money, useLocale, type MessageKey } from "@/lib/i18n";
+import "./mobile-client.css";
 
-const questions: (keyof Answers)[] = ["caller_claims_bank_or_police", "asked_to_move_to_safe_account", "asked_to_keep_secret_or_install_app", "initiated_by_customer", "knows_recipient_personally"];
-
-export function CoolingModal({ result, context, onClose, onResolved }: { result: Evaluation; context: Partial<Context>; onClose: () => void; onResolved: (value: Evaluation) => void }) {
+type Props = { result: Evaluation; context: Partial<Context>; answers: Partial<Answers>; onAnswersChange: (value: Partial<Answers>) => void; onClose: () => void; onResolved: (value: Evaluation) => void };
+export function CoolingModal({ result, context, answers, onAnswersChange, onClose, onResolved }: Props) {
   const { lang, setLang, t } = useLocale();
+  const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const dialog = useRef<HTMLDialogElement>(null);
-  const [answers, setAnswers] = useState<Partial<Answers>>(result.verification_answers ?? {});
+  const heading = useRef<HTMLHeadingElement>(null);
+  const [step, setStep] = useState(() => firstCoolingStep(answers));
+  const [editing, setEditing] = useState(false);
   const [clock, setClock] = useState(() => ({ receivedAt: Date.now(), started: performance.now(), elapsed: 0 }));
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
-  const notify = useRef(onResolved);
-  notify.current = onResolved;
-  const dirty = useRef(false);
+  const notify = useRef(onResolved); notify.current = onResolved;
   const [error, setError] = useState<MessageKey | null>(null);
-  const seconds = remainingSeconds(result, clock.elapsed, clock.receivedAt);
+  const remaining = remainingSeconds(result, clock.elapsed, clock.receivedAt);
+  const seconds = result.cooling_off_until && Number.isFinite(Date.parse(result.cooling_off_until)) && Number.isFinite(remaining) ? remaining : null;
   const unchanged = !!result.verification_answers && questions.every(q => result.verification_answers?.[q] === answers[q]);
+  const answered = questions.filter(q => typeof answers[q] === "boolean").length;
+  const reviewing = step === questions.length;
+  const question = step >= 0 && !reviewing ? questions[step] : null;
+  const stage = step < 0 ? 0 : reviewing ? 2 : 1;
   useEffect(() => { setClock({ receivedAt: Date.now(), started: performance.now(), elapsed: 0 }); }, [result.server_time]);
-  useEffect(() => { if (!dirty.current) setAnswers(result.verification_answers ?? {}); }, [result.verification_answers]);
   useEffect(() => {
     let disposed = false;
     let refreshing = false;
@@ -34,7 +41,7 @@ export function CoolingModal({ result, context, onClose, onResolved }: { result:
       try {
         const value = await api<Evaluation>(`transfers/${result.transaction_id}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]) });
         if (!disposed && !inFlight.current) notify.current(value);
-      } catch { /* A read failure never releases a hold; explicit actions still verify on the server. */ }
+      } catch { /* Reads never release funds. Explicit actions still verify on the server. */ }
       finally { refreshing = false; }
     };
     const visible = () => void refresh();
@@ -43,44 +50,40 @@ export function CoolingModal({ result, context, onClose, onResolved }: { result:
     return () => { disposed = true; clearInterval(timer); controller.abort(); document.removeEventListener("visibilitychange", visible); window.removeEventListener("focus", visible); };
   }, [result.transaction_id]);
   useEffect(() => {
-    const element = dialog.current;
-    const previous = document.activeElement;
+    const element = dialog.current; const previous = document.activeElement;
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    element?.showModal();
+    document.body.style.overflow = "hidden"; element?.showModal();
     const timer = setInterval(() => setClock(value => ({ ...value, elapsed: performance.now() - value.started })), 1000);
-    return () => { clearInterval(timer); element?.close(); document.body.style.overflow = previousOverflow; if (previous instanceof HTMLElement) previous.focus(); };
+    return () => { clearInterval(timer); element?.close(); document.body.style.overflow = previousOverflow; if (previous instanceof HTMLElement && previous.isConnected) previous.focus(); };
   }, []);
+  useEffect(() => { heading.current?.focus(); dialog.current?.scrollTo({ top: 0 }); }, [step]);
+
   async function submit(cancel = false) {
-    if (inFlight.current || (!cancel && !questions.every(q => typeof answers[q] === "boolean"))) return;
+    if (inFlight.current || (!cancel && !completeCoolingAnswers(answers))) return;
     inFlight.current = true; setBusy(true); setError(null);
-    try { const value = await api<Evaluation>(`transfers/${result.transaction_id}/${cancel ? "cancel" : "resolve-cooling"}`, { method: "POST", body: JSON.stringify(cancel ? {} : { answers }) }); dirty.current = false; onResolved(value); }
-    catch (e) {
-      // A lost response or another operator's action must not leave a stale hold on screen.
-      try { const current = await api<Evaluation>(`transfers/${result.transaction_id}`); if (current.status !== "cooling_off") { onResolved(current); return; } } catch { /* Keep the same transaction available for retry. */ }
-      setError(errorKey(e));
-    }
-    finally { inFlight.current = false; setBusy(false); }
+    try {
+      const value = await api<Evaluation>(`transfers/${result.transaction_id}/${cancel ? "cancel" : "resolve-cooling"}`, { method: "POST", body: JSON.stringify(cancel ? {} : { answers }) });
+      onResolved(value);
+    } catch (failure) {
+      try {
+        const current = await api<Evaluation>(`transfers/${result.transaction_id}`);
+        if (current.status !== "cooling_off" || (!cancel && questions.every(q => current.verification_answers?.[q] === answers[q]))) { onResolved(current); return; }
+      } catch { /* The same operation remains available for a safe retry. */ }
+      setError(errorKey(failure));
+    } finally { inFlight.current = false; setBusy(false); }
   }
-  return <dialog ref={dialog} className="cooling-modal" aria-labelledby="cooling-title" aria-describedby="cooling-description" onCancel={e => { e.preventDefault(); if (!busy) onClose(); }}>
-    <div className="flex items-center justify-between gap-3"><span className="badge cooling_off"><Clock3 size={15} />{t("cooling_off")}</span>
-      <div className="language" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button type="button" key={l} aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>
+  return <dialog ref={dialog} className="cooling-modal mobile-cooling" data-step={step < 0 ? "intro" : reviewing ? "review" : "question"} aria-labelledby="cooling-title" aria-describedby="cooling-description" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
+    <div className="cooling-toolbar"><span className="sheet-wordmark">bcc<span> shield</span></span><div className="language" aria-label={t("language")}>{(["kk", "ru"] as const).map(value => <button type="button" key={value} aria-pressed={lang === value} onClick={() => setLang(value)}>{value === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div><button type="button" className="sheet-close" aria-label={t("leaveHeld")} disabled={busy} onClick={onClose}><X size={20} /></button></div>
+    <ol className="cooling-stages" aria-label={t("securityCheck")}>{(["coolingIntroStep", "coolingQuestionsStep", "coolingReviewStep"] as const).map((key, index) => <li key={key} className={index <= stage ? "active" : ""} aria-current={index === stage ? "step" : undefined}><span>{index < stage ? <Check size={12} /> : index + 1}</span>{m(key)}</li>)}</ol>
+    <div className="cooling-transfer"><div><small>{m("coolingSummary")}</small><strong>{result.amount === undefined ? "— ₸" : money(result.amount, lang)}</strong><span>{result.recipient.display_name}</span></div><div className="cooling-clock" role="timer" aria-label={t("remaining")}><Clock3 size={17} /><strong>{seconds === null ? "—" : `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`}</strong><small>{t("remaining")}</small></div></div>
+    {seconds === null && <p className="cooling-time-note" role="status">{m("coolingMissing")}</p>}{seconds === 0 && <p className="cooling-time-note" role="status">{t("expired")}</p>}
+    <div className="cooling-step-content" key={step}>
+      <h2 id="cooling-title" ref={heading} tabIndex={-1}>{t(step < 0 ? "coolingTitle" : "securityCheck")}</h2><p id="cooling-description" className="muted">{step < 0 ? t("coolingText") : m(reviewing ? "coolingReviewHint" : "coolingAnswerHint")}</p>
+      {step < 0 && <><aside className="ai-warning"><strong><ShieldCheck size={17} />{t("aiWarning")}</strong>{warningKeys(context, result.reasons).map(key => <p key={key}>{t(key)}</p>)}</aside><p className="cooling-advice"><ShieldCheck size={21} />{m("coolingAdvice")}</p><button type="button" className="primary cooling-wide cooling-start" onClick={() => setStep(0)}>{m("coolingStart")}<ArrowRight size={18} /></button></>}
+      {question && <><div className="verification-progress"><span>{m("coolingQuestion")} {step + 1} / {questions.length}</span><strong>{answered} / {questions.length}</strong></div><progress className="cooling-progress" value={answered} max={questions.length} aria-label={t("verificationProgress")} /><fieldset className="cooling-question" disabled={busy}><legend>{t(question)}</legend><div className="cooling-choices">{[true, false].map(value => <label key={String(value)}><input type="radio" name={question} checked={answers[question] === value} onChange={() => { onAnswersChange({ ...answers, [question]: value }); }} /><span>{t(value ? "yes" : "no")}</span>{answers[question] === value && <Check size={18} />}</label>)}</div></fieldset><div className="cooling-navigation"><button type="button" className="secondary cooling-back" onClick={() => { setStep(editing ? questions.length : step - 1); setEditing(false); }}><ArrowLeft size={16} />{m("coolingBack")}</button><button type="button" className="primary cooling-next" disabled={typeof answers[question] !== "boolean"} onClick={() => { setStep(editing ? questions.length : step + 1); setEditing(false); }}>{m("coolingNext")}<ArrowRight size={16} /></button></div></>}
+      {reviewing && <form onSubmit={event => { event.preventDefault(); void submit(); }}><h3 className="cooling-review-title">{m("coolingReview")}</h3><ol className="cooling-review-list">{questions.map((q, index) => <li key={q}><span>{t(q)}<strong>{typeof answers[q] === "boolean" ? t(answers[q] ? "yes" : "no") : "—"}</strong></span><button type="button" className="cooling-edit" disabled={busy} aria-label={`${m("coolingEdit")}: ${t(q)}`} onClick={() => { setEditing(true); setStep(index); }}>{m("coolingEdit")}</button></li>)}</ol><p className="muted mt-4 text-xs" role="status">{t(unchanged && seconds !== 0 ? "answersSaved" : "confirmNote")}</p><button className="primary cooling-wide cooling-submit" disabled={busy || !completeCoolingAnswers(answers) || (unchanged && seconds !== 0)}>{busy ? <LoaderCircle className="animate-spin" size={17} /> : <ShieldCheck size={17} />}{t(seconds === 0 ? "releaseTransfer" : "confirm")}</button></form>}
     </div>
-    <div className="security-sheet-brand"><span className="sheet-shield"><ShieldCheck size={30} /></span><div><strong>bcc.kz</strong><span>{t("securityCheck")}</span></div></div>
-    <h2 id="cooling-title">{t("coolingTitle")}</h2><p id="cooling-description" className="muted">{t("coolingText")}</p>
-    <aside className="ai-warning"><strong><ShieldCheck size={17} />{t("aiWarning")}</strong>{warningKeys(context, result.reasons).map(key => <p key={key}>{t(key)}</p>)}</aside>
-    <div className="countdown"><span>{t("remaining")}</span><strong>{String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</strong></div>
-    {seconds === 0 && <p className="muted">{t("expired")}</p>}
-    <div className="verification-progress"><span>{t("verificationProgress")}</span><strong>{questions.filter(q => typeof answers[q] === "boolean").length} / {questions.length}</strong></div>
-    <form onSubmit={e => { e.preventDefault(); void submit(); }}>
-      <fieldset disabled={busy} className="space-y-3 border-0 p-0">
-        {questions.map((q, index) => <fieldset key={q} className="question"><legend>{index + 1}. {t(q)}</legend><div className="flex gap-3">{[true, false].map(value => <label key={String(value)}><input type="radio" name={q} required checked={answers[q] === value} onChange={() => { dirty.current = true; setAnswers(a => ({ ...a, [q]: value })); }} />{t(value ? "yes" : "no")}</label>)}</div></fieldset>)}
-      </fieldset>
-      <p className="muted mt-4 text-xs" role="status">{t(unchanged && seconds > 0 ? "answersSaved" : "confirmNote")}</p>
-      {error && <p role="alert" className="error">{t(error)}</p>}
-      <div className="mt-5 flex flex-wrap gap-3"><button className="primary flex-1" disabled={busy || !questions.every(q => typeof answers[q] === "boolean") || (unchanged && seconds > 0)}>{busy && <LoaderCircle className="animate-spin" size={16} />}{t(seconds === 0 ? "releaseTransfer" : "confirm")}</button><button type="button" className="secondary" disabled={busy} onClick={onClose}>{t("leaveHeld")}</button></div>
-      <button type="button" className="danger-button mt-3" disabled={busy} onClick={() => void submit(true)}><X size={16} />{t("cancelTransfer")}</button>
-      <p className="muted mt-3 text-xs">{t("cancelNote")}</p>
-    </form>
+    {error && <p role="alert" className="error">{t(error)}</p>}
+    <div className="cooling-later"><button type="button" className="secondary" disabled={busy} onClick={onClose}>{t("leaveHeld")}</button><button type="button" className="danger-button" disabled={busy} onClick={() => void submit(true)}><X size={16} />{t("cancelTransfer")}</button><p>{m("coolingDraftHint")}</p><p>{t("cancelNote")}</p></div>
   </dialog>;
 }

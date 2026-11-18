@@ -62,6 +62,9 @@ class FeedStats(BaseModel):
     cancelled_amount: Decimal = Decimal("0")
     avg_latency_ms: float = 0.0
     max_latency_ms: float = 0.0
+    p95_latency_ms: float | None = Field(None, ge=0)
+    latency_sample_size: int = Field(0, ge=0, le=500)
+    latency_sample_limit: int = 500
 
 
 class FeedPagination(BaseModel):

@@ -28,6 +28,7 @@ from app.services.graph import GraphStore, NodeView
 from app.services.transfers import NotFoundError, register_account, transfer_detail
 
 RING_SPACING = 280.0
+LATENCY_SAMPLE_LIMIT = 500
 
 
 def _party(account: Account) -> FeedParty:
@@ -171,6 +172,22 @@ async def _stats(session: AsyncSession) -> FeedStats:
         )
         or 0
     )
+    # This measures the original scorer only, independently of feed filters.
+    # Some seeded rows have no measurement (zero); exclude those from the percentile.
+    recent = (
+        await session.scalars(
+            select(Transaction.latency_ms)
+            .where(Transaction.latency_ms > 0)
+            .order_by(Transaction.created_at.desc(), Transaction.id.desc())
+            .limit(LATENCY_SAMPLE_LIMIT)
+        )
+    ).all()
+    timings = sorted(float(value) for value in recent if math.isfinite(float(value)))
+    stats.latency_sample_size = len(timings)
+    stats.latency_sample_limit = LATENCY_SAMPLE_LIMIT
+    if timings:
+        # Nearest-rank percentile: the selected observed sample is not interpolated.
+        stats.p95_latency_ms = round(timings[math.ceil(0.95 * len(timings)) - 1], 3)
     return stats
 
 

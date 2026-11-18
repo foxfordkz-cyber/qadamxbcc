@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Background, Handle, MarkerType, Panel, Position, ReactFlow, ReactFlowProvider, useNodesState, useReactFlow, type Node, type NodeProps } from "@xyflow/react";
 import { Maximize2, Minus, Plus, Smartphone, UserRound } from "lucide-react";
 import type { Graph, GraphData } from "@/lib/contracts";
+import { directGraphLayout } from "@/lib/graph-layout";
 import { useLocale } from "@/lib/i18n";
 
 type AccountNode = Node<GraphData & { tone: string; caption: string }, "account">;
 function Account({ data, selected }: NodeProps<AccountNode>) {
   return <div className={`account-node ${data.tone} ${selected ? "selected" : ""}`}>
     <Handle type="target" position={Position.Left} />
-    <div className="flex items-center gap-2">{data.shared_device_accounts > 0 ? <Smartphone size={18} /> : <UserRound size={18} />}<strong>{data.label}</strong></div><small>{data.caption}</small>
+    <div className="flex items-center gap-2">{data.shared_device_accounts > 0 ? <Smartphone size={18} /> : <UserRound size={18} />}<strong title={data.label}>{data.label}</strong></div><small title={data.caption}>{data.caption}</small>
     <Handle type="source" position={Position.Right} />
   </div>;
 }
@@ -61,7 +62,7 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
     const suspicious = new Set(graph.nodes.filter(n => n.data.suspected_mule || n.data.flagged || n.data.role === "hub" || n.data.role === "mule").map(n => n.id));
     const hubs = new Set(graph.nodes.filter(n => n.data.role === "hub" || (n.data.suspected_mule && n.data.in_degree >= 5)).map(n => n.id));
     const incoming = new Set(graph.edges.filter(e => e.data.edge_type === "transfer" && suspicious.has(e.target)).map(e => e.source));
-    return graph.nodes.map(n => ({ ...n, type: "account" as const, data: { ...n.data,
+    return directGraphLayout(graph).map(n => ({ ...n, type: "account" as const, data: { ...n.data,
       tone: hubs.has(n.id) ? "danger" : suspicious.has(n.id) || n.data.shared_device_accounts > 0 || incoming.has(n.id) ? "warning" : "safe",
       caption: t(hubs.has(n.id) ? "hub" : n.data.shared_device_accounts > 0 ? "shared" : incoming.has(n.id) ? "victim" : suspicious.has(n.id) ? "account" : "safeAccount"),
     } }));
@@ -69,7 +70,10 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph, lang]);
   const [nodes, setNodes, onNodesChange] = useNodesState<AccountNode>(prepared);
-  useEffect(() => { setNodes(previous => prepared.map(n => ({ ...n, position: previous.find(p => p.id === n.id)?.position ?? n.position }))); }, [prepared, setNodes]);
+  useEffect(() => { setNodes(previous => prepared.map(n => {
+    const retained = previous.find(p => p.id === n.id);
+    return { ...retained, ...n, position: retained?.position ?? n.position, selected: retained?.selected };
+  })); }, [prepared, setNodes]);
   const edges = graph.edges.map(edge => {
     const shared = edge.data.edge_type === "shared_device";
     const risky = edge.data.highlight || prepared.some(n => n.id === edge.target && n.data.tone === "danger");
@@ -80,7 +84,7 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
       labelStyle: { fill: "#344054", fontSize: 11, fontWeight: 600 }, labelBgStyle: { fill: "#FFFFFF", fillOpacity: 0.96 },
     };
   });
-  return <><div className="graph-canvas" ref={container}><ReactFlow<AccountNode> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange}
+  return <><div className="graph-canvas" data-depth={graph.depth} ref={container}><ReactFlow<AccountNode> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange}
     onNodeClick={(_, node) => setSelectedId(node.id)} onSelectionChange={({ nodes: selectedNodes }) => setSelectedId(selectedNodes[0]?.id ?? null)} onPaneClick={() => setSelectedId(null)} fitView minZoom={0.2} maxZoom={2} nodesConnectable={false} edgesFocusable={false} colorMode="light"
     ariaLabelConfig={{ "node.a11yDescription.default": t("graphKeyboard"), "node.a11yDescription.keyboardDisabled": t("graphKeyboard"), "node.a11yDescription.ariaLiveMessage": ({ x, y }) => `${t("account")}: ${x}, ${y}`, "edge.a11yDescription.default": t("graphKeyboard"), "handle.ariaLabel": t("account") }}>
     <Background color="#D0D5DD" gap={24} /><Controls />
@@ -90,5 +94,5 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
   </>;
 }
 export default function NetworkGraph({ graph, streaming = false }: { graph: Graph; streaming?: boolean }) {
-  return <ReactFlowProvider><Canvas key={graph.center} graph={graph} streaming={streaming} /></ReactFlowProvider>;
+  return <ReactFlowProvider key={`${graph.center}:${graph.depth}`}><Canvas graph={graph} streaming={streaming} /></ReactFlowProvider>;
 }

@@ -19,10 +19,13 @@ test("SOC search and pages cover history beyond the last 50 without changing glo
   assert.equal(blocked.pagination.total_filtered, 31);
   assert.equal(blocked.stats.total, 62);
   assert.equal(blocked.stats.blocked_hubs, 1);
+  assert.equal(blocked.stats.p95_latency_ms, all.stats.p95_latency_ms);
+  assert.equal(blocked.stats.latency_sample_size, all.stats.latency_sample_size);
   assert.ok(blocked.items.every(row => row.status === "blocked"));
   assert.equal(feedDemo({ q: " дАнИяР " }).pagination.total_filtered, 31);
   assert.equal(feedDemo({ q: created[0].transaction_id.toUpperCase().replace(/-/g, "") }).items[0].transaction_id, created[0].transaction_id);
   assert.equal(feedDemo({ q: "%" }).items.length, 0);
+  assert.equal(feedDemo({ q: "%" }).stats.p95_latency_ms, all.stats.p95_latency_ms);
   assert.equal(feedDemo({ q: "_" }).items.length, 0);
   const highRisk = feedDemo({ min_score: 75, limit: 200 });
   assert.equal(highRisk.pagination.total_filtered, 31);
@@ -48,6 +51,9 @@ test("SOC filters validate bounds and malformed pagination cannot masquerade as 
   for (const query of [{ limit: 0 }, { limit: 201 }, { offset: -1 }, { offset: 100001 }, { q: "x".repeat(129) }, { q: "Alice\u0000Bob" }, { min_score: -1 }, { min_score: 101 }, { min_score: 10.5 }, { status: "all" }, { since: "yesterday" }]) assert.equal(feedQuerySchema.safeParse(query).success, false);
   const response = feedDemo();
   assert.doesNotThrow(() => validateApiResponse("soc/feed?offset=0", response));
+  const { p95_latency_ms, latency_sample_size, latency_sample_limit, ...legacyStats } = response.stats;
+  assert.doesNotThrow(() => validateApiResponse("soc/feed", { ...response, stats: legacyStats }));
+  assert.throws(() => validateApiResponse("soc/feed", { ...response, stats: { ...response.stats, p95_latency_ms: -1 } }));
   assert.throws(() => validateApiResponse("soc/feed", { ...response, pagination: { ...response.pagination, total_filtered: -1 } }));
   assert.throws(() => validateApiResponse("soc/feed", { ...response, pagination: undefined }));
   assert.equal(socFeedPath("blocked", " Аружан & Марат ", 25), "soc/feed?limit=25&offset=25&status=blocked&q=%D0%90%D1%80%D1%83%D0%B6%D0%B0%D0%BD+%26+%D0%9C%D0%B0%D1%80%D0%B0%D1%82");

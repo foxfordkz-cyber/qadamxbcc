@@ -14,6 +14,10 @@
   В заметках слайдов есть текст выступления. Восемь слайдов рассчитаны на пять минут.
 - [Репетиция и команды](REHEARSAL.md) — отдельная база, три пресета и автоматическая
   проверка без изменения истории текущего пользовательского preview.
+- [Резервное HD-видео](../deliverables/demo/BCC-Shield-demo.webm),
+  [субтитры RU](../deliverables/demo/BCC-Shield-demo.ru.srt),
+  [субтитры KK](../deliverables/demo/BCC-Shield-demo.kk.srt) — три сценария на живом API.
+  [Повтор записи](DEMO_VIDEO.md); [проверки UI и локализации](FRONTEND_QA.md).
 - [Источники и реестр утверждений](HACKATHON_EVIDENCE.md),
   [международные практики](ANTIFRAUD_PRACTICES.md),
   [оценка модели](MODEL_EVALUATION.md), [границы пилота](PILOT.md).
