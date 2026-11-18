@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { History } from "lucide-react";
 import type { RecoveryRecord } from "@/lib/recovery";
 import { unresolved } from "@/lib/recovery";
 import { useLocale } from "@/lib/i18n";
@@ -13,8 +14,10 @@ export function RecoveryPanel({ records, busy, refreshing, persisted, onReview, 
   const pageCount = Math.max(1, Math.ceil(visible.length / 5));
   const currentPage = Math.min(page, pageCount - 1);
   if (!records.length && persisted) return null;
+  const open = records.filter(unresolved).length;
+  if (!open && !showHistory && persisted) return <div className="recovery-compact"><button type="button" onClick={() => { setShowHistory(true); setPage(0); }}><History size={15} aria-hidden="true" />{t("recentReceipts")} <span className="tabular-nums">{records.length}</span></button></div>;
   return <section className="pending-panel" aria-label={t("recoveryCenter")}>
-    <div><strong>{t("recoveryCenter")} · {records.filter(unresolved).length}</strong><p className="muted">{t("recoveryHint")}</p>{!persisted && <p className="error" role="status">{t("recoveryStorageUnavailable")}</p>}</div>
+    <div><strong>{t("recoveryCenter")} · <span className="tabular-nums">{open}</span></strong><p className="muted">{t("recoveryHint")}</p>{!persisted && <p className="error" role="status">{t("recoveryStorageUnavailable")}</p>}</div>
     <div className="recovery-toolbar"><button className="secondary" disabled={busy || refreshing} onClick={onRefresh}>{t("refresh")}</button><button className="secondary" aria-pressed={showHistory} onClick={() => { setShowHistory(value => !value); setPage(0); }}>{t(showHistory ? "pendingTransfers" : "recentReceipts")}</button></div>
     <ul className="recovery-list">{visible.slice(currentPage * 5, (currentPage + 1) * 5).map(record => <li key={record.id}>
       <div><strong>{record.state === "unknown" ? t("outcomeUnconfirmed") : record.state === "abandoned" ? t("attemptAbandoned") : t(record.status ?? "cooling_off")}</strong><small>•••• {record.id.slice(-8)}</small></div>

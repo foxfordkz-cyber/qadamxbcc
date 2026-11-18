@@ -121,7 +121,12 @@ async function main() {
     await page.waitForTimeout(1600); await page.locator('#recipient').press('Backspace');
     check('browser_paste_and_typing_sensor_live', await page.locator('.biometric-sensor.paste-detected').count() === 1 && (await page.locator('.sensor-readings').innerText()).includes('Обнаружена вставка'));
     await page.locator('#transfer-amount').fill('5000');
+    const beforeConfirm = report.mutations.filter(item => item.path.endsWith('/evaluate')).length;
     await page.locator('.phone-form .transfer-cta').click();
+    await page.locator('.phone-confirm').waitFor();
+    const confirmText = await page.locator('.phone-confirm').innerText();
+    check('confirm_step_shows_amount_and_recipient_before_sending', /5\s000\s₸/.test(confirmText) && confirmText.includes('+7 701 000 00 02') && report.mutations.filter(item => item.path.endsWith('/evaluate')).length === beforeConfirm, confirmText.slice(0, 200));
+    await page.locator('.phone-confirm .transfer-confirm').click();
     await page.locator('.phone-receipt').waitFor();
     const biometric = records.get(await page.locator('.phone-receipt').getAttribute('data-transaction-id')).context;
     check('browser_biometrics_reach_evaluation', biometric.pasted_recipient === true && biometric.typing_duration_ms >= 1500 && biometric.hesitation_count >= 2, biometric);
