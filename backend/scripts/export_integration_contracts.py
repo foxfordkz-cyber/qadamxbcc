@@ -13,8 +13,11 @@ from app.api.v1 import (
     integration_insights,
     integration_operations,
     integrations,
+    scam_check,
     trusted_contacts,
 )
+from app.integrations.scam_check import EXPLANATIONS, ScamCheckRequest, analyze
+from app.integrations.telegram.scam_check import COPY as SCAN_COPY
 from app.integrations.timeline import LABELS
 from app.main import create_app
 
@@ -79,6 +82,26 @@ def export() -> None:
                 "response": response,
             }
         )
+    scan_path = "/api/v1/integrations/guardian/scam-check"
+    examples = [e for e in examples if e["path"] != scan_path]
+    for lang, text in (
+        ("ru", "Переведите деньги на безопасный счет. +77000000000"),
+        ("kk", "Ақшаны қауіпсіз шотқа аударыңыз."),
+    ):
+        body = ScamCheckRequest.model_validate({"text": text, "language": lang})
+        examples.append(
+            {
+                "method": "POST",
+                "path": scan_path,
+                "role": "owner",
+                "headers": {"Authorization": "Bearer <operator-issued-owner-capability>"},
+                "path_parameters": {},
+                "query_parameters": {},
+                "request": body.model_dump(),
+                "status": 200,
+                "response": analyze(body).model_dump(),
+            }
+        )
     routes = {
         (method, prefix + route.path): route
         for module, prefix in [
@@ -89,6 +112,7 @@ def export() -> None:
             (guardian_reports, "/api/v1/integrations"),
             (guardian_cases, "/api/v1/integrations"),
             (integration_operations, "/api/v1/integrations"),
+            (scam_check, "/api/v1/integrations"),
         ]
         for route in module.router.routes
         if isinstance(route, APIRoute)
@@ -105,6 +129,13 @@ def export() -> None:
             json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
     texts = json.loads((DOCS / "ui_texts.json").read_text(encoding="utf-8"))
+    texts["scam_check"] = {
+        "statuses": {
+            code: {lang: SCAN_COPY[lang][code] for lang in ("ru", "kk")}
+            for code in ("signals_detected", "no_known_signals", "insufficient_context")
+        },
+        "signals": {code: {"ru": value[0], "kk": value[1]} for code, value in EXPLANATIONS.items()},
+    }
     texts["timeline"] = {code: {"ru": label[2], "kk": label[3]} for code, label in LABELS.items()}
     texts["health"] = {
         "ok": {"ru": "Работает", "kk": "Жұмыс істеп тұр"},

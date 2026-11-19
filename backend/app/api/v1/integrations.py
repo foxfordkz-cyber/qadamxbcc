@@ -10,6 +10,7 @@ from app.api.v1.guardian_cases import router as cases_router
 from app.api.v1.guardian_reports import router as reports_router
 from app.api.v1.integration_insights import router as insights_router
 from app.api.v1.integration_operations import router as operations_router
+from app.api.v1.scam_check import router as scam_router
 from app.integrations.contracts import (
     EnrichmentOut,
     IntegrationHealth,
@@ -32,6 +33,7 @@ router.include_router(insights_router)
 router.include_router(reports_router)
 router.include_router(cases_router)
 router.include_router(operations_router)
+router.include_router(scam_router)
 
 
 @router.post("/transactions/{transaction_id}", response_model=RunOut, status_code=202)

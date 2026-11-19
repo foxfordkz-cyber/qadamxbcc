@@ -34,6 +34,16 @@ jobs:
           node-version: '24'
       - name: Full project oracle
         run: bash verify.sh
+      - name: Reproducible private Scam Check evaluation
+        working-directory: backend
+        run: uv run --no-sync python -m scripts.evaluate_scam_check --benchmark --output ../.local-checks/scam-check-evaluation.json
+      - name: Save synthetic Scam Check metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: scam-check-evaluation
+          path: .local-checks/scam-check-evaluation.json
+          include-hidden-files: true
+          retention-days: 7
       - name: PostgreSQL and Redis integration tests
         working-directory: backend
         env:
