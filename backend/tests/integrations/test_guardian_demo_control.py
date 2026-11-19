@@ -182,7 +182,8 @@ def test_probe_signing_does_not_load_the_scoring_engine() -> None:
             "-c",
             "import sys; from app.integrations.capabilities import Principal, "
             "issue_token; assert 'app.core.resources' not in sys.modules; "
-            "assert 'app.services.antifraud' not in sys.modules; assert 'sklearn' not in sys.modules",
+            "assert 'app.services.antifraud' not in sys.modules; "
+            "assert 'sklearn' not in sys.modules",
         ],
         cwd=demo.ROOT / "backend",
         capture_output=True,
