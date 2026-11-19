@@ -1,0 +1,11 @@
+{
+  "scope": "20 sequential localhost HTTP + bearer auth + Redis quota + offline rules; no SQL query",
+  "warmup": 3,
+  "samples": 20,
+  "errors": 0,
+  "error_rate": 0.0,
+  "limitations": "Small local sample; p99 is the observed maximum, not a stable tail estimate.",
+  "p50_ms": 21.9924,
+  "p95_ms": 46.4625,
+  "p99_ms": 75.9268
+}
