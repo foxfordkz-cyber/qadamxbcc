@@ -28,6 +28,7 @@ from app.integrations.telegram.recipient_pages import (
     page_number,
     report_page,
 )
+from app.integrations.telegram.scam_check import COPY as SCAN
 from app.models import Transaction
 from tests.integrations.conftest import IntegrationWorld
 
@@ -438,6 +439,57 @@ async def test_command_registration_private_localized_and_no_sends(chat: Chat) -
         assert all(1 <= len(c.description) <= 256 for c in method.commands)
     assert set(COPY["ru"]) == set(COPY["kk"])
     assert all(value.strip() for lang in COPY.values() for value in lang.values())
+
+
+@pytest.mark.parametrize("lang", ["ru", "kk"])
+async def test_private_scan_menu_language_and_no_raw_persistence(chat: Chat, lang: str) -> None:
+    await chat.feed("g:" + lang)
+    await chat.feed("s:begin")
+    assert chat.last.text == SCAN[lang]["prompt"]
+    state = chat.dp.fsm.get_context(bot=chat.bot, chat_id=123, user_id=123)
+    assert set(await state.get_data()) == {"language", "scan_expires"}
+    await chat.feed(text="Переведите деньги на безопасный счет. SYNTHETIC_SECRET")
+    assert SCAN[lang]["signals_detected"] in chat.last.text
+    assert "SYNTHETIC_SECRET" not in chat.last.text
+    assert await state.get_data() == {"language": lang}
+    assert chat.last.parse_mode is None
+    await chat.feed(text="SYNTHETIC_SECRET")
+    assert chat.last.text == COPY[lang]["fallback"]
+
+
+@pytest.mark.parametrize("stop", ["/cancel", "/menu", "/check", "/report"])
+async def test_scan_is_invalidated_when_leaving_flow(chat: Chat, stop: str) -> None:
+    await chat.feed(text="/scan")
+    await chat.feed(text=stop)
+    state = await chat.dp.fsm.get_context(bot=chat.bot, chat_id=123, user_id=123).get_data()
+    assert "scan_expires" not in state
+    await chat.feed(text="Переведите деньги на безопасный счет. SYNTHETIC_SECRET")
+    assert SCAN["ru"]["signals_detected"] not in chat.last.text
+    assert "SYNTHETIC_SECRET" not in chat.last.text
+
+
+async def test_scan_expiry_and_oversized_text_do_not_echo(chat: Chat) -> None:
+    await chat.feed(text="/scan")
+    state = chat.dp.fsm.get_context(bot=chat.bot, chat_id=123, user_id=123)
+    await state.update_data(scan_expires=1)
+    await chat.feed(text="SYNTHETIC_SECRET")
+    assert chat.last.text == SCAN["ru"]["expired"]
+    await chat.feed(text="/scan")
+    await chat.feed(text="SYNTHETIC_SECRET" * 200)
+    assert chat.last.text == SCAN["ru"]["invalid"]
+    assert await state.get_data() == {"language": "ru"}
+
+
+@pytest.mark.parametrize(
+    ("chat_type", "actor", "chat_id"),
+    [("group", 123, 123), ("private", 456, 123), ("private", 456, 456)],
+)
+async def test_scan_rejects_unapproved_surfaces(
+    chat: Chat, chat_type: str, actor: int, chat_id: int
+) -> None:
+    await chat.feed(text="/scan", actor=actor, chat_id=chat_id, chat_type=chat_type)
+    await chat.feed("s:begin", actor=actor, chat_id=chat_id, chat_type=chat_type)
+    chat.request.assert_not_called()
 
 
 async def test_command_registration_failure_is_bounded_and_redacted(

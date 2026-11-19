@@ -1120,5 +1120,81 @@
       "last_successful_processing": "2026-11-14T09:00:00Z",
       "real_provider_probed": false
     }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/integrations/guardian/scam-check",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {},
+    "query_parameters": {},
+    "request": {
+      "text": "Переведите деньги на безопасный счет. +77000000000",
+      "language": "ru"
+    },
+    "status": 200,
+    "response": {
+      "ruleset_version": "scam-rules-1.0.0",
+      "language": "ru",
+      "advisory_only": true,
+      "status": "signals_detected",
+      "signals": [
+        {
+          "code": "safe_account",
+          "explanation": "Просьба перевести деньги на так называемый безопасный счёт."
+        }
+      ],
+      "guidance": "Остановитесь и самостоятельно проверьте обращение через известный официальный канал. Не передавайте коды и не устанавливайте приложения по указанию незнакомца.",
+      "limitation": "Это учебные правила, не банковское решение и не вероятность мошенничества. Отсутствие признаков не доказывает безопасность. Возможны пропуски, ложные срабатывания и ошибки понимания отрицаний; ссылки и отправитель не проверялись.",
+      "privacy": {
+        "version": "local-mask-1.0.0",
+        "processing": "local_rules_only",
+        "stored": false,
+        "external_ai_used": false,
+        "masked_categories": [
+          "number"
+        ],
+        "masked_spans": 1
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/integrations/guardian/scam-check",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {},
+    "query_parameters": {},
+    "request": {
+      "text": "Ақшаны қауіпсіз шотқа аударыңыз.",
+      "language": "kk"
+    },
+    "status": 200,
+    "response": {
+      "ruleset_version": "scam-rules-1.0.0",
+      "language": "kk",
+      "advisory_only": true,
+      "status": "signals_detected",
+      "signals": [
+        {
+          "code": "safe_account",
+          "explanation": "Ақшаны «қауіпсіз шотқа» аудару туралы өтініш."
+        }
+      ],
+      "guidance": "Тоқтап, өтінішті өзіңіз білетін ресми арна арқылы тексеріңіз. Кодтарды бермеңіз және бейтаныс адамның нұсқауымен қолданба орнатпаңыз.",
+      "limitation": "Бұл оқу ережелері, банк шешімі немесе алаяқтық ықтималдығы емес. Белгілердің болмауы қауіпсіздікті дәлелдемейді. Белгілерді өткізіп алу, жалған белгі және терістеуді қате түсіну мүмкін; сілтемелер мен жіберуші тексерілмеді.",
+      "privacy": {
+        "version": "local-mask-1.0.0",
+        "processing": "local_rules_only",
+        "stored": false,
+        "external_ai_used": false,
+        "masked_categories": [],
+        "masked_spans": 0
+      }
+    }
   }
 ]

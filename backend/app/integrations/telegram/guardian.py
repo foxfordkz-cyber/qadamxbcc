@@ -26,6 +26,8 @@ from app.integrations.telegram.recipient_pages import (
     notification_page,
     page_number,
 )
+from app.integrations.telegram.scam_check import COPY as SCAN_COPY
+from app.integrations.telegram.scam_check import build_scan_router
 from app.integrations.telegram.schemas import ContactState
 from app.integrations.telegram.templates import STATE_LABELS
 
@@ -183,6 +185,9 @@ def menu(language: str) -> InlineKeyboardMarkup:
             for k in ("security", "alerts", "contacts", "scam", "history", "language", "help")
         ]
     )
+    result.inline_keyboard.insert(
+        4, [InlineKeyboardButton(text=SCAN_COPY[language]["title"], callback_data="s:begin")]
+    )
     for key, action in (
         ("report", "r:begin"),
         ("reports", "r:list"),
@@ -250,6 +255,7 @@ def build_router(
 ) -> Router:
     router = Router(name="guardian")
     router.include_router(build_report_router(factory, admitted))
+    router.include_router(build_scan_router(admitted))
 
     commands = {
         "start": "home",

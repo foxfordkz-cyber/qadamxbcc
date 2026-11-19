@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from io import StringIO
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -251,3 +252,43 @@ def test_probe_timeout_is_reported_without_raw_error(monkeypatch: pytest.MonkeyP
     assert result["checks"]["api_ready"] is False
     assert result["checks"]["integration_health"] is False
     assert "synthetic-secret" not in json.dumps(result)
+
+
+@pytest.mark.parametrize("recovers", [True, False])
+def test_start_readiness_probes_are_bounded_and_never_replay_operations(
+    monkeypatch: pytest.MonkeyPatch, recovers: bool
+) -> None:
+    probes: list[list[dict[str, Any]]] = []
+    waits: list[int] = []
+
+    def inspect_readiness(data: list[dict[str, Any]]) -> dict[str, Any]:
+        probes.append(data)
+        return {"success": recovers and len(probes) == 2}
+
+    monkeypatch.setattr(demo, "containers", lambda: [container()])
+    monkeypatch.setattr(demo, "check", inspect_readiness)
+    monkeypatch.setattr("scripts.guardian_demo.time.sleep", waits.append)
+    monkeypatch.setattr(demo, "compose", lambda *a, **kw: pytest.fail("probe must not mutate"))
+    result = demo.readiness_after_start()
+    assert result["success"] is recovers
+    assert len(probes) == (2 if recovers else 3)
+    assert waits == [2] * (len(probes) - 1)
+
+
+def test_direct_script_probe_imports_from_an_unrelated_directory(tmp_path: Path) -> None:
+    script = str(demo.ROOT / "backend/scripts/guardian_demo.py")
+    program = (
+        "import runpy\n"
+        f"module = runpy.run_path({script!r})\n"
+        "class Offline:\n"
+        "    def open(self, *a, **kw): raise OSError('offline')\n"
+        "probe = module['probe']\n"
+        "probe.__globals__['build_opener'] = lambda *a: Offline()\n"
+        "result = probe('k' * 64)\n"
+        "assert result['checks']['api_ready'] is False\n"
+        "assert result['checks']['integration_health'] is False\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", program], cwd=tmp_path, capture_output=True, timeout=30, check=False
+    )
+    assert result.returncode == 0
