@@ -31,7 +31,7 @@ STATE_LABELS = {
 
 
 ALERTS = {
-    "ru": "🛡 BCC Shield Guardian — демо, не официальный сервис банка.\n" + ALERTS["ru"],
-    "kk": "🛡 BCC Shield Guardian — демо, банктің ресми қызметі емес.\n" + ALERTS["kk"],
+    "ru": "🛡 Saq Bol Guardian — демо, не официальный сервис банка.\n" + ALERTS["ru"],
+    "kk": "🛡 Saq Bol Guardian — демо, банктің ресми қызметі емес.\n" + ALERTS["kk"],
 }
-CONSENT = "BCC Shield — демо, не сервис банка / банктің қызметі емес.\n" + CONSENT
+CONSENT = "Saq Bol — демо, не сервис банка / банктің қызметі емес.\n" + CONSENT

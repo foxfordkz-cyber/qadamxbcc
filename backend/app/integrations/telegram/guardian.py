@@ -32,7 +32,7 @@ from app.integrations.telegram.templates import STATE_LABELS
 TEXT = {
     "ru": {
         "welcome": (
-            "🛡 BCC Shield Guardian\nДемонстрационный помощник BCC Shield. Не "
+            "🛡 Saq Bol Guardian\nДемонстрационный помощник Saq Bol. Не "
             "является официальным сервисом банка.\nНе присылайте PIN, CVV, OTP,"
             " пароли или банковские реквизиты."
         ),
@@ -84,7 +84,7 @@ TEXT = {
     },
     "kk": {
         "welcome": (
-            "🛡 BCC Shield Guardian\nBCC Shield демонстрациялық көмекшісі. "
+            "🛡 Saq Bol Guardian\nSaq Bol демонстрациялық көмекшісі. "
             "Банктің ресми қызметі емес.\nPIN, CVV, OTP, құпиясөздер немесе "
             "банк деректемелерін жібермеңіз."
         ),

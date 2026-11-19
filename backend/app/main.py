@@ -1,4 +1,4 @@
-"""FastAPI application factory for BCC Shield."""
+"""FastAPI application factory for Saq Bol."""
 
 import asyncio
 import math

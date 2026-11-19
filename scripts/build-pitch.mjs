@@ -62,7 +62,7 @@ function base(presentation, item, lang, index) {
   const slide = presentation.slides.add();
   slide.background.fill = C.canvas;
   const content = item[lang];
-  text(slide, 'BCC Shield', 64, 30, 240, 34, 23, C.darkGreen, true);
+  text(slide, 'Saq Bol', 64, 30, 240, 34, 23, C.darkGreen, true);
   text(slide, `${index + 1} / 8`, 1100, 34, 116, 24, 17, C.muted, false, 'right');
   text(slide, content.title, 64, 88, 1152, 118, 44, C.ink, true);
   text(slide, content.lead, 64, 218, 1130, 76, 27, C.muted);

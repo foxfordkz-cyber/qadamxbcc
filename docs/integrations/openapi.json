@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "BCC Shield Core",
+    "title": "Saq Bol Core",
     "description": "Real-time antifraud, drop-network detection and adaptive cooling-off for Bank CenterCredit transfers (kk/ru explainability).",
     "version": "0.1.0"
   },

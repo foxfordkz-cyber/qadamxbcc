@@ -13,7 +13,7 @@ class Settings(BaseSettings):
         env_prefix="BCC_", env_file=".env", extra="ignore", hide_input_in_errors=True
     )
 
-    app_name: str = "BCC Shield Core"
+    app_name: str = "Saq Bol Core"
     environment: Literal["local", "demo", "pilot"] = "local"
     api_prefix: str = "/api/v1"
     allow_demo_overrides: bool = True

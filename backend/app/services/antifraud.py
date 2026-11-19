@@ -1,4 +1,4 @@
-"""BCC Shield real-time antifraud & drop-network engine.
+"""Saq Bol real-time antifraud & drop-network engine.
 
 Hybrid pipeline evaluated on every transfer (warmed scorer p95 target < 15 ms):
 

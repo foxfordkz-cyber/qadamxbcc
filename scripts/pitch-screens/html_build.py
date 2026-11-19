@@ -1,4 +1,4 @@
-"""Kazakh 10-slide BCC Shield pitch as one self-contained animated HTML file."""
+"""Kazakh 10-slide Saq Bol pitch as one self-contained animated HTML file."""
 import base64, json, sys
 from pathlib import Path
 
@@ -17,7 +17,7 @@ slides = []
 # 1 cover
 slides.append(("dark", "zoom", f'''
 <div class="cover-text">
-  <p class="kicker a" style="--d:100ms">BCC Shield · ITU Hackathon 2026</p>
+  <p class="kicker a" style="--d:100ms">Saq Bol · ITU Hackathon 2026</p>
   <h1 class="a" style="--d:250ms">Алаяққа аударымды жібермей тұрып тоқтату</h1>
   <p class="lead a" style="--d:450ms">{esc(P["problem"]["lead"])}</p>
   <div class="chips">{"".join(f'<span class="chip a" style="--d:{600+i*120}ms">{c}</span>' for i, c in enumerate(["bcc.kz клиенті", "SOC панелі", "ҚАЗ / РУС"]))}</div>
@@ -30,13 +30,13 @@ slides.append(("dark", "zoom", f'''
 # 2 problem
 slides.append(("light", "slide", f'''{head("«Банктен» қоңырау — клиент ақшаны өзі аударады", P["problem"]["lead"])}
 <div class="row">
-  {steps(["Қоңырау шалушы өзін банк немесе полиция қызметкері деп таныстырады", "Депозиттегі ақшаны «қауіпсіз шотқа» аударуды сұрайды", "Клиент 900 000 ₸ енгізіп, растайды: пароль дұрыс, бірақ шешімді басқа адам таңған", "BCC Shield ақша кетпей тұрып аударымды кідіртеді"], cls="big")}
+  {steps(["Қоңырау шалушы өзін банк немесе полиция қызметкері деп таныстырады", "Депозиттегі ақшаны «қауіпсіз шотқа» аударуды сұрайды", "Клиент 900 000 ₸ енгізіп, растайды: пароль дұрыс, бірақ шешімді басқа адам таңған", "Saq Bol ақша кетпей тұрып аударымды кідіртеді"], cls="big")}
   <div class="phones">
     <figure>{img("mobile-confirm", "phone", 600)}<figcaption class="a" style="--d:800ms">Аударымды растау</figcaption></figure>
     <div class="arrow a" style="--d:900ms">→</div>
     <figure>{img("mobile-cooling-intro", "phone glow-amber", 1000)}<figcaption class="a amber" style="--d:1200ms">15 минуттық кідіріс</figcaption></figure>
   </div>
-</div>''', "Клиенттің жолын нақты экранда көрсетіңіз: қоңырау кезінде депозиттен 900 000 ₸ аудару. Растау бар, пароль дұрыс — бірақ шешім таңылған. BCC Shield ақша кетпей тұрып араласады."))
+</div>''', "Клиенттің жолын нақты экранда көрсетіңіз: қоңырау кезінде депозиттен 900 000 ₸ аудару. Растау бар, пароль дұрыс — бірақ шешім таңылған. Saq Bol ақша кетпей тұрып араласады."))
 # 3 decisions
 dec = [("phone-approved", "0–39 · рұқсат ету", "ok"), ("mobile-cooling-intro", "40–74 · 15 минут кідірту", "warn"), ("phone-blocked", "75–100 · бұғаттау", "bad")]
 slides.append(("light", "rise", head(P["decisions"]["title"], P["decisions"]["lead"]) + '<div class="trio">' + "".join(

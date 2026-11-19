@@ -70,7 +70,7 @@ try {
   await language("РУС");
   started = performance.now();
   preroll = (started - recordingBegan) / 1000;
-  chapter("BCC Shield: синтетическое демо на живом API", "BCC Shield: нақты API-дегі синтетикалық демо");
+  chapter("Saq Bol: синтетическое демо на живом API", "Saq Bol: нақты API-дегі синтетикалық демо");
   await until(5); await language("ҚАЗ");
   await until(10); await language("РУС");
   await page.locator("#transfer-amount").fill("");
