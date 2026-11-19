@@ -1,0 +1,100 @@
+{
+  "session_date": "2026-11-18",
+  "report_finalized": "2026-11-19",
+  "scope": "single consenting private test chat; menu/report acceptance; no notification worker",
+  "authorization": {
+    "new_explicit_user_grant": true,
+    "minutes": 30,
+    "max_replies": 12,
+    "max_menu_updates": 30,
+    "closed": true,
+    "technical_restart_preserved_deadline_and_cumulative_budget": true
+  },
+  "telegram": {
+    "send_attempts": 9,
+    "sends_provider_accepted": 9,
+    "menu_update_attempts": 22,
+    "menu_updates_provider_accepted": 20,
+    "menu_attempts_without_confirmed_success": 2,
+    "uncertain_send_retries": 0,
+    "new_cooling_alerts": 0
+  },
+  "interaction_evidence": {
+    "phase_one_event_codes": [
+      "/start",
+      "CALLBACK:consent",
+      "CALLBACK:consent",
+      "/language",
+      "g:kk",
+      "g:security",
+      "g:home",
+      "g:privacy",
+      "g:home",
+      "g:scam",
+      "CALLBACK:g",
+      "/cancel",
+      "CALLBACK:g",
+      "CALLBACK:r",
+      "CALLBACK:r",
+      "CALLBACK:r",
+      "TEXT_INPUT",
+      "REPORT_CONFIRM",
+      "CALLBACK:r",
+      "/reports",
+      "CALLBACK:r",
+      "CALLBACK:r",
+      "g:home",
+      "/notifications"
+    ],
+    "phase_two_event_codes": [
+      "/start",
+      "CALLBACK:consent"
+    ],
+    "user_confirmed_survey_cancel_and_stale_step_rejection": true,
+    "user_confirmed_receipt_and_demo_operator_status": true,
+    "user_confirmed_empty_notifications": true,
+    "user_confirmed_automatic_post_consent_menu_after_fix": true
+  },
+  "persistence": {
+    "synthetic_reports": 1,
+    "soc_read_succeeded": true,
+    "soc_acknowledgment_succeeded": true,
+    "report_survived_polling_restart": true
+  },
+  "shutdown": {
+    "polling_stopped": true,
+    "grant_inactive": true,
+    "test_consents_revoked": true,
+    "worker_never_started": true,
+    "dedicated_postgres_redis_containers_stopped": true,
+    "volumes_preserved": true
+  },
+  "recorder_issue": {
+    "error_type": "PermissionError",
+    "exact_os_cause_known": false,
+    "possible_reader_replace_contention_reproduced": true,
+    "bounded_local_replace_retry_seconds": 0.5,
+    "synthetic_windows_held_reader_test": "PASS",
+    "synthetic_budget_recipient_expiry_checks": "PASS",
+    "network_requests_in_recorder_self_tests": 0,
+    "acl_changed": false,
+    "provider_retry_added": false
+  },
+  "product_fix": "successful consent edits original message into localized main menu",
+  "focused_dispatcher_cases_passed_after_fix": 33,
+  "new_bot_cases_defined": 24,
+  "product_files_sha256_utf8_lf": {
+    "backend/app/integrations/telegram/assistant_ui.py": "380c03b29cabf36769e09be5a33655fa763da7ea118026f120326ecb21820e5f",
+    "backend/app/integrations/telegram/bot.py": "e467593e47c83a527adfb7b9aef9f91a8a81171c84e199bc83ce2e70e13199cd",
+    "backend/app/integrations/telegram/guardian.py": "b900efdcfa3a892ed377d1b89c0c978bcf26bc38db37facd208ad1331c8eb54f",
+    "backend/app/integrations/telegram/guardian_reports.py": "3bf8ba2b9db7a87fd7dc1e5bfff1236fadff7b832204efb9b9e6a2f7c46bce93",
+    "backend/app/integrations/telegram/recipient_pages.py": "db07d1eb8612e590d6485a7fd8d966d68adf80b5ca712c7167eaae64525c13da"
+  },
+  "not_claimed": [
+    "new real Cooling-Off delivery acceptance",
+    "real 429 or provider outage test",
+    "production readiness",
+    "owner/team merge approval",
+    "all menu attempts succeeded"
+  ]
+}

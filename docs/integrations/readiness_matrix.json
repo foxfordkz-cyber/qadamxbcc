@@ -1,0 +1,1063 @@
+{
+  "total": 100,
+  "counts": {
+    "DONE": 98,
+    "BLOCKED": 2,
+    "PARTIAL": 0,
+    "MISSING": 0
+  },
+  "not_applicable": 0,
+  "score": 99.5,
+  "breakdown": [
+    {
+      "group": "T",
+      "weight": 30,
+      "requirements": 20,
+      "points": 20,
+      "weighted": 30.0
+    },
+    {
+      "group": "G",
+      "weight": 25,
+      "requirements": 20,
+      "points": 20,
+      "weighted": 25.0
+    },
+    {
+      "group": "O",
+      "weight": 25,
+      "requirements": 20,
+      "points": 20,
+      "weighted": 25.0
+    },
+    {
+      "group": "S",
+      "weight": 15,
+      "requirements": 20,
+      "points": 20,
+      "weighted": 15.0
+    },
+    {
+      "group": "D",
+      "weight": 5,
+      "requirements": 20,
+      "points": 18,
+      "weighted": 4.5
+    }
+  ],
+  "requirements": [
+    {
+      "id": "T01",
+      "requirement": "Регистрация доверенного контакта",
+      "status": "DONE",
+      "evidence": "telegram/service.py: invite, owner consent, quota",
+      "tests": "test_owner_consent_required; test_no_contact",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T02",
+      "requirement": "Безопасная привязка Telegram",
+      "status": "DONE",
+      "evidence": "256-bit одноразовый hash-token + private sender",
+      "tests": "test_one_time_invite_and_contact_consent; test_concurrent_invitation_consumption",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T03",
+      "requirement": "Отдельное согласие получателя",
+      "status": "DONE",
+      "evidence": "bind не делает VERIFIED; consent отдельно",
+      "tests": "test_wrong_contact_cannot_consent; test_one_time_invite_and_contact_consent",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T04",
+      "requirement": "Отзыв обоими участниками",
+      "status": "DONE",
+      "evidence": "revoke, очистка адреса, отмена queued",
+      "tests": "test_revoked_consent_prevents_future_notifications; test_stale_session_observes_consent_revocation",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T05",
+      "requirement": "Хранение статусов",
+      "status": "DONE",
+      "evidence": "trusted_contacts + contact_notifications",
+      "tests": "test_verified_duplicate_notification_and_audit",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T06",
+      "requirement": "RU/KZ сообщения",
+      "status": "DONE",
+      "evidence": "telegram/templates.py, ru/kk",
+      "tests": "test_templates_do_not_leak_financial_data[ru/kk]",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T07",
+      "requirement": "Создание уведомления для своего active cooling",
+      "status": "DONE",
+      "evidence": "service.enqueue, existing cooling_until",
+      "tests": "test_approved_transfer_not_queued; test_delivery_guards",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T08",
+      "requirement": "FakeTelegramAdapter",
+      "status": "DONE",
+      "evidence": "telegram/fake_adapter.py, default fake",
+      "tests": "test_fake_adapter_idempotency; fake Docker E2E",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T09",
+      "requirement": "Реальная доставка в разрешённой тестовой среде",
+      "status": "DONE",
+      "evidence": "Authorized live RU/KK alerts, 11 accepted messages; TELEGRAM_LIVE_ACCEPTANCE.md",
+      "tests": "Real private-chat consent/decline/revoke, suspicion and acknowledgment callbacks, SOC reload",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T10",
+      "requirement": "Повтор при временном отказе",
+      "status": "DONE",
+      "evidence": "Persisted next_attempt_at and max 3 claims; explicit rejection only; migration 0002a",
+      "tests": "test_durable_retry + concurrent due-claim PostgreSQL regression",
+      "remaining": "—",
+      "priority": "P2"
+    },
+    {
+      "id": "T11",
+      "requirement": "Защита от повторной отправки",
+      "status": "DONE",
+      "evidence": "unique contact+tx; durable claim; uncertain terminal",
+      "tests": "test_concurrent_enqueue_is_unique; test_crash_claim_is_never_retried",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T12",
+      "requirement": "Idempotency уведомлений и callbacks",
+      "status": "DONE",
+      "evidence": "canonical row; monotonic advisory states",
+      "tests": "test_callbacks_are_advisory_monotonic_and_idempotent",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T13",
+      "requirement": "Notification expiry",
+      "status": "DONE",
+      "evidence": "core cooling deadline + recheck before retry",
+      "tests": "test_expired_invite; test_delivery_guards; test_callback_authentication",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T14",
+      "requirement": "Валидация callbacks",
+      "status": "DONE",
+      "evidence": "sender/chat/message/ref/state/expiry",
+      "tests": "test_callback_authentication; test_owner_cannot_impersonate_telegram_sender",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T15",
+      "requirement": "Защита персональных данных",
+      "status": "DONE",
+      "evidence": "адрес только внутри БД до revoke; минимальные тексты",
+      "tests": "test_templates_do_not_leak_financial_data; test_e2e_cooling_consent_delivery_suspicion_and_soc",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T16",
+      "requirement": "Audit events",
+      "status": "DONE",
+      "evidence": "integration_audit + correlation + NOTIFICATION_RETRY",
+      "tests": "test_verified_duplicate_notification_and_audit; test_rejected_send_retries_once_without_duplicate",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T17",
+      "requirement": "Error handling Telegram и ingress",
+      "status": "DONE",
+      "evidence": "worker isolation + sanitized router error boundary",
+      "tests": "test_polling_boundary_does_not_leak_or_crash; test_real_adapter_error_is_sanitized",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T18",
+      "requirement": "Совместимость с Cooling-Off, advisory only",
+      "status": "DONE",
+      "evidence": "нет вызова resolve-cooling; core unchanged",
+      "tests": "test_e2e_cooling_consent_delivery_suspicion_and_soc; DEMO scam",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T19",
+      "requirement": "Telegram architecture/setup/security docs",
+      "status": "DONE",
+      "evidence": "TRUSTED_CONTACT_ARCHITECTURE.md; TELEGRAM_BOT_SETUP.md",
+      "tests": "document review + linked API fixtures",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "T20",
+      "requirement": "Telegram integration tests",
+      "status": "DONE",
+      "evidence": "57 cases на самостоятельном PR A",
+      "tests": "PostgreSQL/Redis 57 passed + A CI",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G01",
+      "requirement": "Typed external protocol",
+      "status": "DONE",
+      "evidence": "ExternalGatewayProtocol.lookup",
+      "tests": "strict mypy; test_typed_synthetic_results",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G02",
+      "requirement": "Mock adapter",
+      "status": "DONE",
+      "evidence": "MockGatewayAdapter, in-process only",
+      "tests": "test_typed_synthetic_results",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G03",
+      "requirement": "Synthetic fixtures",
+      "status": "DONE",
+      "evidence": "SYN-CLEAR / REVIEW / NETWORK; unknown explicit",
+      "tests": "test_gateway_exposes_bilingual_evidence",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G04",
+      "requirement": "Request validation",
+      "status": "DONE",
+      "evidence": "SYN-* constrained string, UUID ownership",
+      "tests": "test_non_synthetic_identifiers_rejected; test_foreign_transaction_rejected",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G05",
+      "requirement": "Response validation",
+      "status": "DONE",
+      "evidence": "extra forbid, source/identity/verified/interval",
+      "tests": "test_failure_classification",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G06",
+      "requirement": "Redis cache",
+      "status": "DONE",
+      "evidence": "hashed versioned keys, safe bounded cache I/O",
+      "tests": "test_cache_and_expired_cache",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G07",
+      "requirement": "Cache expiry/freshness",
+      "status": "DONE",
+      "evidence": "TTL <=60s/provider expiry; revalidate each hit",
+      "tests": "test_idempotent_replay_does_not_freshen_expired_result; test_corrupt_cache_is_not_trusted",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G08",
+      "requirement": "Timeout",
+      "status": "DONE",
+      "evidence": "GatewayClient per-attempt timeout",
+      "tests": "test_failure_classification[timeout]",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G09",
+      "requirement": "Bounded retry policy",
+      "status": "DONE",
+      "evidence": "max 2 read-only transient attempts, backoff",
+      "tests": "test_bounded_transient_retry",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G10",
+      "requirement": "UNKNOWN/UNAVAILABLE",
+      "status": "DONE",
+      "evidence": "GatewayStatus enum and fixed errors",
+      "tests": "test_failure_classification; test_incomplete_reservation_is_explicit",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G11",
+      "requirement": "Safe fallback без денежного решения",
+      "status": "DONE",
+      "evidence": "unknown() + no core mutation",
+      "tests": "test_enrichment_never_changes_transfer; test_cache_failure_degrades_safely",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G12",
+      "requirement": "Audit logging",
+      "status": "DONE",
+      "evidence": "GatewayAuditService + requested/completed",
+      "tests": "test_idempotency_and_payload_binding",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G13",
+      "requirement": "Idempotency",
+      "status": "DONE",
+      "evidence": "owner+key durable reservation, payload conflict",
+      "tests": "test_concurrent_gateway_reservation",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G14",
+      "requirement": "RU/KZ descriptions",
+      "status": "DONE",
+      "evidence": "description_ru / description_kk computed from enums",
+      "tests": "11 test_gateway_localization cases",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G15",
+      "requirement": "API documentation",
+      "status": "DONE",
+      "evidence": "NBK_MOCK_GATEWAY.md; OpenAPI; examples",
+      "tests": "test_frontend_examples_match_published_routes",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G16",
+      "requirement": "Contract tests",
+      "status": "DONE",
+      "evidence": "typed fixtures, malformed/unverified/future replies",
+      "tests": "test_typed_synthetic_results; test_failure_classification",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G17",
+      "requirement": "Security tests",
+      "status": "DONE",
+      "evidence": "owner/SOC boundaries, synthetic-only identifiers",
+      "tests": "test_owner_and_soc_visibility; test_foreign_transaction_rejected",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G18",
+      "requirement": "SOC integration",
+      "status": "DONE",
+      "evidence": "ExternalCheckOut in EnrichmentOut, freshness exposed",
+      "tests": "test_e2e_cooling_consent_delivery_suspicion_and_soc; DEMO hub",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G19",
+      "requirement": "Docker compatibility",
+      "status": "DONE",
+      "evidence": "worker uses in-process mock without provider keys",
+      "tests": "compose-demo CI + local five-service smoke",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "G20",
+      "requirement": "Error handling",
+      "status": "DONE",
+      "evidence": "fixed codes, no provider diagnostic leakage",
+      "tests": "test_gateway_errors_have_safe_bilingual_descriptions",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O01",
+      "requirement": "Durable event processing",
+      "status": "DONE",
+      "evidence": "integration_runs persisted before processing",
+      "tests": "test_duplicate_events_and_payload_conflicts; test_worker_restart_replays_safely",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O02",
+      "requirement": "Background worker",
+      "status": "DONE",
+      "evidence": "separate app.integrations.worker process",
+      "tests": "Docker heartbeat + E2E",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O03",
+      "requirement": "Transactional outbox integration intent",
+      "status": "DONE",
+      "evidence": "job+audit same DB commit; optional POST after evaluate",
+      "tests": "test_outbox_and_audit_rollback_together_on_commit_failure",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O04",
+      "requirement": "Event correlation",
+      "status": "DONE",
+      "evidence": "run/notification/check/audit IDs linked",
+      "tests": "test_e2e_cooling_consent_delivery_suspicion_and_soc",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O05",
+      "requirement": "Retry/recovery",
+      "status": "DONE",
+      "evidence": "3 bounded attempts; stale current error cleared",
+      "tests": "test_worker_retries_are_bounded; test_recovered_run_clears_current_error_but_preserves_audit",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O06",
+      "requirement": "Duplicate event prevention",
+      "status": "DONE",
+      "evidence": "unique transaction and owner+idempotency key",
+      "tests": "test_concurrent_orchestration_is_unique",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O07",
+      "requirement": "Transaction isolation",
+      "status": "DONE",
+      "evidence": "locks confined to integration lifecycle; no core lock over provider I/O",
+      "tests": "test_invitation_lock_does_not_block_core_foreign_keys; test_stale_session_observes_consent_revocation",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O08",
+      "requirement": "Failure recovery",
+      "status": "DONE",
+      "evidence": "stale claim handling, bounded retry, visible failure",
+      "tests": "test_worker_restart_replays_safely; test_worker_retries_are_bounded",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O09",
+      "requirement": "Telegram orchestration",
+      "status": "DONE",
+      "evidence": "consent-gated enqueue, separate delivery",
+      "tests": "test_contact_gates_in_orchestration",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O10",
+      "requirement": "Gateway orchestration",
+      "status": "DONE",
+      "evidence": "optional enrichment, independent of scoring",
+      "tests": "test_gateway_failure_does_not_prevent_contact_or_scoring",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O11",
+      "requirement": "SOC evidence",
+      "status": "DONE",
+      "evidence": "advisory evidence, safe events, unchanged core_status",
+      "tests": "test_delivery_failure_remains_visible_to_soc; DEMO hub",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O12",
+      "requirement": "Structured logs",
+      "status": "DONE",
+      "evidence": "SafeJSONFormatter allowlist",
+      "tests": "test_structured_logs_allowlist_fields",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O13",
+      "requirement": "Dependency health",
+      "status": "DONE",
+      "evidence": "bounded DB/Redis probe + worker heartbeat",
+      "tests": "test_dependency_health; test_limiter_failure_is_closed",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O14",
+      "requirement": "Docker",
+      "status": "DONE",
+      "evidence": "optional overlay, no token for base/fake",
+      "tests": "full verify Compose config + compose-demo CI",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O15",
+      "requirement": "PostgreSQL",
+      "status": "DONE",
+      "evidence": "durable jobs/audit/checks/contact lifecycle",
+      "tests": "live PostgreSQL integration suite",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O16",
+      "requirement": "Redis",
+      "status": "DONE",
+      "evidence": "rate limit, gateway cache, heartbeat",
+      "tests": "real Redis DB15 tests",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O17",
+      "requirement": "Integration API",
+      "status": "DONE",
+      "evidence": "15 operations total; owner/SOC/simulator separation",
+      "tests": "test_soc_requires_soc_role_and_owner_is_scoped; API examples tests",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O18",
+      "requirement": "E2E",
+      "status": "DONE",
+      "evidence": "normal, scam, hub script through full stack",
+      "tests": "scripts.demo_integrations local + CI",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O19",
+      "requirement": "No scoring modification",
+      "status": "DONE",
+      "evidence": "services/schemas/core transfer routes no diff from a02d20d",
+      "tests": "existing core suite + test_scoring_and_enqueue_never_call_gateway",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "O20",
+      "requirement": "No frontend regression",
+      "status": "DONE",
+      "evidence": "frontend untouched",
+      "tests": "12 existing frontend tests + tsc + Next build",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S01",
+      "requirement": "Account-bound authorization; UUID alone insufficient",
+      "status": "DONE",
+      "evidence": "security.py HMAC role/subject/expiry",
+      "tests": "test_missing_auth_and_fake_identity; test_cross_owner_access",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S02",
+      "requirement": "Simulator isolation / real-mode guards",
+      "status": "DONE",
+      "evidence": "simulator role fake-only; test environment allowlist",
+      "tests": "test_owner_cannot_impersonate_telegram_sender; test_real_adapter_allowlist_blocks_before_network",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S03",
+      "requirement": "Rate limiting and fail-closed dependency",
+      "status": "DONE",
+      "evidence": "Redis atomic per-principal counter + bot limit",
+      "tests": "test_rate_limit; test_limiter_failure_is_closed; polling redis_unavailable",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S04",
+      "requirement": "No secrets in tracked code/current CI logs",
+      "status": "DONE",
+      "evidence": "known-pattern scan; safe events; CI key masked before export",
+      "tests": "test_polling_boundary_does_not_leak_or_crash; test_ci_generated_key_is_masked_before_next_step; new CI log inspection",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S05",
+      "requirement": "Input validation and consistent errors",
+      "status": "DONE",
+      "evidence": "Pydantic schemas + sanitized IntegrationError",
+      "tests": "security tests + 15 request examples validation",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S06",
+      "requirement": "Failure injection",
+      "status": "DONE",
+      "evidence": "timeout/unavailable/malformed/cache/provider failures",
+      "tests": "test_failure_classification; test_delivery_timeout_is_bounded",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S07",
+      "requirement": "Concurrent duplicate protection in PostgreSQL",
+      "status": "DONE",
+      "evidence": "unique keys + row locks",
+      "tests": "7 live-only concurrency/locking cases",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S08",
+      "requirement": "Crash/restart semantics tested",
+      "status": "DONE",
+      "evidence": "no ambiguous resend; stale run recovery",
+      "tests": "test_crash_claim_is_never_retried; test_worker_restart_replays_safely",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S09",
+      "requirement": "Revoked consent survives stale sessions",
+      "status": "DONE",
+      "evidence": "populate_existing under contact lock",
+      "tests": "test_stale_session_observes_consent_revocation",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S10",
+      "requirement": "Reversible migrations and ORM parity",
+      "status": "DONE",
+      "evidence": "0002/0003/0004; five tables",
+      "tests": "PostgreSQL head→0001→head + alembic check; existing SQLite migration test",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S11",
+      "requirement": "Full oracle, lint/types/backend/frontend",
+      "status": "DONE",
+      "evidence": "verify.sh from current tree",
+      "tests": "Ruff + mypy + pytest + tsc/build + Compose",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S12",
+      "requirement": "APPROVED/COOLING_OFF/BLOCKED preserved",
+      "status": "DONE",
+      "evidence": "existing core API, no financial writes from integrations",
+      "tests": "core scenario tests + three full-stack demos",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S13",
+      "requirement": "Ownership boundaries",
+      "status": "DONE",
+      "evidence": "no core weights/thresholds/frontend rewrite",
+      "tests": "git diff current main; original API comparison",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S14",
+      "requirement": "Existing API backward compatibility",
+      "status": "DONE",
+      "evidence": "all current-main OpenAPI paths/components equal",
+      "tests": "structural OpenAPI comparison + snapshot test",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S15",
+      "requirement": "Off-path latency verified",
+      "status": "DONE",
+      "evidence": "no adapters in scoring; repeated real-Redis benchmark",
+      "tests": "3×500 current main vs integrated measurements; no production SLA",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S16",
+      "requirement": "Isolated test data and resources",
+      "status": "DONE",
+      "evidence": "bcc_integration_test DB/schema, Redis15, synthetic fixtures",
+      "tests": "fixture guards; disposable Compose project",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S17",
+      "requirement": "Disabled integration leaves core operational",
+      "status": "DONE",
+      "evidence": "enabled=false default; adapters independent",
+      "tests": "test_disabled_integrations_leave_core_alive; test_disabled_gateway",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S18",
+      "requirement": "No real NBK/bank data/money",
+      "status": "DONE",
+      "evidence": "no remote gateway; only SYN-* and synthetic seed",
+      "tests": "source review + demo trace + validation tests",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S19",
+      "requirement": "Contact cannot authorize funds",
+      "status": "DONE",
+      "evidence": "advisory_only; no resolve-cooling invocation",
+      "tests": "test_e2e_cooling_consent_delivery_suspicion_and_soc",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "S20",
+      "requirement": "Operational scope guardrails",
+      "status": "DONE",
+      "evidence": "no production deploy, secret rotation, force push or main merge",
+      "tests": "Git history/PR state; reused existing local demo config",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D01",
+      "requirement": "Full requirements matrix and transparent scoring",
+      "status": "DONE",
+      "evidence": "this 100-row matrix; original-spec traceability",
+      "tests": "formula recomputed from statuses, no manual target override",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D02",
+      "requirement": "API inventory and generated OpenAPI JSON",
+      "status": "DONE",
+      "evidence": "BEKZAT_FRONTEND_HANDOFF.md + openapi.json",
+      "tests": "test_openapi_export_matches_current_application",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D03",
+      "requirement": "Request/response examples for every operation",
+      "status": "DONE",
+      "evidence": "api_examples.json, roles/headers/statuses",
+      "tests": "15 test_frontend_examples_match_published_routes cases",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D04",
+      "requirement": "Error states and caller actions",
+      "status": "DONE",
+      "evidence": "handoff HTTP 401/403/404/409/422/429/503 table",
+      "tests": "authorization/validation/failure tests",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D05",
+      "requirement": "Contact/notification/run lifecycle handoff",
+      "status": "DONE",
+      "evidence": "handoff state and expiry/replay rules",
+      "tests": "consent, callback, lifecycle tests",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D06",
+      "requirement": "RU/KZ UI vocabulary",
+      "status": "DONE",
+      "evidence": "ui_texts.json + gateway computed descriptions",
+      "tests": "template tests + gateway localization coverage",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D07",
+      "requirement": "SOC UI data contracts",
+      "status": "DONE",
+      "evidence": "EnrichmentOut and core feed/graph join guidance",
+      "tests": "SOC role/ownership and E2E tests",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D08",
+      "requirement": "Configuration and setup",
+      "status": "DONE",
+      "evidence": ".env.example, test bot and fake Docker instructions",
+      "tests": "disabled-mode tests + Docker smoke",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D09",
+      "requirement": "DEMO 1 normal transfer",
+      "status": "DONE",
+      "evidence": "core preset approved, no integration run/alert",
+      "tests": "full-stack normal PASS",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D10",
+      "requirement": "DEMO 2 social engineering",
+      "status": "DONE",
+      "evidence": "cooling + consent + suspicion + SOC",
+      "tests": "full-stack scam PASS",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D11",
+      "requirement": "DEMO 3 suspicious network",
+      "status": "DONE",
+      "evidence": "core blocked + graph evidence + MOCK network marker",
+      "tests": "full-stack hub PASS",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D12",
+      "requirement": "Architecture/security/original documentation",
+      "status": "DONE",
+      "evidence": "original seven docs retained; current updates linked",
+      "tests": "documentation review against source",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D13",
+      "requirement": "Final verification evidence with SHA/PR/commands",
+      "status": "DONE",
+      "evidence": "BEKZAT_FINAL_VERIFICATION.md",
+      "tests": "local logs + immutable CI run links",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D14",
+      "requirement": "Honest contribution accounting",
+      "status": "DONE",
+      "evidence": "BEKZAT_CONTRIBUTIONS.md, current-main diff",
+      "tests": "generated JSON/lockfiles/docs separated from authored Python",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D15",
+      "requirement": "Published fix commits and current PR CI",
+      "status": "DONE",
+      "evidence": "PR A/B/C, no force push",
+      "tests": "GitHub Actions on checked branch heads",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D16",
+      "requirement": "Current main/reviews/mergeability audited",
+      "status": "DONE",
+      "evidence": "main a02d20d; open Draft PRs; no reviews",
+      "tests": "GitHub metadata and review timeline reads",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D17",
+      "requirement": "Human core-owner review of shared hooks/migrations",
+      "status": "BLOCKED",
+      "evidence": "no owner approval submitted",
+      "tests": "agent checks are not independent human approval",
+      "remaining": "Владелец core должен провести review/одобрение; агент не может одобрить собственную работу",
+      "priority": "P1"
+    },
+    {
+      "id": "D18",
+      "requirement": "Joint frontend acceptance using real UI",
+      "status": "BLOCKED",
+      "evidence": "contracts delivered; frontend implementation belongs to team",
+      "tests": "no joint mobile/SOC browser sign-off",
+      "remaining": "Дамир/mobile и SOC-команда подключают UI и проводят совместный acceptance",
+      "priority": "P1"
+    },
+    {
+      "id": "D19",
+      "requirement": "Reproducible evidence and artifact package",
+      "status": "DONE",
+      "evidence": "logs, OpenAPI, examples, reports, source archive",
+      "tests": "archive integrity + checksum manifest",
+      "remaining": "—",
+      "priority": "P1"
+    },
+    {
+      "id": "D20",
+      "requirement": "GO gates and remaining work declared",
+      "status": "DONE",
+      "evidence": "local/team/production decisions separated",
+      "tests": "security gate independent of percentage",
+      "remaining": "—",
+      "priority": "P1"
+    }
+  ],
+  "verification": {
+    "implementation_sha": "84c793028accd21c293dd50be4630072c816e924",
+    "baseline": "a02d20dcc857001de364e0b0f12a66ce72db0c12",
+    "unique_backend": 199,
+    "integration_cases": 151,
+    "frontend_cases": 12,
+    "portable_passed": 192,
+    "portable_skipped": 7,
+    "live_alerts": 2,
+    "accepted_send_message_calls": 11,
+    "pr_implementation_heads": [
+      "59550de781c146e517e082cada22f64bd4405e32",
+      "be7489d7bfb4f9e6a392d3c1088865a31c9db083",
+      "4533b16769a04a71b3756bc77119b276752377cf",
+      "84c793028accd21c293dd50be4630072c816e924"
+    ],
+    "successful_ci_runs": [
+      43563302792,
+      43563495541,
+      43563561759,
+      43565606217
+    ],
+    "latency": {
+      "date_utc": "2026-11-14T06:32:29.648331+00:00",
+      "quantiles": "nearest rank",
+      "environment": "Windows Python 3.12.16, Docker Desktop PG16/Redis7, synthetic data",
+      "comparison": "single implementation, no speedup or regression claim",
+      "engine_only": {
+        "attempted": 500,
+        "successes": 500,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 5.7827,
+        "p95_ms": 15.5109,
+        "p99_ms": 32.7947,
+        "scope": "engine + graph + real Redis14; 30 warmups; excludes HTTP/SQL"
+      },
+      "http_database": {
+        "attempted": 100,
+        "successes": 100,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 79.2297,
+        "p95_ms": 446.7354,
+        "p99_ms": 662.804,
+        "scope": "loopback HTTP + Docker FastAPI + engine + PG; 10 warmups; serial reused sender, risk outcomes may vary"
+      },
+      "integration_enqueue_http": {
+        "attempted": 20,
+        "successes": 20,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 76.9344,
+        "p95_ms": 116.1098,
+        "p99_ms": 123.2384
+      },
+      "queue_wait": {
+        "attempted": 20,
+        "successes": 20,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 9774.138,
+        "p95_ms": 13896.28,
+        "p99_ms": 14367.428
+      },
+      "integration_processing": {
+        "attempted": 20,
+        "successes": 20,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 26.218,
+        "p95_ms": 41.138,
+        "p99_ms": 133.19
+      },
+      "integration_total": {
+        "attempted": 20,
+        "successes": 20,
+        "errors": 0,
+        "error_rate": 0.0,
+        "p50_ms": 9794.754,
+        "p95_ms": 13923.344,
+        "p99_ms": 14397.282
+      },
+      "integration_workload": "20 gateway-only fake jobs in a burst; one worker, 0.5s loop; persisted audit timestamps, not client polling delay; no Telegram; p99 is maximum at N=20",
+      "health_after": {
+        "status": "ok",
+        "checked_at": "2026-11-14T06:33:09.086211Z",
+        "cache_seconds": 5,
+        "database": "ok",
+        "redis": "ok",
+        "worker": "ok",
+        "telegram": "fake_enabled",
+        "gateway": "mock_ready",
+        "queue": {
+          "notifications_queued": 0,
+          "notifications_delayed": 0,
+          "notifications_failed": 0,
+          "runs_pending": 0
+        },
+        "last_successful_processing": "2026-11-14T06:33:08.917864Z",
+        "real_provider_probed": false
+      },
+      "timeline_codes": [
+        "TRANSFER_EVALUATED",
+        "DECISION_APPROVED",
+        "INTEGRATION_QUEUED",
+        "INTEGRATION_STARTED",
+        "MOCK_GATEWAY_REQUESTED",
+        "MOCK_GATEWAY_CLEAR",
+        "INTEGRATION_COMPLETE"
+      ]
+    }
+  }
+}

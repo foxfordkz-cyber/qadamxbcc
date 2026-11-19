@@ -40,6 +40,7 @@ try {
     $dockerCommand = Get-Command docker -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($dockerCommand) {
         Invoke-Check 'docker compose config' $dockerCommand.Source @('compose', '-f', (Join-Path $repoPath 'docker-compose.yml'), 'config', '--quiet')
+        Invoke-Check 'docker compose integrations config' $dockerCommand.Source @('compose', '-f', (Join-Path $repoPath 'docker-compose.yml'), '-f', (Join-Path $repoPath 'docker-compose.integrations.yml'), 'config', '--quiet')
     }
     Write-Host "`n==> verify: ALL GREEN" -ForegroundColor Green
     exit 0

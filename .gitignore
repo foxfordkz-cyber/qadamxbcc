@@ -4,10 +4,11 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+.pytest_*/
 *.db
 .env
-.env.pilot
-.env.pilot.local
+.env.*
+!.env.example
 *.log
 .local-checks/
 node_modules/

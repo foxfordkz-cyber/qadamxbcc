@@ -1,0 +1,6438 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "BCC Shield Core",
+    "description": "Real-time antifraud, drop-network detection and adaptive cooling-off for Bank CenterCredit transfers (kk/ru explainability).",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_ready_get",
+        "parameters": [
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Ready Ready Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transfers/requests/{request_id}/abandon": {
+      "post": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "Abandon Request",
+        "description": "Prevent a delayed unknown request from executing, or return its existing decision.",
+        "operationId": "abandon_request_api_v1_transfers_requests__request_id__abandon_post",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Request Id"
+            }
+          },
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbandonRequestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transfers/evaluate": {
+      "post": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "Evaluate Transfer",
+        "description": "Score once per request_id; retries replay the original persisted evaluation.",
+        "operationId": "evaluate_transfer_api_v1_transfers_evaluate_post",
+        "parameters": [
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferEvaluateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transfers/{transaction_id}": {
+      "get": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "Transfer Detail",
+        "description": "Recover current lifecycle, original ML explanations and saved verification answers.",
+        "operationId": "transfer_detail_api_v1_transfers__transaction_id__get",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          },
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transfers/{transaction_id}/resolve-cooling": {
+      "post": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "Resolve Cooling",
+        "description": "Save answers; release only after the deadline and explicit clean verification.",
+        "operationId": "resolve_cooling_api_v1_transfers__transaction_id__resolve_cooling_post",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          },
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveCoolingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transfers/{transaction_id}/cancel": {
+      "post": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "Cancel Transfer",
+        "description": "Cancel a held transfer permanently, without execution; repeat cancellation is safe.",
+        "operationId": "cancel_transfer_api_v1_transfers__transaction_id__cancel_post",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          },
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/soc/feed": {
+      "get": {
+        "tags": [
+          "soc"
+        ],
+        "summary": "Soc Feed",
+        "description": "Searchable SOC window; offset pages are not a snapshot or lossless event cursor.",
+        "operationId": "soc_feed_api_v1_soc_feed_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^[^\\x00]*$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Party name substring or exact transaction UUID",
+              "title": "Q"
+            },
+            "description": "Party name substring or exact transaction UUID"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Rows updated after this time; not a lossless cursor",
+              "title": "Since"
+            },
+            "description": "Rows updated after this time; not a lossless cursor"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TransactionStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "min_score",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 0,
+              "default": 0,
+              "title": "Min Score"
+            }
+          },
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/soc/graph/{account_id}": {
+      "get": {
+        "tags": [
+          "soc"
+        ],
+        "summary": "Soc Graph",
+        "description": "Money-flow subgraph around an account, shaped for React Flow (nodes + edges).",
+        "operationId": "soc_graph_api_v1_soc_graph__account_id__get",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "depth",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 3,
+              "minimum": 1,
+              "default": 2,
+              "title": "Depth"
+            }
+          },
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trusted-contacts": {
+      "get": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Contacts",
+        "operationId": "contacts_api_v1_trusted_contacts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactsOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Invite",
+        "operationId": "invite_api_v1_trusted_contacts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trusted-contacts/{contact_id}": {
+      "delete": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Revoke",
+        "operationId": "revoke_api_v1_trusted_contacts__contact_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Contact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trusted-contacts/transactions/{transaction_id}/notifications": {
+      "post": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Enqueue",
+        "operationId": "enqueue_api_v1_trusted_contacts_transactions__transaction_id__notifications_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Notifications",
+        "operationId": "notifications_api_v1_trusted_contacts_transactions__transaction_id__notifications_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationOut"
+                  },
+                  "title": "Response Notifications Api V1 Trusted Contacts Transactions  Transaction Id  Notifications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trusted-contacts/notifications/{notification_id}/history": {
+      "get": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_trusted_contacts_notifications__notification_id__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Notification Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditOut"
+                  },
+                  "title": "Response History Api V1 Trusted Contacts Notifications  Notification Id  History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trusted-contacts/simulator/update": {
+      "post": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Simulate",
+        "operationId": "simulate_api_v1_trusted_contacts_simulator_update_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulatedUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/trusted-contacts/{contact_id}/preferences": {
+      "patch": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Preferences",
+        "operationId": "preferences_api_v1_trusted_contacts__contact_id__preferences_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Contact Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactPreferences"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external-checks": {
+      "post": {
+        "tags": [
+          "MOCK enrichment — synthetic demonstration only"
+        ],
+        "summary": "Check",
+        "description": "Synthetic advisory evidence; never an official NBK response or a payment decision.",
+        "operationId": "check_api_v1_external_checks_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalCheckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalCheckOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/external-checks/{check_id}": {
+      "get": {
+        "tags": [
+          "MOCK enrichment — synthetic demonstration only"
+        ],
+        "summary": "Status",
+        "operationId": "status_api_v1_external_checks__check_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "check_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Check Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalCheckOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/soc/transactions/{transaction_id}/timeline": {
+      "get": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Incident Timeline",
+        "operationId": "incident_timeline_api_v1_integrations_soc_transactions__transaction_id__timeline_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelinePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/health/details": {
+      "get": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Integration Health Details",
+        "operationId": "integration_health_details_api_v1_integrations_health_details_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/soc/transactions/{transaction_id}/summary": {
+      "get": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Incident Summary",
+        "operationId": "incident_summary_api_v1_integrations_soc_transactions__transaction_id__summary_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/reports": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian demo reports"
+        ],
+        "summary": "Submit",
+        "operationId": "submit_api_v1_integrations_guardian_reports_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian demo reports"
+        ],
+        "summary": "List Reports",
+        "operationId": "list_reports_api_v1_integrations_guardian_reports_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReportOut"
+                  },
+                  "title": "Response List Reports Api V1 Integrations Guardian Reports Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/reports/{report_id}": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian demo reports"
+        ],
+        "summary": "Read Report",
+        "operationId": "read_report_api_v1_integrations_guardian_reports__report_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/reports/{report_id}/acknowledge": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian demo reports"
+        ],
+        "summary": "Acknowledge",
+        "operationId": "acknowledge_api_v1_integrations_guardian_reports__report_id__acknowledge_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/reports/{report_id}/history": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian demo reports"
+        ],
+        "summary": "Report History",
+        "operationId": "report_history_api_v1_integrations_guardian_reports__report_id__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditOut"
+                  },
+                  "title": "Response Report History Api V1 Integrations Guardian Reports  Report Id  History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_v1_integrations_guardian_soc_cases_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenCase"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "List Cases",
+        "operationId": "list_cases_api_v1_integrations_guardian_soc_cases_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/analytics": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Case Analytics",
+        "operationId": "case_analytics_api_v1_integrations_guardian_soc_cases_analytics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseAnalytics"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Read Case",
+        "operationId": "read_case_api_v1_integrations_guardian_soc_cases__case_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/actions": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Action",
+        "operationId": "action_api_v1_integrations_guardian_soc_cases__case_id__actions_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Transition"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Assign"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Categorize"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Note"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AskInformation"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "action",
+                  "mapping": {
+                    "transition": "#/components/schemas/Transition",
+                    "assign": "#/components/schemas/Assign",
+                    "categorize": "#/components/schemas/Categorize",
+                    "note": "#/components/schemas/Note",
+                    "request_information": "#/components/schemas/AskInformation"
+                  }
+                },
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/history": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_integrations_guardian_soc_cases__case_id__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "After Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/notes": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Notes",
+        "operationId": "notes_api_v1_integrations_guardian_soc_cases__case_id__notes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "After Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/evidence": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Evidence",
+        "operationId": "evidence_api_v1_integrations_guardian_soc_cases__case_id__evidence_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/soc/cases/{case_id}/export": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Export",
+        "operationId": "export_api_v1_integrations_guardian_soc_cases__case_id__export_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseExport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/reports/{report_id}/information-requests": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Information Requests",
+        "operationId": "information_requests_api_v1_integrations_guardian_reports__report_id__information_requests_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InformationOut"
+                  },
+                  "title": "Response Information Requests Api V1 Integrations Guardian Reports  Report Id  Information Requests Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/guardian/reports/{report_id}/information-requests/{request_id}": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Answer Information",
+        "operationId": "answer_information_api_v1_integrations_guardian_reports__report_id__information_requests__request_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Request Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerInformation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/soc/operations/notifications": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "integration operations and privacy"
+        ],
+        "summary": "Notifications",
+        "operationId": "notifications_api_v1_integrations_soc_operations_notifications_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          },
+          {
+            "name": "failed_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Failed Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/soc/operations/queue": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "integration operations and privacy"
+        ],
+        "summary": "Queue",
+        "operationId": "queue_api_v1_integrations_soc_operations_queue_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueSummary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/privacy/permissions": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "integration operations and privacy"
+        ],
+        "summary": "Permissions",
+        "operationId": "permissions_api_v1_integrations_privacy_permissions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/privacy/contacts/{contact_id}/history": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "integration operations and privacy"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_integrations_privacy_contacts__contact_id__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Contact Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "after_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionHistory"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/transactions/{transaction_id}": {
+      "post": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Enqueue",
+        "operationId": "enqueue_api_v1_integrations_transactions__transaction_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrchestrationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Status",
+        "operationId": "status_api_v1_integrations_transactions__transaction_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/soc/transactions/{transaction_id}": {
+      "get": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Soc Enrichment",
+        "operationId": "soc_enrichment_api_v1_integrations_soc_transactions__transaction_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrichmentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/health": {
+      "get": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Dependency Health",
+        "operationId": "dependency_health_api_v1_integrations_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationHealth"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AbandonRequestResponse": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "abandoned",
+              "processed"
+            ],
+            "title": "Status"
+          },
+          "evaluation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransferEvaluateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "server_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Server Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "status",
+          "server_time"
+        ],
+        "title": "AbandonRequestResponse"
+      },
+      "AnswerInformation": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Body"
+          },
+          "confirmed_demo_submission": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirmed Demo Submission"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "body",
+          "confirmed_demo_submission"
+        ],
+        "title": "AnswerInformation"
+      },
+      "AnswerReceipt": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "received": {
+            "type": "boolean",
+            "const": true,
+            "title": "Received",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id"
+        ],
+        "title": "AnswerReceipt"
+      },
+      "AskInformation": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "action": {
+            "type": "string",
+            "const": "request_information",
+            "title": "Action"
+          },
+          "question": {
+            "type": "string",
+            "enum": [
+              "caller_request",
+              "remote_access",
+              "secrecy_pressure"
+            ],
+            "title": "Question"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "action",
+          "question"
+        ],
+        "title": "AskInformation"
+      },
+      "Assign": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "action": {
+            "type": "string",
+            "const": "assign",
+            "title": "Action"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "demo_analyst_a",
+                  "demo_analyst_b"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "action",
+          "assignee"
+        ],
+        "title": "Assign"
+      },
+      "AuditOut": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Correlation Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "correlation_id",
+          "created_at"
+        ],
+        "title": "AuditOut"
+      },
+      "CaseAnalytics": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "open": {
+            "type": "integer",
+            "title": "Open"
+          },
+          "closed": {
+            "type": "integer",
+            "title": "Closed"
+          },
+          "by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By State"
+          },
+          "by_source": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Source"
+          },
+          "escalated_cases": {
+            "type": "integer",
+            "title": "Escalated Cases"
+          },
+          "manually_reviewed_cases": {
+            "type": "integer",
+            "title": "Manually Reviewed Cases"
+          },
+          "manual_review_share": {
+            "type": "number",
+            "title": "Manual Review Share"
+          },
+          "oldest_current_status_seconds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Oldest Current Status Seconds"
+          },
+          "demonstration_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Demonstration Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "total",
+          "open",
+          "closed",
+          "by_state",
+          "by_source",
+          "escalated_cases",
+          "manually_reviewed_cases",
+          "manual_review_share",
+          "oldest_current_status_seconds"
+        ],
+        "title": "CaseAnalytics"
+      },
+      "CaseExport": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "owner_demo",
+              "trusted_contact"
+            ],
+            "title": "Source"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ExportEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "demonstration_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Demonstration Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "state",
+          "source",
+          "created_at",
+          "events"
+        ],
+        "title": "CaseExport"
+      },
+      "CaseOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "owner_demo",
+              "trusted_contact"
+            ],
+            "title": "Source"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "demo_analyst_a",
+                  "demo_analyst_b"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "status_since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Status Since"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "demonstration_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Demonstration Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "report_id",
+          "source",
+          "category",
+          "state",
+          "assignee",
+          "version",
+          "created_at",
+          "status_since",
+          "expires_at"
+        ],
+        "title": "CaseOut"
+      },
+      "CasePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CaseOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "CasePage"
+      },
+      "Categorize": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "action": {
+            "type": "string",
+            "const": "categorize",
+            "title": "Action"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "action",
+          "category"
+        ],
+        "title": "Categorize"
+      },
+      "ConsentFact": {
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Contact Id"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "consented": {
+            "type": "boolean",
+            "title": "Consented"
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contact_id",
+          "state",
+          "consented",
+          "notifications_enabled"
+        ],
+        "title": "ConsentFact"
+      },
+      "ContactOut": {
+        "properties": {
+          "alias": {
+            "type": "string",
+            "title": "Alias",
+            "default": ""
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled",
+            "default": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ContactState"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "state",
+          "language",
+          "created_at"
+        ],
+        "title": "ContactOut"
+      },
+      "ContactPreferences": {
+        "properties": {
+          "alias": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Alias"
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "kk"
+            ],
+            "title": "Language"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "alias",
+          "notifications_enabled",
+          "language"
+        ],
+        "title": "ContactPreferences"
+      },
+      "ContactState": {
+        "type": "string",
+        "enum": [
+          "CONTACT_NOT_CONFIGURED",
+          "CONTACT_PENDING_CONSENT",
+          "CONTACT_VERIFIED",
+          "CONTACT_REVOKED"
+        ],
+        "title": "ContactState"
+      },
+      "ContactsOut": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/ContactState"
+          },
+          "contacts": {
+            "items": {
+              "$ref": "#/components/schemas/ContactOut"
+            },
+            "type": "array",
+            "title": "Contacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "contacts"
+        ],
+        "title": "ContactsOut"
+      },
+      "ContentOut": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Event Id"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "body",
+          "expires_at"
+        ],
+        "title": "ContentOut"
+      },
+      "ContentPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContentOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_after_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_after_version"
+        ],
+        "title": "ContentPage"
+      },
+      "CoolingQuestionnaire": {
+        "properties": {
+          "caller_claims_bank_or_police": {
+            "type": "boolean",
+            "title": "Caller Claims Bank Or Police",
+            "description": "Someone calling claims to be from a bank, police or KNB"
+          },
+          "asked_to_move_to_safe_account": {
+            "type": "boolean",
+            "title": "Asked To Move To Safe Account",
+            "description": "You were asked to move money to a 'safe account'"
+          },
+          "asked_to_keep_secret_or_install_app": {
+            "type": "boolean",
+            "title": "Asked To Keep Secret Or Install App",
+            "description": "You were told to keep it secret or install a remote-access app"
+          },
+          "initiated_by_customer": {
+            "type": "boolean",
+            "title": "Initiated By Customer",
+            "description": "You decided to make this transfer yourself"
+          },
+          "knows_recipient_personally": {
+            "type": "boolean",
+            "title": "Knows Recipient Personally",
+            "description": "You personally know the recipient"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "caller_claims_bank_or_police",
+          "asked_to_move_to_safe_account",
+          "asked_to_keep_secret_or_install_app",
+          "initiated_by_customer",
+          "knows_recipient_personally"
+        ],
+        "title": "CoolingQuestionnaire",
+        "description": "Anti-scam check shown during the cooling-off period (questions mirror real scam scripts)."
+      },
+      "EnrichmentOut": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "core_status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "type": "array",
+            "title": "Notifications"
+          },
+          "external_checks": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalCheckOut"
+            },
+            "type": "array",
+            "title": "External Checks"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditOut"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "source": {
+            "type": "string",
+            "const": "MOCK",
+            "title": "Source",
+            "default": "MOCK"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Advisory Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "core_status",
+          "run",
+          "notifications",
+          "external_checks",
+          "events"
+        ],
+        "title": "EnrichmentOut"
+      },
+      "EventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "actor_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Actor Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "actor_role": {
+            "type": "string",
+            "enum": [
+              "soc",
+              "owner"
+            ],
+            "title": "Actor Role"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "demo_analyst_a",
+                  "demo_analyst_b"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "description_ru": {
+            "type": "string",
+            "title": "Description Ru"
+          },
+          "description_kk": {
+            "type": "string",
+            "title": "Description Kk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "actor_id",
+          "version",
+          "code",
+          "actor_role",
+          "timestamp",
+          "state",
+          "category",
+          "assignee",
+          "reason",
+          "description_ru",
+          "description_kk"
+        ],
+        "title": "EventOut"
+      },
+      "EventPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EventOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_after_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_after_version"
+        ],
+        "title": "EventPage"
+      },
+      "EvidenceOut": {
+        "properties": {
+          "report_available": {
+            "type": "boolean",
+            "title": "Report Available"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Id"
+          },
+          "report_events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditOut"
+            },
+            "type": "array",
+            "title": "Report Events"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "title": "Advisory Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_available",
+          "transaction_id",
+          "report_events"
+        ],
+        "title": "EvidenceOut"
+      },
+      "ExportEvent": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "state",
+          "timestamp"
+        ],
+        "title": "ExportEvent"
+      },
+      "ExternalCheckOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Correlation Id"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Id"
+          },
+          "result": {
+            "$ref": "#/components/schemas/GatewayResult"
+          },
+          "fresh": {
+            "type": "boolean",
+            "title": "Fresh"
+          },
+          "cache_hit": {
+            "type": "boolean",
+            "title": "Cache Hit"
+          },
+          "description_ru": {
+            "type": "string",
+            "title": "Description Ru",
+            "readOnly": true
+          },
+          "description_kk": {
+            "type": "string",
+            "title": "Description Kk",
+            "readOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "correlation_id",
+          "transaction_id",
+          "result",
+          "fresh",
+          "cache_hit",
+          "description_ru",
+          "description_kk"
+        ],
+        "title": "ExternalCheckOut"
+      },
+      "ExternalCheckRequest": {
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "pattern": "^SYN-[A-Z0-9-]{1,40}$",
+            "title": "Identifier"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identifier"
+        ],
+        "title": "ExternalCheckRequest"
+      },
+      "FeedItem": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "risk_score": {
+            "type": "integer",
+            "title": "Risk Score"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/FeedParty"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/FeedParty"
+          },
+          "active_call": {
+            "type": "boolean",
+            "title": "Active Call"
+          },
+          "from_deposit": {
+            "type": "boolean",
+            "title": "From Deposit"
+          },
+          "is_new_device": {
+            "type": "boolean",
+            "title": "Is New Device"
+          },
+          "is_new_recipient": {
+            "type": "boolean",
+            "title": "Is New Recipient"
+          },
+          "cooling_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cooling Until"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/RiskReasonOut"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "context": {
+            "$ref": "#/components/schemas/TransferContextIn"
+          },
+          "verification_answers": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoolingQuestionnaire"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ml_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ml Score"
+          },
+          "ml_base_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ml Base Score"
+          },
+          "ml_model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ml Model Version"
+          },
+          "ml_explanation_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "tree_path_probability"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ml Explanation Method"
+          },
+          "ml_contributors": {
+            "items": {
+              "$ref": "#/components/schemas/MLContributorOut"
+            },
+            "type": "array",
+            "title": "Ml Contributors"
+          },
+          "layer_latency_ms": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Layer Latency Ms"
+          },
+          "velocity": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Velocity"
+          },
+          "recipient_graph": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Recipient Graph"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "created_at",
+          "updated_at",
+          "status",
+          "risk_score",
+          "amount",
+          "currency",
+          "latency_ms",
+          "sender",
+          "recipient",
+          "active_call",
+          "from_deposit",
+          "is_new_device",
+          "is_new_recipient",
+          "cooling_until",
+          "resolved_at",
+          "reasons",
+          "context"
+        ],
+        "title": "FeedItem"
+      },
+      "FeedPagination": {
+        "properties": {
+          "total_filtered": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Filtered"
+          },
+          "offset": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Offset"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_filtered",
+          "offset",
+          "limit",
+          "has_more"
+        ],
+        "title": "FeedPagination"
+      },
+      "FeedParty": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "iban": {
+            "type": "string",
+            "title": "Iban"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name",
+          "iban"
+        ],
+        "title": "FeedParty"
+      },
+      "FeedResponse": {
+        "properties": {
+          "server_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Server Time"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FeedItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/FeedStats"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/FeedPagination"
+          }
+        },
+        "type": "object",
+        "required": [
+          "server_time",
+          "items",
+          "stats",
+          "pagination"
+        ],
+        "title": "FeedResponse"
+      },
+      "FeedStats": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          },
+          "approved": {
+            "type": "integer",
+            "title": "Approved",
+            "default": 0
+          },
+          "cooling_off": {
+            "type": "integer",
+            "title": "Cooling Off",
+            "default": 0
+          },
+          "blocked": {
+            "type": "integer",
+            "title": "Blocked",
+            "default": 0
+          },
+          "blocked_hubs": {
+            "type": "integer",
+            "title": "Blocked Hubs",
+            "default": 0
+          },
+          "cancelled": {
+            "type": "integer",
+            "title": "Cancelled",
+            "default": 0
+          },
+          "blocked_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Blocked Amount",
+            "default": "0"
+          },
+          "held_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Held Amount",
+            "default": "0"
+          },
+          "cancelled_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cancelled Amount",
+            "default": "0"
+          },
+          "avg_latency_ms": {
+            "type": "number",
+            "title": "Avg Latency Ms",
+            "default": 0.0
+          },
+          "max_latency_ms": {
+            "type": "number",
+            "title": "Max Latency Ms",
+            "default": 0.0
+          },
+          "p95_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 Latency Ms"
+          },
+          "latency_sample_size": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Latency Sample Size",
+            "default": 0
+          },
+          "latency_sample_limit": {
+            "type": "integer",
+            "title": "Latency Sample Limit",
+            "default": 500
+          }
+        },
+        "type": "object",
+        "title": "FeedStats"
+      },
+      "GatewayErrorCode": {
+        "type": "string",
+        "enum": [
+          "UNKNOWN_IDENTIFIER",
+          "INTERNAL_SERVICE_ERROR",
+          "GATEWAY_UNAVAILABLE",
+          "TIMEOUT",
+          "MALFORMED_RESPONSE",
+          "EXPIRED_RESULT",
+          "UNVERIFIED_RESPONSE",
+          "INCOMPLETE_CHECK"
+        ],
+        "title": "GatewayErrorCode"
+      },
+      "GatewayResult": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "MOCK",
+            "title": "Source",
+            "default": "MOCK"
+          },
+          "identifier": {
+            "type": "string",
+            "pattern": "^SYN-[A-Z0-9-]{1,40}$",
+            "title": "Identifier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GatewayStatus"
+          },
+          "markers": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "SYNTHETIC_REVIEW",
+                "SYNTHETIC_NETWORK_SIGNAL"
+              ]
+            },
+            "type": "array",
+            "title": "Markers"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GatewayErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Advisory Only",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identifier",
+          "status",
+          "checked_at",
+          "expires_at",
+          "verified"
+        ],
+        "title": "GatewayResult"
+      },
+      "GatewayStatus": {
+        "type": "string",
+        "enum": [
+          "CLEAR",
+          "INDICATORS",
+          "UNKNOWN",
+          "UNAVAILABLE"
+        ],
+        "title": "GatewayStatus"
+      },
+      "GraphEdgeData": {
+        "properties": {
+          "edge_type": {
+            "type": "string",
+            "enum": [
+              "transfer",
+              "shared_device"
+            ],
+            "title": "Edge Type"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "tx_count": {
+            "type": "integer",
+            "title": "Tx Count"
+          },
+          "highlight": {
+            "type": "boolean",
+            "title": "Highlight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "edge_type",
+          "weight",
+          "tx_count",
+          "highlight"
+        ],
+        "title": "GraphEdgeData"
+      },
+      "GraphEdgeOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "default"
+          },
+          "animated": {
+            "type": "boolean",
+            "title": "Animated",
+            "default": false
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GraphEdgeData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "target",
+          "data"
+        ],
+        "title": "GraphEdgeOut",
+        "description": "React Flow edge."
+      },
+      "GraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "account"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GraphNodeData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "position",
+          "data"
+        ],
+        "title": "GraphNode",
+        "description": "React Flow node."
+      },
+      "GraphNodeData": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "center",
+              "hub",
+              "mule",
+              "normal"
+            ],
+            "title": "Role"
+          },
+          "depth": {
+            "type": "integer",
+            "title": "Depth"
+          },
+          "device_id": {
+            "type": "string",
+            "title": "Device Id"
+          },
+          "flagged": {
+            "type": "boolean",
+            "title": "Flagged"
+          },
+          "suspected_mule": {
+            "type": "boolean",
+            "title": "Suspected Mule"
+          },
+          "in_degree": {
+            "type": "integer",
+            "title": "In Degree"
+          },
+          "out_degree": {
+            "type": "integer",
+            "title": "Out Degree"
+          },
+          "in_weight": {
+            "type": "number",
+            "title": "In Weight"
+          },
+          "out_weight": {
+            "type": "number",
+            "title": "Out Weight"
+          },
+          "transit_ratio": {
+            "type": "number",
+            "title": "Transit Ratio"
+          },
+          "shared_device_accounts": {
+            "type": "integer",
+            "title": "Shared Device Accounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "role",
+          "depth",
+          "device_id",
+          "flagged",
+          "suspected_mule",
+          "in_degree",
+          "out_degree",
+          "in_weight",
+          "out_weight",
+          "transit_ratio",
+          "shared_device_accounts"
+        ],
+        "title": "GraphNodeData"
+      },
+      "GraphResponse": {
+        "properties": {
+          "center": {
+            "type": "string",
+            "title": "Center"
+          },
+          "depth": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Depth"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdgeOut"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "center",
+          "depth",
+          "nodes",
+          "edges"
+        ],
+        "title": "GraphResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthDetails": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "cache_seconds": {
+            "type": "integer",
+            "const": 5,
+            "title": "Cache Seconds",
+            "default": 5
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Database"
+          },
+          "redis": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Redis"
+          },
+          "worker": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "not_seen",
+              "unknown"
+            ],
+            "title": "Worker"
+          },
+          "telegram": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "fake_enabled",
+              "test_enabled"
+            ],
+            "title": "Telegram"
+          },
+          "gateway": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "mock_ready"
+            ],
+            "title": "Gateway"
+          },
+          "queue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueueCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_successful_processing": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Successful Processing"
+          },
+          "real_provider_probed": {
+            "type": "boolean",
+            "const": false,
+            "title": "Real Provider Probed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "checked_at",
+          "database",
+          "redis",
+          "worker",
+          "telegram",
+          "gateway",
+          "queue",
+          "last_successful_processing"
+        ],
+        "title": "HealthDetails"
+      },
+      "IncidentSummary": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "core_status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "cooling_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cooling Until"
+          },
+          "cooling_active": {
+            "type": "boolean",
+            "title": "Cooling Active"
+          },
+          "consents": {
+            "items": {
+              "$ref": "#/components/schemas/ConsentFact"
+            },
+            "type": "array",
+            "title": "Consents"
+          },
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "type": "array",
+            "title": "Notifications"
+          },
+          "gateway_results": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalCheckOut"
+            },
+            "type": "array",
+            "title": "Gateway Results"
+          },
+          "recent_events": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEvent"
+            },
+            "type": "array",
+            "title": "Recent Events"
+          },
+          "manual_review_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Manual Review Reasons"
+          },
+          "manual_review_requested": {
+            "type": "boolean",
+            "title": "Manual Review Requested"
+          },
+          "description_ru": {
+            "type": "string",
+            "title": "Description Ru"
+          },
+          "description_kk": {
+            "type": "string",
+            "title": "Description Kk"
+          },
+          "health": {
+            "$ref": "#/components/schemas/HealthDetails"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Advisory Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "core_status",
+          "cooling_until",
+          "cooling_active",
+          "consents",
+          "notifications",
+          "gateway_results",
+          "recent_events",
+          "manual_review_reasons",
+          "manual_review_requested",
+          "description_ru",
+          "description_kk",
+          "health"
+        ],
+        "title": "IncidentSummary"
+      },
+      "InformationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "question": {
+            "type": "string",
+            "enum": [
+              "caller_request",
+              "remote_access",
+              "secrecy_pressure"
+            ],
+            "title": "Question"
+          },
+          "description_ru": {
+            "type": "string",
+            "title": "Description Ru"
+          },
+          "description_kk": {
+            "type": "string",
+            "title": "Description Kk"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "answered": {
+            "type": "boolean",
+            "title": "Answered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "question",
+          "description_ru",
+          "description_kk",
+          "created_at",
+          "answered"
+        ],
+        "title": "InformationOut"
+      },
+      "IntegrationHealth": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Database"
+          },
+          "redis": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Redis"
+          },
+          "worker": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "not_seen"
+            ],
+            "title": "Worker"
+          },
+          "telegram_mode": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "fake",
+              "test"
+            ],
+            "title": "Telegram Mode"
+          },
+          "gateway": {
+            "type": "string",
+            "enum": [
+              "MOCK",
+              "disabled"
+            ],
+            "title": "Gateway"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "database",
+          "redis",
+          "worker",
+          "telegram_mode",
+          "gateway"
+        ],
+        "title": "IntegrationHealth"
+      },
+      "InvitationOut": {
+        "properties": {
+          "contact": {
+            "$ref": "#/components/schemas/ContactOut"
+          },
+          "invitation_token": {
+            "type": "string",
+            "title": "Invitation Token"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contact",
+          "invitation_token",
+          "expires_at"
+        ],
+        "title": "InvitationOut"
+      },
+      "InviteRequest": {
+        "properties": {
+          "owner_consent": {
+            "type": "boolean",
+            "const": true,
+            "title": "Owner Consent"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "kk"
+            ],
+            "title": "Language",
+            "default": "ru"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "owner_consent"
+        ],
+        "title": "InviteRequest"
+      },
+      "JobOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Correlation Id"
+          },
+          "state": {
+            "$ref": "#/components/schemas/NotificationState"
+          },
+          "disposition": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "delayed",
+              "processing",
+              "ambiguous",
+              "retry_exhausted",
+              "terminal"
+            ],
+            "title": "Disposition"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "processing_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Age Seconds"
+          },
+          "queue_age_seconds": {
+            "type": "number",
+            "title": "Queue Age Seconds"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "retry_scheduled": {
+            "type": "boolean",
+            "title": "Retry Scheduled"
+          },
+          "manual_resend_supported": {
+            "type": "boolean",
+            "const": false,
+            "title": "Manual Resend Supported",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "correlation_id",
+          "state",
+          "disposition",
+          "attempts",
+          "created_at",
+          "expires_at",
+          "next_attempt_at",
+          "processing_age_seconds",
+          "queue_age_seconds",
+          "error_code",
+          "retry_scheduled"
+        ],
+        "title": "JobOut"
+      },
+      "JobPage": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/JobOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_after_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "items",
+          "next_after_id"
+        ],
+        "title": "JobPage"
+      },
+      "MLContributorOut": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "contribution": {
+            "type": "number",
+            "title": "Contribution",
+            "description": "Signed probability points, before blending; not SHAP"
+          },
+          "label_kk": {
+            "type": "string",
+            "title": "Label Kk"
+          },
+          "label_ru": {
+            "type": "string",
+            "title": "Label Ru"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "value",
+          "contribution",
+          "label_kk",
+          "label_ru"
+        ],
+        "title": "MLContributorOut"
+      },
+      "Note": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Body"
+          },
+          "action": {
+            "type": "string",
+            "const": "note",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "body",
+          "action"
+        ],
+        "title": "Note"
+      },
+      "NotificationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Contact Id"
+          },
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Correlation Id"
+          },
+          "state": {
+            "$ref": "#/components/schemas/NotificationState"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts",
+            "default": 0
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Advisory Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "contact_id",
+          "transaction_id",
+          "correlation_id",
+          "state",
+          "expires_at",
+          "error_code"
+        ],
+        "title": "NotificationOut"
+      },
+      "NotificationRequest": {
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Contact Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "contact_id"
+        ],
+        "title": "NotificationRequest"
+      },
+      "NotificationState": {
+        "type": "string",
+        "enum": [
+          "NOTIFICATION_QUEUED",
+          "NOTIFICATION_SENT",
+          "DELIVERY_FAILED",
+          "CONTACT_ACKNOWLEDGED",
+          "SUSPICION_REPORTED",
+          "CONTACT_REVOKED",
+          "NOTIFICATION_EXPIRED"
+        ],
+        "title": "NotificationState"
+      },
+      "OpenCase": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "report_id"
+        ],
+        "title": "OpenCase"
+      },
+      "OrchestrationRequest": {
+        "properties": {
+          "contact_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "gateway_identifier": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^SYN-[A-Z0-9-]{1,40}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gateway Identifier"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "OrchestrationRequest"
+      },
+      "PartyOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "iban_masked": {
+            "type": "string",
+            "title": "Iban Masked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "iban_masked"
+        ],
+        "title": "PartyOut"
+      },
+      "PermissionEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "event",
+          "created_at"
+        ],
+        "title": "PermissionEvent"
+      },
+      "PermissionHistory": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "next_after_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events",
+          "next_after_id"
+        ],
+        "title": "PermissionHistory"
+      },
+      "PermissionOut": {
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Contact Id"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ContactState"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled"
+          },
+          "owner_consented_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Owner Consented At"
+          },
+          "last_contact_consent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Contact Consent At"
+          },
+          "consent_currently_valid": {
+            "type": "boolean",
+            "title": "Consent Currently Valid"
+          },
+          "delivery_identifiers_erased": {
+            "type": "boolean",
+            "title": "Delivery Identifiers Erased"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contact_id",
+          "state",
+          "language",
+          "notifications_enabled",
+          "owner_consented_at",
+          "last_contact_consent_at",
+          "consent_currently_valid",
+          "delivery_identifiers_erased"
+        ],
+        "title": "PermissionOut"
+      },
+      "PermissionPage": {
+        "properties": {
+          "exported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Exported At"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionOut"
+            },
+            "type": "array",
+            "title": "Permissions"
+          },
+          "next_after_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next After Id"
+          },
+          "active_contact_limit": {
+            "type": "integer",
+            "const": 3,
+            "title": "Active Contact Limit",
+            "default": 3
+          },
+          "recipients_per_notification": {
+            "type": "integer",
+            "const": 1,
+            "title": "Recipients Per Notification",
+            "default": 1
+          },
+          "retention_policy": {
+            "type": "string",
+            "const": "personal_fields_until_revoke_metadata_until_demo_database_removal",
+            "title": "Retention Policy",
+            "default": "personal_fields_until_revoke_metadata_until_demo_database_removal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exported_at",
+          "permissions",
+          "next_after_id"
+        ],
+        "title": "PermissionPage"
+      },
+      "Position": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "title": "Y"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "Position"
+      },
+      "QueueCounts": {
+        "properties": {
+          "notifications_queued": {
+            "type": "integer",
+            "title": "Notifications Queued"
+          },
+          "notifications_delayed": {
+            "type": "integer",
+            "title": "Notifications Delayed"
+          },
+          "notifications_failed": {
+            "type": "integer",
+            "title": "Notifications Failed"
+          },
+          "runs_pending": {
+            "type": "integer",
+            "title": "Runs Pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "notifications_queued",
+          "notifications_delayed",
+          "notifications_failed",
+          "runs_pending"
+        ],
+        "title": "QueueCounts"
+      },
+      "QueueSummary": {
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By State"
+          },
+          "processing": {
+            "type": "integer",
+            "title": "Processing"
+          },
+          "oldest_processing_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Processing Age Seconds"
+          },
+          "oldest_queued_age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Queued Age Seconds"
+          },
+          "retry_exhausted": {
+            "type": "integer",
+            "title": "Retry Exhausted"
+          },
+          "ambiguous_delivery": {
+            "type": "integer",
+            "title": "Ambiguous Delivery"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "by_state",
+          "processing",
+          "oldest_processing_age_seconds",
+          "oldest_queued_age_seconds",
+          "retry_exhausted",
+          "ambiguous_delivery"
+        ],
+        "title": "QueueSummary"
+      },
+      "ReportOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "owner_demo",
+              "trusted_contact"
+            ],
+            "title": "Source"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Id"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "SUBMITTED",
+              "DEMO_ACKNOWLEDGED"
+            ],
+            "title": "State"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "demonstration_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Demonstration Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "category",
+          "description",
+          "transaction_id",
+          "state",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "ReportOut"
+      },
+      "ReportRequest": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "impersonation",
+              "safe_account",
+              "remote_access",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Description"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Id"
+          },
+          "confirmed_demo_submission": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirmed Demo Submission"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "category",
+          "description",
+          "confirmed_demo_submission"
+        ],
+        "title": "ReportRequest"
+      },
+      "ResolveCoolingRequest": {
+        "properties": {
+          "answers": {
+            "$ref": "#/components/schemas/CoolingQuestionnaire"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answers"
+        ],
+        "title": "ResolveCoolingRequest"
+      },
+      "RiskReasonOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "layer": {
+            "type": "string",
+            "title": "Layer"
+          },
+          "score_delta": {
+            "type": "integer",
+            "title": "Score Delta"
+          },
+          "reason_kk": {
+            "type": "string",
+            "title": "Reason Kk"
+          },
+          "reason_ru": {
+            "type": "string",
+            "title": "Reason Ru"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "layer",
+          "score_delta",
+          "reason_kk",
+          "reason_ru"
+        ],
+        "title": "RiskReasonOut"
+      },
+      "RunOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Correlation Id"
+          },
+          "state": {
+            "$ref": "#/components/schemas/RunState"
+          },
+          "contact_outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactState"
+              },
+              {
+                "$ref": "#/components/schemas/NotificationState"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "NOT_REQUESTED",
+                  "SKIPPED_NOT_COOLING",
+                  "INTEGRATION_DISABLED",
+                  "ERROR"
+                ]
+              }
+            ],
+            "title": "Contact Outcome"
+          },
+          "notification_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notification Id"
+          },
+          "external_check_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Check Id"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Advisory Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "transaction_id",
+          "correlation_id",
+          "state",
+          "contact_outcome",
+          "notification_id",
+          "external_check_id",
+          "attempts",
+          "error_code",
+          "created_at"
+        ],
+        "title": "RunOut"
+      },
+      "RunState": {
+        "type": "string",
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "COMPLETE",
+          "DEGRADED",
+          "FAILED"
+        ],
+        "title": "RunState"
+      },
+      "SimulatedUpdate": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "start",
+              "consent",
+              "revoke",
+              "ack",
+              "suspect"
+            ],
+            "title": "Kind"
+          },
+          "chat_id": {
+            "type": "integer",
+            "maximum": 4503599627370496.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Chat Id"
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Reference"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "chat_id",
+          "reference"
+        ],
+        "title": "SimulatedUpdate",
+        "description": "Test-only equivalent of authenticated private Telegram updates."
+      },
+      "TimelineEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "core",
+              "contact",
+              "gateway",
+              "orchestration"
+            ],
+            "title": "Category"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "information",
+              "attention"
+            ],
+            "title": "Importance"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "description_ru": {
+            "type": "string",
+            "title": "Description Ru"
+          },
+          "description_kk": {
+            "type": "string",
+            "title": "Description Kk"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "persisted_core",
+              "integration_audit"
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "timestamp",
+          "category",
+          "importance",
+          "code",
+          "correlation_id",
+          "description_ru",
+          "description_kk",
+          "source"
+        ],
+        "title": "TimelineEvent"
+      },
+      "TimelinePage": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Advisory Only",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "as_of",
+          "events",
+          "next_cursor"
+        ],
+        "title": "TimelinePage"
+      },
+      "TransactionStatus": {
+        "type": "string",
+        "enum": [
+          "approved",
+          "cooling_off",
+          "blocked",
+          "cancelled"
+        ],
+        "title": "TransactionStatus"
+      },
+      "TransferContextIn": {
+        "properties": {
+          "active_call": {
+            "type": "boolean",
+            "title": "Active Call",
+            "description": "A phone call is active during the transfer",
+            "default": false
+          },
+          "from_deposit": {
+            "type": "boolean",
+            "title": "From Deposit",
+            "description": "Funds were just withdrawn from a deposit",
+            "default": false
+          },
+          "pasted_recipient": {
+            "type": "boolean",
+            "title": "Pasted Recipient",
+            "default": false
+          },
+          "typing_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3600000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Typing Duration Ms"
+          },
+          "hesitation_count": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Hesitation Count",
+            "default": 0
+          },
+          "recipient_input_length": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 128.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Input Length",
+            "description": "Measured typed characters; needed with duration to compute characters/sec"
+          },
+          "hesitation_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 300000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hesitation Ms",
+            "description": "Measured cumulative pauses; never inferred from hesitation_count"
+          },
+          "is_new_device": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is New Device",
+            "description": "Override; by default derived from the sender's registered device"
+          },
+          "is_new_recipient": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is New Recipient",
+            "description": "Override; by default derived from the transfer graph"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TransferContextIn",
+        "description": "Client-side signals captured by the BCC mobile app at the moment of transfer."
+      },
+      "TransferEvaluateRequest": {
+        "properties": {
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "sender_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sender Id"
+          },
+          "recipient_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Id"
+          },
+          "recipient_phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\+7\\d{10}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Phone"
+          },
+          "recipient_iban": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^KZ[0-9A-Z]{18}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Iban"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^KZT$",
+            "title": "Currency",
+            "default": "KZT"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "context": {
+            "$ref": "#/components/schemas/TransferContextIn"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At",
+            "description": "Event time (demo presets use it to replay night transfers)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sender_id",
+          "amount"
+        ],
+        "title": "TransferEvaluateRequest"
+      },
+      "TransferEvaluateResponse": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "risk_score": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Risk Score"
+          },
+          "ml_score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ml Score"
+          },
+          "ml_base_score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ml Base Score"
+          },
+          "ml_model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ml Model Version"
+          },
+          "ml_explanation_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "tree_path_probability"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ml Explanation Method",
+            "default": "tree_path_probability"
+          },
+          "ml_contributors": {
+            "items": {
+              "$ref": "#/components/schemas/MLContributorOut"
+            },
+            "type": "array",
+            "title": "Ml Contributors"
+          },
+          "headline_kk": {
+            "type": "string",
+            "title": "Headline Kk"
+          },
+          "headline_ru": {
+            "type": "string",
+            "title": "Headline Ru"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/RiskReasonOut"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "reasons_kk": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons Kk"
+          },
+          "reasons_ru": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons Ru"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms"
+          },
+          "layer_latency_ms": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Layer Latency Ms"
+          },
+          "cooling_off_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cooling Off Until"
+          },
+          "is_new_recipient": {
+            "type": "boolean",
+            "title": "Is New Recipient"
+          },
+          "is_new_device": {
+            "type": "boolean",
+            "title": "Is New Device"
+          },
+          "recipient": {
+            "$ref": "#/components/schemas/PartyOut"
+          },
+          "velocity": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Velocity"
+          },
+          "recipient_graph": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Recipient Graph"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount"
+          },
+          "context": {
+            "$ref": "#/components/schemas/TransferContextIn"
+          },
+          "server_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Server Time"
+          },
+          "verification_answers": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoolingQuestionnaire"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "red_flags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Red Flags"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "created_at",
+          "updated_at",
+          "status",
+          "risk_score",
+          "ml_contributors",
+          "headline_kk",
+          "headline_ru",
+          "reasons",
+          "reasons_kk",
+          "reasons_ru",
+          "latency_ms",
+          "layer_latency_ms",
+          "cooling_off_until",
+          "is_new_recipient",
+          "is_new_device",
+          "recipient",
+          "velocity",
+          "recipient_graph",
+          "amount",
+          "context",
+          "server_time"
+        ],
+        "title": "TransferEvaluateResponse"
+      },
+      "Transition": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "action": {
+            "type": "string",
+            "const": "transition",
+            "title": "Action"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_REVIEW",
+              "NEEDS_INFORMATION",
+              "ESCALATED",
+              "RESOLVED",
+              "CLOSED"
+            ],
+            "title": "State"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "review_started",
+              "needs_followup",
+              "review_complete",
+              "duplicate",
+              "reopened"
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "action",
+          "state",
+          "reason"
+        ],
+        "title": "Transition"
+      },
+      "UpdateOut": {
+        "properties": {
+          "resource_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Resource Id"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource_id",
+          "state"
+        ],
+        "title": "UpdateOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

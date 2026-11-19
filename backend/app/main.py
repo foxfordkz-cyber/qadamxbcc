@@ -12,9 +12,11 @@ from sqlalchemy import text
 
 from app.api.limits import RequestLimits
 from app.api.security import require_soc_access, require_transfer_access
-from app.api.v1 import soc, transfers
+from app.api.v1 import external_checks, integrations, soc, transfers, trusted_contacts
 from app.core.config import Settings, get_settings
 from app.core.resources import Resources
+from app.integrations.config import get_integration_settings
+from app.integrations.errors import IntegrationError
 from app.ml.features import Features
 from app.services.graph import GraphCapacityError
 from app.services.velocity import VelocityCapacityError
@@ -70,6 +72,11 @@ def create_app(settings: Settings | None = None, resources: Resources | None = N
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type", "X-BCC-API-Key", "X-BCC-SOC-Key"],
     )
+    app.state.integration_settings = get_integration_settings()
+
+    @app.exception_handler(IntegrationError)
+    async def integration_error(request: Request, exc: IntegrationError) -> JSONResponse:
+        return JSONResponse(status_code=exc.status, content={"detail": exc.code})
 
     @app.get("/health", tags=["meta"])
     async def health() -> dict[str, str]:
@@ -106,6 +113,9 @@ def create_app(settings: Settings | None = None, resources: Resources | None = N
     api = APIRouter(prefix=cfg.api_prefix)
     api.include_router(transfers.router, dependencies=[Depends(require_transfer_access)])
     api.include_router(soc.router, dependencies=[Depends(require_soc_access)])
+    api.include_router(trusted_contacts.router)
+    api.include_router(external_checks.router)
+    api.include_router(integrations.router)
     app.include_router(api)
     return app
 
