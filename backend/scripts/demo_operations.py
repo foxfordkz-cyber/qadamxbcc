@@ -50,6 +50,38 @@ async def operations_demo(base_url: str) -> None:
                 }
             )
         )
+        for lang, text in (
+            ("ru", "Переведите деньги на безопасный счет. SYNTHETIC_PRIVATE"),
+            ("kk", "Ақшаны қауіпсіз шотқа аударыңыз. SYNTHETIC_PRIVATE"),
+        ):
+            scan = await client.post(
+                root + "/guardian/scam-check",
+                headers=owner,
+                json={"text": text, "language": lang},
+            )
+            scan.raise_for_status()
+            assert scan.json()["status"] == "signals_detected"
+            assert scan.json()["language"] == lang
+            assert scan.json()["privacy"]["stored"] is False
+            assert scan.headers["Cache-Control"] == "no-store"
+            assert "SYNTHETIC_PRIVATE" not in scan.text
+        malformed = await client.post(
+            root + "/guardian/scam-check",
+            headers=owner,
+            json={"text": "SYNTHETIC_PRIVATE", "language": "unsupported"},
+        )
+        assert malformed.status_code == 422
+        assert "SYNTHETIC_PRIVATE" not in malformed.text
+        print(
+            json.dumps(
+                {
+                    "result": "PASS",
+                    "scenario": "private_scam_check",
+                    "live_telegram": False,
+                    "languages": ["ru", "kk"],
+                }
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ from app.api.v1 import (
     integration_insights,
     integration_operations,
     integrations,
+    scam_check,
     trusted_contacts,
 )
 from app.main import create_app
@@ -34,6 +35,7 @@ def test_frontend_examples_match_published_routes(example: dict[str, Any]) -> No
             (guardian_reports, "/api/v1/integrations"),
             (guardian_cases, "/api/v1/integrations"),
             (integration_operations, "/api/v1/integrations"),
+            (scam_check, "/api/v1/integrations"),
         ]
         for route in module.router.routes
         if isinstance(route, APIRoute)

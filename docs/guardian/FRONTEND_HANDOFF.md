@@ -1,5 +1,11 @@
 # Guardian / Trusted Circle handoff
 
+2026-11-19 additive handoff: [Private Scam Check](PRIVATE_SCAM_CHECK.md) specifies
+`POST /api/v1/integrations/guardian/scam-check`, RU/KK UI states, private input handling,
+authentication, errors and retry behavior. Checked JSON examples and OpenAPI include it.
+Frontend files and financial decisions are unchanged. Integrate after the dependency stack
+through PR #15 and this feature branch has been reviewed by the owner.
+
 Dependencies: #4 observability → #5 Guardian UX → #6 Trusted Circle → #7 reports/SOC. The bank UI is owned
 by the frontend team and was not modified. Existing evaluate/resolve-cooling contracts
 remain unchanged. Telegram chat identity is never a source of owner capabilities.
