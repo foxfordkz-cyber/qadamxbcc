@@ -1,0 +1,21 @@
+{
+  "source": "14831db44d5e1e70e7a5c9cabef1281c7d59507e",
+  "run_id": 43596133203,
+  "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/43596133203",
+  "conclusion": "success",
+  "verify_evidence": [
+    "2026-11-14T12:42:49.4092484Z All checks passed!",
+    "2026-11-14T12:43:03.0884098Z Success: no issues found in 113 source files",
+    "2026-11-14T12:43:39.5114250Z 224 passed, 10 skipped in 34.38s",
+    "2026-11-14T12:43:53.9108868Z ℹ tests 12",
+    "2026-11-14T12:43:53.9150692Z ℹ skipped 0",
+    "2026-11-14T12:44:15.3303048Z \u001b[1;36m==> verify: ALL GREEN\u001b[0m",
+    "2026-11-14T12:45:12.1045462Z 186 passed in 51.30s"
+  ],
+  "demo_evidence": [
+    "2026-11-14T12:44:58.2295511Z {\"result\": \"PASS\", \"scenario\": \"normal\", \"transaction_id\": \"e64fccb0-4a02-4f77-882b-e3650dc3ef80\", \"core_status\": \"approved\", \"notifications\": 0, \"gateway_source\": null}",
+    "2026-11-14T12:44:58.2296597Z {\"result\": \"PASS\", \"scenario\": \"scam\", \"transaction_id\": \"b75e474c-ce07-4610-a54f-03e93efddedc\", \"correlation_id\": \"ea7f009e-d64c-4c4e-a960-1b61202c36e4\", \"core_status\": \"cooling_off\", \"notification\": \"SUSPICION_REPORTED\", \"gateway_source\": \"MOCK\"}",
+    "2026-11-14T12:44:58.2297644Z {\"result\": \"PASS\", \"scenario\": \"hub\", \"transaction_id\": \"a3198f79-22ea-4ccb-a124-71c980cec79d\", \"core_status\": \"blocked\", \"notifications\": 0, \"gateway_source\": \"MOCK\"}",
+    "2026-11-14T12:44:58.2298691Z {\"result\": \"PASS\", \"scenario\": \"guardian_report\", \"report_id\": \"d0a71901-aee0-44e2-a753-6b9536717454\", \"status\": \"DEMO_ACKNOWLEDGED\", \"events\": 2, \"delivery\": \"local_demo_soc\", \"scam_check_bot_flow\": \"covered separately by RU/KK dispatcher tests; no live Telegram\"}"
+  ]
+}

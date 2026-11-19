@@ -1,0 +1,92 @@
+name: Integration verification
+on:
+  pull_request:
+  push:
+    branches: [main, 'feature/bekzat-*', 'codex/bekzat-main-readiness-*']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: bcc
+          POSTGRES_PASSWORD: bcc
+          POSTGRES_DB: bcc_integration_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U bcc -d bcc_integration_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Full project oracle
+        run: bash verify.sh
+      - name: PostgreSQL and Redis integration tests
+        working-directory: backend
+        env:
+          BCC_TEST_DATABASE_URL: postgresql+asyncpg://bcc:bcc@localhost:5432/bcc_integration_test
+          BCC_TEST_POSTGRES_URL: postgresql+asyncpg://bcc:bcc@localhost:5432/bcc_integration_test
+          BCC_TEST_REDIS_URL: redis://localhost:6379/15
+        run: |
+          uv run --no-sync python -m scripts.verify_merged_migrations
+          uv run --no-sync python -m scripts.verify_case_migrations
+          uv run --no-sync pytest tests/integrations tests/test_postgres_concurrency.py
+  compose-demo:
+    # Pin the OS together with the browser harness; ubuntu-latest can change underneath it.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      BCC_INTEGRATIONS_ENABLED: 'true'
+      BCC_INTEGRATIONS_TELEGRAM_MODE: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Generate ephemeral demo key
+        run: |
+          python -c "import os,secrets; key=secrets.token_hex(32); print('::add-mask::'+key); open(os.environ['GITHUB_ENV'],'a').write('BCC_INTEGRATIONS_SIGNING_KEY='+key+'\n')"
+      - name: Build and start complete stack
+        run: docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations up -d --build --wait --wait-timeout 180
+      - name: Seed synthetic core fixtures
+        run: |
+          docker compose exec -T backend python -m scripts.seed_bcc > /tmp/seed-report.txt
+          docker compose restart backend
+          docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations up -d --wait --wait-timeout 120
+      - name: Exercise fake end-to-end flow
+        working-directory: backend
+        run: uv run --python 3.12 python -m scripts.demo_operations
+      - name: Verify existing browser demo with integrations disabled
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations stop integrations-worker
+          BCC_INTEGRATIONS_ENABLED=false docker compose -f docker-compose.yml -f docker-compose.integrations.yml up -d --no-deps --wait --wait-timeout 120 backend
+          test "$(curl --silent --output /tmp/integrations-disabled.json --write-out '%{http_code}' http://127.0.0.1:8000/api/v1/integrations/health)" = 503
+          npm install --prefix /tmp/bcc-browser-qa --no-save --package-lock=false --no-audit --no-fund playwright@1.56.1
+          node /tmp/bcc-browser-qa/node_modules/playwright/cli.js install --with-deps chromium
+          PLAYWRIGHT_MODULE=/tmp/bcc-browser-qa/node_modules/playwright QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/browser-ci" node frontend/scripts/qa-mobile-soc.cjs http://127.0.0.1:3000
+      - name: Save synthetic browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrations-disabled-browser-qa
+          path: .local-checks/browser-ci/
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 7
+      - name: Shutdown disposable stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.integrations.yml --profile integrations down -v

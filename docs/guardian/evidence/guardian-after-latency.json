@@ -1,0 +1,90 @@
+{
+  "date_utc": "2026-11-14T12:51:20.044955+00:00",
+  "quantiles": "nearest rank",
+  "environment": "Windows Python 3.12.16, Docker Desktop PG16/Redis7, synthetic data",
+  "comparison": "single implementation, no speedup or regression claim",
+  "engine_only": {
+    "attempted": 500,
+    "successes": 500,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 1.6533,
+    "p95_ms": 4.8825,
+    "p99_ms": 6.6546,
+    "scope": "engine + graph + real Redis14; 30 warmups; excludes HTTP/SQL"
+  },
+  "http_database": {
+    "attempted": 100,
+    "successes": 100,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 76.1718,
+    "p95_ms": 105.9979,
+    "p99_ms": 138.7604,
+    "scope": "loopback HTTP + Docker FastAPI + engine + PG; 10 warmups; serial reused sender, risk outcomes may vary"
+  },
+  "integration_enqueue_http": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 69.0039,
+    "p95_ms": 147.3175,
+    "p99_ms": 209.2692
+  },
+  "queue_wait": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 427.932,
+    "p95_ms": 955.512,
+    "p99_ms": 955.793
+  },
+  "integration_processing": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 30.352,
+    "p95_ms": 92.413,
+    "p99_ms": 207.964
+  },
+  "integration_total": {
+    "attempted": 20,
+    "successes": 20,
+    "errors": 0,
+    "error_rate": 0.0,
+    "p50_ms": 472.475,
+    "p95_ms": 998.671,
+    "p99_ms": 1003.113
+  },
+  "integration_workload": "20 gateway-only fake jobs in a burst; one worker, bounded fake drain 0.01s/0.5s; persisted audit timestamps, not client polling delay; no Telegram; p99 is maximum at N=20",
+  "health_after": {
+    "status": "ok",
+    "checked_at": "2026-11-14T12:51:32.916828Z",
+    "cache_seconds": 5,
+    "database": "ok",
+    "redis": "ok",
+    "worker": "ok",
+    "telegram": "fake_enabled",
+    "gateway": "mock_ready",
+    "queue": {
+      "notifications_queued": 0,
+      "notifications_delayed": 0,
+      "notifications_failed": 0,
+      "runs_pending": 0
+    },
+    "last_successful_processing": "2026-11-14T12:51:32.743873Z",
+    "real_provider_probed": false
+  },
+  "timeline_codes": [
+    "TRANSFER_EVALUATED",
+    "DECISION_APPROVED",
+    "INTEGRATION_QUEUED",
+    "INTEGRATION_STARTED",
+    "MOCK_GATEWAY_REQUESTED",
+    "MOCK_GATEWAY_CLEAR",
+    "INTEGRATION_COMPLETE"
+  ]
+}
