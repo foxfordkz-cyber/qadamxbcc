@@ -28,7 +28,7 @@ export function MobileQr() {
     let cancelled = false;
     setState("loading");
     mobileUrl()
-      .then(async url => url ? { url, svg: await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#101828", light: "#FFFFFF" } }) } : "missing" as const)
+      .then(async url => url ? { url, svg: await QRCode.toString(url, { type: "svg", margin: 1, errorCorrectionLevel: "M", color: { dark: "#1C1C1E", light: "#FFFFFF" } }) } : "missing" as const)
       .catch(() => "missing" as const)
       .then(value => { if (!cancelled) setState(value); });
     return () => { cancelled = true; };
