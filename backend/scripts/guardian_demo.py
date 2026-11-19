@@ -31,6 +31,10 @@ class NoRedirect(HTTPRedirectHandler):
 
 
 def probe(key: str) -> dict[str, Any]:
+    # The wrappers also support executing this file by absolute path from any cwd.
+    backend_path = str(ROOT / "backend")
+    if backend_path not in sys.path:
+        sys.path.insert(0, backend_path)
     from app.integrations.capabilities import Principal, issue_token
 
     opener = build_opener(ProxyHandler({}), NoRedirect())
