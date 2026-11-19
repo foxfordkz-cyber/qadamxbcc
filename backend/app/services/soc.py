@@ -166,7 +166,14 @@ async def _stats(session: AsyncSession) -> FeedStats:
             select(func.count(func.distinct(Transaction.recipient_id))).where(
                 Transaction.status == TransactionStatus.BLOCKED,
                 Transaction.risk_events.any(
-                    RiskEvent.rule_code.in_(("DROP_HUB_FAN_IN", "RECIPIENT_MANY_SENDERS"))
+                    RiskEvent.rule_code.in_(
+                        (
+                            "DROP_HUB_FAN_IN",
+                            "RECIPIENT_MANY_SENDERS",
+                            "RECHECK_DROP_HUB_FAN_IN",
+                            "RECHECK_RECIPIENT_MANY_SENDERS",
+                        )
+                    )
                 ),
             )
         )

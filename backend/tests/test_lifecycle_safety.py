@@ -13,7 +13,8 @@ import app.services.transfers as transfers
 from app.core.resources import Resources
 from app.models import AbandonedRequest, GraphEdge, ProjectionEvent, Transaction
 from app.services.graph import MAX_GRAPH_NEIGHBOURS
-from tests.test_api import CLEAN, World
+from tests.clock import pin_server_clock
+from tests.test_api import CLEAN, DAY, World
 from tests.test_api import world as world
 
 
@@ -90,7 +91,11 @@ async def test_read_session_cannot_rollback_pending_evaluation(
         assert edge.weight == 31_000
 
 
-async def test_release_rechecks_new_dropper_network_without_new_attempt(world: World) -> None:
+async def test_release_rechecks_new_dropper_network_without_new_attempt(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Keep the intended daytime cashout and its settled velocity on the same clock.
+    pin_server_clock(monkeypatch, DAY)
     held = await world.evaluate(
         "victim", "scammer", 900_000, context={"active_call": True, "from_deposit": True}
     )
