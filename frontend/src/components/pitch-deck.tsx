@@ -4,6 +4,8 @@ import { ArrowRight, BrainCircuit, Check, CircleDashed, Clock3, ExternalLink, Fi
 import type { Lang } from "@/lib/contracts";
 import { compare, compareNote, compareSources, competitors, decisions, layers, metrics, phases, problem, screens, slides, steps, team, type L, type Slide } from "@/content/pitch-deck";
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const STATIC = process.env.NEXT_PUBLIC_BCC_STATIC === "1";
 const stepIcons = [MessageSquareWarning, PhoneCall, Wallet, Network];
 const layerIcons = [Fingerprint, Gauge, Network, BrainCircuit];
 const screenIcons = [Smartphone, UserRound, ShieldCheck];
@@ -44,13 +46,13 @@ export function DeckSlide({ slide, index, total, lang }: { slide: Slide; index: 
     </>}
 
     {slide.kind === "live" && <div className="deck-live">
-      <div className="deck-phone"><iframe src="/mobile" title={pick(["Saq Bol тірі қосымшасы", "Живое приложение Saq Bol"])} loading="lazy" /></div>
+      <div className="deck-phone"><iframe src={`${BASE}/mobile${STATIC ? "/" : ""}`} title={pick(["Saq Bol тірі қосымшасы", "Живое приложение Saq Bol"])} loading="lazy" /></div>
       <div className="deck-live-side">
         <h1>{tr(slide.title)}</h1>{slide.lead && <p className="deck-lead">{tr(slide.lead)}</p>}
         <ol className="deck-screens">{screens.map((screen, i) => { const Icon = screenIcons[i]; return <li key={screen.owner} className="deck-card">
           <Icon size={20} /><div><strong>{tr(screen.who)}</strong><p>{tr(screen.sees)}</p></div>
         </li>; })}</ol>
-        <a className="deck-open" href="/" target="_blank" rel="noopener noreferrer">{pick(["SOC-ты ашу", "Открыть SOC"])} <ExternalLink size={14} /></a>
+        <a className="deck-open" href={`${BASE}/`} target="_blank" rel="noopener noreferrer">{pick(["SOC-ты ашу", "Открыть SOC"])} <ExternalLink size={14} /></a>
       </div>
     </div>}
 

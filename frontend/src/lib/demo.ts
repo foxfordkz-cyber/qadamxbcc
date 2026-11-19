@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { latencySummary } from "./latency-summary";
-import { ids } from "./config";
+import { ids } from "./demo-ids";
 import { feedQuerySchema, type FeedQuery } from "./contracts";
 import { countBlockedHubs } from "./feed-summary";
 import type { AbandonResult, Answers, Decision, Evaluation, Feed, FeedItem, Graph, GraphData, Party, Reason, Status, TransferInput } from "./contracts";
@@ -32,7 +31,7 @@ export function callCheckDemo(customerId: string, now = Date.now()) {
   if (!accounts.some(a => a.id === customerId)) throw new DemoError(404, "notFound");
   if (callChecks().size >= 5000) callChecks().clear();
   const verified = (bankCalls().get(customerId) ?? 0) > now;
-  const check_id = randomUUID();
+  const check_id = globalThis.crypto.randomUUID();
   callChecks().set(check_id, { customer: customerId, verified, at: now });
   return {
     check_id, verified, checked_at: new Date(now).toISOString(), simulated_log: true,
@@ -95,7 +94,7 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
   const score = Math.min(100, behavioral + reasons.filter(r => r.layer !== "behavioral").reduce((n, r) => n + r.score_delta, 0));
   const status: Status = score >= 75 ? "blocked" : score >= 40 ? "cooling_off" : "approved";
   const until = status === "cooling_off" ? new Date(now + 900000).toISOString() : null;
-  const id = input.request_id ?? randomUUID();
+  const id = input.request_id ?? globalThis.crypto.randomUUID();
   const latency = Math.round((performance.now() - start) * 1000) / 1000;
   rows().unshift({ transaction_id: id, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(), status, risk_score: score, amount: input.amount, currency: "KZT", latency_ms: latency, sender, recipient, ...ctx, context: ctx, is_new_recipient: isNew, cooling_until: until, resolved_at: null, reasons });
   const result: Evaluation = { ...decision(status, score, id, reasons), reasons, latency_ms: latency,

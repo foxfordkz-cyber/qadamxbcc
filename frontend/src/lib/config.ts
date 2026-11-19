@@ -2,12 +2,9 @@ import { z } from "zod";
 import type { AppConfig, Preset, PresetForm, TrafficAccount } from "./contracts";
 import { accessConfiguration } from "./server-access";
 
-export const ids = {
-  sender: "00000000-0000-4000-8000-000000000001",
-  friend: "00000000-0000-4000-8000-000000000002",
-  stranger: "00000000-0000-4000-8000-000000000003",
-  hub: "00000000-0000-4000-8000-000000000004",
-};
+import { ids } from "./demo-ids";
+
+export { ids };
 export const demoPresets: Record<Preset, PresetForm> = {
   normal: { sender: ids.sender, recipient: "+77010000002", amount: "25000", context: { active_call: false, from_deposit: false, is_new_device: false, is_new_recipient: false } },
   scam: { sender: ids.sender, recipient: "+77010000003", amount: "900000", context: { active_call: true, from_deposit: true, is_new_device: false, is_new_recipient: true } },

@@ -20,6 +20,11 @@ Redis, NetworkX и локальная ML-модель. Интерфейс сти
 
 ## Публичное демо
 
+**Демо в браузере (GitHub Pages):** <https://foxfordkz-cyber.github.io/qadamxbcc/> — сайт, `/mobile`, `/pitch`.
+Это статическая версия: синтетический демо-движок работает прямо в браузере, без FastAPI,
+PostgreSQL и ML-модели. Обновляется автоматически при каждом пуше в `main`.
+Полная версия с сервером — кнопкой ниже.
+
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/foxfordkz-cyber/qadamxbcc)
 
 Кнопка создаёт на Render сайт, PostgreSQL и Redis из `render.yaml` (бесплатный план).
