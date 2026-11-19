@@ -3,6 +3,10 @@
 > [Draft PR #14 and current CI](https://github.com/foxfordkz-cyber/qadamxbcc/pull/14).
 > The 14 November counts below are historical, not the latest combined-suite counts.
 
+> 19 November Private Scam Check: [current delivery and verification](../guardian/PRIVATE_SCAM_CHECK_VERIFICATION.md),
+> [Draft PR #16](https://github.com/foxfordkz-cyber/qadamxbcc/pull/16). RU/KK offline API,
+> Telegram /scan, synthetic quality evidence and completed-test guards are additive.
+
 ## 18–19 November follow-up
 
 Main integration preparation passed its final two-job CI at `10874ed`:
