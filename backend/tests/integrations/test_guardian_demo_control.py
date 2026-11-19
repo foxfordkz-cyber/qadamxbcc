@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+from io import StringIO
 from typing import Any
 
 import pytest
@@ -191,3 +192,62 @@ def test_probe_signing_does_not_load_the_scoring_engine() -> None:
         check=False,
     )
     assert result.returncode == 0
+
+
+def test_probe_uses_only_fixed_loopback_and_compatible_soc_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.integrations.security import verify_token
+
+    key = "k" * 64
+    requests = []
+
+    class Opener:
+        def open(self, request: Any, *, timeout: int) -> StringIO:
+            assert timeout == 5
+            assert request.full_url.startswith("http://127.0.0.1:18000/")
+            requests.append(request)
+            if request.full_url.endswith("/ready"):
+                return StringIO(json.dumps({"status": "ready"}))
+            principal = verify_token(request.headers["Authorization"].removeprefix("Bearer "), key)
+            assert principal.role == "soc"
+            return StringIO(
+                json.dumps(
+                    {
+                        "database": "ok",
+                        "redis": "ok",
+                        "worker": "ok",
+                        "gateway": "mock_ready",
+                        "telegram": "fake_enabled",
+                        "queue": dict.fromkeys(
+                            (
+                                "notifications_queued",
+                                "notifications_delayed",
+                                "notifications_failed",
+                                "runs_pending",
+                            ),
+                            0,
+                        ),
+                    }
+                )
+            )
+
+    monkeypatch.setattr(demo, "build_opener", lambda *args: Opener())
+    assert all(demo.probe(key)["checks"].values())
+    assert len(requests) == 2
+    assert (
+        demo.NoRedirect().redirect_request(None, None, None, None, None, "https://example.org")
+        is None
+    )
+
+
+def test_probe_timeout_is_reported_without_raw_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Opener:
+        def open(self, *args: Any, **kwargs: Any) -> None:
+            raise TimeoutError("synthetic-secret")
+
+    monkeypatch.setattr(demo, "build_opener", lambda *args: Opener())
+    result = demo.probe("k" * 64)
+    assert result["checks"]["api_ready"] is False
+    assert result["checks"]["integration_health"] is False
+    assert "synthetic-secret" not in json.dumps(result)
