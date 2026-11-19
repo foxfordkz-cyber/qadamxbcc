@@ -101,7 +101,7 @@ export interface TrafficAccount { id: string; city: City; role: "normal" | "scam
 export interface AppConfig { mode: "demo" | "live"; presets: Record<Preset, PresetForm>; trafficAccounts?: TrafficAccount[]; demoActionsEnabled?: boolean }
 
 export class ApiError extends Error {
-  constructor(public code: string, public status = 0) { super(code); }
+  constructor(public code: string, public status = 0, public retryAfter = 0) { super(code); }
 }
 const statusSchema = z.enum(["approved", "cooling_off", "blocked", "cancelled"]);
 export const feedQuerySchema = z.object({
@@ -175,7 +175,8 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const body: unknown = await response.json().catch(() => null);
     const code = body && typeof body === "object" && "error" in body && typeof body.error === "string"
       ? body.error : response.status === 404 ? "notFound" : response.status === 409 ? "conflict" : "apiError";
-    throw new ApiError(code, response.status);
+    const retry = Number(response.headers.get("retry-after"));
+    throw new ApiError(code, response.status, Number.isFinite(retry) && retry > 0 ? retry : 0);
   }
   try { return validateApiResponse(path, await response.json()) as T; }
   catch (error) { if (error instanceof ApiError) throw error; throw new ApiError("invalidResponse", 502); }

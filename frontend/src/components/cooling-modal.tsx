@@ -11,8 +11,8 @@ import { errorKey, money, useLocale, type MessageKey } from "@/lib/i18n";
 import { TrustedCircle } from "./trusted-circle";
 import "./mobile-client.css";
 
-type Props = { result: Evaluation; context: Partial<Context>; answers: Partial<Answers>; onAnswersChange: (value: Partial<Answers>) => void; onClose: () => void; onResolved: (value: Evaluation) => void };
-export function CoolingModal({ result, context, answers, onAnswersChange, onClose, onResolved }: Props) {
+type Props = { draftFailed: boolean; result: Evaluation; context: Partial<Context>; answers: Partial<Answers>; onAnswersChange: (value: Partial<Answers>) => void; onClose: () => void; onResolved: (value: Evaluation) => void };
+export function CoolingModal({ draftFailed, result, context, answers, onAnswersChange, onClose, onResolved }: Props) {
   const { lang, setLang, t } = useLocale();
   const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -84,8 +84,8 @@ export function CoolingModal({ result, context, answers, onAnswersChange, onClos
       {question && <><div className="verification-progress"><span>{m("coolingQuestion")} {step + 1} / {questions.length}</span><strong>{answered} / {questions.length}</strong></div><progress className="cooling-progress" value={answered} max={questions.length} aria-label={t("verificationProgress")} /><fieldset className="cooling-question" disabled={busy}><legend>{t(question)}</legend><div className="cooling-choices">{[true, false].map(value => <label key={String(value)}><input type="radio" name={question} checked={answers[question] === value} onChange={() => { onAnswersChange({ ...answers, [question]: value }); }} /><span>{t(value ? "yes" : "no")}</span>{answers[question] === value && <Check size={18} />}</label>)}</div></fieldset><div className="cooling-navigation"><button type="button" className="secondary cooling-back" onClick={() => { setStep(editing ? questions.length : step - 1); setEditing(false); }}><ArrowLeft size={16} />{m("coolingBack")}</button><button type="button" className="primary cooling-next" disabled={typeof answers[question] !== "boolean"} onClick={() => { setStep(editing ? questions.length : step + 1); setEditing(false); }}>{m("coolingNext")}<ArrowRight size={16} /></button></div></>}
       {reviewing && <form onSubmit={event => { event.preventDefault(); void submit(); }}><h3 className="cooling-review-title">{m("coolingReview")}</h3><ol className="cooling-review-list">{questions.map((q, index) => <li key={q}><span>{t(q)}<strong>{typeof answers[q] === "boolean" ? t(answers[q] ? "yes" : "no") : "—"}</strong></span><button type="button" className="cooling-edit" disabled={busy} aria-label={`${m("coolingEdit")}: ${t(q)}`} onClick={() => { setEditing(true); setStep(index); }}>{m("coolingEdit")}</button></li>)}</ol><p className="muted mt-4 text-xs" role="status">{t(unchanged && seconds !== 0 ? "answersSaved" : "confirmNote")}</p><button className="primary cooling-wide cooling-submit" disabled={busy || !completeCoolingAnswers(answers) || (unchanged && seconds !== 0)}>{busy ? <LoaderCircle className="animate-spin" size={17} /> : <ShieldCheck size={17} />}{t(seconds === 0 ? "releaseTransfer" : "confirm")}</button></form>}
     </div>
-    <TrustedCircle transactionId={result.transaction_id} active={result.status === "cooling_off" && seconds !== 0} />
+    <TrustedCircle transactionId={result.transaction_id} active={result.status === "cooling_off" && seconds !== null && seconds > 0} />
     {error && <p role="alert" className="error">{t(error)}</p>}
-    <div className="cooling-later"><button type="button" className="secondary" disabled={busy} onClick={onClose}>{t("leaveHeld")}</button><button type="button" className="danger-button" disabled={busy} onClick={() => void submit(true)}><X size={16} />{t("cancelTransfer")}</button><p>{m("coolingDraftHint")}</p><p>{t("cancelNote")}</p></div>
+    <div className="cooling-later"><button type="button" className="secondary" disabled={busy} onClick={onClose}>{t("leaveHeld")}</button><button type="button" className="danger-button" disabled={busy} onClick={() => void submit(true)}><X size={16} />{t("cancelTransfer")}</button><p>{m(draftFailed ? "draftFailed" : "coolingDraftHint")}</p><p>{t("cancelNote")}</p></div>
   </dialog>;
 }

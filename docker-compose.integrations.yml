@@ -1,5 +1,9 @@
 # Optional local/test overlay. Core compose remains usable without any integration secret.
 services:
+  frontend:
+    environment:
+      BCC_INTEGRATIONS_SIGNING_KEY: ${BCC_INTEGRATIONS_SIGNING_KEY:-}
+      BCC_INTEGRATIONS_TELEGRAM_MODE: ${BCC_INTEGRATIONS_TELEGRAM_MODE:-fake}
   backend:
     environment: &integration-environment
       BCC_DATABASE_URL: postgresql+asyncpg://bcc:bcc@postgres:5432/bcc_shield

@@ -72,6 +72,12 @@
 | `POST` | `/api/v1/call-check` | `X-BCC-API-Key` | `CallCheckRequest` | `CallCheckResponse` | 200, 422 |
 | `POST` | `/api/v1/call-check/demo/bank-call` | `X-BCC-API-Key` | `DemoBankCallRequest` | `DemoBankCallResponse` | 200, 422 |
 
+### scam-check
+
+| Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
+|---|---|---|---|---|---|
+| `GET` | `/api/v1/scam-check/guide` | `X-BCC-API-Key` | — | `ScamGuide` | 200, 422 |
+
 ### soc
 
 | Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
