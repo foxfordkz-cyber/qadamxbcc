@@ -6,6 +6,10 @@ API слушает только `127.0.0.1` внутри контейнера, �
 
 ## Render (бесплатно, 5 минут)
 
+Самый короткий путь — ссылка
+<https://render.com/deploy?repo=https://github.com/foxfordkz-cyber/qadamxbcc>:
+войти в Render, проверить три ресурса и нажать **Apply**. То же вручную:
+
 1. Войти на [render.com](https://render.com) через GitHub и дать доступ к репозиторию
    `foxfordkz-cyber/qadamxbcc`.
 2. **New → Blueprint** → выбрать репозиторий, ветку `main`. Render прочитает `render.yaml`

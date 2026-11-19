@@ -20,8 +20,10 @@ Redis, NetworkX и локальная ML-модель. Интерфейс сти
 
 ## Публичное демо
 
-Сайт разворачивается одним контейнером на Render (кнопка **New → Blueprint**, файл `render.yaml`),
-Railway или любом сервере с Docker: [инструкция](docs/DEPLOY.md).
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/foxfordkz-cyber/qadamxbcc)
+
+Кнопка создаёт на Render сайт, PostgreSQL и Redis из `render.yaml` (бесплатный план).
+Railway или любой сервер с Docker: [инструкция](docs/DEPLOY.md).
 
 ## Запуск демо одной командой
 
