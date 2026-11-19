@@ -1,4 +1,4 @@
-# BCC Shield
+# Saq Bol
 
 Двуязычный (`kk` / `ru`) прототип защиты переводов: Next.js, FastAPI, PostgreSQL,
 Redis, NetworkX и локальная ML-модель. Интерфейс стилизован под BCC; это учебный

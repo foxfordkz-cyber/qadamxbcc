@@ -1,4 +1,4 @@
-"""Core persistence model for BCC Shield.
+"""Core persistence model for Saq Bol.
 
 Types are chosen to be portable: PostgreSQL in production, SQLite for tests.
 """

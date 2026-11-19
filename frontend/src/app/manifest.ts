@@ -3,9 +3,9 @@ import type { MetadataRoute } from "next";
 // Lets /mobile be added to the home screen and open full-screen like an app.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "BCC Shield — қауіпсіз аударым / безопасный перевод",
-    short_name: "BCC Shield",
-    description: "Демо-клиент BCC Shield: перевод с проверкой на мошенничество (ҚАЗ/РУС).",
+    name: "Saq Bol — қауіпсіз аударым / безопасный перевод",
+    short_name: "Saq Bol",
+    description: "Демо-клиент Saq Bol: перевод с проверкой на мошенничество (ҚАЗ/РУС).",
     id: "/mobile",
     start_url: "/mobile",
     scope: "/",

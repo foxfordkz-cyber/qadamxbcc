@@ -24,6 +24,6 @@ try {
     & docker @composeArgs
     if ($LASTEXITCODE -ne 0) { throw 'Startup failed. Inspect: docker compose logs --tail 100' }
     $webPort = if ($env:BCC_WEB_PORT) { $env:BCC_WEB_PORT } else { '3000' }
-    Write-Host "BCC Shield ready: http://localhost:$webPort"
+    Write-Host "Saq Bol ready: http://localhost:$webPort"
     Write-Host 'Synthetic data are created only if the database is empty. Existing data are preserved.'
 } finally { Pop-Location }

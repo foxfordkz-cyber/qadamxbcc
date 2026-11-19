@@ -166,7 +166,7 @@ try {
 
     $launchRecord.state = 'ready'
     $launchRecord | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $recordPath -Encoding UTF8
-    Write-Host "BCC Shield ready: http://127.0.0.1:$FrontendPort"
+    Write-Host "Saq Bol ready: http://127.0.0.1:$FrontendPort"
     Write-Host "Backend PID: $($backendProcess.Id); frontend PID: $($frontendProcess.Id)"
     Write-Host "Logs and process record: $recordPath"
     Write-Host "Dedicated synthetic database: $databasePath"

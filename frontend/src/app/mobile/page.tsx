@@ -4,8 +4,8 @@ import { appConfig } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "BCC Shield — телефон",
-  appleWebApp: { capable: true, title: "BCC Shield", statusBarStyle: "default" },
+  title: "Saq Bol — телефон",
+  appleWebApp: { capable: true, title: "Saq Bol", statusBarStyle: "default" },
 };
 // resizes-content keeps "Продолжить" above the on-screen keyboard on Android Chrome.
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#00A859", interactiveWidget: "resizes-content" };

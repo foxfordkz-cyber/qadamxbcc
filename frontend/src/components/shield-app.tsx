@@ -233,7 +233,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   // /mobile: the same client logic on a real smartphone — no bezel, decision panel or SOC tab.
   if (layout === "phone") return <>
     <header className="topbar mobile-topbar"><div className="topbar-inner">
-      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span><div><strong>bcc<span> shield</span></strong></div></div>
+      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span><div><strong>saq<span> bol</span></strong></div></div>
       {languageSwitch}
     </div></header>
     <main className="mobile-shell">
@@ -245,7 +245,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   </>;
   return <>
     <header className="topbar"><div className="topbar-inner">
-      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>bcc<span> shield</span></strong><small>{t("tagline")}</small></div></div>
+      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>saq<span> bol</span></strong><small>{t("tagline")}</small></div></div>
       <div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span>{languageSwitch}</div>
     </div></header>
     <main className="shell">
@@ -257,7 +257,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
       {error && tab === "soc" && <p className="error" role="alert">{t(error)}</p>}
-      <div className="tabs" role="tablist" aria-label="BCC Shield">{(["mobile", "soc"] as const).map(key => { const Icon = key === "mobile" ? Smartphone : Activity; return <button key={key} type="button" role="tab" id={`tab-${key}`} aria-selected={tab === key} aria-controls={`panel-${key}`} tabIndex={tab === key ? 0 : -1} onKeyDown={e => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); const next = e.key === "Home" ? "mobile" : e.key === "End" ? "soc" : key === "mobile" ? "soc" : "mobile"; changeTab(next); document.getElementById(`tab-${next}`)?.focus(); } }} onClick={() => changeTab(key)}><Icon size={17} />{t(key === "mobile" ? "tabMobile" : "tabSoc")}</button>; })}</div>
+      <div className="tabs" role="tablist" aria-label="Saq Bol">{(["mobile", "soc"] as const).map(key => { const Icon = key === "mobile" ? Smartphone : Activity; return <button key={key} type="button" role="tab" id={`tab-${key}`} aria-selected={tab === key} aria-controls={`panel-${key}`} tabIndex={tab === key ? 0 : -1} onKeyDown={e => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); const next = e.key === "Home" ? "mobile" : e.key === "End" ? "soc" : key === "mobile" ? "soc" : "mobile"; changeTab(next); document.getElementById(`tab-${next}`)?.focus(); } }} onClick={() => changeTab(key)}><Icon size={17} />{t(key === "mobile" ? "tabMobile" : "tabSoc")}</button>; })}</div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} /> : <>
           <div className="client-wrap">
@@ -269,7 +269,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
           </div>
         </>}
       </div>
-      <footer className="page-footer"><span>BCC Shield · ITU Hackathon 2026</span><span>{config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
+      <footer className="page-footer"><span>Saq Bol · ITU Hackathon 2026</span><span>{config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
     </main>
     {cooling}
   </>;

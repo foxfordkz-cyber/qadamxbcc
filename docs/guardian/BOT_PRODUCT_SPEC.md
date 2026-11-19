@@ -1,4 +1,4 @@
-# BCC Shield Guardian — implementation audit
+# Saq Bol Guardian — implementation audit
 
 Baseline: PR #4 7f47709, dependent on Draft #1 → #2 → #3. Main remains a02d20d.
 Baseline CI 43567054363 passed: 199 unique backend cases and 12 frontend cases.
