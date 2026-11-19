@@ -21,6 +21,8 @@ import { RecoveryPanel } from "./recovery-panel";
 import { retainCoolingDraft } from "@/lib/cooling-flow";
 import { reconcileCoolingDrafts } from "@/lib/mobile-session";
 import { randomId } from "@/lib/secure-fallback";
+import { mobileRecovery } from "@/lib/mobile-recovery";
+
 
 const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
 export type AppLayout = "full" | "phone";
@@ -35,6 +37,18 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const selection = useRef(new TransferSelection());
+  const [storage] = useState(() => mobileRecovery(`${config.mode}.${config.presets.normal.sender}`, () => window.localStorage));
+  const restoreDialog = useRef<string | null>(null);
+  const [draftFailed, setDraftFailed] = useState(false);
+  useEffect(() => {
+    const id = storage.selection();
+    if (id) { selection.current.select(id); restoreDialog.current = id; }
+  }, [storage]);
+  function selectTransfer(id: string | null) {
+    selection.current.select(id);
+    storage.select(id);
+    restoreDialog.current = null;
+  }
   const [error, setError] = useState<MessageKey | null>(null);
   const [modal, setModal] = useState(false);
   const [coolingDrafts, setCoolingDrafts] = useState<Record<string, Partial<Answers>>>({});
@@ -70,10 +84,14 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     if (!acceptsEvaluation(evaluation, stored, previous)) return previous && acceptsEvaluation(previous, stored) ? previous : null;
     const next = Object.fromEntries([...Object.entries(latestEvaluations.current).filter(([id]) => id !== evaluation.transaction_id).slice(-399), [evaluation.transaction_id, evaluation]]);
     latestEvaluations.current = next; setEvaluations(next);
-    setCoolingDrafts(drafts => reconcileCoolingDrafts(drafts, evaluation));
+    const id = evaluation.transaction_id;
+    const persisted = storage.read(id);
+    const disk = reconcileCoolingDrafts(persisted ? { [id]: persisted } : {}, evaluation);
+    if (persisted && !disk[id]) storage.save(id, null);
+    setCoolingDrafts(drafts => reconcileCoolingDrafts(disk[id] && !drafts[id] ? { ...drafts, [id]: disk[id] } : drafts, evaluation));
     recovery.record(receipt(evaluation, stored));
     return evaluation;
-  }, [recovery.record, recovery.get]);
+  }, [recovery.record, recovery.get, storage]);
   const retireUnused = useCallback(async (id: string) => {
     try {
       const value = await api<AbandonResult>(`transfers/requests/${id}/abandon`, { method: "POST", body: "{}" });
@@ -110,7 +128,10 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
         if (matchesAttempt && currentIdentity.current === attemptIdentity.current) setCompletedIdentity(attemptIdentity.current);
         setError(null);
         setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {});
-        if (value.status !== "cooling_off") setModal(false);
+        if (restoreDialog.current === value.transaction_id) {
+          restoreDialog.current = null;
+          setModal(value.status === "cooling_off");
+        } else if (value.status !== "cooling_off") setModal(false);
       }));
     } finally { reconciling.current = false; setCheckingRecovery(false); }
   }, [recovery.refresh, remember]);
@@ -123,13 +144,13 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   useEffect(() => {
     if (identity !== previousIdentity.current) {
       if (completedIdentity !== null) forceNext.current = true;
-      previousIdentity.current = identity; selection.current.select(null); setResult(null); setModal(false); setCompletedIdentity(null); setError(null);
+      previousIdentity.current = identity; selectTransfer(null); setResult(null); setModal(false); setCompletedIdentity(null); setError(null);
     }
   }, [identity, completedIdentity]);
 
   async function review(id: string) {
     if (lock.current) return;
-    selection.current.select(id);
+    selectTransfer(id);
     if (result?.transaction_id !== id) { setResult(null); setModal(false); }
     lock.current = true; setBusy(true); setError(null);
     try {
@@ -142,7 +163,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     finally { lock.current = false; setBusy(false); }
   }
   async function execute(current: TransferAttempt, chosen?: Preset) {
-    selection.current.select(current.input.request_id!);
+    selectTransfer(current.input.request_id!);
     lock.current = true; setBusy(true); setError(null); setResult(null); setPreset(chosen ?? null); setModal(false); setUnknown(false);
     const started = performance.now();
     try {
@@ -166,7 +187,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     const context = chosen ? value.context : { ...value.context, ...sensor.context() };
     const parsed = transferSchema.safeParse({ sender_id: value.sender.trim(), [`recipient_${type}`]: recipient, amount: value.amount, currency: "KZT", context });
     if (!parsed.success) { setError(chosen && (!value.sender || !value.recipient) ? "presetMissing" : "invalid"); setTab("mobile"); return; }
-    selection.current.select(null);
+    selectTransfer(null);
     lock.current = true; setBusy(true); setError(null);
     try {
       const hash = await digestDraft(draft);
@@ -182,7 +203,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       if (!reserved) { setError("recoveryRequired"); return; }
       forceNext.current = false; attemptIdentity.current = draft;
       if (reserved.existing) {
-        selection.current.select(reserved.id);
+        selectTransfer(reserved.id);
         const value = remember(await api<Evaluation>(`transfers/${reserved.id}`));
         if (!value) { setError("staleData"); return; }
         setResult(value); setResultAmount(value.amount ?? parsed.data.amount); setResultContext(value.context ?? {}); setCompletedIdentity(draft); setModal(value.status === "cooling_off");
@@ -214,7 +235,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       if (value.status === "processed" && value.evaluation) {
         const accepted = remember(value.evaluation);
         if (!accepted) { setError("staleData"); return; }
-        selection.current.select(accepted.transaction_id);
+        selectTransfer(accepted.transaction_id);
         setResult(accepted); setResultAmount(accepted.amount ?? "0"); setResultContext(accepted.context ?? {}); setModal(accepted.status === "cooling_off");
       }
       else recovery.record({ id, state: "abandoned", updatedAt: Date.now() });
@@ -225,10 +246,15 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   function changeTab(value: "mobile" | "soc") { if (value === "mobile") stream.stop(); setTab(value); }
   function freshTransfer() {
     if (lock.current || hasUnknown) return;
-    selection.current.select(null); forceNext.current = true; attempt.current = null;
+    selectTransfer(null); forceNext.current = true; attempt.current = null;
     setCompletedIdentity(null); sensor.reset(); setResult(null); setPreset(null); setError(null);
   }
-  const cooling = modal && result?.status === "cooling_off" && <CoolingModal key={result.transaction_id} result={result} context={resultContext} answers={coolingDrafts[result.transaction_id] ?? result.verification_answers ?? {}} onAnswersChange={answers => setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers))} onClose={() => setModal(false)} onResolved={resolved} />;
+  const cooling = modal && result?.status === "cooling_off" && <CoolingModal key={result.transaction_id} result={result} context={resultContext}
+    answers={coolingDrafts[result.transaction_id] ?? result.verification_answers ?? {}} draftFailed={draftFailed}
+    onAnswersChange={answers => {
+      setDraftFailed(!storage.save(result.transaction_id, answers));
+      setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers));
+    }} onClose={() => setModal(false)} onResolved={resolved} />;
   const languageSwitch = <div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>;
   // /mobile: the same client logic on a real smartphone — no bezel, decision panel or SOC tab.
   if (layout === "phone") return <>
