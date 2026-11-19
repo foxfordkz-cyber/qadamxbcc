@@ -2432,6 +2432,93 @@
         }
       }
     },
+    "/api/v1/integrations/guardian/scam-check": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Private Scam Check"
+        ],
+        "summary": "Check",
+        "operationId": "check_api_v1_integrations_guardian_scam_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScamCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScamCheckResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScamCheckError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScamCheckError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScamCheckError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScamCheckError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScamCheckError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/integrations/transactions/{transaction_id}": {
       "post": {
         "tags": [
@@ -5305,6 +5392,51 @@
         ],
         "title": "Position"
       },
+      "PrivacySummary": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "local-mask-1.0.0"
+          },
+          "processing": {
+            "type": "string",
+            "const": "local_rules_only",
+            "title": "Processing",
+            "default": "local_rules_only"
+          },
+          "stored": {
+            "type": "boolean",
+            "const": false,
+            "title": "Stored",
+            "default": false
+          },
+          "external_ai_used": {
+            "type": "boolean",
+            "const": false,
+            "title": "External Ai Used",
+            "default": false
+          },
+          "masked_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Masked Categories"
+          },
+          "masked_spans": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Masked Spans"
+          }
+        },
+        "type": "object",
+        "required": [
+          "masked_categories",
+          "masked_spans"
+        ],
+        "title": "PrivacySummary"
+      },
       "QueueCounts": {
         "properties": {
           "notifications_queued": {
@@ -5685,6 +5817,130 @@
           "FAILED"
         ],
         "title": "RunState"
+      },
+      "ScamCheckError": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ScamCheckError"
+      },
+      "ScamCheckRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "kk"
+            ],
+            "title": "Language",
+            "default": "ru"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ScamCheckRequest"
+      },
+      "ScamCheckResult": {
+        "properties": {
+          "ruleset_version": {
+            "type": "string",
+            "title": "Ruleset Version",
+            "default": "scam-rules-1.0.0"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "kk"
+            ],
+            "title": "Language"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Advisory Only",
+            "default": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "signals_detected",
+              "no_known_signals",
+              "insufficient_context"
+            ],
+            "title": "Status"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/ScamSignal"
+            },
+            "type": "array",
+            "title": "Signals"
+          },
+          "guidance": {
+            "type": "string",
+            "title": "Guidance"
+          },
+          "limitation": {
+            "type": "string",
+            "title": "Limitation"
+          },
+          "privacy": {
+            "$ref": "#/components/schemas/PrivacySummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "language",
+          "status",
+          "signals",
+          "guidance",
+          "limitation",
+          "privacy"
+        ],
+        "title": "ScamCheckResult"
+      },
+      "ScamSignal": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "safe_account",
+              "credentials",
+              "remote_access",
+              "secrecy",
+              "impersonation",
+              "advance_fee"
+            ],
+            "title": "Code"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "explanation"
+        ],
+        "title": "ScamSignal"
       },
       "SimulatedUpdate": {
         "properties": {

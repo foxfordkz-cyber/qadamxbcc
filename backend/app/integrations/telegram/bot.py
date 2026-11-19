@@ -110,7 +110,9 @@ def build_ingress_router(
         else:
             await message.answer("Согласие отозвано / Келісім қайтарылды")
 
-    @router.callback_query(~(F.data.startswith("g:") | F.data.startswith("r:")))
+    @router.callback_query(
+        ~(F.data.startswith("g:") | F.data.startswith("r:") | F.data.startswith("s:"))
+    )
     async def callback(query: CallbackQuery, state: FSMContext) -> None:
         message = query.message
         if (

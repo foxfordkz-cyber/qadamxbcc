@@ -18,7 +18,7 @@ jobs:
         run: uv sync --frozen --python 3.12
       - name: Start isolated fake stack
         run: bash scripts/guardian-demo.sh start
-      - name: Run six synthetic flows
+      - name: Run seven synthetic flows
         run: bash scripts/guardian-demo.sh rehearse --reset-synthetic
       - name: Readiness and preserved stop/start
         run: |

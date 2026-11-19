@@ -2,6 +2,12 @@
 
 # Bekzat — three synthetic hackathon demos
 
+19 November extension: the isolated operator from PR #15 now verifies **seven** fake
+scenarios, including RU/KK `POST /api/v1/integrations/guardian/scam-check` and redacted
+validation failures. See [current verification](../guardian/PRIVATE_SCAM_CHECK_VERIFICATION.md)
+and [API/UI contract](../guardian/PRIVATE_SCAM_CHECK.md). The real Telegram `/scan` step
+requires separate consent; operator rehearse never sends real Telegram messages.
+
 Verified 2026-11-14 on source `84c793028accd21c293dd50be4630072c816e924`, [PR #4](https://github.com/foxfordkz-cyber/qadamxbcc/pull/4).
 Use a fresh isolated demo database/volume and the existing core-owned synthetic seed.
 These three scripted scenarios use fake Telegram and synthetic data, with no bank/NBK calls.

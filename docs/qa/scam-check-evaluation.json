@@ -1,0 +1,338 @@
+{
+  "ruleset_version": "scam-rules-1.0.0",
+  "corpus_sha256": "5a95f9ab9616f5a0e6682db4280d4677e24d6831026f71f8b7b370964d4bc40d",
+  "scope": "40 authored synthetic challenge cases; paired RU/KK scenarios are correlated",
+  "limitations": "No training/tuning split, prevalence estimate, independent holdout or bank data. Ablation reuses the same lexicon. Insufficient context counts as not detected. Known misses and false positives remain visible; no production accuracy claim.",
+  "contextual": {
+    "all": {
+      "samples": 40,
+      "tp": 16,
+      "fp": 2,
+      "fn": 4,
+      "tn": 18,
+      "precision": 0.8888888888888888,
+      "recall": 0.8,
+      "false_positive_rate": 0.1,
+      "insufficient_context": 6,
+      "mismatched_ids": [
+        "ru-08",
+        "ru-10",
+        "ru-16",
+        "kk-08",
+        "kk-10",
+        "kk-16"
+      ]
+    },
+    "ru": {
+      "samples": 20,
+      "tp": 8,
+      "fp": 1,
+      "fn": 2,
+      "tn": 9,
+      "precision": 0.8888888888888888,
+      "recall": 0.8,
+      "false_positive_rate": 0.1,
+      "insufficient_context": 2,
+      "mismatched_ids": [
+        "ru-08",
+        "ru-10",
+        "ru-16"
+      ]
+    },
+    "kk": {
+      "samples": 20,
+      "tp": 8,
+      "fp": 1,
+      "fn": 2,
+      "tn": 9,
+      "precision": 0.8888888888888888,
+      "recall": 0.8,
+      "false_positive_rate": 0.1,
+      "insufficient_context": 4,
+      "mismatched_ids": [
+        "kk-08",
+        "kk-10",
+        "kk-16"
+      ]
+    }
+  },
+  "keyword_baseline": {
+    "samples": 40,
+    "tp": 16,
+    "fp": 12,
+    "fn": 4,
+    "tn": 8,
+    "precision": 0.5714285714285714,
+    "recall": 0.8,
+    "false_positive_rate": 0.6,
+    "insufficient_context": 0,
+    "mismatched_ids": [
+      "ru-08",
+      "ru-10",
+      "ru-13",
+      "ru-14",
+      "ru-15",
+      "ru-16",
+      "ru-18",
+      "ru-19",
+      "kk-08",
+      "kk-10",
+      "kk-13",
+      "kk-14",
+      "kk-15",
+      "kk-16",
+      "kk-18",
+      "kk-19"
+    ]
+  },
+  "scenarios": {
+    "advance_fee": {
+      "samples": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "context_separation": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "credentials": {
+      "samples": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "impersonation": {
+      "samples": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "implicit_pressure": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "tn": 0,
+      "precision": null,
+      "recall": 0.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": [
+        "ru-08",
+        "kk-08"
+      ]
+    },
+    "insufficient": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "insufficient_context": 1,
+      "mismatched_ids": []
+    },
+    "investment": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "tn": 0,
+      "precision": null,
+      "recall": 0.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": [
+        "ru-10",
+        "kk-10"
+      ]
+    },
+    "legitimate_fee": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 2,
+      "fn": 0,
+      "tn": 0,
+      "precision": 0.0,
+      "recall": null,
+      "false_positive_rate": 1.0,
+      "insufficient_context": 0,
+      "mismatched_ids": [
+        "ru-16",
+        "kk-16"
+      ]
+    },
+    "negation_attack": {
+      "samples": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "obfuscation": {
+      "samples": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "ordinary": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "ordinary_urgency": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "own_action": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "quoted_warning": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "insufficient_context": 1,
+      "mismatched_ids": []
+    },
+    "remote_access": {
+      "samples": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "safe_account": {
+      "samples": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "secrecy": {
+      "samples": 2,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "tn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_rate": null,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "technical": {
+      "samples": 2,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "insufficient_context": 0,
+      "mismatched_ids": []
+    },
+    "warning": {
+      "samples": 4,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 4,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "insufficient_context": 4,
+      "mismatched_ids": []
+    }
+  },
+  "latency": {
+    "scope": "offline rules only; excludes HTTP, Redis, DB, Telegram and antifraud engine",
+    "python": "3.12.16",
+    "platform": "Windows",
+    "iterations": 1000,
+    "errors": 0,
+    "error_rate": 0,
+    "p50_ms": 0.0962,
+    "p95_ms": 0.1962,
+    "p99_ms": 0.3002
+  }
+}

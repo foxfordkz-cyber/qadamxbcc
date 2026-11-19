@@ -11,6 +11,7 @@ import os
 import secrets
 import subprocess
 import sys
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -304,6 +305,17 @@ def check(data: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def readiness_after_start() -> dict[str, Any]:
+    """Docker health can precede Windows loopback readiness; retry only read-only probes."""
+    report = check(containers())
+    for _ in range(2):
+        if report["success"]:
+            break
+        time.sleep(2)
+        report = check(containers())
+    return report
+
+
 def rehearsal_run(key: str) -> str:
     # Reuse the backend development environment; httpx is intentionally not added
     # to the production image just for this demo driver.
@@ -358,7 +370,7 @@ def execute(
             compose(["build"], key, timeout=900)
         print("Waiting for demo services (bounded to 10 minutes).", file=sys.stderr)
         compose(["up", "-d", "--wait", "--wait-timeout", "600"], key, timeout=660)
-        return check(containers())
+        return readiness_after_start()
     if not reset_synthetic:
         raise DemoError("rehearsal_requires_reset_synthetic_flag")
     if not check(data)["success"]:
@@ -376,6 +388,7 @@ def execute(
         "guardian_report",
         "soc_case_lifecycle",
         "operations_privacy",
+        "private_scam_check",
     }
     passed = set()
     for line in output.splitlines():

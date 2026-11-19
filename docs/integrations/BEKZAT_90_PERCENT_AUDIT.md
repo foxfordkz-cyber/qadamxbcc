@@ -7,6 +7,9 @@
 > Main integration still follows the 18 November team order, not individual merges of the
 > older stack PRs. Main, owner review and joint frontend acceptance have not been completed.
 
+> 19 November add-on: [Private Scam Check delivery/QA](../guardian/PRIVATE_SCAM_CHECK_VERIFICATION.md),
+> Draft PR #16. This separate feature does not change the original 100-row score or close D17/D18.
+
 # Bekzat — доказательный аудит готовности (2026-11-14)
 
 **99,50% по прежней матрице: 98 DONE, 0 PARTIAL, 2 BLOCKED, 0 MISSING.**

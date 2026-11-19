@@ -1,5 +1,11 @@
 # Bekzat — GitHub attribution audit
 
+19 November addendum: [PR #16](https://github.com/foxfordkz-cyber/qadamxbcc/pull/16)
+contains real Private Scam Check/QA work. GitHub maps implementation `9037ea6` and
+readiness/verification fix `342c0e5` to author **and** committer `bekzatwr`. No authorship
+rewrites or merge into main were performed. [Delivery evidence](../guardian/PRIVATE_SCAM_CHECK_VERIFICATION.md).
+The counts below are the dated 15 November snapshot, not current lifetime totals.
+
 Дата проверки: 15 ноября 2026. Снимок **до публикации этого отчёта**:
 main `a02d20dcc857001de364e0b0f12a66ce72db0c12`, PR #7
 `7d8791f1d8c07de9ec1cd81b64b055daab5a536c`.
