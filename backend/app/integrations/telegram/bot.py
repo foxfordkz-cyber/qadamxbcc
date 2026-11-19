@@ -8,6 +8,7 @@ from typing import Literal
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import (
@@ -18,12 +19,15 @@ from aiogram.types import (
     Message,
 )
 from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import get_settings
 from app.db.session import build_engine, build_session_factory
-from app.integrations.config import get_integration_settings
+from app.integrations.config import IntegrationSettings, get_integration_settings
 from app.integrations.errors import IntegrationError
-from app.integrations.telegram.guardian import build_router
+from app.integrations.telegram.assistant_ui import configure_commands
+from app.integrations.telegram.assistant_ui import language as preferred_language
+from app.integrations.telegram.guardian import TEXT, build_router, menu
 from app.integrations.telegram.handlers import process_update
 from app.integrations.telegram.polling_lock import PollingLock
 from app.integrations.telegram.schemas import SimulatedUpdate
@@ -31,15 +35,10 @@ from app.integrations.telegram.service import TrustedContactService
 from app.integrations.telegram.templates import CONSENT, STATE_LABELS
 
 
-async def run() -> None:
-    cfg = get_integration_settings()
-    if not cfg.enabled or cfg.telegram_mode != "test":
-        raise RuntimeError("polling requires explicitly configured test Telegram mode")
-    core = get_settings()
-    engine = build_engine(core.database_url)
-    factory = build_session_factory(engine)
-    redis: Redis = Redis.from_url(core.redis_url)
-    bot = Bot(cfg.telegram_token.get_secret_value())
+def build_ingress_router(
+    factory: async_sessionmaker[AsyncSession], redis: Redis, cfg: IntegrationSettings
+) -> Router:
+    """The same ingress is exercised offline by dispatcher tests and by authorized polling."""
     router = Router()
 
     @router.errors()
@@ -62,7 +61,7 @@ async def run() -> None:
 
     router.include_router(build_router(factory, admitted))
 
-    @router.message(Command("start", "revoke"), F.text.contains(" "))
+    @router.message(Command("start", "revoke"), F.text.regexp(r"^/\S+\s+\S"))
     async def command(message: Message) -> None:
         if (
             message.chat.type != "private"
@@ -112,7 +111,7 @@ async def run() -> None:
             await message.answer("Согласие отозвано / Келісім қайтарылды")
 
     @router.callback_query(~(F.data.startswith("g:") | F.data.startswith("r:")))
-    async def callback(query: CallbackQuery) -> None:
+    async def callback(query: CallbackQuery, state: FSMContext) -> None:
         message = query.message
         if (
             not isinstance(message, Message)
@@ -134,7 +133,14 @@ async def run() -> None:
         )
         async with factory() as session:
             try:
-                result = await process_update(TrustedContactService(session, cfg), update)
+                service = TrustedContactService(session, cfg)
+                result = await process_update(service, update)
+                language = "ru"
+                if result.state == "CONTACT_VERIFIED":
+                    contact = await service.get_contact(result.resource_id)
+                    language = preferred_language(
+                        (await state.get_data()).get("language", contact.language)
+                    )
             except IntegrationError:
                 await query.answer("Недействительный запрос / Жарамсыз сұрау")
                 return
@@ -147,18 +153,46 @@ async def run() -> None:
             if result.state in {"CONTACT_REVOKED", "SUSPICION_REPORTED"}
             else message.reply_markup
         )
+        if result.state == "CONTACT_VERIFIED":
+            # Finish onboarding in the same message; do not leave the user on consent buttons.
+            await state.set_data({"language": language})
+            text = " / ".join(labels) + "\n\n" + TEXT[language]["welcome"]
+            markup = menu(language)
+        elif result.state == "CONTACT_REVOKED":
+            markup = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="Главное меню / Басты мәзір", callback_data="g:home"
+                        )
+                    ]
+                ]
+            )
         with suppress(TelegramBadRequest):
             await message.edit_text(text, reply_markup=markup, parse_mode=None)
 
+    return router
+
+
+async def run() -> None:
+    cfg = get_integration_settings()
+    if not cfg.enabled or cfg.telegram_mode != "test":
+        raise RuntimeError("polling requires explicitly configured test Telegram mode")
+    core = get_settings()
+    engine = build_engine(core.database_url)
+    factory = build_session_factory(engine)
+    redis: Redis = Redis.from_url(core.redis_url)
+    bot = Bot(cfg.telegram_token.get_secret_value())
     storage = RedisStorage(
         redis, key_builder=DefaultKeyBuilder(with_bot_id=True), state_ttl=900, data_ttl=900
     )
     dispatcher = Dispatcher(storage=storage, events_isolation=storage.create_isolation())
-    dispatcher.include_router(router)
+    dispatcher.include_router(build_ingress_router(factory, redis, cfg))
     polling_lock: PollingLock | None = None
     try:
         polling_lock = PollingLock(bot.id)
         polling_lock.acquire()
+        await configure_commands(bot)
         await dispatcher.start_polling(bot, allowed_updates=["message", "callback_query"])
     finally:
         if polling_lock:

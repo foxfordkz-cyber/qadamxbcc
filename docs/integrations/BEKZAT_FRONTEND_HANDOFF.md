@@ -172,6 +172,19 @@ Existing explicit core resolution remains subject to its own contract and user i
 | initiated_by_customer | Вы сами решили сделать этот перевод? | Бұл аударымды өзіңіз жасауды шештіңіз бе? |
 | knows_recipient_personally | Вы лично знаете получателя? | Алушыны жеке танисыз ба? |
 
-This is handoff copy for existing fields, not a second implemented questionnaire or
-completed frontend feature. Trusted Circle is deferred; do not fan out invitations or
-silently increase the single-active-contact quota.
+This is handoff copy for existing fields, not a second independent questionnaire or
+completed frontend feature. Guardian subsequently implemented the separately authorized
+three-contact Circle; each consent remains independent and one notification selects one
+recipient. See the current [Guardian handoff](../guardian3/FRONTEND_HANDOFF.md).
+
+## Telegram assistant follow-up, 18 November 2026
+
+The separate `feature/bekzat-bot-assistant` branch improves recipient navigation and
+confirmation safety without changing HTTP contracts, frontend code or banking decisions.
+It adds localized command entry, a factual dashboard, paginated notification/report
+history, privacy and draft cancellation. See [scope and acceptance](../guardian/BOT_ASSISTANT_2026_11_18.md).
+The team merge gate and original top branch are unchanged; browser integration still uses
+the existing server-side authorization proxy in the Guardian handoff. Telegram UI acceptance
+ran on 18 November under a separate grant: menu/consent, KK navigation, cancellation,
+report receipt and SOC acknowledgment were observed. The found onboarding transition was
+fixed and confirmed live. Both grants are now closed; neither authorizes future sends.

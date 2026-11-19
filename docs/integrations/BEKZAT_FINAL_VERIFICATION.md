@@ -1,4 +1,40 @@
-> Guardian 2.0 follow-up (2026-11-14): see [current verification](../guardian/VERIFICATION.md) and [new frontend contract](../guardian/FRONTEND_HANDOFF.md). Historical counts/live acceptance below belong to the previous stage.
+> Current follow-up, 19 November 2026: [main integration rehearsal](MAIN_MERGE_READINESS_2026_11_18.md),
+> [Guardian assistant and fresh live acceptance](../guardian/BOT_ASSISTANT_2026_11_18.md),
+> [Draft PR #14 and current CI](https://github.com/foxfordkz-cyber/qadamxbcc/pull/14).
+> The 14 November counts below are historical, not the latest combined-suite counts.
+
+## 18–19 November follow-up
+
+Main integration preparation passed its final two-job CI at `10874ed`:
+[run 44337359457](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/44337359457).
+It preserves core security, joins both migration heads, fixes historical Timeline
+cancellation and adds 12 regression cases. It has 423 unique backend cases, 64 existing
+frontend tests, six fake Docker flows and 81 browser checks. It is a rehearsal against
+main `3d19e8e`, not acceptance against the still-unmerged redesign/recovery branches.
+
+The separate bot release adds 24 cases, for an inventory of 447 unique backend cases.
+Focused acceptance after the live-found onboarding fix is **33/33**. Before that final
+fix, `6a3d0ce` passed local full verify and [both CI jobs](https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/44340518462):
+431 portable passed + 15 external-only skips, 261 PostgreSQL/Redis passed, 64 frontend,
+six fake Docker flows, 81 browser checks, Ruff 159 files and mypy 158 sources. These
+pre-fix counts are not substituted for the final commit's CI; its result/counts are
+recorded on PR #14. Repeated runs and overlap between suites are never added as unique tests.
+
+Fresh authorized live acceptance used the existing protected bot/private enrollment:
+9 service messages accepted, 20 confirmed menu updates out of 22 attempts, one report
+visible and acknowledged through SOC, persisted across polling restart. The recipient
+confirmed KK screens, cancellation/stale-step protection, receipt/status and the fixed
+automatic post-consent menu. No new Cooling-Off alert was sent; the worker was disabled.
+Both temporary consents were revoked and the cumulative grant closed at the end.
+The [sanitized evidence](../guardian/evidence/bot-assistant-live-2026-11-18.json) records
+the local recorder error and independently verified shutdown instead of hiding it.
+
+Original readiness remains **99.50%: 98 DONE, D17/D18 BLOCKED**. New features do not
+inflate that denominator. Redesign and recovery were still outside main at the final
+19 November ref check. Only the top Bekzat stack is to be integrated after those gates;
+the older individual-PR sequence below is superseded by the team's 18 November plan.
+Local synthetic demonstration/review is GO; final combined main/frontend acceptance
+is pending the team gates. Production remains NO-GO. No main merge or history rewrite.
 
 # Bekzat — final integration verification, 2026-11-14
 

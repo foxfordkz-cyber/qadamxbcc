@@ -1,4 +1,11 @@
-> Guardian 2.0 follow-up (2026-11-14): see [current verification](../guardian/VERIFICATION.md) and [new frontend contract](../guardian/FRONTEND_HANDOFF.md). Historical counts/live acceptance below belong to the previous stage.
+> Follow-up verified through 19 November 2026: see [integration preparation](MAIN_MERGE_READINESS_2026_11_18.md)
+> and [assistant release/live evidence](../guardian/BOT_ASSISTANT_2026_11_18.md).
+> The original matrix remains 99.50% (98 DONE, D17/D18 BLOCKED); new features are assessed
+> separately. Historical test counts below describe the 14 November stage.
+> Current Trusted Circle has the separately approved cap of three, independent consent
+> per contact and one selected recipient; Guardian reports/cases and bot navigation exist.
+> Main integration still follows the 18 November team order, not individual merges of the
+> older stack PRs. Main, owner review and joint frontend acceptance have not been completed.
 
 # Bekzat — доказательный аудит готовности (2026-11-14)
 
@@ -146,10 +153,11 @@ Fake-only остаются gateway (всегда MOCK), искусственны
 один claim при конкуренции. Неизвестный результат отправки не повторяется.
 Standalone worker восстанавливает цикл после временной DB/Redis ошибки.
 
-Trusted Circle отложен: текущая квота — один активный контакт; расширение требует
-отдельного UX/quota/priority/retention review. Массовой рассылки нет. Scam Safety
-остаётся образовательным представлением существующего CoolingQuestionnaire, без
-второго финансового механизма; RU/KK mapping передан frontend в handoff.
+Уточнение прежнего текста: утверждение о квоте одного контакта было неточным — исходный
+service допускал пять. После отдельного разрешения пользователя Guardian реализовал
+квоту три с независимыми согласиями, настройками и выбором одного получателя; массовой
+рассылки нет. Scam Safety переиспользует поля CoolingQuestionnaire в образовательном
+бот-потоке, без второго финансового механизма. Это не меняет исходную 100-строчную матрицу.
 
 **Локальное synthetic demo: GO. Team integration: GO для feature/test подключения и
 review; общий merge/UI acceptance ожидают D17/D18. Production: NO-GO.**
