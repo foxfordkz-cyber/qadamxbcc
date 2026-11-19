@@ -65,6 +65,7 @@ async def benchmark(samples: int = 500, redis_url: str | None = None) -> dict[st
             "ml_p95_ms": statistics.quantiles(ml_times, n=20)[-1],
             "engine_p50_ms": statistics.median(engine_times),
             "engine_p95_ms": statistics.quantiles(engine_times, n=20)[-1],
+            "engine_p99_ms": statistics.quantiles(engine_times, n=100, method="inclusive")[98],
         }
     finally:
         await redis.aclose()
