@@ -1,5 +1,9 @@
 > Guardian 2.0 follow-up (2026-11-14): see [current verification](../guardian/VERIFICATION.md) and [new frontend contract](../guardian/FRONTEND_HANDOFF.md). Historical counts/live acceptance below belong to the previous stage.
 
+> 2026-11-19: additive [Private Scam Check contract](../guardian/PRIVATE_SCAM_CHECK.md),
+> RU/KK examples and privacy requirements are available for the frontend team. This does
+> not replace prior integration contracts or imply that the feature stack is merged into main.
+
 # Bekzat — frontend integration handoff (2026-11-14)
 
 Scope: additive APIs from [PR #1](https://github.com/foxfordkz-cyber/qadamxbcc/pull/1),

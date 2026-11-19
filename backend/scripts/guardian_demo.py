@@ -376,6 +376,7 @@ def execute(
         "guardian_report",
         "soc_case_lifecycle",
         "operations_privacy",
+        "private_scam_check",
     }
     passed = set()
     for line in output.splitlines():

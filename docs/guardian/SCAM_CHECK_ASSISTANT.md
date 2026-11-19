@@ -1,5 +1,10 @@
 # Educational Scam Check
 
+2026-11-19: the original `/check` flow below remains unchanged. A separate `/scan`
+and authenticated stateless API now provide offline RU/KK text analysis. See
+[Private Scam Check contract](PRIVATE_SCAM_CHECK.md) for privacy, API, bot behavior,
+QA evidence and limitations. Text analysis never resolves Cooling-Off or submits a report.
+
 Uses precisely the five existing CoolingQuestionnaire fields: caller_claims_bank_or_police,
 asked_to_move_to_safe_account, asked_to_keep_secret_or_install_app, initiated_by_customer,
 knows_recipient_personally. Field parity is executable in test_guardian_navigation.
