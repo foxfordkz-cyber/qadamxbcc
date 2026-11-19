@@ -79,3 +79,17 @@ test("LAN demo trusts only its own private Wi-Fi Host, and only when enabled", (
   assert.equal(checkAccess(request(), { BCC_MOBILE_LAN: "yes" })?.status, 503);
   assert.equal(checkAccess(request({ ...headers, authorization: auth }, "POST"), { ...env, BCC_MOBILE_LAN: "true" })?.status, 403);
 });
+
+test("hosted demo trusts only its configured public HTTPS origin behind the proxy", () => {
+  const hosted = { BCC_ENVIRONMENT: "demo", BCC_API_MODE: "live", BCC_DEMO_PUBLIC_ORIGIN: "https://saq-bol.onrender.com" };
+  // Next sees the proxy's internal URL; the browser sends the public origin.
+  const internal = (headers: Record<string, string>) => checkAccess({ method: "POST", origin: "http://10.0.0.5:10000", headers: new Headers({ host: "saq-bol.onrender.com", "content-type": "application/json", ...headers }) }, hosted);
+  assert.equal(internal({ origin: "https://saq-bol.onrender.com" }), null);
+  assert.equal(internal({ origin: "https://evil.example" })?.status, 403);
+  assert.equal(internal({ origin: "https://saq-bol.onrender.com", "sec-fetch-site": "cross-site" })?.status, 403);
+  // The setting never travels with credentials, outside demo, or without HTTPS.
+  assert.equal(checkAccess(request(), { ...hosted, BCC_API_KEY: "x".repeat(40) })?.status, 503);
+  assert.equal(checkAccess(request(), { ...hosted, BCC_ENVIRONMENT: "local" })?.status, 503);
+  assert.equal(checkAccess(request(), { ...hosted, BCC_DEMO_PUBLIC_ORIGIN: "http://saq-bol.onrender.com" })?.status, 503);
+  assert.equal(checkAccess(request(), { ...hosted, BCC_DEMO_PUBLIC_ORIGIN: "https://saq-bol.onrender.com/path" })?.status, 503);
+});

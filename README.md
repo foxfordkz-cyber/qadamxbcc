@@ -18,6 +18,11 @@ Redis, NetworkX и локальная ML-модель. Интерфейс сти
 [Резервное Full HD-видео](deliverables/demo/BCC-Shield-demo.webm) с субтитрами
 на двух языках: [запись и проверенные ограничения](docs/DEMO_VIDEO.md).
 
+## Публичное демо
+
+Сайт разворачивается одним контейнером на Render (кнопка **New → Blueprint**, файл `render.yaml`),
+Railway или любом сервере с Docker: [инструкция](docs/DEPLOY.md).
+
 ## Запуск демо одной командой
 
 Нужен запущенный Docker Desktop с Linux containers.

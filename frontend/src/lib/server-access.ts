@@ -20,6 +20,12 @@ export function accessConfiguration(env: Environment = process.env): AccessConfi
   const protectedValues = ["BCC_API_KEY", "BCC_SOC_API_KEY", "BCC_PILOT_USER", "BCC_PILOT_PASSWORD", "BCC_PUBLIC_ORIGIN"];
   if (environment !== "pilot") {
     if (protectedValues.some(name => env[name] !== undefined)) throw new Error("Credentials require pilot access protection");
+    // A credential-free public demo behind a hosting proxy (Render, Railway) states
+    // the HTTPS origin browsers use; Next only sees the proxy's internal URL.
+    if (env.BCC_DEMO_PUBLIC_ORIGIN !== undefined) {
+      if (environment !== "demo") throw new Error("A public origin requires the demo environment");
+      return { environment: "demo", publicOrigin: httpsOrigin(env.BCC_DEMO_PUBLIC_ORIGIN) };
+    }
     return { environment: environment as "local" | "demo" };
   }
   const keyIsValid = (key: string | undefined) => !!key && key.length >= 32 && key.trim() === key && new Set(key).size >= 12;
@@ -29,12 +35,16 @@ export function accessConfiguration(env: Environment = process.env): AccessConfi
     env.BCC_API_MODE !== "live" || env.BCC_DEMO_ACTIONS_ENABLED !== "false") {
     throw new Error("Pilot access is not configured");
   }
-  const configured = new URL(env.BCC_PUBLIC_ORIGIN || "");
+  return { environment: "pilot", publicOrigin: httpsOrigin(env.BCC_PUBLIC_ORIGIN || "") };
+}
+
+function httpsOrigin(value: string): string {
+  const configured = new URL(value);
   if (configured.protocol !== "https:" || !configured.hostname || configured.hostname.includes("*") ||
     configured.username || configured.password || configured.pathname !== "/" || configured.search || configured.hash) {
-    throw new Error("Pilot origin is not configured");
+    throw new Error("Public origin is not configured");
   }
-  return { environment: "pilot", publicOrigin: configured.origin };
+  return configured.origin;
 }
 
 function sameSecret(actual: string, expected: string): boolean {
@@ -47,7 +57,7 @@ export function checkAccess(request: AccessRequest, env: Environment = process.e
   try { configuration = accessConfiguration(env); }
   catch { return { status: 503, error: "Service access is not configured" }; }
   const pilot = configuration.environment === "pilot";
-  let trustedOrigin = request.origin;
+  let trustedOrigin = configuration.publicOrigin ?? request.origin;
   // Next normalizes loopback URLs internally. Use the actual, strictly loopback
   // Host for local demos; the pilot always uses its configured HTTPS origin.
   // With BCC_MOBILE_LAN=true a local demo also trusts its own private Wi-Fi IP,

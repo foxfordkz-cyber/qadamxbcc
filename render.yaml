@@ -1,0 +1,34 @@
+# Saq Bol public demo on Render (free plan).
+# Render Dashboard → New → Blueprint → this repository (branch main).
+# One web service runs the site and the API; PostgreSQL and Key Value are managed.
+# The site's public URL is taken from RENDER_EXTERNAL_URL at start (deploy/start.sh).
+services:
+  - type: web
+    name: saq-bol
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: saq-bol-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: saq-bol-cache
+          property: connectionString
+
+  - type: keyvalue
+    name: saq-bol-cache
+    plan: free
+    ipAllowList: []
+
+databases:
+  - name: saq-bol-db
+    plan: free
+    databaseName: bcc_shield
+    user: bcc
