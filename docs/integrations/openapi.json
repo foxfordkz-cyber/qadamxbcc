@@ -394,6 +394,126 @@
         }
       }
     },
+    "/api/v1/call-check": {
+      "post": {
+        "tags": [
+          "call-check"
+        ],
+        "summary": "Check Call",
+        "description": "Answer from the bank's own log; never from what the caller says.",
+        "operationId": "check_call_api_v1_call_check_post",
+        "parameters": [
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallCheckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/call-check/demo/bank-call": {
+      "post": {
+        "tags": [
+          "call-check"
+        ],
+        "summary": "Start Demo Bank Call",
+        "description": "Demo control for «а если звонит правда банк?»; unavailable outside the demo.",
+        "operationId": "start_demo_bank_call_api_v1_call_check_demo_bank_call_post",
+        "parameters": [
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoBankCallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoBankCallResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/soc/feed": {
       "get": {
         "tags": [
@@ -2797,6 +2917,85 @@
         ],
         "title": "AuditOut"
       },
+      "CallCheckRequest": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Customer Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "customer_id"
+        ],
+        "title": "CallCheckRequest"
+      },
+      "CallCheckResponse": {
+        "properties": {
+          "check_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Check Id"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified",
+            "description": "True when the bank's outbound call log has a live call"
+          },
+          "employee_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Name"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "message_kk": {
+            "type": "string",
+            "title": "Message Kk"
+          },
+          "message_ru": {
+            "type": "string",
+            "title": "Message Ru"
+          },
+          "simulated_log": {
+            "type": "boolean",
+            "title": "Simulated Log",
+            "description": "The outbound call log is a prototype stub",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "check_id",
+          "verified",
+          "checked_at",
+          "message_kk",
+          "message_ru"
+        ],
+        "title": "CallCheckResponse"
+      },
       "CaseAnalytics": {
         "properties": {
           "as_of": {
@@ -3309,6 +3508,64 @@
         ],
         "title": "CoolingQuestionnaire",
         "description": "Anti-scam check shown during the cooling-off period (questions mirror real scam scripts)."
+      },
+      "DemoBankCallRequest": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Customer Id"
+          },
+          "employee_name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Employee Name",
+            "default": "Асем Нурланова"
+          },
+          "department": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Department",
+            "default": "Кредиттеу бөлімі / Отдел кредитования"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "customer_id"
+        ],
+        "title": "DemoBankCallRequest"
+      },
+      "DemoBankCallResponse": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Customer Id"
+          },
+          "employee_name": {
+            "type": "string",
+            "title": "Employee Name"
+          },
+          "department": {
+            "type": "string",
+            "title": "Department"
+          },
+          "expires_in_s": {
+            "type": "integer",
+            "title": "Expires In S"
+          }
+        },
+        "type": "object",
+        "required": [
+          "customer_id",
+          "employee_name",
+          "department",
+          "expires_in_s"
+        ],
+        "title": "DemoBankCallResponse"
       },
       "EnrichmentOut": {
         "properties": {
@@ -5956,6 +6213,19 @@
             ],
             "title": "Is New Recipient",
             "description": "Override; by default derived from the transfer graph"
+          },
+          "bank_call_check_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Call Check Id",
+            "description": "«Is the bank calling me?» check made during this call; a negative answer from the bank's log raises risk"
           }
         },
         "additionalProperties": false,

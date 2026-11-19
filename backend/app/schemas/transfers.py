@@ -38,6 +38,11 @@ class TransferContextIn(BaseModel):
     is_new_recipient: bool | None = Field(
         None, description="Override; by default derived from the transfer graph"
     )
+    bank_call_check_id: uuid.UUID | None = Field(
+        None,
+        description="«Is the bank calling me?» check made during this call; "
+        "a negative answer from the bank's log raises risk",
+    )
 
 
 class TransferEvaluateRequest(BaseModel):

@@ -63,6 +63,8 @@ W_NEW_DEVICE: Final = 15
 W_NIGHT: Final = 10
 W_SE_PATTERN: Final = 10
 W_ATO_PATTERN: Final = 10
+# The client asked «is the bank calling me?» and the bank's own log said no.
+W_BANK_CALL_DENIED: Final = 20
 NIGHT_HOURS: Final = range(0, 6)
 
 # Velocity weights / thresholds
@@ -126,6 +128,7 @@ class TransferContext:
     hesitation_count: int = 0
     recipient_input_length: int | None = None
     hesitation_ms: int | None = None
+    bank_call_denied: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -208,6 +211,7 @@ class AntifraudEngine:
         allow_model_training: bool = True,
     ) -> None:
         self.graph = graph
+        self.redis = redis
         self.velocity = VelocityCounters(redis)
         self._tz = ZoneInfo(timezone)
         self.cooling_off_minutes = cooling_off_minutes
@@ -387,6 +391,8 @@ class AntifraudEngine:
             out.append(_reason("ACTIVE_CALL", LAYER_BEHAVIORAL, W_ACTIVE_CALL))
         if ctx.active_call and ctx.pasted_recipient:
             out.append(_reason("PASTED_DURING_CALL", LAYER_BEHAVIORAL, 15))
+        if ctx.active_call and ctx.bank_call_denied:
+            out.append(_reason("BANK_CALL_DENIED", LAYER_BEHAVIORAL, W_BANK_CALL_DENIED))
         if ctx.from_deposit:
             out.append(_reason("DEPOSIT_WITHDRAWAL", LAYER_BEHAVIORAL, W_DEPOSIT))
         if is_new_recipient:

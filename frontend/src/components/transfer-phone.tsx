@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { AlertTriangle, ArrowLeft, ArrowLeftRight, BatteryFull, Check, ChevronDown, Clock3, History, House, Landmark, LoaderCircle, LockKeyhole, Menu, PhoneCall, ReceiptText, ShieldCheck, ShieldX, Signal, SlidersHorizontal, Smartphone, Wifi, XCircle } from "lucide-react";
-import type { AppConfig, Evaluation, Preset, PresetForm } from "@/lib/contracts";
+import { api, type AppConfig, type CallCheck, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
 import { groupAmount, rawAmount } from "@/lib/amount";
@@ -52,6 +52,32 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const contextDetails = useRef<HTMLDetailsElement>(null);
   const confirmHeading = useRef<HTMLHeadingElement>(null);
   const [step, setStep] = useState<"details" | "confirm">("details");
+  const [callCheck, setCallCheck] = useState<CallCheck | null>(null);
+  const [callChecking, setCallChecking] = useState(false);
+  const [callCheckFailed, setCallCheckFailed] = useState(false);
+  const [bankCallStarted, setBankCallStarted] = useState(false);
+  const onCall = form.context.active_call;
+  // A check answers for this call and this customer only.
+  useEffect(() => {
+    setCallCheck(null); setCallCheckFailed(false);
+    setForm(v => v.context.bank_call_check_id ? { ...v, context: { ...v.context, bank_call_check_id: undefined } } : v);
+  }, [onCall, form.sender]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function checkBankCall() {
+    setCallChecking(true); setCallCheckFailed(false);
+    try {
+      const value = await api<CallCheck>("call-check", { method: "POST", body: JSON.stringify({ customer_id: form.sender.trim() }) });
+      setCallCheck(value);
+      setForm(v => ({ ...v, context: { ...v.context, bank_call_check_id: value.check_id } }));
+    } catch { setCallCheck(null); setCallCheckFailed(true); }
+    finally { setCallChecking(false); }
+  }
+  async function startBankCall() {
+    try {
+      await api("call-check/demo/bank-call", { method: "POST", body: JSON.stringify({ customer_id: form.sender.trim() }) });
+      setBankCallStarted(true); setCallCheck(null);
+      setForm(v => ({ ...v, context: { ...v.context, active_call: true, bank_call_check_id: undefined } }));
+    } catch { setBankCallStarted(false); setCallCheckFailed(true); }
+  }
   const receipt = result && !blocked ? result : null;
   useEffect(() => { if (receipt) setStep("details"); }, [receipt?.transaction_id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (step === "confirm" && !busy) confirmHeading.current?.focus({ preventScroll: true }); }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -159,9 +185,16 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
                   const Icon = key === "active_call" ? PhoneCall : key === "from_deposit" ? Landmark : Smartphone;
                   return <button className="toggle-row" type="button" role="switch" aria-checked={form.context[key]} key={key} onClick={() => setForm(v => ({ ...v, context: { ...v.context, [key]: !v.context[key] } }))}><span><Icon size={16} aria-hidden="true" />{t(key)}</span><i className={form.context[key] ? "on" : ""}><b /></i></button>;
                 })}
+                {config.demoActionsEnabled !== false && <button type="button" className="secondary bank-call-demo" onClick={() => void startBankCall()}><PhoneCall size={16} aria-hidden="true" />{bankCallStarted ? m("bankCallStarted") : m("bankCallDemo")}</button>}
                 <label className="field sender-field">{m("demoSender")}<input required value={form.sender} onChange={e => { sensor.reset(); setForm(v => ({ ...v, sender: e.target.value })); }} placeholder="00000000-0000-4000-8000-000000000001" autoComplete="off" spellCheck={false} /></label>
               </div>
             </details>
+            {onCall && <section className="call-check" aria-live="polite">
+              <div className="call-check-row"><span className="call-check-icon"><PhoneCall size={18} aria-hidden="true" /></span><div><strong>{m("callActive")}</strong><p>{m("callCheckHint")}</p></div></div>
+              <button type="button" className="call-check-cta" disabled={callChecking || !form.sender.trim()} onClick={() => void checkBankCall()}>{callChecking ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" /> : <ShieldCheck size={16} aria-hidden="true" />}{m("callCheckCta")}</button>
+              {callCheck && <div className={`call-check-result ${callCheck.verified ? "verified" : "denied"}`} role="status">{callCheck.verified ? <ShieldCheck size={18} aria-hidden="true" /> : <ShieldX size={18} aria-hidden="true" />}<div><strong>{callCheck.verified ? m("callVerified") : m("callDenied")}</strong><p>{lang === "kk" ? callCheck.message_kk : callCheck.message_ru}</p>{!callCheck.verified && <p className="call-check-note">{m("callDeniedNote")}</p>}{callCheck.simulated_log !== false && <p className="call-check-sim">{m("callLogSimulated")}</p>}</div></div>}
+              {callCheckFailed && <p className="error" role="alert">{m("callCheckFailed")}</p>}
+            </section>}
             {showUnknown && <div className="phone-alert warning" role="status"><AlertTriangle size={18} aria-hidden="true" /><div><strong>{m("unknownTitle")}</strong><p>{m("unknownText")}</p></div></div>}
             {error && !showUnknown && <p className="error" role="alert">{t(error)}</p>}
             <button className="primary transfer-cta" disabled={busy || blocked || completed}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : blocked ? t("checkPreviousTransfer") : completed ? t("transferCompleted") : m("continueCta")}</button>

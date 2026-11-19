@@ -16,6 +16,35 @@ const rows = () => root.bccDemoTransfers ??= [];
 const details = () => root.bccDemoDetails ??= new Map();
 const requests = () => root.bccDemoRequests ??= new Map();
 const abandoned = () => root.bccDemoAbandoned ??= new Set();
+// «Банк мне звонит?» — a simulated bank outbound call log and the checks made against it.
+const demoCalls = root as typeof root & { bccDemoBankCalls?: Map<string, number>; bccDemoCallChecks?: Map<string, { customer: string; verified: boolean; at: number }> };
+const bankCalls = () => demoCalls.bccDemoBankCalls ??= new Map();
+const callChecks = () => demoCalls.bccDemoCallChecks ??= new Map();
+const BANK_CALL_TTL_MS = 10 * 60_000;
+const CALL_CHECK_TTL_MS = 30 * 60_000;
+const DEMO_EMPLOYEE = { employee_name: "Асем Нурланова", department: "Кредиттеу бөлімі / Отдел кредитования" };
+export function bankCallDemo(customerId: string, now = Date.now()) {
+  if (!accounts.some(a => a.id === customerId)) throw new DemoError(404, "notFound");
+  bankCalls().set(customerId, now + BANK_CALL_TTL_MS);
+  return { customer_id: customerId, ...DEMO_EMPLOYEE, expires_in_s: BANK_CALL_TTL_MS / 1000 };
+}
+export function callCheckDemo(customerId: string, now = Date.now()) {
+  if (!accounts.some(a => a.id === customerId)) throw new DemoError(404, "notFound");
+  if (callChecks().size >= 5000) callChecks().clear();
+  const verified = (bankCalls().get(customerId) ?? 0) > now;
+  const check_id = randomUUID();
+  callChecks().set(check_id, { customer: customerId, verified, at: now });
+  return {
+    check_id, verified, checked_at: new Date(now).toISOString(), simulated_log: true,
+    employee_name: verified ? DEMO_EMPLOYEE.employee_name : null, department: verified ? DEMO_EMPLOYEE.department : null,
+    message_kk: verified ? `Иә, бұл банк қызметкері: ${DEMO_EMPLOYEE.employee_name}, ${DEMO_EMPLOYEE.department}.` : "Банк сізге қазір қоңырау шалып жатқан жоқ. Тұтқаны қойыңыз: бұл алаяқтар болуы мүмкін.",
+    message_ru: verified ? `Да, это сотрудник банка: ${DEMO_EMPLOYEE.employee_name}, ${DEMO_EMPLOYEE.department}.` : "Банк вам сейчас НЕ звонит. Положите трубку: это могут быть мошенники.",
+  };
+}
+function bankCallDenied(checkId: string | undefined, customerId: string, now: number) {
+  const check = checkId ? callChecks().get(checkId) : undefined;
+  return Boolean(check && check.customer === customerId && !check.verified && now - check.at <= CALL_CHECK_TTL_MS);
+}
 export class DemoError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -49,6 +78,7 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
   const reasons: Reason[] = [];
   if (ctx.active_call) reasons.push(reason("ACTIVE_CALL", "behavioral", 25, "Аударым кезінде қоңырау белсенді.", "Во время перевода активен телефонный звонок."));
   if (ctx.active_call && ctx.pasted_recipient) reasons.push(reason("PASTED_DURING_CALL", "behavioral", 15, "Реквизиттер белсенді қоңырау кезінде алмасу буферінен қойылды", "Реквизиты вставлены из буфера обмена во время активного звонка"));
+  if (ctx.active_call && bankCallDenied(ctx.bank_call_check_id, sender.id, now)) reasons.push(reason("BANK_CALL_DENIED", "behavioral", 20, "Клиент «Банк маған қоңырау шалып тұр ма?» деп тексерді: банк журналы бойынша банк бұл клиентке қоңырау шалмайды.", "Клиент проверил «Банк мне звонит?»: по журналу банка банк этому клиенту не звонит."));
   if (ctx.from_deposit) reasons.push(reason("DEPOSIT_WITHDRAWAL", "behavioral", 15, "Қаражат депозиттен жаңа шығарылған.", "Средства только что сняты с депозита."));
   if (ctx.is_new_device) reasons.push(reason("NEW_DEVICE", "behavioral", 15, "Аударым жаңа құрылғыдан жасалуда.", "Перевод выполняется с нового устройства."));
   if (isNew) reasons.push(reason("NEW_RECIPIENT", "behavioral", 10, "Бұл алушыға алғашқы аударым.", "Первый перевод этому получателю."));
