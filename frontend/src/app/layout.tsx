@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/inter";
+import "@fontsource-variable/roboto-flex";
 import "@xyflow/react/dist/style.css";
 import "./globals.css";
 
