@@ -7,7 +7,14 @@ export function proxy(request: NextRequest) {
     ? NextResponse.json({ error: denied.error }, { status: denied.status, headers: denied.authenticate ? { "WWW-Authenticate": 'Basic realm="Saq Bol Pilot", charset="UTF-8"' } : undefined })
     : NextResponse.next();
   response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
+  // Only the phone screen may be framed, and only by this same site (the live phone
+  // on the /pitch demo slide). Every other page refuses all framing.
+  if (request.nextUrl.pathname === "/mobile") {
+    response.headers.set("X-Frame-Options", "SAMEORIGIN");
+    response.headers.set("Content-Security-Policy", "frame-ancestors 'self'");
+  } else {
+    response.headers.set("X-Frame-Options", "DENY");
+  }
   response.headers.set("Referrer-Policy", "no-referrer");
   response.headers.set("Cache-Control", "no-store");
   return response;
