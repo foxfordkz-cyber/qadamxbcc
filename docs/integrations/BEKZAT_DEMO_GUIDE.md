@@ -100,3 +100,25 @@ The separate recovery harness observed Redis/PG outage and recovery on the fake 
 Before replaying the three strict presets, create a fresh disposable seeded environment:
 benchmark traffic intentionally changes current velocity/history. Never erase the
 preserved live acceptance DB just to reset a demonstration.
+
+## Guardian assistant demonstration, 18–19 November 2026
+
+Use [Draft PR #14](https://github.com/foxfordkz-cyber/qadamxbcc/pull/14) on its documented
+preparation base. This does not include the team's pending redesign/recovery/Android PRs.
+For an independently authorized test session, the existing polling module registers
+twelve private-chat commands. Consent now opens the localized menu in the same message.
+Demonstrate language selection, saved-fact security status, privacy, the existing educational
+questionnaire and `/cancel`, then an explicit synthetic report preview/submit. `/reports`
+opens the receipt and shows a demo operator's acknowledgment through the existing SOC API.
+Keep `/notifications` empty when no jobs were created; do not invent an alert for the demo.
+
+This exact menu/report flow was exercised in the owner's private chat on 18 November:
+nine accepted replies, one persisted report, confirmed automatic post-consent menu after
+its fix. [Evidence and limitations](../guardian/BOT_ASSISTANT_2026_11_18.md) distinguish
+this from the earlier RU/KK Cooling-Off delivery session. The worker stayed off, the test
+consents were revoked and the grant/poller closed. A later live demonstration needs a
+new scoped grant; do not silently restart the completed session or drain pending jobs.
+
+Main integration remains gated by the team's preceding redesign and recovery merges.
+The preparation and bot branches are reviewable independently; no owner approval or
+joint frontend acceptance is implied by backend, browser or Telegram test success.

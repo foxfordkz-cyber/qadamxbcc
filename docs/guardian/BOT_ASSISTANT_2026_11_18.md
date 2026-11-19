@@ -1,6 +1,7 @@
 # Guardian assistant — recipient usability release
 
-18 November 2026. Branch: `feature/bekzat-bot-assistant`, based on the independently
+Implemented/live-tested 18 November; report finalized 19 November 2026.
+Branch: `feature/bekzat-bot-assistant`, based on the independently
 verified `codex/bekzat-main-readiness-20261118` preparation. This is a separate product
 change requested after integration preparation, not part of the team's gated main merge.
 The original top integration branch, main and other participants' frontend are unchanged.
@@ -45,6 +46,11 @@ See the official [Telegram command API](https://core.telegram.org/bots/api#setmy
   silently revoke consent or delete an already submitted report.
 - Invitation arguments accept normal command whitespace, including tabs; they remain
   distinct from the no-argument onboarding menu.
+- Real acceptance exposed a missing transition after consent: the old consent buttons
+  stayed on screen. Successful consent now edits that same message into the main menu,
+  preserving the chosen language or using the invitation language for first-time onboarding.
+  Revocation offers a return-to-menu button. No extra send is added. The user confirmed
+  automatic menu opening on the updated live runtime; both initial locales have regressions.
 
 ## Boundaries and limitations
 
@@ -77,14 +83,15 @@ provide production retention/durability guarantees.
 
 ## Verification
 
-`tests/integrations/test_bot_assistant.py` adds 23 cases using the same polling router,
+`tests/integrations/test_bot_assistant.py` adds 24 cases using the same polling router,
 real SQL lifecycle and controlled Telegram transport: both languages/all commands,
 invitation/consent/revoke, pagination, identity/consent isolation, stale and expired previews,
 duplicate submission, cancellation, unsupported input, Redis admission/quota failure,
 localized private command registration and no resend after failed/ambiguous edits.
 The earlier Guardian navigation/report tests remain and follow the actual emitted buttons.
 
-Focused offline acceptance: **32 passed** (23 new + 9 existing), including both languages.
+Focused offline acceptance after the live-found fix: **33 passed** (24 new + 9 existing),
+including both languages and automatic post-consent navigation.
 Ruff/format: **159 files PASS**; strict mypy: **158 source files PASS**.
 
 Full release results and CI links are recorded in the PR after execution. Earlier preparation
@@ -104,17 +111,39 @@ paths, six synthetic Docker flows and the unchanged frontend browser harness.
 
 ## Live acceptance and team handoff
 
-The historical 14 November RU/KK delivery acceptance is documented separately. That grant
-is closed. This release sends **zero new real Telegram messages** during development.
-Live acceptance of these new screens is **PENDING a new scoped private-chat grant**.
-Never reuse historical consent as permission for a new unattended send session.
+The owner gave a **new** grant on 18 November: at most 12 bot replies, 30 menu updates,
+30 minutes, one already verified private chat. The encrypted configuration/ACL was
+validated without new token entry. The notification worker stayed **off**. This was
+independent of the closed 14 November RU/KK Cooling-Off delivery session.
 
-After a separately authorized local test startup, use the existing protected token
-mechanism and test allowlist; one poller only. A new token entry is unnecessary if the
-existing encrypted configuration validates. Do not print or commit it. Verify `/menu`,
-`/language`, `/status`, `/notifications`, `/privacy`, `/check` → `/cancel`, and an explicitly
-confirmed synthetic report. Stop polling at the end. The notification worker need not run
-for menu acceptance; it must not drain old jobs as part of a navigation-only test.
+Observed: **9 sendMessage attempts, all 9 accepted by Telegram; 22 menu-update attempts,
+20 confirmed accepted**. Two menu attempts have no confirmed-success ledger entry and
+are not called successful. The counters include the technical restart for the onboarding
+fix; its original deadline, recipient and budgets were retained. No ambiguous send was
+retried. The user confirmed the actual consent/menu screens and report receipt.
+
+Real callbacks exercised KK selection, factual dashboard, privacy, the questionnaire,
+cancellation and stale-step rejection. A real explicit report submission created exactly
+one synthetic report. Fresh SOC GET and acknowledgment both succeeded; the bot showed
+the updated demo-operator status. `/reports` and `/notifications` worked; notifications
+were correctly empty. The report remained present across the polling restart. Final
+confirmation verified automatic menu opening after consent in the updated runtime.
+
+At closure, the local acceptance recorder reported a Windows `PermissionError` while
+replacing a status file. The exact OS cause was not retained, so it is not claimed certain;
+temporary reader/replace contention is a plausible cause reproduced by a synthetic lock
+test. The local recorder now retries only file replacement for at most 0.5 seconds and
+fails closed if access remains unavailable. The lock test and budget/expiry tests passed
+without network requests. ACLs were not weakened, and no Telegram request is retried.
+Closure was independently verified: grant inactive, polling stopped, consent revoked,
+worker never started. The two dedicated PostgreSQL/Redis test containers were stopped.
+
+No new Cooling-Off alert, real outage/429 test, bank operation or production deployment
+occurred in this navigation session. Those are not inferred from menu acceptance.
+The earlier delivery evidence remains historical. See
+[sanitized live evidence](evidence/bot-assistant-live-2026-11-18.json) and
+[Telegram acceptance addendum](../integrations/TELEGRAM_LIVE_ACCEPTANCE.md).
+Any later live run needs its own scoped grant; this completed grant cannot be reused.
 
 Frontend integration uses the same published 41-path contract and existing examples.
 Main integration still waits for redesign and Tanirbergen recovery before the top Bekzat
