@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from io import StringIO
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -251,3 +252,22 @@ def test_probe_timeout_is_reported_without_raw_error(monkeypatch: pytest.MonkeyP
     assert result["checks"]["api_ready"] is False
     assert result["checks"]["integration_health"] is False
     assert "synthetic-secret" not in json.dumps(result)
+
+
+def test_direct_script_probe_imports_from_an_unrelated_directory(tmp_path: Path) -> None:
+    script = str(demo.ROOT / "backend/scripts/guardian_demo.py")
+    program = (
+        "import runpy\n"
+        f"module = runpy.run_path({script!r})\n"
+        "class Offline:\n"
+        "    def open(self, *a, **kw): raise OSError('offline')\n"
+        "probe = module['probe']\n"
+        "probe.__globals__['build_opener'] = lambda *a: Offline()\n"
+        "result = probe('k' * 64)\n"
+        "assert result['checks']['api_ready'] is False\n"
+        "assert result['checks']['integration_health'] is False\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", program], cwd=tmp_path, capture_output=True, timeout=30, check=False
+    )
+    assert result.returncode == 0
