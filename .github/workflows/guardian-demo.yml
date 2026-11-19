@@ -1,0 +1,32 @@
+name: Guardian demo operator acceptance
+on:
+  pull_request:
+    paths: ['backend/scripts/guardian_demo.py', 'scripts/guardian-demo.*', '.github/workflows/guardian-demo.yml']
+  push:
+    branches: ['feature/bekzat-demo-readiness']
+permissions:
+  contents: read
+jobs:
+  operator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Prepare backend driver
+        working-directory: backend
+        run: uv sync --frozen --python 3.12
+      - name: Start isolated fake stack
+        run: bash scripts/guardian-demo.sh start
+      - name: Run six synthetic flows
+        run: bash scripts/guardian-demo.sh rehearse --reset-synthetic
+      - name: Readiness and preserved stop/start
+        run: |
+          bash scripts/guardian-demo.sh check
+          bash scripts/guardian-demo.sh stop
+          if bash scripts/guardian-demo.sh check; then echo 'Stopped stack incorrectly ready'; exit 1; fi
+          bash scripts/guardian-demo.sh start --no-build
+          bash scripts/guardian-demo.sh check
+      - name: Stop only the rehearsal project
+        if: always()
+        run: bash scripts/guardian-demo.sh stop
