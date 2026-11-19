@@ -11,10 +11,11 @@ import os
 import secrets
 import subprocess
 import sys
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from urllib.request import ProxyHandler, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 ROOT = Path(__file__).resolve().parents[2]
 PROJECT = "bcc-guardian-rehearsal"
@@ -22,48 +23,50 @@ MARKER = "com.bcc-shield.guardian-rehearsal"
 SERVICES = ("postgres", "redis", "backend", "frontend", "integrations-worker")
 PORTS = {"postgres": 15432, "redis": 16379, "backend": 18000, "frontend": 13000}
 
-# Executed only in our labelled backend. Tokens stay in that process, never stdout.
-PROBE = """
-import json, os, urllib.request, uuid
-from app.integrations.capabilities import Principal, issue_token
-checks = {}
-cfg = os.environ
-checks['fake_mode'] = (cfg.get('BCC_ENVIRONMENT') == 'demo'
-    and cfg.get('BCC_INTEGRATIONS_ENABLED') == 'true'
-    and cfg.get('BCC_INTEGRATIONS_ENVIRONMENT') == 'local'
-    and cfg.get('BCC_INTEGRATIONS_TELEGRAM_MODE') == 'fake'
-    and not cfg.get('BCC_INTEGRATIONS_TELEGRAM_TOKEN')
-    and cfg.get('BCC_INTEGRATIONS_TELEGRAM_ALLOWED_CHAT_IDS') == '[]')
-if not checks['fake_mode']:
-    print(json.dumps({'checks': checks})); raise SystemExit(0)
-opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-def get(path, headers=None):
-    req = urllib.request.Request('http://127.0.0.1:8000'+path, headers=headers or {})
-    with opener.open(req, timeout=5) as response:
-        return json.load(response)
-try:
-    ready = get('/ready')
-    checks['api_ready'] = ready.get('status') == 'ready'
-except Exception:
-    checks['api_ready'] = False
-try:
-    key = cfg['BCC_INTEGRATIONS_SIGNING_KEY']
-    token = issue_token(Principal(role='soc', subject=uuid.UUID(int=1)), key)
-    health = get('/api/v1/integrations/health/details', {'Authorization': 'Bearer '+token})
-    for name in ('database', 'redis', 'worker'):
-        checks[name] = health.get(name) == 'ok'
-    checks['gateway'] = health.get('gateway') == 'mock_ready'
-    checks['adapter'] = health.get('telegram') == 'fake_enabled'
-    queue = health.get('queue') or {}
-    names = ('notifications_queued', 'notifications_delayed',
-             'notifications_failed', 'runs_pending')
-    queue = {name: queue.get(name) for name in names}
-    checks['queue_idle'] = all(type(v) is int and v == 0 for v in queue.values())
-except Exception:
-    checks['integration_health'] = False
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, *args: Any, **kwargs: Any) -> Request | None:
+        # A signed local capability must never follow a redirect to another server.
+        return None
+
+
+def probe(key: str) -> dict[str, Any]:
+    from app.integrations.capabilities import Principal, issue_token
+
+    opener = build_opener(ProxyHandler({}), NoRedirect())
+
+    def get(path: str, headers: dict[str, str] | None = None) -> Any:
+        request = Request(f"http://127.0.0.1:{PORTS['backend']}{path}", headers=headers or {})
+        with opener.open(request, timeout=5) as response:
+            return json.load(response)
+
+    checks: dict[str, bool] = {"fake_mode": True}  # verified before this function is called
     queue = None
-print(json.dumps({'checks': checks, 'queue': queue}))
-"""
+    try:
+        checks["api_ready"] = get("/ready").get("status") == "ready"
+    except Exception:
+        checks["api_ready"] = False
+    try:
+        token = issue_token(Principal(role="soc", subject=uuid.UUID(int=1)), key, ttl=60)
+        health = get("/api/v1/integrations/health/details", {"Authorization": "Bearer " + token})
+        for name in ("database", "redis", "worker"):
+            checks[name] = health.get(name) == "ok"
+        checks["gateway"] = health.get("gateway") == "mock_ready"
+        checks["adapter"] = health.get("telegram") == "fake_enabled"
+        raw_queue = health.get("queue") or {}
+        queue = {
+            name: raw_queue.get(name)
+            for name in (
+                "notifications_queued",
+                "notifications_delayed",
+                "notifications_failed",
+                "runs_pending",
+            )
+        }
+        checks["queue_idle"] = all(type(value) is int and value == 0 for value in queue.values())
+    except Exception:
+        checks["integration_health"] = False
+    return {"checks": checks, "queue": queue}
 
 
 class DemoError(Exception):
@@ -264,7 +267,7 @@ def reset_owned_data(data: list[dict[str, Any]]) -> None:
 
 
 def check(data: list[dict[str, Any]]) -> dict[str, Any]:
-    safe_configuration(data)
+    key = safe_configuration(data)
     states = {
         item["Config"]["Labels"]["com.docker.compose.service"]: item.get("State", {})
         .get("Health", {})
@@ -275,10 +278,10 @@ def check(data: list[dict[str, Any]]) -> dict[str, Any]:
     }
     checks = {f"container_{name}": states.get(name, False) for name in SERVICES}
     queue = None
-    if checks["container_backend"]:
-        probe = json.loads(backend_exec(["python", "-c", PROBE], data))
-        checks.update(probe["checks"])
-        queue = probe.get("queue")
+    if checks["container_backend"] and key:
+        result = probe(key)
+        checks.update(result["checks"])
+        queue = result.get("queue")
     for name, path in (("frontend_http", "/health"), ("frontend_proxy", "/api/v1/soc/feed")):
         try:
             with build_opener(ProxyHandler({})).open(

@@ -29,6 +29,9 @@ failure; no readiness was fabricated. Once images are built, use `start --no-bui
 The probe uses the existing capability signing implementation extracted into a lightweight
 module. Importing it no longer loads the scoring/ML stack in a second diagnostic process.
 The public security imports, token format and authorization checks remain compatible.
+Authenticated probes run from the host against the fixed loopback API, with proxies and
+redirects disabled. They do not start an extra Python interpreter inside Docker. API
+timeouts still fail closed; core readiness thresholds have not been relaxed.
 
 Open **http://localhost:13000**. Backend: `127.0.0.1:18000`; PostgreSQL: `127.0.0.1:15432`;
 Redis: `127.0.0.1:16379`. Ports are intentionally separate from the team's default demo.
