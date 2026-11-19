@@ -1,5 +1,9 @@
 # Authorized real Telegram acceptance — 2026-11-14
 
+> Additional real assistant/menu acceptance ran on 18 November 2026 with a fresh grant.
+> The 14 November delivery evidence below remains a separate historical session.
+> See the dated addendum at the end; neither completed grant authorizes future sends.
+
 The existing user's test bot was connected; no new bot/account was created by the agent.
 The owner entered the token into a hidden local prompt. A fresh /start challenge from
 the authenticated Telegram Bot API identified the owner's private chat. Only that chat
@@ -67,3 +71,35 @@ PR #3 (orchestration). Timeline and diagnostic Health are additive review work.
 The final verification package records checked commit SHAs, CI and sanitized live evidence.
 The checked-in [telegram_live_evidence.json](telegram_live_evidence.json) records the
 final revoked-contact states, persisted event codes and 11 accepted send timestamps.
+
+## Assistant menu acceptance — 18 November 2026
+
+Finalized 19 November. The owner separately authorized 12 replies and 30 menu updates
+within 30 minutes in the previously verified private chat. Existing DPAPI configuration
+and ACL validated; no token re-entry or new bot was needed. The notification worker
+was disabled throughout. Only synthetic accounts/report data were used.
+
+- Nine `sendMessage` attempts were accepted by Telegram, within the shared budget.
+  The user confirmed the consent/menu screens and actual report receipt.
+- Twenty of 22 attempted menu updates have confirmed provider-success entries. The
+  other two are not counted as successful; no uncertain send was retried.
+- Real consent, KK navigation, security/privacy screens, questionnaire cancellation and
+  rejection of the old survey step were exercised. `/reports` opened the saved receipt;
+  `/notifications` correctly showed no notifications in this worker-disabled session.
+- One report was submitted by the user through a real preview/confirmation button.
+  SOC read and demo acknowledgment succeeded, and the user saw the updated status.
+  The same single report survived the polling-process restart.
+- The user found that consent left the old consent controls on screen. The bot now
+  opens its menu by editing that message; the user confirmed the corrected automatic
+  transition after a technical restart within the same deadline and cumulative budgets.
+- The final recorder encountered a Windows file-replacement `PermissionError`; its
+  precise OS cause is unknown. Bounded local file retries were added and verified with
+  a synthetic held-reader test. This never retries a provider send or alters ACLs.
+  Final state independently confirms revoked test consent, inactive grant and stopped
+  poller. The test PostgreSQL/Redis containers were stopped with their volumes retained.
+
+This session did not send a new Cooling-Off alert and does not recertify the historical
+RU/KK delivery scenarios above. Production, banking operations and real 429 injection
+remain outside scope. [Feature report](../guardian/BOT_ASSISTANT_2026_11_18.md) and
+[sanitized ledger](../guardian/evidence/bot-assistant-live-2026-11-18.json) distinguish
+provider acceptance, recipient confirmation, automated tests and observed limitations.

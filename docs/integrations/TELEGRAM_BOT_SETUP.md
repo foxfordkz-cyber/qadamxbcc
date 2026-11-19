@@ -50,5 +50,7 @@ private-chat commands after acquiring its lock. `/menu`, `/status`, `/notificati
 `/contacts`, `/check`, `/report`, `/reports`, `/safety`, `/privacy`, `/language`, `/cancel`
 and `/help` are available. See [features, privacy and acceptance scope](../guardian/BOT_ASSISTANT_2026_11_18.md).
 `/cancel` clears only the current draft; use `/contacts` and confirm to revoke consent.
-This code is tested through the real dispatcher with a fake Telegram transport. New real
-messages and unattended polling still require a fresh live-test grant, as described above.
+The code is tested through the real dispatcher with a fake Telegram transport and the
+18 November live menu acceptance in the feature report. Consent now opens the menu in
+the same message. The completed test grant is closed; new real messages and unattended
+polling still require a fresh scoped grant, as described above.

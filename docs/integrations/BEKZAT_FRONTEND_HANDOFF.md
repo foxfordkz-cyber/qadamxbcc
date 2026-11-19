@@ -184,5 +184,7 @@ confirmation safety without changing HTTP contracts, frontend code or banking de
 It adds localized command entry, a factual dashboard, paginated notification/report
 history, privacy and draft cancellation. See [scope and acceptance](../guardian/BOT_ASSISTANT_2026_11_18.md).
 The team merge gate and original top branch are unchanged; browser integration still uses
-the existing server-side authorization proxy in the Guardian handoff. New Telegram UI acceptance
-is not covered by the closed 14 November live send grant.
+the existing server-side authorization proxy in the Guardian handoff. Telegram UI acceptance
+ran on 18 November under a separate grant: menu/consent, KK navigation, cancellation,
+report receipt and SOC acknowledgment were observed. The found onboarding transition was
+fixed and confirmed live. Both grants are now closed; neither authorizes future sends.

@@ -152,6 +152,15 @@ async def test_invitation_consent_and_menu_revoke_through_polling_router(
     consent = chat.action("consent:")
     await chat.feed(consent)
     assert "Согласие подтверждено" in chat.last.text
+    assert chat.action("g:security") == "g:security"
+    assert chat.action("r:begin") == "r:begin"
+    assert all(
+        not (b.callback_data or "").startswith("consent:")
+        for row in chat.last.reply_markup.inline_keyboard
+        for b in row
+    )
+    # Consent changes only this message; no second send is introduced by onboarding.
+    assert isinstance(chat.last, EditMessageText)
     await chat.feed(text="/contacts")
     await chat.feed(chat.action("g:revoke:"))
     confirm = chat.action("revoke:")
@@ -161,6 +170,7 @@ async def test_invitation_consent_and_menu_revoke_through_polling_router(
         assert row is not None
         assert row.state == "CONTACT_VERIFIED"
     await chat.feed(confirm)
+    assert chat.action("g:home") == "g:home"
     async with iw.factory() as session:
         row = await session.get(TrustedContact, uuid.UUID(consent.split(":")[1]))
         assert row is not None
@@ -182,6 +192,18 @@ async def test_cancel_clears_drafts_and_rejects_old_question(chat: Chat) -> None
     assert chat.last.text == TEXT["kk"]["stale"]
     await chat.feed(text="/privacy")
     assert chat.last.text == COPY["kk"]["privacy_text"]
+
+
+async def test_first_consent_opens_menu_in_invitation_language(
+    iw: IntegrationWorld, chat: Chat
+) -> None:
+    invitation = await iw.invite("kk")
+    await chat.feed(text="/start " + str(invitation["invitation_token"]))
+    await chat.feed(chat.action("consent:"))
+    assert TEXT["kk"]["welcome"] in chat.last.text
+    assert chat.action("g:security") == "g:security"
+    state = await chat.dp.fsm.get_context(bot=chat.bot, chat_id=123, user_id=123).get_data()
+    assert state == {"language": "kk"}
 
 
 async def test_stale_confirmation_cannot_submit_a_different_preview(

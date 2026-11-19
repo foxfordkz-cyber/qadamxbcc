@@ -8,6 +8,7 @@ from typing import Literal
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import (
@@ -25,7 +26,8 @@ from app.db.session import build_engine, build_session_factory
 from app.integrations.config import IntegrationSettings, get_integration_settings
 from app.integrations.errors import IntegrationError
 from app.integrations.telegram.assistant_ui import configure_commands
-from app.integrations.telegram.guardian import build_router
+from app.integrations.telegram.assistant_ui import language as preferred_language
+from app.integrations.telegram.guardian import TEXT, build_router, menu
 from app.integrations.telegram.handlers import process_update
 from app.integrations.telegram.polling_lock import PollingLock
 from app.integrations.telegram.schemas import SimulatedUpdate
@@ -109,7 +111,7 @@ def build_ingress_router(
             await message.answer("Согласие отозвано / Келісім қайтарылды")
 
     @router.callback_query(~(F.data.startswith("g:") | F.data.startswith("r:")))
-    async def callback(query: CallbackQuery) -> None:
+    async def callback(query: CallbackQuery, state: FSMContext) -> None:
         message = query.message
         if (
             not isinstance(message, Message)
@@ -131,7 +133,14 @@ def build_ingress_router(
         )
         async with factory() as session:
             try:
-                result = await process_update(TrustedContactService(session, cfg), update)
+                service = TrustedContactService(session, cfg)
+                result = await process_update(service, update)
+                language = "ru"
+                if result.state == "CONTACT_VERIFIED":
+                    contact = await service.get_contact(result.resource_id)
+                    language = preferred_language(
+                        (await state.get_data()).get("language", contact.language)
+                    )
             except IntegrationError:
                 await query.answer("Недействительный запрос / Жарамсыз сұрау")
                 return
@@ -144,6 +153,21 @@ def build_ingress_router(
             if result.state in {"CONTACT_REVOKED", "SUSPICION_REPORTED"}
             else message.reply_markup
         )
+        if result.state == "CONTACT_VERIFIED":
+            # Finish onboarding in the same message; do not leave the user on consent buttons.
+            await state.set_data({"language": language})
+            text = " / ".join(labels) + "\n\n" + TEXT[language]["welcome"]
+            markup = menu(language)
+        elif result.state == "CONTACT_REVOKED":
+            markup = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text="Главное меню / Басты мәзір", callback_data="g:home"
+                        )
+                    ]
+                ]
+            )
         with suppress(TelegramBadRequest):
             await message.edit_text(text, reply_markup=markup, parse_mode=None)
 
