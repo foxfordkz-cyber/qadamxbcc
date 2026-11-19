@@ -22,6 +22,13 @@ check time. Exit 0 means the requested operation passed; exit 1 means inspect th
 failure/check. `check` does not create containers, reseed data, send messages or install
 dependencies. Health probes are bounded and run only on invocation; no background polling.
 The authenticated integration health API retains its own cache/rate limit.
+Cold image builds and service startup have separate bounded budgets (15 and 10 minutes).
+This follows a real Windows cold-start timeout on an 8 GB laptop: the build completed,
+but startup used the remainder of the old shared budget. The timeout was reported as a
+failure; no readiness was fabricated. Once images are built, use `start --no-build`.
+The probe uses the existing capability signing implementation extracted into a lightweight
+module. Importing it no longer loads the scoring/ML stack in a second diagnostic process.
+The public security imports, token format and authorization checks remain compatible.
 
 Open **http://localhost:13000**. Backend: `127.0.0.1:18000`; PostgreSQL: `127.0.0.1:15432`;
 Redis: `127.0.0.1:16379`. Ports are intentionally separate from the team's default demo.

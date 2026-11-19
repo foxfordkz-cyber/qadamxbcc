@@ -25,7 +25,7 @@ PORTS = {"postgres": 15432, "redis": 16379, "backend": 18000, "frontend": 13000}
 # Executed only in our labelled backend. Tokens stay in that process, never stdout.
 PROBE = """
 import json, os, urllib.request, uuid
-from app.integrations.security import Principal, issue_token
+from app.integrations.capabilities import Principal, issue_token
 checks = {}
 cfg = os.environ
 checks['fake_mode'] = (cfg.get('BCC_ENVIRONMENT') == 'demo'
@@ -346,10 +346,11 @@ def execute(
         raise DemoError("partial_stack_without_signing_key")
     key = saved_key or secrets.token_hex(32)
     if action == "start":
-        args = ["up", "-d", "--wait", "--wait-timeout", "180"]
         if not no_build:
-            args.append("--build")
-        compose(args, key, timeout=900)
+            print("Building isolated demo images (bounded to 15 minutes).", file=sys.stderr)
+            compose(["build"], key, timeout=900)
+        print("Waiting for demo services (bounded to 10 minutes).", file=sys.stderr)
+        compose(["up", "-d", "--wait", "--wait-timeout", "600"], key, timeout=660)
         return check(containers())
     if not reset_synthetic:
         raise DemoError("rehearsal_requires_reset_synthetic_flag")
@@ -359,7 +360,7 @@ def execute(
     compose(["stop", "backend", "integrations-worker"], key, timeout=60)
     reset_owned_data(data)
     # Backend startup applies migrations and bootstraps the empty synthetic database.
-    compose(["up", "-d", "--wait", "--wait-timeout", "180"], key, timeout=240)
+    compose(["up", "-d", "--wait", "--wait-timeout", "600"], key, timeout=660)
     output = rehearsal_run(key)
     expected = {
         "normal",

@@ -4,31 +4,18 @@ import hashlib
 import hmac
 import time
 import uuid
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
 from redis.exceptions import RedisError
 
 from app.api.deps import get_resources
 from app.core.resources import Resources
+from app.integrations.capabilities import Principal as Principal
+from app.integrations.capabilities import Role as Role
+from app.integrations.capabilities import issue_token as issue_token
 from app.integrations.config import IntegrationSettings
-
-Role = Literal["owner", "soc", "simulator"]
-
-
-class Principal(BaseModel):
-    subject: uuid.UUID
-    role: Role
-
-
-def issue_token(principal: Principal, key: str, *, ttl: int = 900) -> str:
-    if len(key) < 32 or not 1 <= ttl <= 3600:
-        raise ValueError("invalid capability configuration")
-    payload = f"{principal.role}:{principal.subject}:{int(time.time()) + ttl}"
-    signature = hmac.new(key.encode(), payload.encode(), hashlib.sha256).hexdigest()
-    return f"{payload}:{signature}"
 
 
 def verify_token(token: str, key: str) -> Principal:
