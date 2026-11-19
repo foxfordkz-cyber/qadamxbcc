@@ -1,6 +1,8 @@
 # Private Scam Check — контракт Бекзата
 
 Дополнение к PR #15; отдельная ветка `feature/bekzat-private-scam-check`.
+Опубликовано в [Draft PR #16](https://github.com/foxfordkz-cyber/qadamxbcc/pull/16);
+результаты и сообщение Дамиру — в [verification report](PRIVATE_SCAM_CHECK_VERIFICATION.md).
 Это локальная образовательная проверка текста RU/KK, а не обученная модель,
 антифрод-решение или новый механизм блокировки. Scoring, Redis velocity, граф,
 миграции и финансовые API не изменяются. Существующий `/check` с пятью вопросами сохранён.
