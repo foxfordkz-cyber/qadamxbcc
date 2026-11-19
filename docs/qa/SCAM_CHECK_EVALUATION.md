@@ -48,6 +48,13 @@ Python/platform в отчёте. Измеряются только локаль�
 Telegram delivery, worker queue или antifraud engine. Нулевые ошибки означают, что
 1000 вызовов завершились, а не отсутствие классификационных FP/FN.
 
+[HTTP observation](scam-check-http-latency.json): отдельный запуск Windows → loopback Docker,
+один keep-alive клиент, 3 прогревочных и 20 последовательных POST с одним синтетическим
+owner capability, без параллелизма и повторов. Всего 23 запроса в пределах существующей
+квоты 30/min. Измерение включает HTTP/auth/Redis/rules; SQL в этом маршруте отсутствует.
+P99 здесь — максимум маленькой выборки, не устойчивая оценка хвоста. Результат нельзя
+сравнивать с engine-only benchmark или выдавать за банковский SLA.
+
 Core QA остаётся в `scripts.evaluate_fraud_model` и `scripts.benchmark_antifraud`.
 Не складывать их выборки/latency с этим анализатором. PostgreSQL/Redis, миграции,
 Docker-сценарии и browser/frontend regression выполняются отдельно в существующем CI.
