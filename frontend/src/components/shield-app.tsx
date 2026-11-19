@@ -14,11 +14,12 @@ import { CoolingModal } from "./cooling-modal";
 import { SocDashboard } from "./soc-dashboard";
 import { useTrafficStream } from "./use-traffic-stream";
 import { isUnknownOutcome, TransferAttempt } from "@/lib/transfer-session";
+import { TransferSelection } from "@/lib/transfer-selection";
 import { acceptsEvaluation, digestDraft, draftIdentity, findDraftReceipt, receipt, recoveryBatch, unresolved } from "@/lib/recovery";
 import { useRecovery, withIntentLock } from "./use-recovery";
 import { RecoveryPanel } from "./recovery-panel";
 import { retainCoolingDraft } from "@/lib/cooling-flow";
-import { reconcileCoolingDrafts, shouldRestoreAttempt } from "@/lib/mobile-session";
+import { reconcileCoolingDrafts } from "@/lib/mobile-session";
 import { randomId } from "@/lib/secure-fallback";
 
 const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
@@ -33,7 +34,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const [roundtrip, setRoundtrip] = useState(0);
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
-  const interacted = useRef(false);
+  const selection = useRef(new TransferSelection());
   const [error, setError] = useState<MessageKey | null>(null);
   const [modal, setModal] = useState(false);
   const [coolingDrafts, setCoolingDrafts] = useState<Record<string, Partial<Answers>>>({});
@@ -47,12 +48,12 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const recovery = useRecovery();
   const attempt = useRef<TransferAttempt | null>(null);
   const attemptIdentity = useRef<string | null>(null);
-  const currentResultId = useRef<string | null>(null);
-  currentResultId.current = result?.transaction_id ?? null;
   const [unknown, setUnknown] = useState(false);
   const [completedIdentity, setCompletedIdentity] = useState<string | null>(null);
   const [checkingRecovery, setCheckingRecovery] = useState(false);
   const identity = draftIdentity(form, recipientType);
+  const currentIdentity = useRef(identity);
+  currentIdentity.current = identity;
   const previousIdentity = useRef(identity);
   const forceNext = useRef(false);
   const hasUnknown = recovery.records.some(record => record.state === "unknown");
@@ -96,20 +97,20 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     lastReconciledAt.current = performance.now();
     reconciling.current = true; setCheckingRecovery(true);
     try {
-      const batch = recoveryBatch(recovery.refresh(), recoveryCursor.current, currentResultId.current);
+      const batch = recoveryBatch(recovery.refresh(), recoveryCursor.current, selection.current.id);
       recoveryCursor.current = batch.nextCursor;
       await Promise.allSettled(batch.records.map(async record => {
         const value = remember(await api<Evaluation>(`transfers/${record.id}`));
         if (!value) return;
-        if (attempt.current?.input.request_id === value.transaction_id) {
-          setUnknown(false); setCompletedIdentity(attemptIdentity.current); setError(null);
-          if (shouldRestoreAttempt(value.transaction_id, attempt.current.input.request_id ?? null, currentResultId.current)) {
-            setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {});
-          }
-        }
-        setResult(previous => previous?.transaction_id === value.transaction_id ? value : previous);
-        if (currentResultId.current === value.transaction_id && value.status !== "cooling_off") setModal(false);
-        if (!interacted.current) { interacted.current = true; setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {}); }
+        const matchesAttempt = attempt.current?.input.request_id === value.transaction_id;
+        if (matchesAttempt) setUnknown(false);
+        // A receipt may settle an earlier attempt without taking over a newer
+        // selection or a form the user has started editing while reads run.
+        if (!selection.current.acceptsRecovery(value.transaction_id)) return;
+        if (matchesAttempt && currentIdentity.current === attemptIdentity.current) setCompletedIdentity(attemptIdentity.current);
+        setError(null);
+        setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {});
+        if (value.status !== "cooling_off") setModal(false);
       }));
     } finally { reconciling.current = false; setCheckingRecovery(false); }
   }, [recovery.refresh, remember]);
@@ -122,13 +123,14 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   useEffect(() => {
     if (identity !== previousIdentity.current) {
       if (completedIdentity !== null) forceNext.current = true;
-      previousIdentity.current = identity; interacted.current = true; setResult(null); setCompletedIdentity(null); setError(null);
+      previousIdentity.current = identity; selection.current.select(null); setResult(null); setModal(false); setCompletedIdentity(null); setError(null);
     }
   }, [identity, completedIdentity]);
 
   async function review(id: string) {
     if (lock.current) return;
-    interacted.current = true;
+    selection.current.select(id);
+    if (result?.transaction_id !== id) { setResult(null); setModal(false); }
     lock.current = true; setBusy(true); setError(null);
     try {
       const value = remember(await api<Evaluation>(`transfers/${id}`));
@@ -140,7 +142,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     finally { lock.current = false; setBusy(false); }
   }
   async function execute(current: TransferAttempt, chosen?: Preset) {
-    interacted.current = true;
+    selection.current.select(current.input.request_id!);
     lock.current = true; setBusy(true); setError(null); setResult(null); setPreset(chosen ?? null); setModal(false); setUnknown(false);
     const started = performance.now();
     try {
@@ -164,6 +166,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     const context = chosen ? value.context : { ...value.context, ...sensor.context() };
     const parsed = transferSchema.safeParse({ sender_id: value.sender.trim(), [`recipient_${type}`]: recipient, amount: value.amount, currency: "KZT", context });
     if (!parsed.success) { setError(chosen && (!value.sender || !value.recipient) ? "presetMissing" : "invalid"); setTab("mobile"); return; }
+    selection.current.select(null);
     lock.current = true; setBusy(true); setError(null);
     try {
       const hash = await digestDraft(draft);
@@ -179,6 +182,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       if (!reserved) { setError("recoveryRequired"); return; }
       forceNext.current = false; attemptIdentity.current = draft;
       if (reserved.existing) {
+        selection.current.select(reserved.id);
         const value = remember(await api<Evaluation>(`transfers/${reserved.id}`));
         if (!value) { setError("staleData"); return; }
         setResult(value); setResultAmount(value.amount ?? parsed.data.amount); setResultContext(value.context ?? {}); setCompletedIdentity(draft); setModal(value.status === "cooling_off");
@@ -197,7 +201,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   }
   function resolved(value: Evaluation) {
     const accepted = remember(value);
-    if (!accepted || currentResultId.current !== accepted.transaction_id) return;
+    if (!accepted || selection.current.id !== accepted.transaction_id) return;
     value = accepted; setResult(value); setResultAmount(value.amount ?? resultAmount); setResultContext(value.context ?? {});
     setTraffic(previous => previous[value.transaction_id] ? { ...previous, [value.transaction_id]: { ...previous[value.transaction_id], evaluation: value } } : previous);
     setModal(value.status === "cooling_off"); setRevision(n => n + 1);
@@ -210,6 +214,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       if (value.status === "processed" && value.evaluation) {
         const accepted = remember(value.evaluation);
         if (!accepted) { setError("staleData"); return; }
+        selection.current.select(accepted.transaction_id);
         setResult(accepted); setResultAmount(accepted.amount ?? "0"); setResultContext(accepted.context ?? {}); setModal(accepted.status === "cooling_off");
       }
       else recovery.record({ id, state: "abandoned", updatedAt: Date.now() });
@@ -220,7 +225,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   function changeTab(value: "mobile" | "soc") { if (value === "mobile") stream.stop(); setTab(value); }
   function freshTransfer() {
     if (lock.current || hasUnknown) return;
-    interacted.current = true; forceNext.current = true; attempt.current = null;
+    selection.current.select(null); forceNext.current = true; attempt.current = null;
     setCompletedIdentity(null); sensor.reset(); setResult(null); setPreset(null); setError(null);
   }
   const cooling = modal && result?.status === "cooling_off" && <CoolingModal key={result.transaction_id} result={result} context={resultContext} answers={coolingDrafts[result.transaction_id] ?? result.verification_answers ?? {}} onAnswersChange={answers => setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers))} onClose={() => setModal(false)} onResolved={resolved} />;

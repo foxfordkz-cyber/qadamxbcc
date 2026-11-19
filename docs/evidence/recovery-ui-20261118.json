@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "browser": "msedge headless",
+  "checks": [
+    "Review A remains selected after a delayed recovery response for last attempt B; cancellation targets A.",
+    "Editing the form while B recovery is in flight keeps an empty result and the edited amount.",
+    "A failed review of A clears the previous B receipt, then later recovery restores only selected A.",
+    "A lost evaluate response recovers the selected pending request, clears unknown state, and shows its receipt.",
+    "A pending unknown B settles while A is reviewed without replacing the A modal or leaving retry state behind.",
+    "Switching from a completed normal preset to a different scam preset preserves selection and accepts modal cancellation."
+  ],
+  "pageErrors": [],
+  "apiMutationsObserved": 8,
+  "scope": "Actual Next.js React UI with a preflight-verified synthetic in-process demo API; selected GET responses delayed and POST responses dropped."
+}
