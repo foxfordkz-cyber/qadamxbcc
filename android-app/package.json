@@ -1,0 +1,22 @@
+{
+  "name": "bcc-shield-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android app for BCC Shield: opens the demo's /mobile client on a real phone.",
+  "scripts": {
+    "vendor": "node -e \"require('fs').mkdirSync('www/vendor',{recursive:true});require('fs').copyFileSync(require.resolve('jsqr/dist/jsQR.js'),'www/vendor/jsQR.js')\"",
+    "sync": "npm run vendor && cap sync android",
+    "test": "node --test tests/*.test.mjs",
+    "apk": "npm run sync && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/splash-screen": "^8.0.2",
+    "jsqr": "^1.4.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.2"
+  }
+}
