@@ -12,7 +12,14 @@ from sqlalchemy import text
 
 from app.api.limits import RequestLimits
 from app.api.security import require_soc_access, require_transfer_access
-from app.api.v1 import external_checks, integrations, soc, transfers, trusted_contacts
+from app.api.v1 import (
+    call_check,
+    external_checks,
+    integrations,
+    soc,
+    transfers,
+    trusted_contacts,
+)
 from app.core.config import Settings, get_settings
 from app.core.resources import Resources
 from app.integrations.config import get_integration_settings
@@ -112,6 +119,7 @@ def create_app(settings: Settings | None = None, resources: Resources | None = N
 
     api = APIRouter(prefix=cfg.api_prefix)
     api.include_router(transfers.router, dependencies=[Depends(require_transfer_access)])
+    api.include_router(call_check.router, dependencies=[Depends(require_transfer_access)])
     api.include_router(soc.router, dependencies=[Depends(require_soc_access)])
     api.include_router(trusted_contacts.router)
     api.include_router(external_checks.router)

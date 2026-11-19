@@ -5,7 +5,7 @@ import { appConfig, ids } from "@/lib/config";
 import { backendHeaders, checkAccess } from "@/lib/server-access";
 import { readBoundedJson, RequestBodyError } from "@/lib/request-body";
 import { apiAdmission } from "@/lib/request-quota";
-import { abandonDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "@/lib/demo";
+import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "@/lib/demo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +24,9 @@ async function handle(request: NextRequest, context: RouteContext) {
   const detail = request.method === "GET" && /^transfers\/[0-9a-f-]{36}$/i.test(route);
   const feed = request.method === "GET" && route === "soc/feed";
   const graph = request.method === "GET" && /^soc\/graph\/[0-9a-f-]{36}$/i.test(route);
-  if (!evaluate && !resolve && !cancel && !abandon && !detail && !feed && !graph) return json({ error: "notFound" }, 404);
+  const callCheck = request.method === "POST" && route === "call-check";
+  const bankCall = request.method === "POST" && route === "call-check/demo/bank-call";
+  if (!evaluate && !resolve && !cancel && !abandon && !detail && !feed && !graph && !callCheck && !bankCall) return json({ error: "notFound" }, 404);
   if ((abandon || graph) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
   if ((resolve || cancel || detail) && !z.uuid().safeParse(path[1]).success) return json({ error: "invalid" }, 422);
   const admission = apiAdmission();
@@ -52,6 +54,12 @@ async function handle(request: NextRequest, context: RouteContext) {
     if (resolve) {
       const parsed = z.object({ answers: answersSchema }).strict().parse(await readBoundedJson(request));
       if (config.mode === "demo") return json(resolveDemo(path[1], parsed.answers));
+      body = parsed;
+    }
+    if (callCheck || bankCall) {
+      if (bankCall && config.demoActionsEnabled === false) return json({ error: "notFound" }, 404);
+      const parsed = z.object({ customer_id: z.uuid() }).strict().parse(await readBoundedJson(request));
+      if (config.mode === "demo") return json(callCheck ? callCheckDemo(parsed.customer_id) : bankCallDemo(parsed.customer_id));
       body = parsed;
     }
     if (cancel || abandon) body = z.object({}).strict().parse(await readBoundedJson(request));

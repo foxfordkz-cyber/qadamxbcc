@@ -13,7 +13,15 @@ export const contextSchema = z.object({
   hesitation_count: z.number().int().min(0).max(100).optional(),
   recipient_input_length: z.number().int().min(0).max(128).nullable().optional(),
   hesitation_ms: z.number().int().min(0).max(300_000).nullable().optional(),
+  bank_call_check_id: z.uuid().optional(),
 }).strict();
+/** «Банк мне звонит?» — answered from the bank's outbound call log (simulated in the prototype). */
+export const callCheckSchema = z.object({
+  check_id: z.uuid(), verified: z.boolean(), employee_name: z.string().nullable().optional(), department: z.string().nullable().optional(),
+  checked_at: z.iso.datetime({ offset: true }), message_kk: z.string(), message_ru: z.string(), simulated_log: z.boolean().optional(),
+}).passthrough();
+export type CallCheck = z.infer<typeof callCheckSchema>;
+export const bankCallSchema = z.object({ customer_id: z.uuid(), employee_name: z.string(), department: z.string(), expires_in_s: z.number().int().positive() }).passthrough();
 export const transferSchema = z.object({
   request_id: z.uuid().optional(),
   sender_id: z.uuid(),
@@ -144,6 +152,7 @@ export function validateApiResponse(path: string, value: unknown) {
   const route = path.split("?")[0];
   const schema = /^transfers\/requests\/[0-9a-f-]+\/abandon$/i.test(route) ? abandonResponseSchema
     : route === "transfers/evaluate" || /^transfers\/[0-9a-f-]+(?:\/(?:resolve-cooling|cancel))?$/i.test(route) ? evaluationResponseSchema
+    : route === "call-check" ? callCheckSchema : route === "call-check/demo/bank-call" ? bankCallSchema
     : route === "soc/feed" ? feedResponseSchema : route.startsWith("soc/graph/") ? graphResponseSchema : undefined;
   if (!schema) return value;
   const parsed = schema.safeParse(value);

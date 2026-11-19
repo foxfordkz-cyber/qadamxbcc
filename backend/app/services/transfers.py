@@ -41,6 +41,7 @@ from app.schemas.transfers import (
 )
 from app.services import explain
 from app.services.antifraud import AntifraudEngine, Evaluation, TransferContext
+from app.services.call_check import CallCheckService
 from app.services.graph import MAX_GRAPH_NEIGHBOURS, GraphCapacityError, GraphStore
 
 QUESTIONNAIRE_LAYER = "questionnaire"
@@ -394,6 +395,9 @@ class TransferService:
             hesitation_count=req.context.hesitation_count,
             recipient_input_length=req.context.recipient_input_length,
             hesitation_ms=req.context.hesitation_ms,
+            bank_call_denied=await CallCheckService(self.engine.redis).denied_for(
+                req.context.bank_call_check_id, sender.id
+            ),
         )
         ctx = self.engine.trusted_context(ctx, known_device_id=sender.device_id)
 
@@ -449,6 +453,7 @@ class TransferService:
             hesitation_count=ctx.hesitation_count,
             recipient_input_length=ctx.recipient_input_length,
             hesitation_ms=ctx.hesitation_ms,
+            bank_call_check_id=req.context.bank_call_check_id,
         ).model_dump(mode="json")
         response = self._evaluation_response(tx, evaluation, recipient)
         tx.evaluation_snapshot = response.model_dump(mode="json")
@@ -653,6 +658,9 @@ class TransferService:
             hesitation_count=original.hesitation_count,
             recipient_input_length=original.recipient_input_length,
             hesitation_ms=original.hesitation_ms,
+            # The bank's answer is part of the original evidence; the short-lived
+            # check record may already have expired when the hold ends.
+            bank_call_denied=any(e.rule_code == "BANK_CALL_DENIED" for e in tx.risk_events),
         )
         ctx = self.engine.trusted_context(ctx, known_device_id=sender.device_id)
         evaluation = await self.engine.evaluate(ctx, record_attempt=False)
