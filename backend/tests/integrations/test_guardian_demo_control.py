@@ -3,6 +3,7 @@
 import json
 import os
 import subprocess
+import sys
 from typing import Any
 
 import pytest
@@ -172,3 +173,20 @@ def test_reset_can_only_target_verified_project(monkeypatch: pytest.MonkeyPatch)
     with pytest.raises(demo.DemoError, match="foreign_project_refused"):
         demo.reset_owned_data(data)
     assert not calls
+
+
+def test_probe_signing_does_not_load_the_scoring_engine() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; from app.integrations.capabilities import Principal, "
+            "issue_token; assert 'app.core.resources' not in sys.modules; "
+            "assert 'app.services.antifraud' not in sys.modules; assert 'sklearn' not in sys.modules",
+        ],
+        cwd=demo.ROOT / "backend",
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0
