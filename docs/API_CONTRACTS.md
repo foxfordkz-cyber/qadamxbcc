@@ -146,4 +146,10 @@
 | `GET` | `/api/v1/integrations/privacy/permissions` | Bearer | — | `PermissionPage` | 200, 422 |
 | `GET` | `/api/v1/integrations/privacy/contacts/{contact_id}/history` | Bearer | — | `PermissionHistory` | 200, 422 |
 
+### Private Scam Check
+
+| Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
+|---|---|---|---|---|---|
+| `POST` | `/api/v1/integrations/guardian/scam-check` | Bearer | `ScamCheckRequest` | `ScamCheckResult` | 200, 401, 403, 422, 429, 503 |
+
 Коды `401`, `413`, `429`, `503` из раздела «Ошибки» относятся ко всем путям `/api/v1` и в схеме отдельно не перечислены.
