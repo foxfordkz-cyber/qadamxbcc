@@ -16,3 +16,6 @@ node_modules/
 .pytest_tmp/
 backend/app/ml/*.joblib
 deliverables/demo/raw/
+
+# Static GitHub Pages build output
+frontend/pages-out/

@@ -167,6 +167,12 @@ export function validateApiResponse(path: string, value: unknown) {
   return parsed.data;
 }
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  // Static GitHub Pages build: no server, the demo engine runs in this browser.
+  if (process.env.NEXT_PUBLIC_BCC_STATIC === "1") {
+    const { staticApi } = await import("./static-api");
+    try { return validateApiResponse(path, await staticApi(path, init)) as T; }
+    catch (error) { if (error instanceof ApiError) throw error; throw new ApiError("invalidResponse", 502); }
+  }
   const response = await fetch(`/api/v1/${path}`, {
     ...init, cache: "no-store", signal: init?.signal ?? AbortSignal.timeout(12_000),
     headers: { "Content-Type": "application/json", ...init?.headers },

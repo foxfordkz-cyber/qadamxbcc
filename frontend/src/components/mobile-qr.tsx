@@ -10,6 +10,8 @@ const LOOPBACK = /^(?:localhost|127\.0\.0\.1|\[::1\])$/i;
 /** The address a jury phone can open: this page's origin, or the laptop's Wi-Fi address when the SOC is opened on localhost. */
 async function mobileUrl(): Promise<string | null> {
   const { protocol, hostname, port, origin } = window.location;
+  const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+  if (process.env.NEXT_PUBLIC_BCC_STATIC === "1") return `${origin}${base}/mobile/`;
   if (!LOOPBACK.test(hostname)) return `${origin}/mobile`;
   const response = await fetch("/mobile/link", { cache: "no-store" });
   if (!response.ok) return null;

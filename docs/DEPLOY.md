@@ -4,6 +4,24 @@
 API слушает только `127.0.0.1` внутри контейнера, снаружи доступен лишь сайт.
 Режим — `demo`: синтетические данные, демо-кнопки и `/pitch` включены, ключи не нужны.
 
+## GitHub Pages — статическое демо (уже настроено)
+
+Адрес: <https://foxfordkz-cyber.github.io/qadamxbcc/> (страницы `/`, `/mobile/`, `/pitch/`).
+Workflow `.github/workflows/pages.yml` при каждом пуше в `main` собирает
+`frontend/scripts/build-pages.mjs` и публикует в ветку `gh-pages`.
+
+Ограничения статической версии: GitHub Pages отдаёт только файлы, поэтому FastAPI, PostgreSQL,
+Redis, ML-модель, граф NetworkX и Telegram в ней не работают. Решения считает синтетический
+демо-движок на TypeScript (`frontend/src/lib/demo.ts`) прямо в браузере; история хранится в
+`localStorage` этого браузера. Доверенный круг показывает «не подключено». Для показа
+настоящего backend нужна серверная версия ниже.
+
+Если сайт не открылся после первой публикации: **Settings → Pages → Build and deployment →
+Source: Deploy from a branch → `gh-pages` / root → Save.**
+
+Локальная проверка: `cd frontend && node scripts/build-pages.mjs`, затем отдать папку
+`pages-out` по пути `/qadamxbcc/` любым статическим сервером.
+
 ## Render (бесплатно, 5 минут)
 
 Самый короткий путь — ссылка
