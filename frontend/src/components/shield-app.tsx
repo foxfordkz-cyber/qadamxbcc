@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import connectedWallet from "@/lib/connected-wallet.json";
 import { Activity, ArrowRight, CircleHelp, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
 import { api, ApiError, transferSchema, type AbandonResult, type Answers, type AppConfig, type CallCheck, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { reconcileTraffic, type TrafficRecord } from "@/lib/traffic";
@@ -320,7 +321,8 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers));
     }} onClose={() => setModal(false)} onResolved={resolved} />;
   const languageSwitch = <div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>;
-  const walletLink = config.demoActionsEnabled !== false && <a className="pitch-link" href="https://saq-bol-mobile.onrender.com/wallet/">{t("connectedWallet")}<ArrowRight size={15} aria-hidden="true" /></a>;
+  const showWallet = config.demoActionsEnabled !== false && (!STATIC_DEMO || process.env.NEXT_PUBLIC_BCC_PAGES_WALLET === "1");
+  const walletLink = showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("connectedWallet")}<ArrowRight size={15} aria-hidden="true" /></a>;
   if (layout === "officer") return <>
     <header className="topbar"><div className="topbar-inner"><div className="brand">
       <span className="brand-mark"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("officerWorkspace")}</small></div>

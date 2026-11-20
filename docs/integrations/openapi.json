@@ -1292,6 +1292,104 @@
         }
       }
     },
+    "/api/v1/soc/recipients/{account_id}/prior-receipts": {
+      "get": {
+        "tags": [
+          "soc"
+        ],
+        "summary": "Prior Recipient Receipts",
+        "operationId": "prior_recipient_receipts_api_v1_soc_recipients__account_id__prior_receipts_get",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Version"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 30,
+              "minimum": 1,
+              "default": 7,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriorReceipts"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/soc/graph/{account_id}": {
       "get": {
         "tags": [
@@ -3988,6 +4086,16 @@
             },
             "type": "object",
             "title": "Oldest Current Status Seconds"
+          },
+          "policy_comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PolicyComparison"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "demonstration_only": {
             "type": "boolean",
@@ -6778,6 +6886,63 @@
         ],
         "title": "PermissionPage"
       },
+      "PolicyComparison": {
+        "properties": {
+          "sampled": {
+            "type": "integer",
+            "title": "Sampled",
+            "default": 0
+          },
+          "evaluated": {
+            "type": "integer",
+            "title": "Evaluated",
+            "default": 0
+          },
+          "candidate_threshold": {
+            "type": "integer",
+            "const": 35,
+            "title": "Candidate Threshold",
+            "default": 35
+          },
+          "extra_holds": {
+            "type": "integer",
+            "title": "Extra Holds",
+            "default": 0
+          },
+          "fraud_labelled": {
+            "type": "integer",
+            "title": "Fraud Labelled",
+            "default": 0
+          },
+          "legitimate_labelled": {
+            "type": "integer",
+            "title": "Legitimate Labelled",
+            "default": 0
+          },
+          "baseline_detected": {
+            "type": "integer",
+            "title": "Baseline Detected",
+            "default": 0
+          },
+          "candidate_detected": {
+            "type": "integer",
+            "title": "Candidate Detected",
+            "default": 0
+          },
+          "baseline_false_interventions": {
+            "type": "integer",
+            "title": "Baseline False Interventions",
+            "default": 0
+          },
+          "candidate_false_interventions": {
+            "type": "integer",
+            "title": "Candidate False Interventions",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "PolicyComparison"
+      },
       "Position": {
         "properties": {
           "x": {
@@ -6813,6 +6978,95 @@
           "action"
         ],
         "title": "PostCallRequest"
+      },
+      "PriorReceipt": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "sender_ref": {
+            "type": "string",
+            "title": "Sender Ref"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount"
+          },
+          "status": {
+            "type": "string",
+            "const": "approved",
+            "title": "Status",
+            "default": "approved"
+          },
+          "settled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Settled At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "sender_ref",
+          "amount",
+          "settled_at"
+        ],
+        "title": "PriorReceipt"
+      },
+      "PriorReceipts": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Account Id"
+          },
+          "flag_version": {
+            "type": "integer",
+            "title": "Flag Version"
+          },
+          "from_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "From Time"
+          },
+          "flagged_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Flagged At"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PriorReceipt"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "flag_version",
+          "from_time",
+          "flagged_at",
+          "items",
+          "next_cursor"
+        ],
+        "title": "PriorReceipts"
       },
       "PrivacySummary": {
         "properties": {
@@ -8468,7 +8722,10 @@
               "needs_followup",
               "review_complete",
               "duplicate",
-              "reopened"
+              "reopened",
+              "confirmed_fraud",
+              "legitimate_transfer",
+              "insufficient_evidence"
             ],
             "title": "Reason"
           }

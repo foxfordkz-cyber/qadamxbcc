@@ -4,6 +4,12 @@ import { privateStorySchema } from "./transfer-story";
 const id = z.uuid();
 const timestamp = z.iso.datetime({ offset: true });
 const count = z.number().int().nonnegative();
+export const outcomeReasons = ["confirmed_fraud", "legitimate_transfer", "insufficient_evidence"] as const;
+const policyComparisonSchema = z.object({
+  sampled: count.max(100), evaluated: count.max(100), candidate_threshold: z.literal(35), extra_holds: count,
+  fraud_labelled: count, legitimate_labelled: count, baseline_detected: count, candidate_detected: count,
+  baseline_false_interventions: count, candidate_false_interventions: count,
+});
 export const caseStates = ["NEW", "IN_REVIEW", "NEEDS_INFORMATION", "ESCALATED", "RESOLVED", "CLOSED"] as const;
 export const caseStaff = ["demo_analyst_a", "demo_analyst_b"] as const;
 export const caseCategories = ["impersonation", "safe_account", "remote_access", "other"] as const;
@@ -20,7 +26,8 @@ export const casePageSchema = z.object({ items: z.array(caseSchema).max(100), ne
 export const caseAnalyticsSchema = z.object({ as_of: timestamp, total: count, open: count, closed: count,
   by_state: z.record(z.string(), count), by_source: z.record(z.string(), count), escalated_cases: count,
   manually_reviewed_cases: count, manual_review_share: z.number().min(0).max(1),
-  oldest_current_status_seconds: z.record(z.string(), z.number().nonnegative()), demonstration_only: z.literal(true) });
+  oldest_current_status_seconds: z.record(z.string(), z.number().nonnegative()), demonstration_only: z.literal(true),
+  policy_comparison: policyComparisonSchema.nullish() });
 export const caseHistorySchema = z.object({ items: z.array(z.object({ id, actor_id: id, version, code: z.string(),
   actor_role: z.enum(["soc", "owner"]), timestamp, state, category, assignee: staff, reason: z.string().nullable(), ...descriptions })).max(100),
   next_after_version: count.nullable() });
@@ -37,7 +44,7 @@ export const caseActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("note"), expected_version: version, body: safeText }).strict(),
   z.object({ action: z.literal("request_information"), expected_version: version, question: z.enum(caseQuestions) }).strict(),
   z.object({ action: z.literal("transition"), expected_version: version, state,
-    reason: z.enum(["review_started", "needs_followup", "review_complete", "duplicate", "reopened"]) }).strict(),
+    reason: z.enum(["review_started", "needs_followup", "review_complete", "duplicate", "reopened", ...outcomeReasons]) }).strict(),
 ]);
 const timelineEventSchema = z.object({ id: z.string(), timestamp, category: z.enum(["core", "contact", "gateway", "orchestration"]),
     importance: z.enum(["information", "attention"]), code: z.string(), correlation_id: id.nullable(), ...descriptions,

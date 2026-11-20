@@ -35,3 +35,10 @@
 .return-receipt { justify-items: center; text-align: center; }
 .return-receipt b { font-size: 1.75rem; }
 .return-review h3, .return-review p { margin: 0; }
+.market-check { border: 1px solid #dce4e0; border-radius: 14px; padding: 12px 14px; }
+.market-check summary { cursor: pointer; font-weight: 600; }
+.market-check p { margin: 8px 0; line-height: 1.45; }
+.market-check label { display: grid; gap: 5px; margin: 9px 0; }
+.market-check select { width: 100%; padding: 8px; border: 1px solid #cbd5d1; border-radius: 8px; }
+.market-check [role="status"] { border-inline-start: 3px solid #64748b; margin-top: 12px; padding-inline-start: 10px; }
+.market-check [data-order-result="mismatch"], .market-check [data-order-result="close"] { border-color: #b45309; }

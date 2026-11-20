@@ -26,7 +26,16 @@ class Versioned(Strict):
 class Transition(Versioned):
     action: Literal["transition"]
     state: State
-    reason: Literal["review_started", "needs_followup", "review_complete", "duplicate", "reopened"]
+    reason: Literal[
+        "review_started",
+        "needs_followup",
+        "review_complete",
+        "duplicate",
+        "reopened",
+        "confirmed_fraud",
+        "legitimate_transfer",
+        "insufficient_evidence",
+    ]
 
 
 class Assign(Versioned):
@@ -131,6 +140,22 @@ class AnswerReceipt(BaseModel):
     received: Literal[True] = True
 
 
+OUTCOME_REASONS = frozenset({"confirmed_fraud", "legitimate_transfer", "insufficient_evidence"})
+
+
+class PolicyComparison(BaseModel):
+    sampled: int = 0
+    evaluated: int = 0
+    candidate_threshold: Literal[35] = 35
+    extra_holds: int = 0
+    fraud_labelled: int = 0
+    legitimate_labelled: int = 0
+    baseline_detected: int = 0
+    candidate_detected: int = 0
+    baseline_false_interventions: int = 0
+    candidate_false_interventions: int = 0
+
+
 class CaseAnalytics(BaseModel):
     as_of: datetime
     total: int
@@ -142,6 +167,7 @@ class CaseAnalytics(BaseModel):
     manually_reviewed_cases: int
     manual_review_share: float
     oldest_current_status_seconds: dict[str, float]
+    policy_comparison: PolicyComparison | None = None
     demonstration_only: Literal[True] = True
 
 

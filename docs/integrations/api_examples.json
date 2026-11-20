@@ -831,6 +831,18 @@
       "oldest_current_status_seconds": {
         "NEW": 0.0
       },
+      "policy_comparison": {
+        "sampled": 0,
+        "evaluated": 0,
+        "candidate_threshold": 35,
+        "extra_holds": 0,
+        "fraud_labelled": 0,
+        "legitimate_labelled": 0,
+        "baseline_detected": 0,
+        "candidate_detected": 0,
+        "baseline_false_interventions": 0,
+        "candidate_false_interventions": 0
+      },
       "demonstration_only": true
     }
   },

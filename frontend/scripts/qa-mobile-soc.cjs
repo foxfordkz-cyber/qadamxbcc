@@ -502,6 +502,61 @@ async function main() {
     await phone.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
     expectedPreset = 'normal';
     await phone.locator('.contact').first().click(); await phone.locator('.phone-form .transfer-cta').click();
+    const familyWrites = report.mutations.length;
+    const marketCheck = phone.locator('.market-check');
+    const marketResult = marketCheck.locator('[data-order-result]');
+    const compareOrder = async reference => {
+      await marketCheck.getByRole('combobox').selectOption(reference);
+      await marketCheck.getByRole('button', { name: 'Сверить', exact: true }).click();
+    };
+    await marketCheck.locator('summary').click();
+    await compareOrder('SB-1042');
+    check('matching_market_order', await marketResult.getAttribute('data-order-result') === 'match');
+    await compareOrder('SB-2031');
+    check('market_seller_transliteration_requires_review', await marketResult.getAttribute('data-order-result') === 'close');
+    await phone.locator('.topbar').getByRole('button', { name: 'ҚАЗ', exact: true }).click();
+    check('close_market_match_switches_language_in_place', (await marketResult.innerText()).includes('басқа әліпбимен'));
+    await phone.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
+    await compareOrder('unknown');
+    check('unknown_order_is_unavailable', await marketResult.getAttribute('data-order-result') === 'unavailable');
+    await marketCheck.getByRole('button', { name: 'Вернуться к реквизитам' }).click();
+    await phone.locator('.contact').nth(1).click(); await phone.locator('.phone-form .transfer-cta').click();
+    await marketCheck.locator('summary').click();
+    await compareOrder('SB-1042');
+    check('changed_market_payee_warns_before_submission', await marketResult.getAttribute('data-order-result') === 'mismatch' && report.mutations.length === familyWrites);
+    const mismatchShot = path.join(output, 'market-payee-mismatch-ru.png');
+    await marketCheck.screenshot({ path: mismatchShot }); report.screenshots.push(mismatchShot);
+    await marketCheck.getByRole('button', { name: 'Вернуться к реквизитам' }).click();
+    await phone.locator('.contact').first().click(); await phone.locator('.phone-form .transfer-cta').click();
+    await phone.evaluate(() => {
+      window.qaFamilyPickerUses = 0;
+      Object.defineProperty(navigator, 'contacts', { configurable: true, value: {
+        select: async () => { window.qaFamilyPickerUses++; return [{ tel: ['+7 701 234 56 78'] }]; },
+      } });
+    });
+    await phone.locator('.family-check-start').click();
+    check('family_check_waits_for_explicit_contact_selection',
+      await phone.evaluate(() => window.qaFamilyPickerUses === 0) && await phone.locator('.transfer-confirm').count() === 0);
+    await phone.getByRole('button', { name: 'Выбрать контакт в телефоне' }).click();
+    check('family_callback_uses_only_selected_address_book_number',
+      await phone.locator('.family-dial').getAttribute('href') === 'tel:+77012345678');
+    await phone.locator('.topbar').getByRole('button', { name: 'ҚАЗ', exact: true }).click();
+    check('family_explanation_switches_to_kazakh', (await phone.locator('#callback-heading').innerText()).includes('қоңырау'));
+    const familyShot = path.join(output, 'family-callback-kk.png');
+    await phone.locator('.family-callback').screenshot({ path: familyShot }); report.screenshots.push(familyShot);
+    await phone.locator('.family-return').click();
+    check('returning_from_callback_does_not_send', await phone.locator('.transfer-confirm').isVisible() && report.mutations.length === familyWrites);
+    await phone.locator('.family-check-start').click();
+    await phone.locator('.family-discard').click();
+    await phone.getByRole('heading', { name: 'Аударым жіберілген жоқ' }).last().waitFor();
+    check('discarding_family_request_keeps_payment_unsent', report.mutations.length === familyWrites);
+    await phone.locator('.family-callback .primary').click();
+    check('discarded_family_request_clears_payment_and_callback_number',
+      await phone.locator('#recipient').inputValue() === '' && await phone.locator('#transfer-amount').inputValue() === ''
+      && await phone.evaluate(() => !JSON.stringify([localStorage, sessionStorage]).includes('77012345678')));
+    await phone.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
+    await phone.locator('.contact').first().click(); await phone.locator('#transfer-amount').fill('25000');
+    await phone.locator('.phone-form .transfer-cta').click();
     const confirm = phone.locator('.phone-confirm .transfer-confirm'); await confirm.scrollIntoViewIfNeeded();
     const confirmBox = await confirm.boundingBox();
     check('mobile_route_confirm_button_on_screen_390', confirmBox.y >= 0 && confirmBox.y + confirmBox.height <= 844 && confirmBox.x + confirmBox.width <= 391, confirmBox);

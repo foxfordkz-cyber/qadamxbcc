@@ -2,6 +2,7 @@ import { z } from "zod";
 import { incomingSchema, paymentSchema, returnRoute } from "./payment-returns";
 import { fundsTraceSchema, traceRoute } from "./funds-trace";
 import { anchorsRoute, traceAnchorsSchema } from "./trace-anchors";
+import { lookbackRoute, priorReceipts } from "./recipient-lookback";
 import { validateSocIntegrationResponse } from "./soc-integrations";
 import { recipientFlagReceiptSchema, recipientFlagSchema } from "./recipient-flag";
 
@@ -161,6 +162,13 @@ const feedResponseSchema = z.object({
 const graphResponseSchema = z.object({ center: z.string(), depth: z.number(), nodes: z.array(z.object({ id: z.string(), type: z.string(), position: z.object({ x: z.number(), y: z.number() }), data: z.object({ label: z.string(), role: z.enum(["center", "hub", "mule", "normal"]), depth: z.number(), device_id: z.string(), flagged: z.boolean(), suspected_mule: z.boolean(), in_degree: z.number(), out_degree: z.number(), in_weight: z.number(), out_weight: z.number(), transit_ratio: z.number(), shared_device_accounts: z.number() }).passthrough() })), edges: z.array(z.object({ id: z.string(), source: z.string(), target: z.string(), type: z.string(), animated: z.boolean(), label: z.string().nullable(), data: z.object({ edge_type: z.enum(["transfer", "shared_device"]), weight: z.number(), tx_count: z.number(), highlight: z.boolean() }) })) });
 export function validateApiResponse(path: string, value: unknown, method = "GET") {
   const route = path.split("?")[0];
+  if (lookbackRoute.test(route)) {
+    const parsed = priorReceipts.safeParse(value);
+    const query = new URLSearchParams(path.split("?")[1]);
+    if (!parsed.success || parsed.data.account_id.toLowerCase() !== route.split("/")[2].toLowerCase()
+      || parsed.data.flag_version !== Number(query.get("version"))) throw new ApiError("invalidResponse", 502);
+    return parsed.data;
+  }
   if (anchorsRoute.test(route)) {
     const anchors = traceAnchorsSchema.safeParse(value);
     if (!anchors.success || anchors.data.account_id.toLowerCase() !== route.split("/")[2].toLowerCase()) throw new ApiError("invalidResponse", 502);

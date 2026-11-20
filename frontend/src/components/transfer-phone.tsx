@@ -10,7 +10,9 @@ import { Badge } from "./risk";
 import { IncomingReturns, returnsTitle } from "./incoming-returns";
 import { RotateCcw } from "lucide-react";
 import { CircleMembers } from "./circle-members";
+import { FamilyCallback } from "./family-callback";
 import { MessageCheck } from "./message-check";
+import { MarketOrderCheck } from "./market-order-check";
 import { TrustedCircle } from "./trusted-circle";
 import type { Biometrics } from "./use-biometrics";
 import "./mobile-client.css";
@@ -65,7 +67,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const contextDetails = useRef<HTMLDetailsElement>(null);
   const confirmHeading = useRef<HTMLHeadingElement>(null);
-  const [step, setStep] = useState<"details" | "confirm">("details");
+  const [step, setStep] = useState<"details" | "confirm" | "family" | "discarded">("details");
   const [screen, setScreen] = useState<"home" | "transfer" | "circle" | "scam" | "returns">(bare ? "home" : "transfer");
   const [offline, setOffline] = useState(false);
   const [largeText, setLargeText] = useState(false);
@@ -137,24 +139,34 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const activeContext = contextKeys.filter(key => form.context[key]).length;
   const numericAmount = Number(form.amount);
   const title = screen === "returns" ? returnsTitle(lang) : screen === "home" ? m("tabHome") : screen === "circle" ? m("circle") : screen === "scam" ? m("scam")
-    : receipt ? m("receiptTitle") : step === "confirm" ? m("stepConfirm") : t("transfer");
+    : receipt ? m("receiptTitle") : step === "family" ? m("familyCallbackTitle")
+    : step === "discarded" ? m("familyDiscarded") : step === "confirm" ? m("stepConfirm") : t("transfer");
   const showUnknown = blocked && !receipt;
+  const reviewingFamily = step === "family" && !showUnknown && !busy && !completed && !submissionPaused;
+  function discardFamilyDraft() {
+    if (!reviewingFamily || receipt) return;
+    onNewTransfer();
+    setForm(previous => ({ ...previous, recipient: "", amount: "", context: { ...previous.context, is_new_recipient: undefined } }));
+    setStep("discarded");
+  }
 
   return <div className={`phone-stage${bare ? " is-bare" : ""}`}>
     <section className="phone-frame" aria-label={t("mobile")}>
       {!bare && <div className="phone-status" aria-hidden="true"><span>9:41</span><i /><div><Signal size={14} /><Wifi size={14} /><BatteryFull size={19} /></div></div>}
       <header className="phone-appbar">
-        {screen === "transfer" && step === "confirm" && !receipt
+        {screen === "transfer" && step === "family" && !receipt
+          ? <button type="button" className="appbar-back" disabled={busy} onClick={() => setStep("confirm")} aria-label={m("familyReturn")}><ArrowLeft size={20} /></button>
+          : screen === "transfer" && step === "confirm" && !receipt
           ? <button type="button" className="appbar-back" disabled={busy} onClick={() => setStep("details")} aria-label={m("editCta")}><ArrowLeft size={20} /></button>
           : screen !== "home" ? <button className="appbar-back" type="button" aria-label={m("tabHome")} disabled={busy} onClick={() => setScreen("home")}><ArrowLeft size={20} /></button> : <span />}
-        <div className="appbar-title"><h2>{title}</h2>{screen === "transfer" && !receipt && <small>{step === "confirm" ? 2 : 1} / 2 · {m("stepOf")}</small>}</div>
+        <div className="appbar-title"><h2>{title}</h2>{screen === "transfer" && !receipt && (step === "details" || step === "confirm") && <small>{step === "confirm" ? 2 : 1} / 2 · {m("stepOf")}</small>}</div>
         <div className="phone-toolbar-actions"><button type="button" className="phone-text-size" aria-label={m("largeText")} title={m("largeText")} aria-pressed={largeText} onClick={toggleText}>Аа</button><span className="demo-tag">{config.accountMode === "test" ? t("testAccounts") : config.mode === "demo" ? m("demoBadge") : t("pilotMode")}</span></div>
       </header>
       <div className="phone-body">
         {offline && <p className="phone-alert warning" role="status">{m("offline")}</p>}
         {screen === "home" ? <section className="mobile-tool home-tools">
           <div className="source-card"><small>{m("available")} · {m("demoValue")}</small><strong>{money(DEMO_BALANCE, lang)}</strong><span>•••• 4821</span></div>
-          <button type="button" className="primary" onClick={() => { if (receipt && !blocked) onNewTransfer(); setScreen("transfer"); }}><ArrowLeftRight size={18}/>{m("homeTransfer")}</button>
+          <button type="button" className="primary" onClick={() => { if (receipt && !blocked) onNewTransfer(); if (step === "discarded") setStep("details"); setScreen("transfer"); }}><ArrowLeftRight size={18}/>{m("homeTransfer")}</button>
           <button type="button" className="secondary" onClick={() => setScreen("circle")}><Users size={18}/>{m("circle")}</button>
           {config.mode === "live" && config.accountMode === "test" && config.demoActionsEnabled && <button type="button" className="secondary" onClick={() => setScreen("returns")}><RotateCcw size={18}/>{returnsTitle(lang)}</button>}
           <button type="button" className="secondary" onClick={() => setScreen("scam")}><ScanText size={18}/>{m("scam")}</button>
@@ -178,7 +190,14 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           <p className="receipt-disclaimer">{m("receiptHint")}</p>
           {config.mode === "live" && receipt.status !== "cooling_off" && <TrustedCircle key={receipt.transaction_id} transactionId={receipt.transaction_id} active={false} historyOnly />}
         </section>
-        : step === "confirm" ? <section className="phone-confirm" aria-labelledby="confirm-title" aria-busy={busy}>
+        : step === "discarded" && !showUnknown ? <section className="phone-section family-callback">
+          <h3 role="status">{m("familyDiscarded")}</h3><p>{m("familyReport")}</p>
+          <a className="secondary" href="tel:505"><PhoneCall size={17} aria-hidden="true" />{m("postCallBank")} · 505</a>
+          <button type="button" className="primary" onClick={() => setStep("details")}>{m("receiptNext")}</button>
+        </section>
+        : reviewingFamily ? <FamilyCallback amount={money(form.amount, lang)} recipient={maskRecipient(form.recipient, recipientType)}
+          onDiscard={discardFamilyDraft} onReturn={() => setStep("confirm")} />
+        : step === "confirm" || step === "family" ? <section className="phone-confirm" aria-labelledby="confirm-title" aria-busy={busy}>
           <h3 id="confirm-title" ref={confirmHeading} tabIndex={-1} className="sr-only">{m("stepConfirm")}</h3>
           <div className="confirm-amount"><span>{t("transferAmount")}</span><strong className="tabular-nums">{money(form.amount, lang)}</strong></div>
           <dl className="confirm-list">
@@ -189,9 +208,14 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             <div className="confirm-total"><dt>{m("totalLabel")}</dt><dd><b className="tabular-nums">{money(form.amount, lang)}</b></dd></div>
           </dl>
           <p className="confirm-note"><ShieldCheck size={16} aria-hidden="true" />{m("confirmNote")}</p>
+          {config.demoActionsEnabled && (config.mode === "demo" || config.accountMode === "test") &&
+            <MarketOrderCheck key={form.recipient + recipientType} phone={recipientType === "phone" ? form.recipient : ""} disabled={busy || submissionPaused || blocked} onEdit={() => setStep("details")} />}
           {showUnknown && <div className="phone-alert warning" role="status"><AlertTriangle size={18} aria-hidden="true" /><div><strong>{m("unknownTitle")}</strong><p>{m("unknownText")}</p></div></div>}
           {error && !showUnknown && <p className="error" role="alert">{t(error)}</p>}
           <div className="confirm-actions">
+            <button type="button" className="secondary family-check-start" disabled={busy || blocked || completed || submissionPaused} onClick={() => setStep("family")}>
+              <PhoneCall size={17} aria-hidden="true" />{m("familyStart")}
+            </button>
             <button type="button" className="primary transfer-confirm" disabled={busy || submissionPaused || blocked || completed || offline} onPointerDown={pressStart} onPointerUp={pressEnd} onPointerCancel={pressEnd} onPointerLeave={pressEnd} onContextMenu={event => event.preventDefault()}
               onClick={() => { const duress = hold.current.fired; hold.current.fired = false; onSubmit(duress); }}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
             <button type="button" className="secondary transfer-edit" disabled={busy} onClick={() => setStep("details")}>{m("editCta")}</button>

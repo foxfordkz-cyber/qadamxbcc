@@ -11,6 +11,7 @@ import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { connectedWalletAvailable } from "./wallet-link.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -48,6 +49,9 @@ try {
   // developer's dotenv files nor inherited live presets/credentials belong here.
   const env = { ...process.env };
   for (const name of Object.keys(env)) if (name.startsWith("BCC_")) delete env[name];
+  const walletAvailable = await connectedWalletAvailable();
+  env.NEXT_PUBLIC_BCC_PAGES_WALLET = walletAvailable ? "1" : "0";
+  if (!walletAvailable) console.log("The connected wallet could not be verified. This static build will omit its link.");
   Object.assign(env, { BCC_PAGES: "1", BCC_API_MODE: "demo", BCC_DEMO_ACTIONS_ENABLED: "true", NEXT_PUBLIC_BCC_STATIC: "1", NEXT_PUBLIC_BASE_PATH: base, BCC_ENVIRONMENT: "local", NEXT_TELEMETRY_DISABLED: "1" });
   const build = spawnSync(process.execPath, [path.join(work, "node_modules/next/dist/bin/next"), "build", "--webpack"], { cwd: work, env, stdio: "inherit" });
   if (build.status !== 0) throw new Error("next build failed");

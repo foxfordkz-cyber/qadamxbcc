@@ -16,6 +16,7 @@ from app.schemas.soc import (
 )
 from app.services import recipient_flags, soc, submission_limits
 from app.services.funds_trace import funds_trace
+from app.services.recipient_lookback import PriorReceipts, prior_receipts
 from app.services.trace_anchors import TraceAnchors, recent_anchors
 from app.services.transfers import NotFoundError
 
@@ -108,6 +109,22 @@ async def flag_recipient(
     actor = recipient_flags.service_actor(key.get_secret_value() if key else None)
     try:
         return await recipient_flags.set_flag(session, engine.graph, account_id, body, actor)
+    except recipient_flags.FlagError as exc:
+        raise HTTPException(exc.status, exc.code) from exc
+
+
+@router.get("/recipients/{account_id}/prior-receipts", response_model=PriorReceipts)
+async def prior_recipient_receipts(
+    account_id: uuid.UUID,
+    session: SessionDep,
+    response: Response,
+    version: Annotated[int, Query(ge=1)],
+    days: Annotated[int, Query(ge=1, le=30)] = 7,
+    cursor: uuid.UUID | None = None,
+) -> PriorReceipts:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return await prior_receipts(session, account_id, version, days, cursor)
     except recipient_flags.FlagError as exc:
         raise HTTPException(exc.status, exc.code) from exc
 

@@ -14,8 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import utcnow
 from app.integrations.cases.models import CaseContent, CaseEvent, FraudCase
+from app.integrations.cases.policy_review import compare_policies
 from app.integrations.cases.schemas import (
     LABELS,
+    OUTCOME_REASONS,
     QUESTIONS,
     Action,
     AnswerInformation,
@@ -169,6 +171,8 @@ async def mutate(
     if row.version >= 500:
         raise IntegrationError(409, "case_action_limit")
     if body.action == "transition":
+        if body.reason in OUTCOME_REASONS and body.state != "CLOSED":
+            raise IntegrationError(409, "case_transition_not_permitted")
         if body.state not in TRANSITIONS[row.state]:
             raise IntegrationError(409, "case_transition_not_permitted")
         if row.state == "CLOSED" and body.reason != "reopened":
@@ -379,6 +383,7 @@ async def analytics(session: AsyncSession) -> CaseAnalytics:
         manually_reviewed_cases=reviewed,
         manual_review_share=reviewed / total if total else 0.0,
         oldest_current_status_seconds=oldest,
+        policy_comparison=await compare_policies(session, now),
     )
 
 

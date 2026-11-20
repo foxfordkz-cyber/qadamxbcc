@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ApiError, feedQuerySchema, validateApiResponse } from "../src/lib/contracts";
-import { DemoError, evaluateDemo, feedDemo, graphDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "../src/lib/demo";
+import { DemoError, evaluateDemo, feedDemo, graphDemo, priorReceiptsDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "../src/lib/demo";
 import { ids } from "../src/lib/demo-ids";
 import { flagMarker, readFlagMarker, recipientFlagInputSchema } from "../src/lib/recipient-flag";
 import { socFeedPath } from "../src/lib/soc-feed";
@@ -20,11 +20,18 @@ test("reviewed flag blocks a new transfer from another sender, survives replay, 
   assert.ok(blocked.reasons.some(reason => reason.code === "RECIPIENT_FLAGGED"));
   assert.equal(blocked.reasons.reduce((sum, reason) => sum + reason.score_delta, 0), blocked.risk_score);
   assert.equal(blocked.reasons.find(reason => reason.code === "RECIPIENT_FLAGGED")?.evidence?.confirmed_flag_minimum, 75);
+  const historyPath = `soc/recipients/${ids.friend}/prior-receipts?version=${receipt.version}&days=7`;
+  const history = priorReceiptsDemo(ids.friend, { version: receipt.version, days: 7 });
+  assert.ok(history.items.some(item => item.transaction_id === before.transaction_id));
+  assert.ok(history.items.every(item => item.transaction_id !== blocked.transaction_id));
+  assert.deepEqual(validateApiResponse(historyPath, { ...history, phone: "private" }), history);
+  assert.throws(() => validateApiResponse(historyPath, { ...history, flag_version: receipt.version + 1 }), ApiError);
   assert.deepEqual(setRecipientFlagDemo(ids.friend, request), receipt);
   assert.equal(recipientFlagDemo(ids.friend).version, receipt.version);
   assert.throws(() => setRecipientFlagDemo(ids.friend, { ...request, note: "Changed payload" }), (e: unknown) => e instanceof DemoError && e.message === "flag_idempotency_conflict");
   assert.throws(() => setRecipientFlagDemo(ids.friend, input(false, 0)), (e: unknown) => e instanceof DemoError && e.message === "flag_version_conflict");
   setRecipientFlagDemo(ids.friend, input(false, receipt.version));
+  assert.throws(() => priorReceiptsDemo(ids.friend, { version: receipt.version, days: 7 }), DemoError);
   assert.equal(graphDemo(ids.friend).nodes[0].data.flagged, false);
   const allowed = evaluateDemo(transfer(ids.stranger));
   assert.equal(allowed.status, "approved"); assert.ok(!allowed.reasons.some(reason => reason.code === "RECIPIENT_FLAGGED"));
