@@ -235,6 +235,43 @@ def install_wallet(app: FastAPI) -> None:
             "has_more": len(rows) > 20,
         }
 
+    @app.get(base + "/graph-operations")
+    async def graph_operations(
+        principal: IdentityDep,
+        session: SessionDep,
+        node: UUID,
+        recipient: UUID | None = None,
+        offset: Annotated[int, Query(ge=0)] = 0,
+    ) -> dict[str, Any]:
+        if principal.role != "admin":
+            raise HTTPException(403, "soc_required")
+        match = (
+            or_(T.sender_id == node, T.recipient_id == node)
+            if recipient is None
+            else and_(T.sender_id == node, T.recipient_id == recipient)
+        )
+        rows = (
+            await session.scalars(
+                select(T)
+                .where(match)
+                .order_by(T.created_at.desc(), T.id.desc())
+                .offset(offset)
+                .limit(21)
+            )
+        ).all()
+        return {
+            "items": [
+                {
+                    "transaction_id": row.id,
+                    "amount": money(row.amount),
+                    "created_at": row.created_at,
+                    "status": row.status.value,
+                }
+                for row in rows[:20]
+            ],
+            "has_more": len(rows) > 20,
+        }
+
     @app.get(base + "/soc")
     async def soc(principal: IdentityDep, session: SessionDep, days: int = 7) -> dict[str, Any]:
         if principal.role != "admin":

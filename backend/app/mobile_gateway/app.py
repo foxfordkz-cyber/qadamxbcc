@@ -11,6 +11,7 @@ import secrets
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated, Any, Literal, cast
 
 import httpx
@@ -19,6 +20,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from redis.exceptions import RedisError
 from sqlalchemy import select
@@ -69,6 +71,17 @@ ADMIN_PATHS = [
 ]
 
 
+WEB_COOKIE = "__Host-qadam-session"
+
+
+def check_web_origin(request: Request) -> None:
+    trusted_origin = f"https://{request.url.netloc}"
+    if request.url.hostname in ("127.0.0.1", "localhost") and request.url.scheme == "http":
+        trusted_origin = f"http://{request.url.netloc}"
+    if request.headers.get("x-qadam-web") != "1" or request.headers.get("origin") != trusted_origin:
+        raise HTTPException(403, "web_origin_required")
+
+
 class Login(BaseModel):
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
     code: SecretStr = Field(min_length=24, max_length=128)
@@ -105,17 +118,26 @@ async def identity(
         HTTPAuthorizationCredentials | None, Depends(HTTPBearer(auto_error=False))
     ],
 ) -> Identity:
-    if credentials is None or not re.fullmatch(r"[A-Za-z0-9_-]{40,100}", credentials.credentials):
+    token = credentials.credentials if credentials else request.cookies.get(WEB_COOKIE, "")
+    if not credentials and token:
+        if request.headers.get("x-qadam-web") != "1":
+            raise HTTPException(401, "mobile_login_required")
+        if request.method not in ("GET", "HEAD"):
+            check_web_origin(request)
+    if not re.fullmatch(r"[A-Za-z0-9_-]{40,100}", token):
         raise HTTPException(401, "mobile_login_required")
     resources: Resources = request.app.state.resources
     try:
-        raw = await resources.redis.get(session_key(credentials.credentials))
+        raw = await resources.redis.get(session_key(token))
     except RedisError as exc:
         raise HTTPException(503, "mobile_unavailable") from exc
     if raw is None:
         raise HTTPException(401, "mobile_session_expired")
     principal = Identity.model_validate_json(raw)
-    await quota(resources, f"session:{digest(credentials.credentials)}", 120)
+    if not credentials and request.headers.get("x-qadam-subject") != str(principal.subject):
+        raise HTTPException(401, "web_account_changed")
+    request.state.session_token = token
+    await quota(resources, f"session:{digest(token)}", 120)
     return principal
 
 
@@ -198,7 +220,9 @@ def create_mobile_app(
     install_protection(app, core.state.integration_settings)
 
     @app.post("/mobile/v1/auth/login")
-    async def password_login(body: PasswordLogin, request: Request) -> dict[str, Any]:
+    async def password_login(
+        body: PasswordLogin, request: Request, response: Response
+    ) -> dict[str, Any]:
         if cfg.auth_mode != "password":
             raise HTTPException(404, "unavailable")
         res: Resources = request.app.state.resources
@@ -206,6 +230,9 @@ def create_mobile_app(
         await quota(res, f"password:{digest(peer)}", 24)
         import asyncio
 
+        web = request.headers.get("x-qadam-web") == "1"
+        if web:
+            check_web_origin(request)
         admin = body.login == "admin_demo"
         encoded = cfg.admin_hash if admin else cfg.client_hash
         matches = await asyncio.to_thread(
@@ -213,13 +240,25 @@ def create_mobile_app(
         )
         if not matches or body.login not in ("client_demo", "admin_demo"):
             raise HTTPException(401, "invalid_credentials")
-        return await issue_session(
+        result = await issue_session(
             res,
             Identity(
                 role="admin" if admin else "client",
                 subject=cfg.officer_id if admin else cfg.customer_id,
             ),
         )
+
+        if web:
+            response.set_cookie(
+                WEB_COOKIE,
+                result.pop("token"),
+                max_age=cfg.session_seconds,
+                httponly=True,
+                secure=True,
+                samesite="strict",
+                path="/",
+            )
+        return result
 
     @app.post("/mobile/v1/sessions")
     async def login(body: Login, request: Request) -> dict[str, Any]:
@@ -265,12 +304,17 @@ def create_mobile_app(
 
     @app.delete("/mobile/v1/session", status_code=204)
     async def logout(request: Request, principal: IdentityDep) -> Response:
-        token = request.headers["authorization"].split(" ", 1)[1]
+        token = request.state.session_token
         try:
             await request.app.state.resources.redis.delete(session_key(token))
         except RedisError as exc:
             raise HTTPException(503, "mobile_unavailable") from exc
-        return Response(status_code=204)
+        response = Response(status_code=204)
+        if WEB_COOKIE in request.cookies:
+            response.delete_cookie(
+                WEB_COOKIE, path="/", secure=True, httponly=True, samesite="strict"
+            )
+        return response
 
     async def dispatch(
         request: Request, principal: Identity, path: str, body: dict[str, Any] | None = None
@@ -448,6 +492,9 @@ def create_mobile_app(
         await session.rollback()
         return await dispatch(request, principal, path, body)
 
+    web_assets = Path(__file__).resolve().parents[2] / ".qadam-web"
+    if (web_assets / "index.html").is_file():
+        app.mount("/wallet", StaticFiles(directory=web_assets, html=True), name="connected_wallet")
     return app
 
 

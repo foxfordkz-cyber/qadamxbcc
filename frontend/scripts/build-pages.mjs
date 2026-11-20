@@ -11,6 +11,7 @@ import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { connectedWalletLink } from "./wallet-link.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -24,7 +25,7 @@ const work = await mkdtemp(path.join(os.tmpdir(), "saqbol-pages-"));
 try {
   const skip = new Set(["node_modules", ".next", "pages-out", "tests", "scripts"]);
   await cp(root, work, { recursive: true, filter: source => !skip.has(path.relative(root, source).split(path.sep)[0]) || source === root });
-  await symlink(path.join(root, "node_modules"), path.join(work, "node_modules"), "dir");
+  await symlink(path.join(root, "node_modules"), path.join(work, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   for (const server of ["src/app/api", "src/app/health", "src/app/mobile/link", "src/proxy.ts"]) await rm(path.join(work, server), { recursive: true, force: true });
   for (const page of ["src/app/page.tsx", "src/app/mobile/page.tsx", "src/app/pitch/page.tsx"]) {
     const file = path.join(work, page);
@@ -39,7 +40,10 @@ try {
     .replace('scope: "/"', `scope: "${base}/"`).replaceAll('src: "/', `src: "${base}/`);
   manifestText = `export const dynamic = "force-static";\n${manifestText}`;
   await writeFile(manifest, manifestText);
-  const env = { ...process.env, BCC_PAGES: "1", NEXT_PUBLIC_BCC_STATIC: "1", NEXT_PUBLIC_BASE_PATH: base, BCC_ENVIRONMENT: "local", NEXT_TELEMETRY_DISABLED: "1" };
+  const origin = process.env.QADAM_PUBLIC_WALLET_ORIGIN || (await readFile(path.join(root, "../android-app/demo-origin.txt"), "utf8")).trim();
+  const wallet = await connectedWalletLink(origin);
+  if (!wallet) console.log("Connected wallet unavailable during build; omitting the portal link.");
+  const env = { ...process.env, NEXT_PUBLIC_CONNECTED_WALLET: wallet, BCC_PAGES: "1", NEXT_PUBLIC_BCC_STATIC: "1", NEXT_PUBLIC_BASE_PATH: base, BCC_ENVIRONMENT: "local", NEXT_TELEMETRY_DISABLED: "1" };
   for (const name of ["BCC_API_MODE", "BCC_API_KEY", "BCC_SOC_API_KEY", "BCC_DEMO_ACTIONS_ENABLED"]) delete env[name];
   const build = spawnSync(process.execPath, [path.join(work, "node_modules/next/dist/bin/next"), "build", "--webpack"], { cwd: work, env, stdio: "inherit" });
   if (build.status !== 0) throw new Error("next build failed");

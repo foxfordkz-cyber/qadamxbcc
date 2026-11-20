@@ -376,6 +376,35 @@ async def test_two_password_accounts_restore_and_revoke(
                 }
             assert (await client.delete("/mobile/v1/session", headers=headers)).status_code == 204
             assert (await client.get("/mobile/v1/session", headers=headers)).status_code == 401
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="https://web.test"
+        ) as web:
+            same = {"Origin": "https://web.test", "X-Qadam-Web": "1"}
+            creds = {"login": "client_demo", "password": client_pw}
+            route = "/mobile/v1/auth/login"
+            other = {**same, "Origin": "https://other.test"}
+            assert (await web.post(route, json=creds, headers=other)).status_code == 403
+            reply = await web.post(route, json=creds, headers=same)
+            assert reply.status_code == 200
+            assert "token" not in reply.json()
+            assert "HttpOnly" in reply.headers["set-cookie"]
+            assert "SameSite=strict" in reply.headers["set-cookie"]
+            headers = {**same, "X-Qadam-Subject": reply.json()["subject"]}
+            assert (await web.get("/mobile/v1/account", headers=headers)).status_code == 200
+            graph_url = f"/mobile/v1/wallet/graph-operations?node={OWNER}"
+            assert (await web.get(graph_url, headers=headers)).status_code == 403
+            assert (
+                await web.delete("/mobile/v1/session", headers={**headers, **other})
+            ).status_code == 403
+            staff = await web.post(
+                route, json={"login": "admin_demo", "password": staff_pw}, headers=same
+            )
+            assert staff.status_code == 200
+            assert (await web.get("/mobile/v1/session", headers=headers)).status_code == 401
+            headers["X-Qadam-Subject"] = staff.json()["subject"]
+            assert (await web.get(graph_url, headers=headers)).json()["items"] == []
+            assert (await web.delete("/mobile/v1/session", headers=headers)).status_code == 204
+            assert (await web.get("/mobile/v1/session", headers=headers)).status_code == 401
     await fake.aclose()
 
 
@@ -500,6 +529,7 @@ async def test_family_one_recipient_actual_callback(
 
     client, _ = mobile_world
     auth = await login(client)
+    before_balance = (await client.get("/mobile/v1/account", headers=auth)).json()["balance"]
     txid = await call_tx(client, auth)
     path = f"/mobile/v1/protection/{txid}"
     await client.post("/mobile/v1/protection/family", headers=auth, json={"action": "enable"})
@@ -540,6 +570,49 @@ async def test_family_one_recipient_actual_callback(
     check = (await client.get(path + "/check", headers=auth)).json()
     assert check["contact_state"] == "CONTACT_ACKNOWLEDGED"
     assert check["answer"] is None
+
+    async with session_factory() as db:
+        service = TrustedContactService(db, cfg)
+        for action in ("suspect", "suspect", "ack"):
+            await service.callback(
+                notice.id, int(contact.telegram_chat_id), notice.message_id, action
+            )
+    notification = (await client.get(path + "/check", headers=auth)).json()
+    assert notification["contact_state"] == "SUSPICION_REPORTED"
+    core_path = "/mobile/v1/api/transfers/" + txid
+    assert (await client.get(core_path, headers=auth)).json()["status"] == "cooling_off"
+    assert (await client.get("/mobile/v1/account", headers=auth)).json()[
+        "balance"
+    ] == before_balance
+    report_path = "/mobile/v1/api/integrations/guardian/reports"
+    report = await client.post(
+        report_path,
+        headers={**auth, "Idempotency-Key": str(uuid.uuid4())},
+        json={
+            "category": "safe_account",
+            "description": "Учебный звонящий требовал срочный перевод.",
+            "transaction_id": txid,
+            "confirmed_demo_submission": True,
+        },
+    )
+    assert report.is_success, report.text
+    staff = await login(client, ADMIN_CODE)
+    case_path = "/mobile/v1/api/integrations/guardian/soc/cases"
+    case = await client.post(
+        case_path,
+        headers={**staff, "Idempotency-Key": str(uuid.uuid4())},
+        json={"report_id": report.json()["id"]},
+    )
+    assert case.is_success, case.text
+    cancelled = await client.post(core_path + "/cancel", headers=auth, json={})
+    assert cancelled.json()["status"] == "cancelled"
+    assert (await client.get("/mobile/v1/account", headers=auth)).json()[
+        "balance"
+    ] == before_balance
+    case_url = case_path + "/" + case.json()["id"]
+    assert (await client.get(case_url, headers=staff)).json()["state"] == "NEW"
+    evidence = (await client.get(case_url + "/evidence", headers=staff)).json()
+    assert evidence["transaction_id"] == txid
 
 
 async def test_wallet_amounts_history_and_role_boundaries(

@@ -67,7 +67,10 @@ export class Gateway {
     )
       throw new Error("invalid_path");
     const headers = { "Content-Type": "application/json" };
-    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    if (this.webSession) {
+      headers["X-Qadam-Web"] = "1";
+      if (this.subject) headers["X-Qadam-Subject"] = this.subject;
+    } else if (this.token) headers.Authorization = `Bearer ${this.token}`;
     if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
     let response;
     try {
@@ -76,7 +79,7 @@ export class Gateway {
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         cache: "no-store",
-        credentials: "omit",
+        credentials: this.webSession ? "same-origin" : "omit",
         redirect: "error",
         signal: AbortSignal.timeout(20000),
       });

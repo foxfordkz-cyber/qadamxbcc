@@ -30,8 +30,8 @@ const initials = (name) =>
     .map((w) => Array.from(w)[0])
     .join("")
     .toUpperCase();
-const ribbon =
-  '<svg class="card-ribbon" viewBox="0 0 180 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"><path fill="#32694d" d="M116-38 214 53 57 214-28 134z"/><path fill="#81a77b" d="m149-35 42 39-147 150-42-39z"/><path fill="#b7cda0" d="m171-34 17 17L44 130l-18-16z"/><path fill="#598b67" d="m215 42 21 20L74 228l-21-20z"/></svg>';
+const ribbon = '<svg class="card-ribbon" viewBox="0 0 200 210" aria-hidden="true" preserveAspectRatio="xMaxYMid slice"><g fill="none" stroke="currentColor" stroke-width="1.7">'+
+  Array.from({length:16},(_,i)=>'<ellipse cx="165" cy="146" rx="'+(47+i*7)+'" ry="'+(97+i*6)+'" transform="rotate(-32 165 146)"/>').join("")+'</g></svg>';
 const chip =
   '<svg class="chip" viewBox="0 0 40 30" aria-hidden="true"><rect x="1" y="1" width="38" height="28" rx="6" fill="#e6d6aa"/><path d="M1 10h11l4 4v3l-5 5H1m38-12H28l-4 4v3l5 5h10M15 1v6l4 4h3l5-5V1M16 29v-5l3-4h4l4 5v4" fill="none" stroke="#927f56" stroke-width="1.1"/></svg>';
 export function walletUI({ T, E, amount, when, button, status }) {
@@ -129,11 +129,11 @@ export function walletUI({ T, E, amount, when, button, status }) {
       .join("");
     return (
       greet +
-      card(a, hidden) +
+      '<div class="wallet-overview"><div class="wallet-account">'+card(a, hidden) +
       '<div class="wallet-quick">' +
       links +
       "</div>" +
-      (pending
+      "</div>" + (pending
         ? button(
             "recover",
             T("Проверить незавершённый запрос", "Аяқталмаған сұрауды тексеру"),
@@ -143,7 +143,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
       (pause || call
         ? '<div class="wallet-checks">' + pause + call + "</div>"
         : "") +
-      '<section class="wallet-section">' +
+      '</div><section class="wallet-section">' +
       heading(
         T("Последние операции", "Соңғы операциялар"),
         little("history", T("Все", "Барлығы")),

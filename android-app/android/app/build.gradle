@@ -13,8 +13,8 @@ android {
         applicationId "kz.qadamx.bccshield"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7
-        versionName "2.4"
+        versionCode 8
+        versionName "2.5"
         resValue "string", "qadam_api_origin", apiOrigin
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
