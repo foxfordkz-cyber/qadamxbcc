@@ -31,7 +31,9 @@ services:
       BCC_REDIS_URL: redis://redis:6379/0
       BCC_MOBILE_ACCESS_DIR: /mobile-access
       BCC_MOBILE_AUTH_MODE: ${QADAM_MOBILE_AUTH_MODE:-password}
-    volumes: ["./.local-checks/mobile-access:/mobile-access"]
+    volumes:
+      - "./.local-checks/mobile-access:/mobile-access"
+      - "./backend/.qadam-web:/app/.qadam-web:ro"
     ports: ["${QADAM_MOBILE_BIND:-127.0.0.1}:${QADAM_MOBILE_PORT:-18001}:18001"]
     depends_on:
       postgres: {condition: service_healthy}

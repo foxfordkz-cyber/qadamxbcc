@@ -30,6 +30,7 @@ from app.core.config import Settings
 from app.core.resources import Resources
 from app.integrations.capabilities import Principal, issue_token
 from app.integrations.config import IntegrationSettings
+from app.integrations.scam_check import EXPLANATIONS, GUIDANCE, LIMITATION, ScamCheckResult
 from app.main import create_app
 from app.mobile_gateway.config import MobileSettings
 from app.models import Account, Transaction
@@ -361,6 +362,21 @@ def create_mobile_app(
         if result.status_code >= 400:
             # Core validation may echo arbitrary inputs; do not forward raw error bodies.
             data = json.dumps({"detail": f"mobile_core_{result.status_code}"}).encode()
+        elif path == "integrations/guardian/scam-check":
+            # Translate the detected codes once, without resubmitting the customer's text.
+            review = ScamCheckResult.model_validate_json(data)
+            other = "kk" if review.language == "ru" else "ru"
+            index = int(other == "kk")
+            alternate = {
+                "language": other,
+                "guidance": GUIDANCE[index],
+                "limitation": LIMITATION[index],
+                "signals": [
+                    {"code": signal.code, "explanation": EXPLANATIONS[signal.code][index]}
+                    for signal in review.signals
+                ],
+            }
+            data = json.dumps(review.model_dump() | {"alternate": alternate}).encode()
         response_headers = (
             {"Retry-After": result.headers["Retry-After"]}
             if "Retry-After" in result.headers

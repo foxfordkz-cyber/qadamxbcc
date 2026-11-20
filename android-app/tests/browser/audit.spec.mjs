@@ -14,7 +14,13 @@ async function enter(page,baseURL,fixture={}) {
     else if(path==="wallet/operations")json={items};
     else if(path==="wallet/analytics"){status=fixture.analytics||200;json={outgoing:"25000"};}
     else if(path.startsWith("api/transfers/"))json={...items.find(r=>r.transaction_id===path.split("/").at(-1)),recipient:{display_name:"Алия"}};
-    else if(path.endsWith("/scam-check")){status=fixture.scan||200;json={guidance:"Проверено"};}
+    else if(path.endsWith("/scam-check")){
+      fixture.scanRequests = (fixture.scanRequests ?? 0) + 1;
+      status = fixture.scan || 200;
+      const ru = {language:"ru", guidance:"Проверено", signals:[{explanation:"Безопасный счёт"}], limitation:"Учебные правила"};
+      const kk = {language:"kk", guidance:"Тексерілді", signals:[{explanation:"Қауіпсіз шот"}], limitation:"Оқу ережелері"};
+      json = route.request().postDataJSON().language === "kk" ? {...kk, alternate:ru} : {...ru, alternate:kk};
+    }
     else if(path.endsWith("/reports")&&route.request().method()==="POST"){fixture.sent=route.request().postDataJSON();status=fixture.reportStatus||200;json={id:ids[0]};}
     else if(path.endsWith("/history")||path.endsWith("/information-requests"))json={items:[]};
     else if(path.endsWith("trusted-contacts"))json={contacts:[]};
@@ -55,7 +61,12 @@ test("Scam Check keeps edited text on failure, locale change and retry until cle
   await expect(page.getByRole("alert")).toBeVisible();await expect(field).toHaveValue(text);
   await page.locator("[data-action=language]:visible").first().click();await expect(field).toHaveValue(text);
   await expect(page.getByRole("alert")).toContainText("Қызмет уақытша");
-  fixture.scan=200;await page.locator("#scan-form [type=submit]").click();await expect(page.getByText("Проверено")).toBeVisible();
+  fixture.scan=200;await page.locator("#scan-form [type=submit]").click();
+  for (const text of ["Тексерілді","Қауіпсіз шот","Оқу ережелері"]) await expect(page.getByText(text,{exact:true})).toBeVisible();
+  await page.locator("[data-action=language]:visible").first().click();
+  for (const text of ["Проверено","Безопасный счёт","Учебные правила"]) await expect(page.getByText(text,{exact:true})).toBeVisible();
+  await expect(field).toHaveValue(text);
+  expect(fixture.scanRequests).toBe(2); // The failed submission and its explicit retry.
   await page.locator("[data-action=clear-scan]").click();await expect(field).toHaveValue("");
 });
 test("switching a report from operation A to B preserves A and submits B",async({page,baseURL})=>{

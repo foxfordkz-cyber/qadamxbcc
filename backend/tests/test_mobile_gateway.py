@@ -215,6 +215,18 @@ async def test_private_scam_check_and_contact_read(mobile_world: tuple[AsyncClie
     )
     assert response.status_code == 200
     assert response.json()["status"] == "signals_detected"
+    review = response.json()
+    assert "Переведите на безопасный счёт" not in response.text
+    assert review["alternate"]["language"] == "kk"
+    assert (
+        [row["code"] for row in review["signals"]]
+        == [row["code"] for row in review["alternate"]["signals"]]
+        == ["safe_account"]
+    )
+    assert "қауіпсіз шотқа" in review["alternate"]["signals"][0]["explanation"]
+    for key in ("guidance", "limitation"):
+        assert review["alternate"][key]
+        assert review["alternate"][key] != review[key]
     assert (await client.get("/mobile/v1/api/trusted-contacts", headers=headers)).status_code == 200
 
 

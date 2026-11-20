@@ -21,14 +21,19 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: android-app/package-lock.json
+      - name: Build the connected browser wallet
+        working-directory: android-app
+        run: npm ci && npm run web
       - run: docker compose -f docker-compose.android.yml up -d --build --wait --wait-timeout 240
       - name: Read synthetic access codes without logging them
         run: |
           sudo chown -R "$(id -u):$(id -g)" .local-checks/mobile-access
           chmod 700 .local-checks/mobile-access
           chmod 600 .local-checks/mobile-access/access.json
-      - working-directory: android-app
-        run: npm ci && npm run vendor
+      - name: Check wallet entry point on the mobile gateway
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:18001/wallet/ -o "$RUNNER_TEMP/wallet.html"
+          grep -q data-web-wallet "$RUNNER_TEMP/wallet.html"
       - name: Client to real ML to SOC acceptance
         working-directory: android-app
         env:
