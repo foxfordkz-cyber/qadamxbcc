@@ -13,7 +13,7 @@ All paths below start with `/mobile/v1`. Session identity controls access. No ro
 | GET /wallet/incoming/{id} | Receiving client. Minimal receipt for an approved transfer. |
 | GET /wallet/analytics?days=7 | Client. Daily incoming and outgoing amounts and counts. Supports 7, 30 and 90 dates in Kazakhstan, using creation time and current status. Empty dates have zero values. |
 | GET /wallet/soc?days=7 | SOC. Counts and sums by current decision, distinct blocked recipients, case states for cases opened in the period, and mean recorded engine latency. |
-| GET /wallet/cases | SOC. Optional state and offset filters. Actions use the existing versioned case API. |
+| GET /wallet/cases | SOC. Optional state, report ID and offset filters. Opening an existing report case retrieves the original case and history. Expired cases are omitted. Actions use the existing versioned case API. |
 | GET /api/integrations/guardian/soc/cases/{id}/history | SOC. Persisted case action history, including requests for information. |
 
 The financial evaluation, scoring, mandatory holds and idempotent request protocol remain in the core. A terminal incoming receipt does not grant access to the sender’s internal risk analysis. The contact limit and public Telegram username come from the server. The app uses a native intent with an HTTPS fallback. Opening Telegram alone does not change contact consent. The fake test adapter supports a private synthetic invitation code. A real Telegram invite can be shared only when delivery is configured for test mode.

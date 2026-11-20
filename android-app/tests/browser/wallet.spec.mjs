@@ -53,3 +53,69 @@ test("wallet card and chart remain usable at phone widths", async ({
     ).toBeLessThanOrEqual(width);
   }
 });
+
+test("sign-in can recover from a service outage without granting a role early", async ({
+  page,
+  baseURL,
+}) => {
+  let status = 503;
+  let attempts = 0;
+  await page.route("https://wallet.test/**", async (route) => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    if (!path.startsWith("/mobile/v1/")) {
+      const asset = await route.fetch({
+        url: new URL(path + url.search, baseURL).href,
+      });
+      return route.fulfill({ response: asset });
+    }
+    if (path.endsWith("/auth/login")) {
+      attempts += 1;
+      return route.fulfill({
+        status,
+        json:
+          status === 200
+            ? {
+                role: "client",
+                subject: "synthetic-wallet",
+                token: "synthetic-session",
+              }
+            : { detail: "unavailable" },
+      });
+    }
+    if (path.endsWith("/account"))
+      return route.fulfill({
+        json: {
+          display_name: "Демо",
+          card_last4: "0001",
+          balance: "5000000",
+          recipients: [],
+        },
+      });
+    if (path.endsWith("/operations"))
+      return route.fulfill({ json: { items: [] } });
+    if (path.endsWith("/analytics"))
+      return route.fulfill({ json: { outgoing: "0" } });
+    return route.fulfill({ status: 404, json: {} });
+  });
+  await page.addInitScript(() => localStorage.setItem("qadam.language", "ru"));
+  await page.goto("https://wallet.test/");
+  async function submit() {
+    await page.locator("[name=login]").fill("sandbox_client");
+    await page.locator("[name=password]").fill("synthetic fixture");
+    await page.locator("#personal-login [type=submit]").click();
+  }
+  await submit();
+  await expect(page.getByRole("alert")).toContainText("Сервис входа");
+  await expect(page.locator("[data-nav]")).toHaveCount(0);
+  status = 401;
+  await submit();
+  await expect(page.getByRole("alert")).toContainText(
+    "Неверный логин или пароль",
+  );
+  status = 200;
+  await submit();
+  await expect(page.locator(".q-card")).toBeVisible();
+  await expect(page.locator("[data-nav=cases]")).toHaveCount(0);
+  expect(attempts).toBe(3);
+});

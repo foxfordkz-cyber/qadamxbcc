@@ -203,11 +203,14 @@ def install_wallet(app: FastAPI) -> None:
         principal: IdentityDep,
         session: SessionDep,
         state: State | None = None,
+        report_id: UUID | None = None,
         offset: Annotated[int, Query(ge=0, le=10000)] = 0,
     ) -> dict[str, Any]:
         if principal.role != "admin":
             raise HTTPException(403, "soc_required")
-        stmt = select(FraudCase)
+        stmt = select(FraudCase).where(FraudCase.expires_at > utcnow())
+        if report_id is not None:
+            stmt = stmt.where(FraudCase.report_id == report_id)
         if state:
             stmt = stmt.where(FraudCase.state == state)
         rows = (

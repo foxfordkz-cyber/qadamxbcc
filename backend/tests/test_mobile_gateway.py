@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -12,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config import Settings
 from app.core.kz import make_kz_iban
 from app.core.resources import Resources
+from app.db.base import utcnow
+from app.integrations.cases.models import FraudCase
 from app.integrations.config import IntegrationSettings
 from app.mobile_gateway.app import create_mobile_app, session_key
 from app.mobile_gateway.config import MobileSettings
@@ -608,3 +611,35 @@ async def test_wallet_amounts_history_and_role_boundaries(
     assert stats["blocked_recipients"] == 1
     assert (await client.get(base + "analytics", headers=admin)).status_code == 403
     assert (await client.get(base + "cases?state=NEW", headers=admin)).json()["items"] == []
+
+
+async def test_case_lookup_is_role_scoped_and_respects_retention(
+    mobile_world: tuple[AsyncClient, Any],
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    client, _ = mobile_world
+    now = utcnow()
+    reports = [uuid.uuid4() for _ in range(3)]
+    async with session_factory() as session:
+        for index, report in enumerate(reports):
+            session.add(
+                FraudCase(
+                    report_id=report,
+                    source="owner_demo",
+                    category="other",
+                    state="NEW",
+                    version=1,
+                    created_at=now,
+                    status_since=now,
+                    expires_at=now + timedelta(days=1 if index < 2 else -1),
+                )
+            )
+        await session.commit()
+    base = "/mobile/v1/wallet/cases"
+    owner, staff = await login(client), await login(client, ADMIN_CODE)
+    assert (
+        await client.get(base, params={"report_id": str(reports[0])}, headers=owner)
+    ).status_code == 403
+    for index, report in enumerate(reports):
+        result = (await client.get(base, params={"report_id": str(report)}, headers=staff)).json()
+        assert [r["report_id"] for r in result["items"]] == ([str(report)] if index < 2 else [])

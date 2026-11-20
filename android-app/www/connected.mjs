@@ -4,6 +4,7 @@ import { packetView } from "./packet.mjs";
 import { readScreenshot } from "./screenshot.mjs";
 import * as identity from "./identity.mjs";
 const product = document.documentElement.hasAttribute("data-product");
+let initializingAccount = product;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
 const defaultLedger=()=>({q:"",status:"",direction:"",day:"",days:""});
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
@@ -769,8 +770,9 @@ function render() {
       root.querySelector("main").insertAdjacentHTML("beforeend",button("report",T("Сообщить о мошенничестве","Алаяқтық туралы хабарлау"),"secondary"));
     }
   }
-  root.querySelector("main").setAttribute("aria-busy", String(loading));
-  if (loading) {
+  const locked = loading || (initializingAccount && page === "login");
+  root.querySelector("main").setAttribute("aria-busy", String(locked));
+  if (locked) {
     for (const field of root.querySelectorAll("main input, main select, main textarea, main button")) {
       field.disabled = true;
     }
@@ -868,11 +870,24 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (b.dataset.openCase) {
-    let created;
+    const reportId=b.dataset.openCase;
+    const lookup=async()=> {
+      const list=await gateway.request("/wallet/cases?report_id="+encodeURIComponent(reportId));
+      return list.items.find(row=>row.report_id===reportId);
+    };
+    let target;
     await perform(async () => {
-      created=await api("integrations/guardian/soc/cases","POST",{report_id:b.dataset.openCase},crypto.randomUUID());
+      if(product)target=await lookup();
+      if(target)return;
+      try {
+        target=await api("integrations/guardian/soc/cases","POST",{report_id:reportId},crypto.randomUUID());
+      } catch(failure) {
+        if(!product || failure.status!==409)throw failure;
+        target=await lookup();
+        if(!target)throw failure;
+      }
     });
-    if(created)await open("case",created.id);
+    if(target)await open("case",target.id);
     return;
   }
   if (b.dataset.sample) {
@@ -1157,11 +1172,15 @@ root.addEventListener("submit", async (event) => {
   const form = event.target,
     fields = new FormData(form);
   if (form.id === "personal-login") {
-    let result;
-    await perform(async () => {
-      result = await identity.signIn(String(fields.get("login")).trim(),String(fields.get("password")));
-    });
-    if (result) await loadOwner(result.gateway,result.subject);
+    if(initializingAccount)return;
+    initializingAccount=true;
+    try {
+      let result;
+      await perform(async () => {
+        result=await identity.signIn(String(fields.get("login")).trim(),String(fields.get("password")));
+      });
+      if(result)await loadOwner(result.gateway,result.subject);
+    } finally {initializingAccount=false;render();}
     return;
   }
   if(form.id==="ledger-filter"){ledgerFilter={...ledgerFilter,q:String(fields.get("q")||"").trim(),status:String(fields.get("status")||""),direction:String(fields.get("direction")||"")};offset=0;await open("history");return;}
@@ -1296,7 +1315,7 @@ if (product) identity.initialize(loadOwner, e => {
   error = e.status === 499 ? T("Вход отменён.","Кіру тоқтатылды.") : e.status === 401 ?
     T("Войди заново, чтобы продолжить.","Жалғастыру үшін қайта кір.") : T("Сервис входа недоступен. Попробуй позже.","Кіру қызметі қолжетімсіз. Кейін қайтала.");
   render();
-}).catch(() => { error = T("Защищённое хранилище недоступно.","Қорғалған қойма қолжетімсіз."); render(); });
+}).catch(() => { error = T("Защищённое хранилище недоступно.","Қорғалған қойма қолжетімсіз."); render(); }).finally(() => { initializingAccount=false;render(); });
 
 root.addEventListener("input", event => {
   const form = event.target.closest("#report-form");
