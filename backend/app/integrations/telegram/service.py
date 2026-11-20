@@ -22,7 +22,6 @@ from app.integrations.telegram.schemas import (
 )
 from app.models import Account, Transaction, TransactionStatus
 
-
 CONTACT_LIMIT = 3
 
 

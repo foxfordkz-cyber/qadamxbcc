@@ -571,7 +571,7 @@ function casesView() {
 }
 function caseView() {
   return data
-    ? `${title(T("Работа с делом", "Іспен жұмыс"))}<section class="paper"><h2>${E(label(data.category))}</h2><p>${caseState(data.state)} · v${Number(data.version)}</p><p class="fine">${E(data.assignee ?? T("Не назначено", "Тағайындалмаған"))}</p><p class="break-id">${E(data.id)}</p></section>${data.state === "NEW" ? button("case-review", T("Взять в рассмотрение", "Қарауға алу")) : ""}${data.state === "IN_REVIEW" ? button("case-resolve", T("Завершить демо-разбор", "Демо-тексеруді аяқтау")) : ""}<p class="fine">${T("Действия фиксируются в журнале. Это не решение банка.", "Әрекеттер журналда сақталады. Бұл банк шешімі емес.")}</p>`
+    ? `${title(T("Работа с делом", "Іспен жұмыс"))}<section class="paper"><h2>${E(product?label(data.category):data.category)}</h2><p>${product?caseState(data.state):E(data.state)} · v${Number(data.version)}</p><p class="fine">${E(data.assignee ?? T("Не назначено", "Тағайындалмаған"))}</p><p class="break-id">${E(data.id)}</p></section>${data.state === "NEW" ? button("case-review", T("Взять в рассмотрение", "Қарауға алу")) : ""}${data.state === "IN_REVIEW" ? button("case-resolve", T("Завершить демо-разбор", "Демо-тексеруді аяқтау")) : ""}<p class="fine">${T("Действия фиксируются в журнале. Это не решение банка.", "Әрекеттер журналда сақталады. Бұл банк шешімі емес.")}</p>`
     : "";
 }
 function enrichmentView() {
@@ -868,15 +868,11 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (b.dataset.openCase) {
+    let created;
     await perform(async () => {
-      data = await api(
-        "integrations/guardian/soc/cases",
-        "POST",
-        { report_id: b.dataset.openCase },
-        crypto.randomUUID(),
-      );
-      page = "case";
+      created=await api("integrations/guardian/soc/cases","POST",{report_id:b.dataset.openCase},crypto.randomUUID());
     });
+    if(created)await open("case",created.id);
     return;
   }
   if (b.dataset.sample) {
