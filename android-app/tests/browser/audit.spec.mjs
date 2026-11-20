@@ -15,7 +15,7 @@ async function enter(page,baseURL,fixture={}) {
     else if(path==="wallet/analytics"){status=fixture.analytics||200;json={outgoing:"25000"};}
     else if(path.startsWith("api/transfers/"))json={...items.find(r=>r.transaction_id===path.split("/").at(-1)),recipient:{display_name:"Алия"}};
     else if(path.endsWith("/scam-check")){status=fixture.scan||200;json={guidance:"Проверено"};}
-    else if(path.endsWith("/reports")&&route.request().method()==="POST"){fixture.sent=route.request().postDataJSON();json={id:ids[0]};}
+    else if(path.endsWith("/reports")&&route.request().method()==="POST"){fixture.sent=route.request().postDataJSON();status=fixture.reportStatus||200;json={id:ids[0]};}
     else if(path.endsWith("/history")||path.endsWith("/information-requests"))json={items:[]};
     else if(path.endsWith("trusted-contacts"))json={contacts:[]};
     await route.fulfill({status,json});
@@ -66,6 +66,9 @@ test("switching a report from operation A to B preserves A and submits B",async(
   await expect(page.locator("[name=description]")).toHaveValue("");
   await expect(page.locator(".report-context")).toContainText(ids[1]);
   await page.locator("[name=description]").fill("Сообщение о второй операции");await page.locator("[name=consent]").check();
-  await page.locator("#report-form button").click();await expect.poll(()=>fixture.sent?.transaction_id).toBe(ids[1]);
+  fixture.reportStatus=429;await page.locator("#report-form button").click();
+  await expect(page.getByRole("alert")).toContainText("За 24 часа");
+  await expect(page.locator("[name=description]")).toHaveValue("Сообщение о второй операции");
+  fixture.reportStatus=200;await page.locator("#report-form button").click();await expect.poll(()=>fixture.sent?.transaction_id).toBe(ids[1]);
   await report(ids[0]);await expect(page.locator("[name=description]")).toHaveValue("Черновик первой операции");
 });

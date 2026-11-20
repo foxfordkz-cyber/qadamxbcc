@@ -173,8 +173,8 @@ const errText = (code) =>
       "Өрістерді тексер. Нақты банк деректері мен құпияларды енгізбе.",
     ),
     429: T(
-      "Лимит запросов. Подожди минуту и обнови вручную.",
-      "Сұрау шегі. Бір минут күтіп, қолмен жаңарт.",
+      "Достигнут лимит запросов. Попробуйте позже.",
+      "Сұрау шегіне жеттіңіз. Кейінірек қайталап көріңіз.",
     ),
     503: T(
       "Сервис временно недоступен. Попробуйте ещё раз.",
@@ -182,9 +182,10 @@ const errText = (code) =>
     ),
   })[code] ?? T("Не удалось выполнить действие.", "Әрекет орындалмады.");
 let failureState = null;
-function failureText({status,login,offline,mutation}) {
+function failureText({status,login,offline,mutation,report}) {
   return offline ? T("Нет интернета. Подключись и попробуй снова.", "Интернет жоқ. Қосылып, қайта көр.")
       : login && status === 401 ? T("Неверный логин или пароль.","Логин немесе құпиясөз қате.")
+      : report && status === 429 ? T("Обращение не отправлено. Попробуйте позже. За 24 часа можно отправить до пяти обращений.", "Өтініш жіберілмеді. Кейінірек қайталап көріңіз. 24 сағат ішінде бес өтінішке дейін жіберуге болады.")
       : status === 499 ? T("Вход отменён. Можно выбрать другой способ.", "Кіру тоқтатылды. Басқа тәсілді таңда.")
       : login && (status === 0 || status >= 500) ? T("Сервис входа пока недоступен. Попробуй позже или открой демонстрацию.", "Кіру қызметі әзірге қолжетімсіз. Кейін қайтала немесе демоны аш.")
       : status === 0 && !mutation ? T("Сервис не ответил. Попробуй обновить данные.", "Қызмет жауап бермеді. Деректерді жаңартып көр.")
@@ -205,7 +206,7 @@ async function perform(task) {
         caseEvents = (await api("integrations/guardian/soc/cases/" + id + "/history")).items;
       } catch { data = null; }
     }
-    failureState = {status:failure.status,login:page==="login",offline:!navigator.onLine,mutation:mutationOutcome};
+    failureState = {status:failure.status,login:page==="login",report:page==="report",offline:!navigator.onLine,mutation:mutationOutcome};
     error = failureText(failureState);
     if (failure.status === 401) {
       if (product) await identity.write("session", null);
