@@ -26,7 +26,7 @@ export async function readScreenshot(file) {
   const [width,height] = await dimensions(file);
   if (!width || !height || width*height>16000000) throw Error("image_size");
   const bitmap = await createImageBitmap(file);
-  let worker;
+  let worker, workerUrl;
   try {
     if (bitmap.width * bitmap.height > 16000000) throw Error("image_size");
     const canvas = document.createElement("canvas");
@@ -38,16 +38,31 @@ export async function readScreenshot(file) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     const assets = new URL("vendor/ocr/", document.baseURI);
-    worker = await Tesseract.createWorker(["rus", "kaz"], 1, {
-      workerPath: new URL("worker.min.js", assets).href,
-      corePath: new URL("tesseract-core-lstm.wasm.js", assets).href,
-      langPath: assets.href, workerBlobURL: false, cacheMethod: "none"
+    // Android WebView serves APK resources in the page; dedicated workers cannot fetch
+    // that virtual HTTPS origin reliably. Load fixed local files here before spawning.
+    const loadAsset = async name => {
+      const response = await fetch(new URL(name, assets), {signal:AbortSignal.timeout(15000)});
+      if (!response.ok) throw Error("ocr_asset");
+      return response;
+    };
+    const [core, engine, ...languages] = await Promise.all([
+      loadAsset("tesseract-core-lstm.wasm.js").then(r=>r.blob()),
+      loadAsset("worker.min.js").then(r=>r.blob()),
+      ...["rus","kaz"].map(async code => ({
+        code, data:new Uint8Array(await (await loadAsset(code+".traineddata")).arrayBuffer())
+      }))
+    ]);
+    workerUrl = URL.createObjectURL(new Blob([core,"\n;\n",engine], {type:"application/javascript"}));
+    worker = await Tesseract.createWorker(languages, 1, {
+      workerPath:workerUrl, workerBlobURL:false, cacheMethod:"none",
+      corePath:new URL("tesseract-core-lstm.wasm.js", assets).href
     });
     const { data } = await worker.recognize(canvas);
     return data.text.trim().slice(0, 2000);
   } finally {
     bitmap.close();
     if (worker) await worker.terminate();
+    if (workerUrl) URL.revokeObjectURL(workerUrl);
   }
 }
 
