@@ -31,6 +31,8 @@ interface Props {
   amount: string;
   onReview: () => void;
   onNewTransfer: () => void;
+  /** The bank-log answer for the current call, for the decision panel next to the phone. */
+  onCallCheck?: (value: CallCheck | null) => void;
   /** Full-screen on a real smartphone (/mobile): no bezel, fake status bar or caption. */
   bare?: boolean;
 }
@@ -50,7 +52,7 @@ function maskRecipient(value: string, type: RecipientType) {
   return value;
 }
 
-export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onNewTransfer, bare = false }: Props) {
+export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onNewTransfer, onCallCheck, bare = false }: Props) {
   const { lang, t } = useLocale();
   const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const contextDetails = useRef<HTMLDetailsElement>(null);
@@ -69,16 +71,20 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const [callCheckFailed, setCallCheckFailed] = useState(false);
   const [bankCallStarted, setBankCallStarted] = useState(false);
   const onCall = form.context.active_call;
-  // A check answers for this call and this customer only.
+  // A check answers for this call and this customer only. The phone notices the call by
+  // itself (CallKit / TelephonyManager in the bank app) and asks the bank's log at once.
   useEffect(() => {
-    setCallCheck(null); setCallCheckFailed(false);
+    setCallCheck(null); setCallCheckFailed(false); onCallCheck?.(null);
     setForm(v => v.context.bank_call_check_id ? { ...v, context: { ...v.context, bank_call_check_id: undefined } } : v);
+    if (!onCall || !/^[0-9a-f-]{36}$/i.test(form.sender.trim())) return;
+    const timer = setTimeout(() => void checkBankCall(), 300);
+    return () => clearTimeout(timer);
   }, [onCall, form.sender]); // eslint-disable-line react-hooks/exhaustive-deps
   async function checkBankCall() {
     setCallChecking(true); setCallCheckFailed(false);
     try {
       const value = await api<CallCheck>("call-check", { method: "POST", body: JSON.stringify({ customer_id: form.sender.trim() }) });
-      setCallCheck(value);
+      setCallCheck(value); onCallCheck?.(value);
       setForm(v => ({ ...v, context: { ...v.context, bank_call_check_id: value.check_id } }));
     } catch { setCallCheck(null); setCallCheckFailed(true); }
     finally { setCallChecking(false); }
@@ -211,7 +217,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             </details>
             {onCall && <section className="call-check" aria-live="polite">
               <div className="call-check-row"><span className="call-check-icon"><PhoneCall size={18} aria-hidden="true" /></span><div><strong>{m("callActive")}</strong><p>{m("callCheckHint")}</p></div></div>
-              <button type="button" className="call-check-cta" disabled={callChecking || !form.sender.trim()} onClick={() => void checkBankCall()}>{callChecking ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" /> : <ShieldCheck size={16} aria-hidden="true" />}{m("callCheckCta")}</button>
+              <button type="button" className="call-check-cta" disabled={callChecking || !form.sender.trim()} onClick={() => void checkBankCall()}>{callChecking ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" /> : <ShieldCheck size={16} aria-hidden="true" />}{callChecking ? m("callChecking") : callCheck ? m("callRecheck") : m("callCheckCta")}</button>
               {callCheck && <div className={`call-check-result ${callCheck.verified ? "verified" : "denied"}`} role="status">{callCheck.verified ? <ShieldCheck size={18} aria-hidden="true" /> : <ShieldX size={18} aria-hidden="true" />}<div><strong>{callCheck.verified ? m("callVerified") : m("callDenied")}</strong><p>{lang === "kk" ? callCheck.message_kk : callCheck.message_ru}</p>{!callCheck.verified && <p className="call-check-note">{m("callDeniedNote")}</p>}{callCheck.simulated_log !== false && <p className="call-check-sim">{m("callLogSimulated")}</p>}</div></div>}
               {callCheckFailed && <p className="error" role="alert">{m("callCheckFailed")}</p>}
             </section>}

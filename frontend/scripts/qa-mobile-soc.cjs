@@ -128,13 +128,13 @@ async function main() {
     await page.locator('#recipient').fill('+77010000002');
     await page.locator('#recipient').pressSequentially('0', { delay: 80 });
     await page.waitForTimeout(1600); await page.locator('#recipient').press('Backspace');
-    check('browser_paste_and_typing_sensor_live', await page.locator('.biometric-sensor.paste-detected').count() === 1 && (await page.locator('.sensor-readings').innerText()).includes('Обнаружена вставка'));
+    check('browser_paste_and_typing_sensor_live', await page.locator('.signal-list li.risk').filter({ hasText: 'Обнаружена вставка' }).count() === 1 && /\d[\d\s]* мс/.test(await page.locator('.signal-list').innerText()));
     await page.locator('#transfer-amount').fill('5000');
     const beforeConfirm = report.mutations.filter(item => item.path.endsWith('/evaluate')).length;
     await page.locator('.phone-form .transfer-cta').click();
     await page.locator('.phone-confirm').waitFor();
     const confirmText = await page.locator('.phone-confirm').innerText();
-    check('confirm_step_shows_amount_and_recipient_before_sending', /5\s000\s₸/.test(confirmText) && confirmText.includes('+7 701 000 00 02') && report.mutations.filter(item => item.path.endsWith('/evaluate')).length === beforeConfirm, confirmText.slice(0, 200));
+    check('confirm_step_shows_amount_and_recipient_before_sending', /5\s000\s₸/.test(confirmText) && /\+7 [•\d ]+00 02/.test(confirmText) && report.mutations.filter(item => item.path.endsWith('/evaluate')).length === beforeConfirm, confirmText.slice(0, 200));
     await page.locator('.phone-confirm .transfer-confirm').click();
     await page.locator('.phone-receipt').waitFor();
     const biometric = records.get(await page.locator('.phone-receipt').getAttribute('data-transaction-id')).context;
@@ -168,6 +168,8 @@ async function main() {
     check('clean_answers_saved_without_early_release', records.get(heldId).status === 'cooling_off' && questions.every((q, i) => records.get(heldId).verification_answers[q] === clean[i]) && report.mutations.length === mutationsBeforeSave + 1);
     await screenshot('cooling-review-ru');
     await page.reload({ waitUntil: 'domcontentloaded' });
+    // Recovery may reopen the questionnaire by itself after the reload; wait for that first.
+    await dialog.waitFor({ timeout: 5000 }).catch(() => {});
     if (!await dialog.isVisible()) await page.locator('.recovery-list li').filter({ hasText: heldId.slice(-8) }).getByRole('button', { name: 'Открыть перевод' }).click();
     await dialog.waitFor();
     check('reload_restores_server_saved_answers', await dialog.getAttribute('data-step') === 'review' && await dialog.locator('.cooling-review-list li').count() === 5 && await dialog.locator('.cooling-submit').isDisabled());
@@ -316,6 +318,10 @@ async function main() {
     phone.on('pageerror', error => report.errors.push(`/mobile: ${error.message}`));
     await phone.setViewportSize({ width: 390, height: 844 });
     await phone.goto(new URL('/mobile', target).href, { waitUntil: 'domcontentloaded' });
+    // Recovery may reopen the held transfer's questionnaire here too; leave it on hold first.
+    const reopened = phone.locator('dialog.cooling-modal[open]');
+    await reopened.waitFor({ timeout: 5000 }).catch(() => {});
+    if (await reopened.isVisible()) await reopened.locator('.cooling-later .secondary').click();
     await phone.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
     // Recovery may reopen this browser's last receipt (same origin storage); start a new transfer from it.
     await phone.locator('.phone-stage.is-bare').waitFor();

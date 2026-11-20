@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Activity, ArrowRight, CircleHelp, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
-import { api, transferSchema, type AbandonResult, type Answers, type AppConfig, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
+import { api, transferSchema, type AbandonResult, type Answers, type AppConfig, type CallCheck, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { reconcileTraffic, type TrafficRecord } from "@/lib/traffic";
 import type { FeedItem } from "@/lib/contracts";
 import { useBiometrics } from "./use-biometrics";
@@ -50,6 +50,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     restoreDialog.current = null;
   }
   const [error, setError] = useState<MessageKey | null>(null);
+  const [callVerdict, setCallVerdict] = useState<CallCheck | null>(null);
   const [modal, setModal] = useState(false);
   const [coolingDrafts, setCoolingDrafts] = useState<Record<string, Partial<Answers>>>({});
   const [revision, setRevision] = useState(0);
@@ -184,7 +185,14 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     const draft = draftIdentity(value, type);
     if (!chosen && !forceNext.current && completedIdentity === draft) return;
     const recipient = value.recipient.replace(/[\s()-]/g, "").toUpperCase();
-    const context = chosen ? value.context : { ...value.context, ...sensor.context() };
+    let context = chosen ? value.context : { ...value.context, ...sensor.context() };
+    // During a call the app asks the bank's outbound log by itself; nobody has to press anything.
+    if (context.active_call && !context.bank_call_check_id && value.sender.trim()) {
+      try {
+        const check = await api<CallCheck>("call-check", { method: "POST", body: JSON.stringify({ customer_id: value.sender.trim() }) });
+        context = { ...context, bank_call_check_id: check.check_id };
+      } catch { /* No answer from the log: score the transfer without this signal. */ }
+    }
     const parsed = transferSchema.safeParse({ sender_id: value.sender.trim(), [`recipient_${type}`]: recipient, amount: value.amount, currency: "KZT", context });
     if (!parsed.success) { setError(chosen && (!value.sender || !value.recipient) ? "presetMissing" : "invalid"); setTab("mobile"); return; }
     selectTransfer(null);
@@ -277,7 +285,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     <main className="shell">
       <section className="demo-bar" aria-label={t("presets")}>
         <div className="demo-bar-label"><CircleHelp size={16} aria-hidden="true" /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "demoScenarios")}</span></div>
-        <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map((key, index) => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><span className="preset-number tabular-nums">0{index + 1}</span><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
+        <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map(key => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
         {config.demoActionsEnabled !== false && <Link href="/pitch" className="pitch-link">{t("pitchLink")}<ArrowRight size={15} aria-hidden="true" /></Link>}
       </section>
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
@@ -287,10 +295,9 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
         {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} /> : <>
           <div className="client-wrap">
-          <div className="section-heading"><div><h1>{t("heroTitle")}</h1><p className="muted">{t("heroIntro")}</p></div></div>
           <div className="transfer-grid">
-            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={() => void evaluate(form)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} />
-            <Telemetry result={result} amount={resultAmount} roundtrip={roundtrip} busy={busy} error={error} sensor={sensor} sender={form.sender} onReview={() => result && void review(result.transaction_id)} />
+            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={() => void evaluate(form)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} onCallCheck={setCallVerdict} />
+            <Telemetry result={result} amount={resultAmount} roundtrip={roundtrip} busy={busy} error={error} sensor={sensor} sender={form.sender} context={form.context} callCheck={callVerdict} onReview={() => result && void review(result.transaction_id)} />
           </div>
           </div>
         </>}
