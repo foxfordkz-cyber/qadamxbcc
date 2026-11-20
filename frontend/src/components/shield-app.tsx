@@ -218,12 +218,12 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     } finally { lock.current = false; setBusy(false); }
   }
 
-  async function evaluate(value: PresetForm, type = recipientType, chosen?: Preset) {
+  async function evaluate(value: PresetForm, type = recipientType, chosen?: Preset, duress = false) {
     if (lock.current || hasUnknown) return;
     const draft = draftIdentity(value, type);
     if (!chosen && !forceNext.current && completedIdentity === draft) return;
     const recipient = value.recipient.replace(/[\s()-]/g, "").toUpperCase();
-    let context = chosen ? value.context : { ...value.context, ...sensor.context() };
+    let context = chosen ? value.context : { ...value.context, ...sensor.context(), ...(duress ? { duress: true } : {}) };
     // During a call the app asks the bank's outbound log by itself; nobody has to press anything.
     if (context.active_call && !context.bank_call_check_id && value.sender.trim()) {
       try {
@@ -311,7 +311,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     <main className="mobile-shell">
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
-      <TransferPhone bare config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={() => void evaluate(form)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} />
+      <TransferPhone bare config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} />
     </main>
     {cooling}
   </>;
@@ -335,7 +335,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
         {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} focusTransfer={socFocus} onFocusConsumed={consumeSocFocus} /> : <>
           <div className="client-wrap">
           <div className="transfer-grid">
-            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={() => void evaluate(form)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} onCallCheck={setCallVerdict} />
+            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} onCallCheck={setCallVerdict} />
             <Telemetry result={result} amount={resultAmount} roundtrip={roundtrip} busy={busy} error={error} sensor={sensor} sender={form.sender} context={form.context} callCheck={callVerdict} onReview={() => result && void review(result.transaction_id)} />
           </div>
           </div>

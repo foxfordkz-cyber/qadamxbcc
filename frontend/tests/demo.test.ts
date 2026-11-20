@@ -274,3 +274,12 @@ test("prevented loss counts unique blocked transfers only and retains reconciled
   assert.equal(preventedLoss(reconciled, []), 250100.50);
   assert.equal(reconcileTraffic(reconciled, [update]), reconciled);
 });
+
+test("the silent alarm blocks a clean transfer in the demo engine, like the backend", () => {
+  const p = demoPresets.normal;
+  const result = evaluateDemo(transferSchema.parse({ sender_id: p.sender, recipient_phone: p.recipient, amount: p.amount, context: { ...p.context, duress: true } }));
+  assert.equal(result.status, "blocked");
+  assert.equal(result.risk_score, 100);
+  assert.ok(result.reasons.some(reason => reason.code === "DURESS_SIGNAL" && reason.score_delta === 100));
+  assert.equal(run("normal").reasons.some(reason => reason.code === "DURESS_SIGNAL"), false);
+});

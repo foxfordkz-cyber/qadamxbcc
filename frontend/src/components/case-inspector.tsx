@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Clock3, Copy, Download, Fingerprint, RefreshCw, ShieldCheck } from "lucide-react";
+import { Check, Clock3, Copy, Download, FileText, Fingerprint, RefreshCw, ShieldCheck } from "lucide-react";
 import type { Evaluation } from "@/lib/contracts";
-import { caseReport, caseTimestamps } from "@/lib/case-report";
+import { caseReport } from "@/lib/case-report";
+import { caseTimeline } from "@/lib/case-timeline";
+import { policeReportHtml } from "@/lib/police-report";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { Badge, Gauge } from "./risk";
 
@@ -34,7 +36,16 @@ export function CaseInspector({ detail, loading, error, receivedAt, selectedId, 
       setNotice(null);
     } catch { if (url) URL.revokeObjectURL(url); setNotice("caseExportFailed"); }
   }
-  const timestamps = current ? caseTimestamps(current) : [];
+  function policeReport() {
+    if (!current || error || loading) return;
+    // A blob page opened from this click: printable, saved as PDF by the browser, no server round trip.
+    const url = URL.createObjectURL(new Blob([policeReportHtml(current, lang, t)], { type: "text/html;charset=utf-8" }));
+    // "noopener" makes window.open return null even on success, so a blocked pop-up is not detectable here.
+    window.open(url, "_blank", "noopener");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    setNotice(null);
+  }
+  const story = current ? caseTimeline(current) : [];
   const active = current ? (Object.keys(signals) as (keyof typeof signals)[]).filter(key => current.context?.[key] === true) : [];
   return <section className="panel case-panel investigation-card" aria-label={t("caseDetails")} data-transaction-id={selectedId ?? ""} aria-busy={loading}>
     <div className="case-heading"><h2>{t("caseDetails")}</h2>{current && <Badge status={current.status} />}</div>
@@ -50,11 +61,11 @@ export function CaseInspector({ detail, loading, error, receivedAt, selectedId, 
         <div className={`investigation-next ${current.status}`}><ShieldCheck size={19} /><div><h3>{t("caseNextStep")}</h3><p>{t(nextSteps[current.status])}</p></div></div>
         {(lang === "kk" ? current.reasons_kk : current.reasons_ru).length > 0 && <ul className="investigation-reason-preview">{(lang === "kk" ? current.reasons_kk : current.reasons_ru).slice(0, 2).map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
         <div className="investigation-signals"><h3><Fingerprint size={17} />{t("caseSignalSnapshot")}</h3>{active.length ? <div>{active.map(key => <span key={key}>{t(signals[key])}</span>)}</div> : <p className="muted">{t("caseNoSignals")}</p>}</div>
-        <div className="investigation-timeline"><h3><Clock3 size={17} />{t("caseTimestamps")} <small>UTC+5</small></h3>{timestamps.length ? <ol>{timestamps.map(item => <li key={item.key} className={item.future ? "planned" : ""}><span>{t(item.key)}</span><time dateTime={item.time}>{date(item.time)}</time></li>)}</ol> : <p className="muted">{t("caseTimeUnknown")}</p>}</div>
+        <div className="investigation-timeline"><h3><Clock3 size={17} />{t("caseStory")} <small>UTC+5</small></h3><ol>{story.map((item, index) => <li key={`${item.key}-${index}`} className={item.tone}><span>{t(item.key)}{item.signals ? `: ${item.signals.map(key => t(signals[key])).join(", ")}` : ""}{item.score !== undefined ? ` · ${item.score}/100` : ""}</span>{item.time ? <time dateTime={item.time}>{date(item.time)}</time> : <time>—</time>}</li>)}</ol></div>
         {current.verification_answers && <p className="investigation-answers"><Check size={16} />{t("caseAnswersSaved")}</p>}
       </>
       {current.status === "cooling_off" && <button className="primary review-button" disabled={busy || loading || !!error} onClick={() => onReview(current.transaction_id)}><Clock3 size={17} />{t("review")}</button>}
-      <div className="investigation-export"><button className="secondary case-export" disabled={loading || !!error} onClick={download}><Download size={16} />{t("caseExport")}</button><p>{t("caseExportHint")}</p></div>
+      <div className="investigation-export"><div className="investigation-export-buttons"><button className="secondary police-report" disabled={loading || !!error} onClick={policeReport}><FileText size={16} />{t("policeReport")}</button><button className="secondary case-export" disabled={loading || !!error} onClick={download}><Download size={16} />{t("caseExport")}</button></div><p>{t("policeReportHint")}</p></div>
       {notice && <p className="investigation-notice" role="status">{t(notice)}</p>}
     </>}
   </section>;
