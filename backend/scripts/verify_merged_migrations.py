@@ -94,7 +94,8 @@ async def sentinel(url: str, *, insert: bool, contact: bool, mobile: bool = Fals
                 assert account.is_flagged
                 if mobile:
                     family = await session.get(FamilyShield, ACCOUNT)
-                    assert family is not None and family.disable_at is None
+                    assert family is not None
+                    assert family.disable_at is None
                 if contact:
                     row = await session.get(TrustedContact, CONTACT)
                     assert row is not None

@@ -10,7 +10,8 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --group mobile-ephemeral
 COPY . .
-RUN python -m scripts.train_fraud_model && useradd --create-home mobile
+RUN useradd --create-home mobile && python -m scripts.train_fraud_model \
+    && chmod 0444 /app/app/ml/fraud_model.joblib
 USER mobile
 EXPOSE 8000
 CMD ["python", "-m", "scripts.mobile_ephemeral"]
