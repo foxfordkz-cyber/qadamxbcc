@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 from contextlib import suppress
 from typing import Literal
 
@@ -27,7 +28,7 @@ from app.integrations.config import IntegrationSettings, get_integration_setting
 from app.integrations.errors import IntegrationError
 from app.integrations.telegram.assistant_ui import configure_commands
 from app.integrations.telegram.assistant_ui import language as preferred_language
-from app.integrations.telegram.guardian import TEXT, build_router, menu
+from app.integrations.telegram.guardian import TEXT, build_router, keyboard, menu
 from app.integrations.telegram.handlers import process_update
 from app.integrations.telegram.polling_lock import PollingLock
 from app.integrations.telegram.schemas import SimulatedUpdate
@@ -76,6 +77,14 @@ def build_ingress_router(
         kind: Literal["start", "revoke"] = (
             "start" if parts[0].split("@")[0] == "/start" else "revoke"
         )
+        # A private test enrollment opens the assistant only after the operator
+        # has added this chat to the allowlist. It grants no contact consent.
+        if kind == "start" and re.fullmatch(r"guardian_[A-Za-z0-9_-]{22}", parts[1]):
+            await message.answer(
+                TEXT["ru"]["welcome"] + "\n\n" + TEXT["kk"]["welcome"],
+                reply_markup=keyboard([("Русский", "ru"), ("Қазақша", "kk")]),
+            )
+            return
         async with factory() as session:
             try:
                 result = await process_update(
@@ -176,7 +185,7 @@ def build_ingress_router(
     return router
 
 
-async def run() -> None:
+async def run(*, embedded: bool = False) -> None:
     cfg = get_integration_settings()
     if not cfg.enabled or cfg.telegram_mode != "test":
         raise RuntimeError("polling requires explicitly configured test Telegram mode")
@@ -195,7 +204,28 @@ async def run() -> None:
         polling_lock = PollingLock(bot.id)
         polling_lock.acquire()
         await configure_commands(bot)
-        await dispatcher.start_polling(bot, allowed_updates=["message", "callback_query"])
+        if embedded:
+            # Uvicorn owns process signals. Let aiogram stop its own internal
+            # polling task before closing sessions or handing off ownership.
+            polling = asyncio.create_task(
+                dispatcher.start_polling(
+                    bot,
+                    handle_signals=False,
+                    handle_as_tasks=False,
+                    allowed_updates=["message", "callback_query"],
+                )
+            )
+            try:
+                await asyncio.shield(polling)
+            finally:
+                if not polling.done():
+                    try:
+                        await dispatcher.stop_polling()
+                    except RuntimeError:  # Cancelled before the dispatcher acquired its lock.
+                        polling.cancel()
+                    await asyncio.gather(polling, return_exceptions=True)
+        else:
+            await dispatcher.start_polling(bot, allowed_updates=["message", "callback_query"])
     finally:
         if polling_lock:
             polling_lock.close()

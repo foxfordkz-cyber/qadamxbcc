@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class IntegrationSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="BCC_INTEGRATIONS_", env_file=".env", extra="ignore"
+        env_prefix="BCC_INTEGRATIONS_", env_file=".env", extra="ignore", hide_input_in_errors=True
     )
 
     enabled: bool = False

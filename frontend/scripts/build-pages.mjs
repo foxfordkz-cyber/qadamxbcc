@@ -23,10 +23,10 @@ if (out === root || root.startsWith(`${out}${path.sep}`)) throw new Error("Outpu
 
 const work = await mkdtemp(path.join(os.tmpdir(), "saqbol-pages-"));
 try {
-  const skip = new Set(["node_modules", ".next", "pages-out", "tests", "scripts"]);
+  const skip = new Set(["node_modules", ".next", "dist", ".wrangler", ".vinext", "pages-out", "tests", "scripts"]);
   await cp(root, work, { recursive: true, filter: source => {
     const first = path.relative(root, source).split(path.sep)[0];
-    return source === root || (!skip.has(first) && !first.startsWith(".env"));
+    return source === root || (!skip.has(first) && !first.startsWith(".env") && !first.startsWith(".dev.vars"));
   } });
   // Junctions do not require Windows Developer Mode or the symlink privilege.
   await symlink(path.join(root, "node_modules"), path.join(work, "node_modules"), process.platform === "win32" ? "junction" : "dir");

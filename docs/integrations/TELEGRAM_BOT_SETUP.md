@@ -1,5 +1,13 @@
 # Local fake Telegram and opt-in test bot
 
+The team's test bot is [@bekzat_bcc_shield_test_bot](https://t.me/bekzat_bcc_shield_test_bot). Its token belongs in the backend secret store under `BCC_INTEGRATIONS_TELEGRAM_TOKEN`. The mobile client's test-mode invitation opens this bot. An allowlisted participant can open the assistant menu before giving separate consent to any trusted-contact invitation. Keep the integration signing key on the operator side of the public web demo.
+
+### Hosted hackathon demo
+
+The API on Render can run the Telegram poller and notification worker in the same process. Set `BCC_RENDER_TELEGRAM_TEST=true`, `BCC_INTEGRATIONS_ENABLED=true`, `BCC_INTEGRATIONS_ENVIRONMENT=test`, `BCC_INTEGRATIONS_TELEGRAM_MODE=test`, a random secret `BCC_INTEGRATIONS_SIGNING_KEY`, the bot token and `BCC_INTEGRATIONS_TELEGRAM_ALLOWED_CHAT_IDS` (a JSON array of confirmed private chat IDs) on the API. Redeploy the web service. The database lock allows one hosted runner at a time. Private chat commands include `/start`, `/menu` and `/language`.
+
+On the free Render plan, the web service can sleep. Open [the API health endpoint](https://saq-bol-api.onrender.com/health) before a live demonstration and wait for a response. Telegram updates alone do not wake a sleeping long poller. For continuous polling, the optional `deploy/render-telegram.yaml` defines a separately billed worker. To switch to that configuration, first turn off the embedded runner on the API. Real contact notifications require the recipient's explicit consent in Telegram.
+
 Default: integrations disabled, Telegram fake, no token needed to start the core.
 aiogram 3.31.0 was resolved against Python 3.12 and Pydantic 2.13.5 in `uv.lock`.
 Compatibility sources: [PyPI](https://pypi.org/project/aiogram/3.31.0/) and

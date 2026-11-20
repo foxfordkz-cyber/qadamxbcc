@@ -15,10 +15,10 @@ export function lanDemoEnabled(env: Environment = process.env): boolean {
 }
 
 /** Private IPv4 addresses of this machine, Wi-Fi/Ethernet first. Empty unless the LAN demo is enabled. */
-export function lanAddresses(env: Environment = process.env, interfaces = networkInterfaces()): string[] {
+export function lanAddresses(env: Environment = process.env, interfaces?: ReturnType<typeof networkInterfaces>): string[] {
   if (!lanDemoEnabled(env)) return [];
   const found: { name: string; address: string }[] = [];
-  for (const [name, entries] of Object.entries(interfaces)) {
+  for (const [name, entries] of Object.entries(interfaces ?? networkInterfaces())) {
     for (const entry of entries ?? []) {
       if (entry.family === "IPv4" && !entry.internal && PRIVATE_IPV4.test(entry.address)) found.push({ name, address: entry.address });
     }

@@ -107,6 +107,13 @@ async def chat(iw: IntegrationWorld, monkeypatch: pytest.MonkeyPatch) -> AsyncIt
         await bot.session.close()
 
 
+async def test_private_demo_enrollment_offers_language_without_contact_consent(chat: Chat) -> None:
+    await chat.feed(text="/start guardian_abcdefghijklmnopqrstuv")
+    assert TEXT["ru"]["welcome"] in chat.last.text
+    assert chat.action("g:kk") == "g:kk"
+    assert chat.action("g:ru") == "g:ru"
+
+
 @pytest.mark.parametrize("lang", ["ru", "kk"])
 async def test_private_commands_and_direct_menu_paths(
     iw: IntegrationWorld, chat: Chat, lang: str

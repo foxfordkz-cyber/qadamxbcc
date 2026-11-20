@@ -2,6 +2,28 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { accessConfiguration, backendHeaders, checkAccess } from "../src/lib/server-access";
 
+test("hosted synthetic demo sends distinct service keys only with a complete HTTPS upstream configuration", () => {
+  const hosted = {
+    BCC_ENVIRONMENT: "demo", BCC_API_MODE: "live", BCC_REQUIRE_DEMO_UPSTREAM: "true",
+    BCC_API_URL: "https://example-api.onrender.com", BCC_DEMO_PUBLIC_ORIGIN: "https://example.workers.dev",
+    BCC_DEMO_UPSTREAM_API_KEY: "transfer-test-0123456789-ABCDEFGHIJKLM",
+    BCC_DEMO_UPSTREAM_SOC_KEY: "soc-test-9876543210-NOPQRSTUVWXYZabcd",
+  };
+  assert.deepEqual(backendHeaders("transfers/evaluate", hosted), { "Content-Type": "application/json", "X-BCC-API-Key": hosted.BCC_DEMO_UPSTREAM_API_KEY });
+  assert.deepEqual(backendHeaders("soc/feed", hosted), { "Content-Type": "application/json", "X-BCC-SOC-Key": hosted.BCC_DEMO_UPSTREAM_SOC_KEY });
+  const post = (origin?: string) => new Headers({ "content-type": "application/json", ...(origin && { origin }) });
+  const check = (headers: Headers) => checkAccess({ origin: "http://localhost", method: "POST", headers }, hosted);
+  assert.equal(check(post(hosted.BCC_DEMO_PUBLIC_ORIGIN)), null);
+  assert.equal(check(post())?.status, 403);
+  assert.equal(check(post("https://wrong.example"))?.status, 403);
+  for (const override of [
+    { BCC_DEMO_UPSTREAM_API_KEY: undefined }, { BCC_DEMO_UPSTREAM_SOC_KEY: hosted.BCC_DEMO_UPSTREAM_API_KEY },
+    { BCC_ENVIRONMENT: "local" }, { BCC_ENVIRONMENT: "pilot" }, { BCC_API_MODE: "demo" }, { BCC_MOBILE_LAN: "true" },
+    { BCC_API_URL: "http://example-api.onrender.com" }, { BCC_API_URL: "https://example.org/alternate" },
+    { BCC_API_URL: hosted.BCC_DEMO_PUBLIC_ORIGIN }, { BCC_DEMO_PUBLIC_ORIGIN: undefined },
+  ]) assert.throws(() => backendHeaders("soc/feed", { ...hosted, ...override }));
+});
+
 const env = {
   BCC_ENVIRONMENT: "pilot", BCC_PUBLIC_ORIGIN: "https://shield.example.kz",
   BCC_API_MODE: "live", BCC_DEMO_ACTIONS_ENABLED: "false", BCC_PILOT_USER: "officer",

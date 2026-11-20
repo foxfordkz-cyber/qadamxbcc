@@ -1,0 +1,46 @@
+# Optional, separately billed background worker. The free API Blueprint does
+# not create it. Configure test integrations on saq-bol-api before applying.
+services:
+  - type: worker
+    name: saq-bol-telegram-test
+    runtime: docker
+    plan: 0.5c-512mb
+    branch: main
+    autoDeployTrigger: "off"
+    numInstances: 1
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: sh scripts/start-render-telegram.sh
+    envVars:
+      - key: BCC_ENVIRONMENT
+        value: demo
+      - key: DATABASE_URL
+        fromDatabase:
+          name: saq-bol-api-db
+          property: connectionString
+      - key: BCC_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: saq-bol-api-cache
+          property: connectionString
+      - key: BCC_INTEGRATIONS_ENABLED
+        value: "true"
+      - key: BCC_INTEGRATIONS_ENVIRONMENT
+        value: test
+      - key: BCC_INTEGRATIONS_TELEGRAM_MODE
+        value: test
+      - key: BCC_INTEGRATIONS_SIGNING_KEY
+        fromService:
+          type: web
+          name: saq-bol-api
+          envVarKey: BCC_INTEGRATIONS_SIGNING_KEY
+      - key: BCC_INTEGRATIONS_TELEGRAM_TOKEN
+        fromService:
+          type: web
+          name: saq-bol-api
+          envVarKey: BCC_INTEGRATIONS_TELEGRAM_TOKEN
+      - key: BCC_INTEGRATIONS_TELEGRAM_ALLOWED_CHAT_IDS
+        fromService:
+          type: web
+          name: saq-bol-api
+          envVarKey: BCC_INTEGRATIONS_TELEGRAM_ALLOWED_CHAT_IDS

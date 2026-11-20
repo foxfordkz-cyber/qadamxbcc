@@ -1,8 +1,17 @@
 # Saq Bol — публичное демо по ссылке
 
-Один контейнер (`deploy/Dockerfile`) запускает сайт и API; PostgreSQL и Redis даёт хостинг.
-API слушает только `127.0.0.1` внутри контейнера, снаружи доступен лишь сайт.
-Режим — `demo`: синтетические данные, демо-кнопки и `/pitch` включены, ключи не нужны.
+## Действующий стенд на Cloudflare и Render
+
+[Сайт](https://saq-bol-bcc.zerdeliportald.workers.dev/) работает на Cloudflare Workers. [FastAPI](https://saq-bol-api.onrender.com/health), PostgreSQL и Redis развёрнуты на Render. Оба хостинга используют бесплатные ресурсы. В публичном интерфейсе доступны синтетические переводы и три пресета.
+
+1. В Render создать Blueprint из ветки `main` с путём `deploy/render-api.yaml`. В нём веб-сервис, закрытая PostgreSQL и закрытый Key Value. После запуска `/health` возвращает 200. Для `/ready` нужен заголовок `X-BCC-SOC-Key`.
+2. Из `frontend/` на Node 22.12+ выполнить `npm ci`, `npm run build:cloudflare` и `npm run test:cloudflare`. В `wrangler.jsonc` указаны адрес Render, разрешённый HTTPS origin приложения и идентификаторы демонстрационных счетов.
+3. Опубликовать Worker командой `npm run deploy:cloudflare`. Скопировать значения Render `BCC_API_KEY` и `BCC_SOC_API_KEY` в секреты именно этого Worker под именами `BCC_DEMO_UPSTREAM_API_KEY` и `BCC_DEMO_UPSTREAM_SOC_KEY`. Wrangler принимает значения через защищённый ввод. Публичный JavaScript и Git содержат только адреса и синтетические идентификаторы. После изменения кода фронтенда повторить сборку и публикацию. GitHub Actions проверяет сборку и маршруты Worker.
+4. Проверить на сайте три пресета и открыть выданную операцию в SOC. При выпуске 20 ноября 2026 через публичный Worker получены `approved` (0), `cooling_off` (74), `blocked` (100), реальная версия модели `bcc-synthetic-rf-v2`, лента и граф. Прямые запросы к данным FastAPI без ключа получили 401.
+
+После простоя бесплатный web service Render засыпает, холодный старт может занимать больше времени, чем один запрос frontend. Перед демонстрацией открыть `/health`, дождаться ответа и загрузить мобильный экран. Бесплатная PostgreSQL имеет ограниченный срок хранения. [Условия бесплатных ресурсов Render](https://render.com/docs/free).
+
+Для тестовых Telegram-чатов используется [бот доверенного контакта](https://t.me/bekzat_bcc_shield_test_bot). У каждого участника должен быть подтверждённый личный chat ID. Для живого канала нужен серверный подписывающий ключ. Он хранится только на стороне оператора и доверенного backend. [Настройка Telegram](integrations/TELEGRAM_BOT_SETUP.md).
 
 ## GitHub Pages — статическое демо (уже настроено)
 
@@ -22,7 +31,9 @@ Source: Deploy from a branch → `gh-pages` / root → Save.**
 Локальная проверка: `cd frontend && node scripts/build-pages.mjs`, затем отдать папку
 `pages-out` по пути `/qadamxbcc/` любым статическим сервером.
 
-## Render (бесплатно, 5 минут)
+## Сайт и API в одном контейнере Render
+
+Корневой `render.yaml` запускает альтернативную конфигурацию. Внутри `deploy/Dockerfile` вместе работают Next и API, который слушает `127.0.0.1`. Используется режим `demo` с синтетическими данными.
 
 Самый короткий путь — ссылка
 <https://render.com/deploy?repo=https://github.com/foxfordkz-cyber/qadamxbcc>:

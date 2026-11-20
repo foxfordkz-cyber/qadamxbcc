@@ -32,7 +32,7 @@ test("flag BFF preserves uncertain success, validates input, and forwards only i
     assert.equal(headers.get("x-bcc-soc-key"), settings.BCC_SOC_API_KEY);
     assert.equal(headers.get("authorization"), null);
     assert.equal(headers.get("x-bcc-api-key"), null);
-    assert.equal(init?.redirect, "error");
+    assert.equal(init?.redirect, "manual");
     assert.deepEqual(JSON.parse(String(init?.body)), body);
     return upstream();
   };

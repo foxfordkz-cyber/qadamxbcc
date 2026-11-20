@@ -12,7 +12,8 @@ class Upstream extends Error { constructor(public status: number, public detail:
 
 export async function upstream(path: string, init: { method?: string; headers: Record<string, string>; body?: string }) {
   const base = (process.env.BCC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-  const response = await fetch(`${base}/api/v1/${path}`, { method: init.method ?? "GET", headers: init.headers, body: init.body, cache: "no-store", signal: AbortSignal.timeout(8_000) });
+  const response = await fetch(`${base}/api/v1/${path}`, { method: init.method ?? "GET", headers: init.headers, body: init.body, cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(8_000) });
+  if (response.status >= 300 && response.status < 400) throw new Upstream(502, "unexpected_redirect", null);
   if (!response.ok) {
     let detail = "";
     try { const value = await response.json() as { detail?: unknown }; if (typeof value.detail === "string") detail = value.detail; } catch { /* Non-JSON upstream errors stay generic. */ }

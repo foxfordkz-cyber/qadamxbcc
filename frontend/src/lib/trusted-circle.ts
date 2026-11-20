@@ -56,3 +56,8 @@ export const invitationSchema = z.object({
   contact: memberSchema, invitation_token: z.string().regex(/^[A-Za-z0-9_-]{20,64}$/),
   expires_at: z.iso.datetime({ offset: true }),
 });
+
+export function telegramInvitation(token: string, mode = process.env.BCC_INTEGRATIONS_TELEGRAM_MODE) {
+  if (mode !== "test" || !invitationSchema.shape.invitation_token.safeParse(token).success) return null;
+  return `https://t.me/bekzat_bcc_shield_test_bot?start=${token}`;
+}

@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ownerCapability, sanitizeContacts, sanitizeNotifications, signingKey, terminalNotification } from "../src/lib/trusted-circle";
+import { ownerCapability, sanitizeContacts, sanitizeNotifications, signingKey, telegramInvitation, terminalNotification } from "../src/lib/trusted-circle";
+
+test("only real test invitations open the configured Guardian bot", () => {
+  const token = "abcdefghijklmnopqrstuvwxyz0123456789_-";
+  assert.equal(telegramInvitation(token, "test"), `https://t.me/bekzat_bcc_shield_test_bot?start=${token}`);
+  for (const mode of ["fake", "disabled", ""]) assert.equal(telegramInvitation(token, mode), null);
+  assert.equal(telegramInvitation("bad&redirect=other", "test"), null);
+});
 
 const key = "demo-signing-key-0123456789-abcdefghij";
 const owner = "00000000-0000-4000-8000-000000000001";

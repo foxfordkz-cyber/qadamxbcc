@@ -76,8 +76,9 @@ async function handle(request: NextRequest, context: RouteContext) {
     const base = (process.env.BCC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
     const response = await fetch(`${base}/api/v1/${route}${request.nextUrl.search}`, {
       method: request.method, headers: backendHeaders(route),
-      body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(10_000), redirect: "error",
+      body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(10_000), redirect: "manual",
     });
+    if (response.status >= 300 && response.status < 400) return json({ error: "apiError" }, 502);
     if (!response.ok) {
       if (recipientFlag && [404, 409].includes(response.status)) {
         const value: unknown = await response.json().catch(() => null);

@@ -3,7 +3,7 @@
 import asyncio
 import math
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,10 +39,15 @@ def create_app(settings: Settings | None = None, resources: Resources | None = N
         res = resources or Resources.build(cfg)
         await res.start()
         app.state.resources = res
-        try:
+        async with AsyncExitStack() as stack:
+            stack.push_async_callback(res.close)
+            if cfg.render_telegram_test:
+                from app.integrations.telegram.hosted import hosted_telegram
+
+                await stack.enter_async_context(
+                    hosted_telegram(cfg, app.state.integration_settings, res.session_factory)
+                )
             yield
-        finally:
-            await res.close()
 
     app = FastAPI(
         title=cfg.app_name,

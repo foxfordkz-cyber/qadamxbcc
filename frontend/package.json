@@ -2,9 +2,16 @@
   "name": "bcc-shield-frontend",
   "version": "1.0.0",
   "private": true,
+  "overrides": {
+    "fflate@0.7.3": "0.7.5"
+  },
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "build:cloudflare": "vite build && next typegen",
+    "test:cloudflare": "node scripts/test-cloudflare.mjs",
+    "preview:cloudflare": "vite preview",
+    "deploy:cloudflare": "wrangler deploy",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
@@ -22,18 +29,26 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "1.70.1",
     "@playwright/test": "1.58.2",
     "@types/node": "^22.0.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "@vitejs/plugin-rsc": "0.5.37",
     "autoprefixer": "^10.4.20",
+    "miniflare": "5.20261118.0-beta",
     "postcss": "^8.4.49",
+    "react-server-dom-webpack": "19.3.1",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vinext": "1.4.6",
+    "vite": "8.3.8",
+    "wrangler": "4.165.0"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.12.0"
   }
 }

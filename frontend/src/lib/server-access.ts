@@ -7,6 +7,8 @@ type AccessFailure = { status: number; error: string; authenticate?: boolean };
 type Environment = Record<string, string | undefined>;
 type AccessConfiguration = { environment: "local" | "demo" | "pilot"; publicOrigin?: string };
 
+const keyIsValid = (value: string | undefined) => !!value && value.length >= 32 && value.trim() === value && new Set(value).size >= 12;
+
 // An absent environment remains the credential-free localhost demo, including a
 // production Next build. A typo must never turn a credentialed proxy anonymous.
 export function accessConfiguration(env: Environment = process.env): AccessConfiguration {
@@ -16,6 +18,16 @@ export function accessConfiguration(env: Environment = process.env): AccessConfi
     (env.BCC_DEMO_ACTIONS_ENABLED !== undefined && !["true", "false"].includes(env.BCC_DEMO_ACTIONS_ENABLED)) ||
     (env.BCC_MOBILE_LAN !== undefined && !["true", "false"].includes(env.BCC_MOBILE_LAN))) {
     throw new Error("Invalid service access configuration");
+  }
+  const demoKey = env.BCC_DEMO_UPSTREAM_API_KEY;
+  const demoSocKey = env.BCC_DEMO_UPSTREAM_SOC_KEY;
+  if (env.BCC_REQUIRE_DEMO_UPSTREAM !== undefined || demoKey !== undefined || demoSocKey !== undefined) {
+    if ((env.BCC_REQUIRE_DEMO_UPSTREAM !== undefined && env.BCC_REQUIRE_DEMO_UPSTREAM !== "true") ||
+      environment !== "demo" || env.BCC_API_MODE !== "live" || env.BCC_MOBILE_LAN === "true" ||
+      !keyIsValid(demoKey) || !keyIsValid(demoSocKey) || demoKey === demoSocKey ||
+      httpsOrigin(env.BCC_API_URL ?? "") === httpsOrigin(env.BCC_DEMO_PUBLIC_ORIGIN ?? "")) {
+      throw new Error("Hosted demo upstream is not configured");
+    }
   }
   const protectedValues = ["BCC_API_KEY", "BCC_SOC_API_KEY", "BCC_PILOT_USER", "BCC_PILOT_PASSWORD", "BCC_PUBLIC_ORIGIN"];
   if (environment !== "pilot") {
@@ -28,7 +40,6 @@ export function accessConfiguration(env: Environment = process.env): AccessConfi
     }
     return { environment: environment as "local" | "demo" };
   }
-  const keyIsValid = (key: string | undefined) => !!key && key.length >= 32 && key.trim() === key && new Set(key).size >= 12;
   if (!env.BCC_PILOT_USER || !/^[A-Za-z0-9_-]{3,64}$/.test(env.BCC_PILOT_USER) ||
     !env.BCC_PILOT_PASSWORD || env.BCC_PILOT_PASSWORD.length < 24 || env.BCC_PILOT_PASSWORD.trim() !== env.BCC_PILOT_PASSWORD ||
     !keyIsValid(env.BCC_API_KEY) || !keyIsValid(env.BCC_SOC_API_KEY) || env.BCC_API_KEY === env.BCC_SOC_API_KEY ||
@@ -63,7 +74,7 @@ export function checkAccess(request: AccessRequest, env: Environment = process.e
   // With BCC_MOBILE_LAN=true a local demo also trusts its own private Wi-Fi IP,
   // so a jury phone can open /mobile; the Origin must still equal that Host.
   const host = request.headers.get("host");
-  if (!pilot && host && (/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host) || (lanDemoEnabled(env) && isPrivateLanHost(host)))) {
+  if (!configuration.publicOrigin && host && (/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host) || (lanDemoEnabled(env) && isPrivateLanHost(host)))) {
     trustedOrigin = `${new URL(request.origin).protocol}//${host}`;
   }
   if (pilot) {
@@ -81,7 +92,7 @@ export function checkAccess(request: AccessRequest, env: Environment = process.e
   }
   if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
     const origin = request.headers.get("origin");
-    if (request.headers.get("sec-fetch-site") === "cross-site" || (origin !== null && origin !== trustedOrigin) || (pilot && !origin)) {
+    if (request.headers.get("sec-fetch-site") === "cross-site" || (origin !== null && origin !== trustedOrigin) || ((pilot || env.BCC_DEMO_UPSTREAM_API_KEY) && !origin)) {
       return { status: 403, error: "Untrusted request origin" };
     }
     if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
@@ -92,10 +103,12 @@ export function checkAccess(request: AccessRequest, env: Environment = process.e
 }
 
 export function backendHeaders(route: string, env: Environment = process.env): Record<string, string> {
-  accessConfiguration(env);
+  const configuration = accessConfiguration(env);
   const result: Record<string, string> = { "Content-Type": "application/json" };
   const soc = route.startsWith("soc/");
-  const key = env[soc ? "BCC_SOC_API_KEY" : "BCC_API_KEY"];
+  const key = configuration.environment === "demo"
+    ? env[soc ? "BCC_DEMO_UPSTREAM_SOC_KEY" : "BCC_DEMO_UPSTREAM_API_KEY"]
+    : env[soc ? "BCC_SOC_API_KEY" : "BCC_API_KEY"];
   if (key) result[soc ? "X-BCC-SOC-Key" : "X-BCC-API-Key"] = key;
   return result;
 }

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     environment: Literal["local", "demo", "pilot"] = "local"
     api_prefix: str = "/api/v1"
     allow_demo_overrides: bool = True
+    render_telegram_test: bool = False
     api_key: SecretStr | None = None
     soc_api_key: SecretStr | None = None
 

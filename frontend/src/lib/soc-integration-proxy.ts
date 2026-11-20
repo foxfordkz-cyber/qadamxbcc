@@ -171,9 +171,10 @@ export async function proxySocIntegration(request: Request, parts: string[], dep
   backend.search = url.search;
   try {
     const response = await (dependencies.fetch ?? fetch)(backend, {
-      method: request.method, headers, body, cache: "no-store", redirect: "error",
+      method: request.method, headers, body, cache: "no-store", redirect: "manual",
       signal: AbortSignal.any([request.signal, AbortSignal.timeout(10_000)]),
     });
+    if (response.status >= 300 && response.status < 400) return json({ error: "integrationsUnavailable" }, 502);
     if (!response.ok) {
       let detail: unknown;
       try {

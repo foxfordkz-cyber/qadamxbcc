@@ -113,7 +113,7 @@ test("proxy forwards only server capability and exact idempotency key with stric
       assert.equal(headers.get("cookie"), null);
       assert.equal(headers.get("x-bcc-soc-key"), null);
       assert.deepEqual(JSON.parse(String(init?.body)), action);
-      assert.equal(init?.redirect, "error");
+      assert.equal(init?.redirect, "manual");
       return Response.json({ ...caseValue, assignee: action.assignee, version: 2, signing_key: "upstream-secret" });
     },
   });

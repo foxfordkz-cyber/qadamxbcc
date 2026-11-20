@@ -28,6 +28,8 @@ Redis, NetworkX и локальная ML-модель. Интерфейс сти
 
 ## Публичное демо
 
+**[Открыть Saq Bol × BCC с серверным скорингом](https://saq-bol-bcc.zerdeliportald.workers.dev/)** · [Мобильный перевод](https://saq-bol-bcc.zerdeliportald.workers.dev/mobile) · [Состояние API](https://saq-bol-api.onrender.com/health). Cloudflare Workers обслуживает сайт и проксирует запросы в FastAPI на Render. Переводы, счета и деньги в этом стенде синтетические. Модель, PostgreSQL, Redis и граф работают на сервере. После простоя бесплатному API может потребоваться время для пробуждения.
+
 **Демо в браузере (GitHub Pages):** <https://foxfordkz-cyber.github.io/qadamxbcc/> — сайт, `/mobile`, `/pitch`.
 Это статическая версия: синтетический демо-движок работает прямо в браузере, без FastAPI,
 PostgreSQL и ML-модели. Обновляется автоматически при каждом пуше в `main`.

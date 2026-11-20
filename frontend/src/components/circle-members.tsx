@@ -7,7 +7,7 @@ import { mobileText } from "@/lib/mobile-copy";
 import type { ContactState } from "@/lib/trusted-circle";
 
 interface Member { id: string; alias: string; state: ContactState }
-interface Invitation { contact: Member; invitation_token: string; expires_at: string }
+interface Invitation { contact: Member; invitation_token: string; expires_at: string; telegram_invitation_url?: string }
 type CopyKey = Parameters<typeof mobileText>[1];
 const path = "trusted-circle/members";
 
@@ -84,6 +84,7 @@ export function CircleMembers() {
   const active = members?.filter(member => member.state !== "CONTACT_REVOKED").length ?? 0;
   return <section className="mobile-tool">
     <div className="tool-heading"><strong>{members && `${active} / 3`}</strong><button className="secondary" disabled={busy} onClick={() => void load()}>{m("refresh")}</button></div>
+    <p className="muted">{m("guardianTestChat")} <a href="https://t.me/bekzat_bcc_shield_test_bot" target="_blank" rel="noopener noreferrer">@bekzat_bcc_shield_test_bot</a></p>
     {!members && !error && <p role="status">{m("loading")}</p>}
     {error && <p className="error" role="alert">{m(error)}</p>}
     {members && <>
@@ -100,6 +101,7 @@ export function CircleMembers() {
     </>}
     {invitation && <div className="safety-result" role="status"><b>{m("invited")}</b><p>{m("inviteInstructions")}</p>
       <code dir="ltr">/start {invitation.invitation_token}</code>
+      {invitation.telegram_invitation_url && <p><a href={invitation.telegram_invitation_url} target="_blank" rel="noopener noreferrer">{m("guardianInvitation")}</a></p>}
       <small>{m("expires")} · {new Date(invitation.expires_at).toLocaleTimeString(lang === "kk" ? "kk-KZ" : "ru-KZ")}</small></div>}
   </section>;
 }
