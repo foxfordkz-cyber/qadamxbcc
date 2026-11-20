@@ -6,17 +6,17 @@ async function offline(page, language = "ru") {
   await page.locator(`[data-lang="${language}"]`).click();
   await page.locator('.bottom-nav [data-route="home"]').click();
 }
-test("first launch offers separate client / SOC entry", async ({ page }) => {
-  const errors = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+test("welcome exposes personal sign-in and explains unavailable deployment", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("h1")).toContainText("Өз қадамың");
+  await expect(page.locator("h1")).toHaveText("Qadam Shield");
+  await page.locator('[name="login"]').fill("client_demo");
+  await page.locator('[name="password"]').fill("example");
+  await page.locator('[data-action="show-password"]').click();
+  await expect(page.locator('[name=password]')).toHaveAttribute("type","text");
+  await page.locator("#personal-login button[type=submit]").click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.locator('[name="origin"], [name="code"], [data-role="admin"]')).toHaveCount(0);
   await page.screenshot({ path: "test-results/welcome.png", fullPage: true });
-  await page.locator('[data-action="start"]').click();
-  await expect(page.locator('[data-role="client"]')).toBeVisible();
-  await expect(page.locator('[data-role="admin"]')).toBeVisible();
-  await page.screenshot({ path: "test-results/login.png", fullPage: true });
-  expect(errors).toEqual([]);
 });
 for (const [preset, status] of [
   ["everyday", "Демо-перевод завершён"],

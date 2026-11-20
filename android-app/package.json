@@ -1,8 +1,8 @@
 {
   "name": "bcc-shield-android",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Qadam Shield Android: role-separated test backend and offline introduction",
+  "description": "Qadam Shield Android: synthetic client and SOC accounts",
   "scripts": {
     "vendor": "node scripts/vendor.mjs",
     "sync": "npm run vendor && cap sync android",

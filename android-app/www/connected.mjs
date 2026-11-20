@@ -1,3 +1,33 @@
+import * as identity from "./identity.mjs";
+const product = document.documentElement.hasAttribute("data-product");
+let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
+let savingDraft = Promise.resolve(), reportTx = null;
+let presetMode = false, mutationOutcome = false, expiryChecked = null;
+const accountLabel = () => T("Учебный счёт · виртуальные средства", "Оқу шоты · виртуалды қаражат");
+const pendingKey = () => "qadam.mobile.pending." + ownerScope;
+async function loadOwner(g, subject) {
+  gateway = g;
+  ownerScope = await identity.scopeKey(g.origin, subject);
+  pending = getLocal(pendingKey(), "");
+  const old = getLocal("qadam.mobile.pending", "");
+  if (!pending && old && getLocal("qadam.gateway", "") === g.origin && g.role === "client") {
+    try {
+      await g.api("transfers/" + old);
+      if (putLocal(pendingKey(), old)) { pending = old; putLocal("qadam.mobile.pending", ""); }
+    } catch { /* Preserve an unproven legacy request in quarantine. */ }
+  }
+  if (product) {
+    reportDraft = await identity.read("report." + ownerScope);
+    invitation = await identity.read("invite." + ownerScope);
+  }
+  offset = 0;
+  await open("home");
+}
+function clearVisible() {
+  account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
+  gateway = null; step = offset = 0; pending = ownerScope = query = filter = "";
+  answers = {}; caseEvents = []; casePageCursor = null; page = "login"; presetMode = false;
+}
 import { SAMPLE } from "./soc-sample.mjs";
 import { Gateway, gatewayOrigin, remainingSeconds } from "./gateway.mjs";
 import { installBackHandler } from "./native.mjs";
@@ -40,7 +70,7 @@ let evaluation = null,
   filter = "",
   offset = 0,
   query = "";
-let pending = getLocal("qadam.mobile.pending", ""),
+let pending = "",
   draft = null,
   step = 0,
   answers = {},
@@ -118,14 +148,25 @@ async function perform(task) {
   try {
     await task();
   } catch (failure) {
-    error = errText(failure.status);
+    if (failure.status === 409 && page === "case" && data?.id) {
+      try {
+        const id = data.id;
+        data = await api("integrations/guardian/soc/cases/" + id);
+        caseEvents = (await api("integrations/guardian/soc/cases/" + id + "/events")).items;
+      } catch { data = null; }
+    }
+    error = !navigator.onLine ? T("Нет интернета. Подключись и попробуй снова.", "Интернет жоқ. Қосылып, қайта көр.")
+      : page === "login" && failure.status === 401 ? T("Неверный логин или пароль.","Логин немесе құпиясөз қате.")
+      : failure.status === 499 ? T("Вход отменён. Можно выбрать другой способ.", "Кіру тоқтатылды. Басқа тәсілді таңда.")
+      : page === "login" && [0,503].includes(failure.status) ? T("Сервис входа пока недоступен. Попробуй позже или открой демонстрацию.", "Кіру қызметі әзірге қолжетімсіз. Кейін қайтала немесе демоны аш.")
+      : failure.status === 0 && !mutationOutcome ? T("Сервис не ответил. Попробуй обновить данные.", "Қызмет жауап бермеді. Деректерді жаңартып көр.")
+      : errText(failure.status);
     if (failure.status === 401) {
-      page = "login";
-      data = null;
-      evaluation = null;
+      if (product) await identity.write("session", null);
+      clearVisible();
     }
   } finally {
-    loading = false;
+    loading = false; mutationOutcome = false;
     render();
   }
 }
@@ -136,12 +177,13 @@ function accept(value) {
   receivedAt = Date.now();
 }
 async function open(next, id) {
+  if (loading) return;
   if (!gateway?.token && next !== "login") return;
   page = next;
   data = null;
   error = "";
   scanResult = null;
-  if (id) selectedId = id;
+  if (id && !["graph","case","reportDetail"].includes(next)) selectedId = id;
   if (next !== "questionnaire") {
     answers = {};
     step = 0;
@@ -152,7 +194,12 @@ async function open(next, id) {
         data = await api(
           `soc/feed?limit=20&offset=${offset}${filter ? `&status=${filter}` : ""}${query ? `&q=${encodeURIComponent(query)}` : ""}`,
         );
-      else data = await gateway.request(`/transfers?limit=20&offset=${offset}`);
+      else {
+        data = await gateway.request(`/transfers?limit=20&offset=${offset}`);
+        if (product && next === "home") account = await gateway.request("/account");
+      }
+    } else if (product && next === "transfer") {
+      account = await gateway.request("/account");
     } else if (next === "detail") {
       accept(await api(`transfers/${selectedId}`));
     } else if (next === "graph") data = await api(`soc/graph/${id}?depth=2`);
@@ -164,14 +211,18 @@ async function open(next, id) {
       data = await api(`integrations/soc/transactions/${selectedId}`);
     else if (next === "system") data = await api("integrations/health/details");
     else if (next === "contacts") data = await api("trusted-contacts");
+    else if (next === "inbox") data = await gateway.request("/inbox");
+    else if (next === "reportDetail") data = await api("integrations/guardian/reports/"+id);
     else if (next === "reports")
       data = await api("integrations/guardian/reports");
     else if (next === "cases")
       data = await api(
         `integrations/guardian/soc/cases?limit=20${casePageCursor ? `&cursor=${encodeURIComponent(casePageCursor)}` : ""}`,
       );
-    else if (next === "case")
+    else if (next === "case") {
       data = await api(`integrations/guardian/soc/cases/${id}`);
+      caseEvents = (await api(`integrations/guardian/soc/cases/${id}/events`)).items;
+    }
     else if (next === "notifications")
       data = await api(
         `trusted-contacts/transactions/${selectedId}/notifications`,
@@ -180,6 +231,14 @@ async function open(next, id) {
   window.scrollTo(0, 0);
 }
 function loginView() {
+  if (product) return `<section class="entry"><div class="shield-art" aria-hidden="true"><img src="mark.svg" alt=""></div>
+    <h1>Qadam Shield</h1><p>${T("Проверяй переводы и получай помощь, когда тебя торопят.", "Аударымды тексер. Асықтырған кезде сенімді көмек ал.")}</p>
+    <form id="personal-login" class="form-stack">
+    ${input("login",T("Логин","Логин"),"", "text",'autocomplete="username" required maxlength="64" autocapitalize="none" spellcheck="false"')}
+    <label>${T("Пароль","Құпиясөз")}<span class="password-field"><input type="password" name="password" required minlength="1" maxlength="128" autocomplete="current-password">
+    <button type="button" data-action="show-password" aria-pressed="false">${T("Показать","Көрсету")}</button></span></label>
+    <button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти","Кіру")}</button></form>
+    ${button("offline",T("Посмотреть демонстрацию","Демонстрацияны көру"),"text-button")}</section>`;
   return `${title(T("Всё начинается с тебя", "Бәрі сенен басталады"), T("Выбери свою роль и войди на тестовый стенд.", "Рөліңді таңдап, тест стендіне кір."))}<div class="role-choice"><button data-role="client" aria-pressed="${chosenRole === "client"}">${T("Клиент", "Клиент")}<small>${T("Свои переводы и защита", "Өз аударымдарың мен қорғаныс")}</small></button><button data-role="admin" aria-pressed="${chosenRole === "admin"}">SOC / ${T("Администратор", "Әкімші")}<small>${T("Мониторинг и расследования", "Мониторинг пен тексеру")}</small></button></div><section class="paper login-card"><form id="login-form" class="form-stack" autocomplete="off">${input("origin", T("Адрес тестового сервера", "Тест серверінің мекенжайы"), loginOrigin, "text", 'required inputmode="url" placeholder="127.0.0.1:18001"')}${input("code", T("Код доступа твоей роли", "Өз рөліңнің кіру коды"), "", "password", 'required minlength="24" maxlength="128" autocomplete="off" spellcheck="false"')}<button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти", "Кіру")} →</button></form><p class="fine">${T("Код выдаёт владелец тестового стенда. Роль проверяет сервер. Это отдельный тестовый код, не пароль банка.", "Кодты тест стендінің иесі береді. Рөлді сервер тексереді. Бұл банк құпиясөзі емес, бөлек тест коды.")}</p></section>${button("offline", T("Попробовать без сервера", "Серверсіз байқап көру"), "secondary")}`;
 }
 function transactionRows(items, soc = false) {
@@ -193,6 +252,14 @@ function transactionRows(items, soc = false) {
     .join("");
 }
 function historyView() {
+  if (product && gateway.role === "client") {
+    if (page === "history") return title(T("История переводов","Аударым тарихы")) + transactionRows(data?.items) +
+      (offset ? button("prev",T("Назад","Артқа"),"secondary") : "") + (data?.has_more ? button("next",T("Ещё","Тағы"),"secondary") : "");
+    return title(T("Добро пожаловать","Қош келдіңіз")) + `<section class="account-card"><small>${accountLabel()}</small><strong>Qadam · KZT</strong>${account ? `<p>${T("Сумма на проверке","Тексерілетін сома")} · ${amount(account.held)}</p>` : ""}</section>` +
+      (pending ? button("recover",T("Уточнить результат перевода","Аударым нәтижесін нақтылау")) :
+       account?.active_pause ? `<button class="live-row" data-detail="${E(account.active_pause)}">${T("Перевод на паузе · открыть","Аударым кідіртілді · ашу")} →</button>` : "") +
+      button("transfer",T("Перевести","Аудару")) + `<h2>${T("Недавние операции","Соңғы операциялар")}</h2>` + transactionRows(data?.items?.slice(0,3));
+  }
   const admin = gateway.role === "admin",
     stats = data?.stats;
   return `${title(admin ? T("Пульс безопасности", "Қауіпсіздік көрінісі") : page === "home" ? T("Твой следующий шаг", "Келесі қадамың") : T("Мои транзакции", "Менің транзакцияларым"), admin ? T("Общая лента из PostgreSQL. Обновление по запросу.", "PostgreSQL-дегі жалпы тізім. Сұрау бойынша жаңартылады.") : T("Только твои операции. Решения принимает существующий antifraud.", "Тек өз әрекеттерің. Шешімді қолданыстағы antifraud қабылдайды."))}${
@@ -239,6 +306,12 @@ const presetValues = {
 function transferView() {
   if (pending)
     return `${title(T("Сначала проверь предыдущий запрос", "Алдыңғы сұрауды тексер"))}${button("recover", T("Проверить статус", "Күйін тексеру"))}${button("abandon", T("Безопасно закрыть запрос", "Сұрауды қауіпсіз жабу"), "secondary")}`;
+  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + `<section class="paper"><form id="transfer-form" class="form-stack">
+    <label>${T("Учебный получатель","Оқу аударымын алушы")}<select required name="recipient_phone"><option value="">${T("Выбери получателя","Алушыны таңда")}</option>
+    ${(account?.recipients ?? []).map(r => `<option value="${E(r.phone)}" ${draft?.recipient_phone === r.phone ? "selected" : ""}>${E(r.name)}</option>`).join("")}</select></label>
+    ${input("amount",T("Сумма, ₸","Сома, ₸"), draft?.amount ?? "", "number", 'required min="0.01" max="999999999" step="0.01" inputmode="decimal"')}
+    <label class="tick-field"><input type="checkbox" name="active_call">${T("Меня просят перевести во время звонка","Қоңырау кезінде аударуды сұрады")}</label>
+    <button class="primary">${T("Проверить реквизиты","Деректемелерді тексеру")}</button></form></section>${button("presets",T("Демонстрационные сценарии","Демонстрациялық сценарийлер"),"secondary")}`;
   const value = draft ?? presetValues.normal;
   return `${title(T("Новый тестовый перевод", "Жаңа тест аударымы"), T("Сумму и признаки анализирует сервер: ML, частота операций и связи получателя.", "Сома мен белгілерді сервер талдайды: ML, әрекет жиілігі және алушы байланыстары."))}<div class="filter-row">${Object.keys(
     presetValues,
@@ -383,10 +456,20 @@ function reportView() {
   return `${title(T("Демо-обращение", "Демо-өтініш"))}<section class="paper"><form id="report-form" class="form-stack"><label>${T("Категория", "Санат")}<select name="category"><option value="impersonation">${T("Представился банком", "Банк атынан танысты")}</option><option value="safe_account">${T("«Безопасный счёт»", "«Қауіпсіз шот»")}</option><option value="remote_access">${T("Удалённый доступ", "Қашықтан кіру")}</option><option value="other">${T("Другое", "Басқа")}</option></select></label><label>${T("Синтетическое описание", "Жасанды сипаттама")}<textarea name="description" minlength="10" maxlength="500" required autocomplete="off"></textarea></label><label class="tick-field"><input type="checkbox" name="consent" required>${T("Подтверждаю отправку в демо-SOC. В тексте нет настоящих личных данных.", "Демо-SOC-қа жіберуді растаймын. Мәтінде нақты жеке деректер жоқ.")}</label><button class="primary" type="submit">${T("Отправить в демо-SOC", "Демо-SOC-қа жіберу")} →</button></form></section>`;
 }
 function reportsView() {
-  return `${title(T("Обращения", "Өтініштер"))}${!data?.length ? `<p class="empty">${T("Обращений нет", "Өтініштер жоқ")}</p>` : data.map((r) => `<section class="paper"><span class="status-pill">${E(r.state)}</span><p>${E(r.description)}</p><p class="fine">${E(r.category)} · ${when(r.created_at)}</p>${gateway.role === "admin" ? `<div class="inline-actions"><button data-ack="${E(r.id)}">${T("Отметить", "Белгілеу")}</button><button data-open-case="${E(r.id)}">${T("Открыть дело", "Іс ашу")}</button></div>` : ""}</section>`).join("")}${button("reports", T("Обновить", "Жаңарту"), "secondary")}`;
+  return `${title(T("Обращения", "Өтініштер"))}${!data?.length ? `<p class="empty">${T("Обращений нет", "Өтініштер жоқ")}</p>` : data.map((r) => `<section class="paper"><span class="status-pill">${E(label(r.state))}</span><p>${E(r.description)}</p><p class="fine">${E(label(r.category))} · ${when(r.created_at)}</p><small>${E(r.id)}</small><button class="text-button" data-object="report" data-object-id="${E(r.id)}">${T("Открыть квитанцию","Түбіртекті ашу")}</button>${gateway.role === "admin" ? `<div class="inline-actions"><button data-ack="${E(r.id)}">${T("Отметить", "Белгілеу")}</button><button data-open-case="${E(r.id)}">${T("Открыть дело", "Іс ашу")}</button></div>` : ""}</section>`).join("")}${button("reports", T("Обновить", "Жаңарту"), "secondary")}`;
 }
+const labels = {
+  CONTACT_VERIFIED:["Согласие получено","Келісім берілді"],CONTACT_PENDING_CONSENT:["Ожидаем согласия","Келісім күтілуде"],
+  CONTACT_REVOKED:["Согласие отозвано","Келісім қайтарылды"],NOTIFICATION_QUEUED:["В очереди","Кезекте"],
+  NOTIFICATION_SENT:["Принято адаптером","Адаптер қабылдады"],CONTACT_ACKNOWLEDGED:["Контакт подтвердил получение","Сенімді адам қабылдағанын растады"],
+  SUSPICION_REPORTED:["Сообщено о подозрении","Күдік туралы хабарланды"],DELIVERY_FAILED:["Ошибка доставки","Жеткізу қатесі"],
+  NOTIFICATION_EXPIRED:["Срок истёк","Мерзімі өтті"],SUBMITTED:["Передано на рассмотрение","Қарауға берілді"],
+  DEMO_ACKNOWLEDGED:["Отмечено оператором","Оператор белгіледі"],impersonation:["Выдача себя за другого","Басқа адам болып танысу"],
+  safe_account:["Безопасный счёт","Қауіпсіз шот"],remote_access:["Удалённый доступ","Қашықтан кіру"],other:["Другое","Басқа"]
+};
+const label = key => labels[key] ? T(...labels[key]) : T("Статус уточняется","Күйі нақтылануда");
 function contactsView() {
-  return `${title(T("Круг доверия", "Сенім шеңбері"), T("Контакт может сообщить о подозрении, но не одобрить перевод. Приглашение не означает согласие.", "Сенімді адам күдік туралы хабарлай алады, бірақ аударымды мақұлдай алмайды. Шақыру келісім болып саналмайды."))}<section class="paper">${(data?.contacts ?? []).map((c) => `<div class="contact"><strong>${E(c.alias || T("Контакт", "Контакт"))}</strong><p>${E(c.state)}</p><small>${E(c.language)}</small>${c.state !== "CONTACT_REVOKED" ? `<button class="text-button" data-revoke="${E(c.id)}">${T("Отозвать согласие", "Келісімді қайтарып алу")}</button>` : ""}</div>`).join("") || `<p>${T("Контакты не подключены.", "Контактілер қосылмаған.")}</p>`}</section><p class="callout">${T("Этот стенд работает с Fake Telegram. Реальные сообщения из приложения выключены. Подключение живого бота — отдельная согласованная проверка.", "Бұл стенд Fake Telegram-мен жұмыс істейді. Қолданбадан нақты хабарлама жіберу өшірулі. Нақты ботты қосу — бөлек келісілген тексеру.")}</p>${button("invite-confirm", T("Создать тестовое приглашение", "Тест шақыруын жасау"), "secondary")}`;
+  return `${title(T("Круг доверия", "Сенім шеңбері"), T("Контакт может сообщить о подозрении, но не одобрить перевод. Приглашение не означает согласие.", "Сенімді адам күдік туралы хабарлай алады, бірақ аударымды мақұлдай алмайды. Шақыру келісім болып саналмайды."))}<section class="paper">${(data?.contacts ?? []).map((c) => `<div class="contact"><strong>${E(c.alias || T("Контакт", "Контакт"))}</strong><p>${E(label(c.state))}</p><small>${E(c.language)}</small>${c.state !== "CONTACT_REVOKED" ? `<button class="text-button" data-revoke="${E(c.id)}">${T("Отозвать согласие", "Келісімді қайтарып алу")}</button>` : ""}</div>`).join("") || `<p>${T("Контакты не подключены.", "Контактілер қосылмаған.")}</p>`}</section><p class="callout">${T("Этот стенд работает с Fake Telegram. Реальные сообщения из приложения выключены. Подключение живого бота — отдельная согласованная проверка.", "Бұл стенд Fake Telegram-мен жұмыс істейді. Қолданбадан нақты хабарлама жіберу өшірулі. Нақты ботты қосу — бөлек келісілген тексеру.")}</p>${button("invite-confirm", T("Создать тестовое приглашение", "Тест шақыруын жасау"), "secondary")}`;
 }
 function graphView() {
   const nodes = data?.nodes ?? [],
@@ -407,7 +490,7 @@ function graphView() {
     .filter((e) => coords.has(e.source) && coords.has(e.target))
     .map(
       (e) =>
-        `<line x1="${coords.get(e.source).x}" y1="${coords.get(e.source).y}" x2="${coords.get(e.target).x}" y2="${coords.get(e.target).y}"/>`,
+        `<line data-edge="${E(e.id)}" class="${e.data?.highlight ? "evidence-edge" : ""}" x1="${coords.get(e.source).x}" y1="${coords.get(e.source).y}" x2="${coords.get(e.target).x}" y2="${coords.get(e.target).y}"/>`,
     )
     .join(
       "",
@@ -434,6 +517,9 @@ function gatewayView() {
   return `${title("Mock Gateway", T("Учебные данные. Это не обращение в НБК.", "Оқу деректері. Бұл ҰБ-ке сұрау емес."))}<section class="paper"><form id="gateway-form" class="form-stack"><label>${T("Синтетический идентификатор", "Жасанды идентификатор")}<select name="identifier"><option>SYN-CLEAR-001</option><option>SYN-REVIEW-001</option><option>SYN-NETWORK-001</option></select></label><button type="submit" class="primary">${T("Проверить", "Тексеру")} →</button></form>${data ? `<p>${E(data[lang === "ru" ? "description_ru" : "description_kk"])}</p><p class="fine">${E(data.result?.status)} · MOCK</p>` : ""}</section>`;
 }
 function settingsView() {
+  if (product) return title(T("Профиль","Профиль")) + `<section class="paper"><h2>${gateway.role === "admin" ? "SOC" : "Qadam"}</h2><p>${accountLabel()}</p></section>` +
+    button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
+    (gateway.role === "client" ? button("contacts",T("Мои согласия","Келісімдерім"),"secondary") : "") + button("logout",T("Выйти","Шығу"));
   return `${title(T("Профиль доступа", "Кіру профилі"))}<section class="paper"><h2>${gateway.role === "admin" ? "SOC / Admin" : T("Клиент", "Клиент")}</h2><p>${T("Роль назначена сервером. Сессия действует 30 минут, затем нужен повторный вход.", "Рөлді сервер тағайындады. Сессия 30 минутқа жарамды, содан кейін қайта кіру қажет.")}</p><p class="fine">${E(gateway.origin)}</p></section>${button("logout", T("Выйти из аккаунта", "Аккаунттан шығу"), "secondary")}`;
 }
 function sampleView() {
@@ -461,6 +547,9 @@ const screens = {
   sample: sampleView,
   login: loginView,
   home: historyView,
+  inbox: () => title(T("Сообщения безопасности","Қауіпсіздік хабарламалары")) +
+    ((data?.items ?? []).map(e => `<button class="live-row" data-object="${E(e.kind)}" data-object-id="${E(e.object_id)}"><strong>${E(e.state === "cooling_off" ? status(e.state) : label(e.state))}</strong><small>${when(e.time)}</small></button>`).join("") || T("Пока нет сообщений","Әзірге хабарлама жоқ")),
+  reportDetail: () => title(T("Квитанция обращения","Өтініш түбіртегі")) + (data ? `<section class="paper"><strong>${E(label(data.state))}</strong><p>${E(data.description)}</p><small>${E(data.id)} · ${when(data.created_at)}</small></section>` : ""),
   history: historyView,
   transfer: transferView,
   review: reviewView,
@@ -482,7 +571,7 @@ const screens = {
   call: () =>
     `${title(T("Банк мне звонит?", "Банк маған қоңырау шалып жатыр ма?"))}<p class="callout">${T("Ответ только из тестового журнала нашего стенда. Это не проверка настоящего звонка банка.", "Жауап тек стендтің тест журналынан алынады. Бұл банктің нақты қоңырауын тексеру емес.")}</p>${button("check-call", T("Проверить тестовый журнал", "Тест журналын тексеру"))}${data ? `<section class="paper"><p>${E(data[lang === "ru" ? "message_ru" : "message_kk"])}</p></section>` : ""}`,
   notifications: () =>
-    `${title(T("Уведомления", "Хабарламалар"))}<section class="paper">${data?.length ? data.map((n) => `<p>${E(n.state)} · ${when(n.expires_at)}</p>`).join("") : T("Уведомлений нет. Реальные сообщения в этой сессии выключены.", "Хабарламалар жоқ. Осы сессияда нақты хабарламалар өшірулі.")}</section>`,
+    `${title(T("Уведомления", "Хабарламалар"))}<section class="paper">${data?.length ? data.map((n) => `<p>${E(label(n.state))} · ${when(n.expires_at)}</p>`).join("") : T("Уведомлений нет. Реальные сообщения в этой сессии выключены.", "Хабарламалар жоқ. Осы сессияда нақты хабарламалар өшірулі.")}</section>`,
   confirmCancel: () =>
     `${title(T("Отменить перевод?", "Аударым тоқтатылсын ба?"))}<p class="callout">${T("Отмена тестовой операции необратима. Администратор не может отправить её за тебя.", "Тест әрекетін тоқтату қайтарылмайды. Әкімші оны сенің атыңнан жібере алмайды.")}</p>${button("cancel-transfer", T("Да, отменить", "Иә, тоқтату"))}${button("refresh-detail", T("Вернуться", "Қайту"), "secondary")}`,
   invite: () =>
@@ -504,11 +593,76 @@ function render() {
           ["safety", "◇", T("Защита", "Қорғаныс")],
           ["settings", "◉", T("Профиль", "Профиль")],
         ];
+  if (product && gateway?.role === "client") nav.splice(0, nav.length,
+    ["home","⌂",T("Главная","Басты бет")],["transfer","↗",T("Переводы","Аударымдар")],["safety","◇",T("Защита","Қорғаныс")],["history","◷",T("История","Тарих")]);
   root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>qadam</span></div><span class="role-tag">${gateway?.role === "admin" ? "SOC" : gateway?.role === "client" ? "CLIENT" : "ANDROID"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("ТЕСТОВЫЙ BACKEND · СИНТЕТИЧЕСКИЕ ДАННЫЕ", "ТЕСТ BACKEND · ЖАСАНДЫ ДЕРЕКТЕР") : "QADAM SHIELD · CLIENT / SOC"}</div><main>${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${page === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
+  if (product) {
+    root.querySelector(".demo-strip")?.remove();
+    root.querySelector(".role-tag")?.remove();
+    const back = root.querySelector(".back");
+    if (["login","home"].includes(page)) back.remove();
+    if (gateway?.token) root.querySelector(".topbar").insertAdjacentHTML("beforeend",
+      `<button data-action="settings" class="profile-button" aria-label="${T("Профиль","Профиль")}">Q</button>`);
+    if (page === "safety" || page === "settings" && gateway?.role === "client")
+      root.querySelector("main").insertAdjacentHTML("beforeend",button("inbox",T("Сообщения безопасности","Қауіпсіздік хабарламалары"),"secondary"));
+    if (page === "call") root.querySelector("main").insertAdjacentHTML("beforeend",
+      button("report",T("Сообщить о звонке","Қоңырау туралы хабарлау"),"secondary"));
+    if (page === "contacts") {
+      if (account?.telegram_bot) root.querySelector(".callout")?.remove();
+      for (const [i,c] of (data?.contacts ?? []).entries()) {
+        const saved = invitation?.[c.id];
+        if (saved && c.state === "CONTACT_PENDING_CONSENT") {
+          const el = root.querySelectorAll(".contact")[i];
+          const active = Date.parse(saved.expires) > Date.now();
+          el.insertAdjacentHTML("beforeend", `<p>${active ? T("Действует до","Жарамды мерзімі") + " " + when(saved.expires) : T("Приглашение истекло. Отзови его и создай новое.","Шақыру мерзімі өтті. Оны қайтарып, жаңасын жаса.")}</p>`);
+          if (active && account?.telegram_bot) el.insertAdjacentHTML("beforeend", `<button class="secondary" data-share="${E(c.id)}">${T("Поделиться приглашением","Шақыруды бөлісу")}</button>`);
+        }
+      }
+    }
+    if (page === "report" && reportDraft) {
+      const form = root.querySelector("#report-form");
+      form.elements.category.value = reportDraft.category;
+      form.elements.description.value = reportDraft.description;
+      form.elements.consent.checked = reportDraft.consent;
+    }
+    if (page === "graph" && data) {
+      const nodes = data.nodes ?? [], edges = data.edges ?? [];
+      const controls = `<div class="inline-actions">${button("graph-zoom",T("Увеличить","Үлкейту"),"secondary")}${button("graph-fit",T("Вместить","Сыйғызу"),"secondary")}${button("graph-full",T("На весь экран","Толық экран"),"secondary")}</div>
+        <p>${T("Зелёная линия — связь, отмеченная анализатором. Красные узлы требуют проверки.","Жасыл сызық — талдаушы жүйе белгілеген байланыс. Қызыл түйіндер тексеруді қажет етеді.")}</p>
+        <label>${T("Выбрать связь","Байланысты таңдау")}<select id="edge-focus"><option value="">—</option>${edges.filter(e=>nodes.slice(0,30).some(n=>n.id===e.source)&&nodes.slice(0,30).some(n=>n.id===e.target)).map(e =>
+          `<option value="${E(e.id)}">${E(nodes.find(n=>n.id===e.source)?.data.label)} → ${E(nodes.find(n=>n.id===e.target)?.data.label)}</option>`).join("")}</select></label><p id="edge-detail" aria-live="polite"></p>`;
+      root.querySelector(".graph")?.insertAdjacentHTML("afterend",controls);
+      root.querySelector("#edge-focus").onchange = e => {
+        const edge = edges.find(v=>v.id===e.target.value);
+        for(const l of root.querySelectorAll(".graph line")) l.classList.toggle("selected-edge", l.dataset.edge===edge?.id);
+        root.querySelector("#edge-detail").textContent = edge ? (edge.data.edge_type==="transfer" ? T("Переводы","Аударымдар") : T("Общее устройство","Ортақ құрылғы"))+" · "+edge.data.tx_count : "";
+      };
+    }
+    if (page === "case" && data) root.querySelector("main").insertAdjacentHTML("beforeend",
+      `<section class="paper"><h2>${T("История дела","Іс тарихы")}</h2>${caseEvents.map(e => `<p>${E(e[lang === "ru" ? "description_ru" : "description_kk"])} · ${when(e.timestamp)}</p>`).join("")}</section>
+      <form id="case-note" class="form-stack paper"><label>${T("Заметка аналитика","Талдаушы жазбасы")}<textarea name="note" required minlength="10" maxlength="500"></textarea></label><button>${T("Сохранить","Сақтау")}</button></form>` +
+      button("case-assign",T("Назначить демо-аналитика","Демо-талдаушыны тағайындау"),"secondary"));
+    if (page === "detail" && gateway?.role === "client" && evaluation) {
+      root.querySelector(".paper")?.insertAdjacentHTML("afterbegin", `<small>${accountLabel()}</small>`);
+      root.querySelector("main").insertAdjacentHTML("beforeend",button("report",T("Сообщить о мошенничестве","Алаяқтық туралы хабарлау"),"secondary"));
+    }
+  }
 }
 root.addEventListener("click", async (event) => {
   const b = event.target.closest("button");
   if (!b || loading) return;
+  if (b.dataset.object) {
+    const kind = b.dataset.object;
+    await open(kind === "contact" ? "contacts" : kind === "report" ? "reportDetail" : "detail", b.dataset.objectId);
+    if (kind === "contact") root.querySelector(`[data-revoke="${CSS.escape(b.dataset.objectId)}"]`)?.focus();
+    return;
+  }
+  if (b.dataset.share) {
+    const saved = invitation?.[b.dataset.share];
+    if (account?.telegram_bot && saved && Date.parse(saved.expires) > Date.now())
+      await perform(() => identity.shareInvite("https://t.me/" + account.telegram_bot + "?start=" + saved.token));
+    return;
+  }
   if (b.dataset.role) {
     chosenRole = b.dataset.role;
     render();
@@ -517,6 +671,7 @@ root.addEventListener("click", async (event) => {
   if (b.dataset.nav) {
     offset = 0;
     casePageCursor = null;
+    if (b.dataset.nav === "transfer") { presetMode = false; draft = null; }
     await open(b.dataset.nav);
     return;
   }
@@ -581,10 +736,21 @@ root.addEventListener("click", async (event) => {
     return;
   }
   const act = b.dataset.action;
+  if (act === "show-password") {
+    const field = root.querySelector('[name=password]');
+    const reveal = field.type === "password";
+    field.type = reveal ? "text" : "password";
+    b.setAttribute("aria-pressed",String(reveal));
+    b.textContent = reveal ? T("Скрыть","Жасыру") : T("Показать","Көрсету");
+    return;
+  }
+  if (act === "report") reportTx = page === "detail" ? selectedId : null;
+  if (act === "presets") { presetMode = true; render(); return; }
   if (
     [
       "home",
       "history",
+      "inbox",
       "safety",
       "scan",
       "report",
@@ -615,6 +781,10 @@ root.addEventListener("click", async (event) => {
     render();
     return;
   }
+  if (act === "graph-fit" || act === "graph-zoom") {
+    root.querySelector(".graph")?.setAttribute("viewBox",act === "graph-fit" ? "0 0 360 300" : "55 45 250 210"); return;
+  }
+  if (act === "graph-full") { const el=root.querySelector(".graph"); if (el?.requestFullscreen) await el.requestFullscreen().catch(()=>{}); return; }
   if (act === "back") {
     if (page === "login") location.assign("index.html");
     else
@@ -628,6 +798,7 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "offline") {
+    if (product) { location.assign("demo.html?offline=1"); return; }
     if (chosenRole === "admin") {
       page = "sample";
       sampleId = null;
@@ -637,12 +808,15 @@ root.addEventListener("click", async (event) => {
   }
   if (act === "logout") {
     await perform(async () => {
-      await gateway.logout();
+      try { await gateway.logout(); } finally {
+        if (product) await identity.write("session", null);
+        clearVisible();
+      }
       data = null;
       evaluation = null;
       page = "login";
     });
-    if (!gateway.token) {
+    if (!gateway?.token) {
       page = "login";
       render();
     }
@@ -657,7 +831,7 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "transfer") {
-    draft = structuredClone(presetValues.normal);
+    presetMode = false; draft = product ? null : structuredClone(presetValues.normal);
     await open("transfer");
     return;
   }
@@ -684,9 +858,9 @@ root.addEventListener("click", async (event) => {
     if (pending || !draft) return;
     await perform(async () => {
       const { request_id: id } = await gateway.request("/requests", "POST", {});
-      if (!putLocal("qadam.mobile.pending", id))
+      if (!putLocal(pendingKey(), id))
         throw new Error("storage unavailable");
-      pending = id;
+      pending = id; mutationOutcome = true;
       const value = await api("transfers/evaluate", "POST", {
         ...draft,
         request_id: id,
@@ -694,7 +868,7 @@ root.addEventListener("click", async (event) => {
       });
       accept(value);
       pending = "";
-      putLocal("qadam.mobile.pending", "");
+      putLocal(pendingKey(), "");
       page = "detail";
       draft = null;
     });
@@ -704,7 +878,7 @@ root.addEventListener("click", async (event) => {
     await perform(async () => {
       accept(await api(`transfers/${pending}`));
       pending = "";
-      putLocal("qadam.mobile.pending", "");
+      putLocal(pendingKey(), "");
       page = "detail";
     });
     return;
@@ -722,7 +896,7 @@ root.addEventListener("click", async (event) => {
         page = "detail";
       } else page = "home";
       pending = "";
-      putLocal("qadam.mobile.pending", "");
+      putLocal(pendingKey(), "");
     });
     if (!error && page === "home") await open("home");
     return;
@@ -780,25 +954,29 @@ root.addEventListener("click", async (event) => {
   }
   if (act === "create-invite") {
     await perform(async () => {
-      await api("trusted-contacts", "POST", {
+      const created = await api("trusted-contacts", "POST", {
         owner_consent: true,
         language: lang,
       });
+      invitation = {...invitation, [created.contact.id]: {token: created.invitation_token, expires: created.expires_at}};
+      if (product) await identity.write("invite." + ownerScope, invitation);
     });
     if (!error) await open("contacts");
     return;
   }
-  if (act === "case-review" || act === "case-resolve") {
+  if (["case-review","case-resolve","case-assign"].includes(act)) {
     const current = data;
     await perform(async () => {
       data = await api(
         `integrations/guardian/soc/cases/${current.id}/actions`,
         "POST",
         {
+          ...(act === "case-assign" ? {action:"assign",assignee:"demo_analyst_a"} : {
           action: "transition",
           expected_version: current.version,
           state: act === "case-review" ? "IN_REVIEW" : "RESOLVED",
-          reason: act === "case-review" ? "review_started" : "review_complete",
+          reason: act === "case-review" ? "review_started" : "review_complete"}),
+          expected_version: current.version,
         },
         crypto.randomUUID(),
       );
@@ -811,6 +989,14 @@ root.addEventListener("submit", async (event) => {
   if (loading) return;
   const form = event.target,
     fields = new FormData(form);
+  if (form.id === "personal-login") {
+    let result;
+    await perform(async () => {
+      result = await identity.signIn(String(fields.get("login")).trim(),String(fields.get("password")));
+    });
+    if (result) await loadOwner(result.gateway,result.subject);
+    return;
+  }
   if (form.id === "login-form") {
     const origin = gatewayOrigin(String(fields.get("origin") ?? ""));
     if (!origin) {
@@ -832,6 +1018,8 @@ root.addEventListener("submit", async (event) => {
         throw { status: 403 };
       }
       gateway = candidate;
+      ownerScope = await identity.scopeKey(origin, candidate.role);
+      pending = getLocal(pendingKey(), "");
       putLocal("qadam.gateway", origin);
       page = "home";
       offset = 0;
@@ -853,6 +1041,12 @@ root.addEventListener("submit", async (event) => {
     render();
     return;
   }
+  if (form.id === "case-note") {
+    const id = data.id;
+    await perform(() => api("integrations/guardian/soc/cases/"+id+"/actions","POST",{action:"note",body:fields.get("note"),expected_version:data.version},crypto.randomUUID()));
+    if (!error) await open("case",id);
+    return;
+  }
   if (form.id === "search-form") {
     query = String(fields.get("q") ?? "");
     offset = 0;
@@ -872,15 +1066,20 @@ root.addEventListener("submit", async (event) => {
   }
   if (form.id === "report-form") {
     const body = {
+      ...(reportDraft?.transaction_id || reportTx ? {transaction_id:reportDraft?.transaction_id || reportTx} : {}),
       category: String(fields.get("category")),
       description: String(fields.get("description")),
       confirmed_demo_submission: true,
     };
-    form.reset();
-    await perform(() =>
-      api("integrations/guardian/reports", "POST", body, crypto.randomUUID()),
-    );
-    if (!error) await open("reports");
+    const key = reportDraft?.key || crypto.randomUUID();
+    reportDraft = {...body, consent: fields.has("consent"), key};
+    await perform(async () => {
+      if (product) { await savingDraft; await identity.write("report." + ownerScope, reportDraft); }
+      const receipt = await api("integrations/guardian/reports", "POST", body, key);
+      if (product) await identity.write("report." + ownerScope, null);
+      reportDraft = null; reportTx = null; selectedId = receipt.id;
+    });
+    if (!error) await open(product ? "reportDetail" : "reports", selectedId);
     return;
   }
   if (form.id === "gateway-form") {
@@ -896,6 +1095,8 @@ root.addEventListener("submit", async (event) => {
   }
 });
 installBackHandler(() => {
+  if (loading) return true;
+  if (product && page === "login") return false;
   if (page === "login") {
     location.assign("index.html");
     return true;
@@ -908,6 +1109,33 @@ installBackHandler(() => {
 }).catch(() => {});
 setInterval(() => {
   const timer = document.querySelector("#countdown");
-  if (timer) timer.textContent = timerText();
+  if (timer) {
+    timer.textContent = timerText();
+    if (product && timer.textContent === "00:00" && expiryChecked !== selectedId && !loading) {
+      expiryChecked = selectedId; void open("detail",selectedId);
+    }
+  }
 }, 1000);
 render();
+
+if (product) identity.initialize(loadOwner, e => {
+  error = e.status === 499 ? T("Вход отменён.","Кіру тоқтатылды.") : e.status === 401 ?
+    T("Войди заново, чтобы продолжить.","Жалғастыру үшін қайта кір.") : T("Сервис входа недоступен. Попробуй позже.","Кіру қызметі қолжетімсіз. Кейін қайтала.");
+  render();
+}).catch(() => { error = T("Защищённое хранилище недоступно.","Қорғалған қойма қолжетімсіз."); render(); });
+
+root.addEventListener("input", event => {
+  const form = event.target.closest("#report-form");
+  if (!form || !product || !ownerScope) return;
+  const fields = new FormData(form);
+  const draft = {category: fields.get("category"), description: fields.get("description"),
+    consent: fields.has("consent"), transaction_id: reportDraft?.transaction_id || reportTx, key:reportDraft?.key || crypto.randomUUID()};
+  reportDraft = draft;
+  const slot = "report." + ownerScope;
+  savingDraft = savingDraft.then(() => identity.write(slot, draft)).catch(() => {
+    error = T("Не удалось сохранить черновик на устройстве.","Құрылғыға нобайды сақтау мүмкін болмады.");
+  });
+});
+document.addEventListener("visibilitychange", () => {
+  if (product && !document.hidden && !loading && page === "detail") void open("detail",selectedId);
+});
