@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.integrations.errors import IntegrationError
+from app.integrations.guardian_education import ADVICE, QUESTIONS
 from app.integrations.guardian_reports import contact_identity
 from app.integrations.models import ContactNotification, TrustedContact
 from app.integrations.telegram.assistant_ui import COPY as ASSISTANT
@@ -64,12 +65,7 @@ TEXT = {
             "Учебная проверка, не банковское решение. Ответы не меняют статус "
             "перевода. Можно завершить в любой момент."
         ),
-        "result": (
-            "Обратите внимание на отмеченные признаки. Не действуйте под "
-            "давлением; самостоятельно свяжитесь с банком через известный "
-            "официальный канал. Даже отсутствие отмеченных признаков не "
-            "доказывает безопасность."
-        ),
+        "result": ADVICE["ru"],
         "draft": "Подготовить сообщение",
         "draft_text": (
             "Черновик для самостоятельного обращения: «Прошу помочь проверить "
@@ -115,11 +111,7 @@ TEXT = {
             "Оқу тексеруі, банктің шешімі емес. Жауаптар аударым күйін "
             "өзгертпейді. Кез келген уақытта аяқтауға болады."
         ),
-        "result": (
-            "Белгіленген белгілерге назар аударыңыз. Қысыммен әрекет етпеңіз; "
-            "банкке белгілі ресми арна арқылы өзіңіз хабарласыңыз. Белгілердің"
-            " болмауы қауіпсіздікті дәлелдемейді."
-        ),
+        "result": ADVICE["kk"],
         "draft": "Хабарлама дайындау",
         "draft_text": (
             "Өз бетіңізше жүгінуге арналған жоба: «Күмәнді хабарласуды "
@@ -134,39 +126,6 @@ TEXT = {
         ),
     },
 }
-# Exact existing CoolingQuestionnaire fields; no score or resolve-cooling call.
-QUESTIONS: list[tuple[str, str, str, bool]] = [
-    (
-        "caller_claims_bank_or_police",
-        "Звонящий представился сотрудником банка или полиции?",
-        "Қоңырау шалушы банк немесе полиция қызметкері болып танысты ма?",
-        True,
-    ),
-    (
-        "asked_to_move_to_safe_account",
-        "Просили перевести деньги на «безопасный счёт»?",
-        "Ақшаны «қауіпсіз шотқа» аударуды сұрады ма?",
-        True,
-    ),
-    (
-        "asked_to_keep_secret_or_install_app",
-        "Просили сохранить разговор в секрете или установить приложение?",
-        "Әңгімені құпия ұстауды немесе қолданба орнатуды сұрады ма?",
-        True,
-    ),
-    (
-        "initiated_by_customer",
-        "Вы сами решили сделать перевод?",
-        "Аударым жасауды өзіңіз шештіңіз бе?",
-        False,
-    ),
-    (
-        "knows_recipient_personally",
-        "Вы лично знаете получателя?",
-        "Алушыны жеке танисыз ба?",
-        False,
-    ),
-]
 
 
 def keyboard(rows: list[tuple[str, str]]) -> InlineKeyboardMarkup:

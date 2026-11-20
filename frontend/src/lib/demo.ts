@@ -75,6 +75,8 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
   const ctx = input.context;
   const isNew = ctx.is_new_recipient ?? recipient.id !== ids.friend;
   const reasons: Reason[] = [];
+  // Same rule and text as backend DURESS_SIGNAL: the client's own alarm blocks the transfer.
+  if (ctx.duress) reasons.push(reason("DURESS_SIGNAL", "behavioral", 100, "Клиент жасырын дабыл берді (растау батырмасын ұстап тұрды): аударым тоқтатылды, экран клиенттің жанындағы адамға ештеңе көрсетпейді.", "Клиент подал тихий сигнал тревоги (удержал кнопку подтверждения): перевод остановлен, экран ничего не выдаёт человеку рядом с клиентом."));
   if (ctx.active_call) reasons.push(reason("ACTIVE_CALL", "behavioral", 25, "Аударым кезінде қоңырау белсенді.", "Во время перевода активен телефонный звонок."));
   if (ctx.active_call && ctx.pasted_recipient) reasons.push(reason("PASTED_DURING_CALL", "behavioral", 15, "Реквизиттер белсенді қоңырау кезінде алмасу буферінен қойылды", "Реквизиты вставлены из буфера обмена во время активного звонка"));
   if (ctx.active_call && bankCallDenied(ctx.bank_call_check_id, sender.id, now)) reasons.push(reason("BANK_CALL_DENIED", "behavioral", 20, "Клиент «Банк маған қоңырау шалып тұр ма?» деп тексерді: банк журналы бойынша банк бұл клиентке қоңырау шалмайды.", "Клиент проверил «Банк мне звонит?»: по журналу банка банк этому клиенту не звонит."));
@@ -83,7 +85,7 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
   if (isNew) reasons.push(reason("NEW_RECIPIENT", "behavioral", 10, "Бұл алушыға алғашқы аударым.", "Первый перевод этому получателю."));
   if (Number(input.amount) >= 120000) reasons.push(reason("AMOUNT_SPIKE", "behavioral", Number(input.amount) >= 400000 ? 20 : 10, "Сома әдеттегі аударымнан едәуір жоғары.", "Сумма значительно выше обычного перевода."));
   if (ctx.active_call && (ctx.from_deposit || isNew)) reasons.push(reason("SOCIAL_ENGINEERING_PATTERN", "behavioral", 10, "Белгілер әлеуметтік инженерияға сәйкес келеді.", "Сочетание сигналов указывает на социальную инженерию."));
-  const behavioral = Math.min(74, reasons.reduce((sum, r) => sum + r.score_delta, 0));
+  const behavioral = Math.min(ctx.duress ? 100 : 74, reasons.reduce((sum, r) => sum + r.score_delta, 0));
   const t1 = performance.now();
   if (recipient.id === ids.hub) reasons.push(
     reason("DROP_HUB_FAN_IN", "velocity", 35, "Демо граф: 30 минутта 12 кіріс аударым.", "Демо граф: 12 входящих переводов за 30 минут."),

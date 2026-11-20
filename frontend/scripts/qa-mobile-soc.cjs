@@ -105,6 +105,12 @@ async function main() {
   const screenshot = async name => { const file = path.join(output, `${name}.png`); await page.screenshot({ path: file, fullPage: true }); report.screenshots.push(file); };
   const answer = async (index, value) => { await dialog.locator(`input[name="${questions[index]}"]`).nth(value ? 0 : 1).check(); await dialog.locator('.cooling-next').click(); };
   const close = () => dialog.locator('.sheet-close').click();
+  // Held transfers are listed only after the summary line is expanded.
+  const openFromRecovery = async id => {
+    const summary = page.locator('.recovery-summary button');
+    if (await summary.isVisible()) await summary.click();
+    await page.locator('.recovery-list li').filter({ hasText: id.slice(-8) }).getByRole('button', { name: 'Открыть перевод' }).click();
+  };
   const reopen = async () => { await page.locator('.telemetry-panel .review-button').click(); await dialog.waitFor(); };
   const settle = () => page.waitForTimeout(250);
   const overflow = () => page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
@@ -128,13 +134,13 @@ async function main() {
     await page.locator('#recipient').fill('+77010000002');
     await page.locator('#recipient').pressSequentially('0', { delay: 80 });
     await page.waitForTimeout(1600); await page.locator('#recipient').press('Backspace');
-    check('browser_paste_and_typing_sensor_live', await page.locator('.biometric-sensor.paste-detected').count() === 1 && (await page.locator('.sensor-readings').innerText()).includes('Обнаружена вставка'));
+    check('browser_paste_and_typing_sensor_live', await page.locator('.signal-list li.risk').filter({ hasText: 'Обнаружена вставка' }).count() === 1 && /\d[\d\s]* мс/.test(await page.locator('.signal-list').innerText()));
     await page.locator('#transfer-amount').fill('5000');
     const beforeConfirm = report.mutations.filter(item => item.path.endsWith('/evaluate')).length;
     await page.locator('.phone-form .transfer-cta').click();
     await page.locator('.phone-confirm').waitFor();
     const confirmText = await page.locator('.phone-confirm').innerText();
-    check('confirm_step_shows_amount_and_recipient_before_sending', /5\s000\s₸/.test(confirmText) && confirmText.includes('+7 701 000 00 02') && report.mutations.filter(item => item.path.endsWith('/evaluate')).length === beforeConfirm, confirmText.slice(0, 200));
+    check('confirm_step_shows_amount_and_recipient_before_sending', /5\s000\s₸/.test(confirmText) && /\+7 [•\d ]+00 02/.test(confirmText) && report.mutations.filter(item => item.path.endsWith('/evaluate')).length === beforeConfirm, confirmText.slice(0, 200));
     await page.locator('.phone-confirm .transfer-confirm').click();
     await page.locator('.phone-receipt').waitFor();
     const biometric = records.get(await page.locator('.phone-receipt').getAttribute('data-transaction-id')).context;
@@ -168,7 +174,9 @@ async function main() {
     check('clean_answers_saved_without_early_release', records.get(heldId).status === 'cooling_off' && questions.every((q, i) => records.get(heldId).verification_answers[q] === clean[i]) && report.mutations.length === mutationsBeforeSave + 1);
     await screenshot('cooling-review-ru');
     await page.reload({ waitUntil: 'domcontentloaded' });
-    if (!await dialog.isVisible()) await page.locator('.recovery-list li').filter({ hasText: heldId.slice(-8) }).getByRole('button', { name: 'Открыть перевод' }).click();
+    // Recovery may reopen the questionnaire by itself after the reload; wait for that first.
+    await dialog.waitFor({ timeout: 5000 }).catch(() => {});
+    if (!await dialog.isVisible()) await openFromRecovery(heldId);
     await dialog.waitFor();
     check('reload_restores_server_saved_answers', await dialog.getAttribute('data-step') === 'review' && await dialog.locator('.cooling-review-list li').count() === 5 && await dialog.locator('.cooling-submit').isDisabled());
     const beforeExpiry = report.mutations.length; records.get(heldId).cooling_until = new Date(Date.now() - 1000).toISOString();
@@ -198,7 +206,7 @@ async function main() {
     await dialog.locator('.cooling-submit').click(); await savedA;
     await page.waitForFunction(() => document.querySelector('.cooling-submit')?.disabled === true);
     await close(); await preset('scam'); await dialog.waitFor(); const holdB = [...records.keys()].at(-1); await close();
-    await page.locator('.recovery-list li').filter({ hasText: holdA.slice(-8) }).getByRole('button', { name: 'Открыть перевод' }).click(); await dialog.waitFor();
+    await openFromRecovery(holdA); await dialog.waitFor();
     // Wait for the actual recovery interval, so the last attempt B is read while A is selected.
     await page.waitForResponse(response => response.url().endsWith(`/transfers/${holdB}`), { timeout: 20000 }); await settle();
     check('background_recovery_of_B_does_not_replace_open_A', await page.locator('.phone-receipt').getAttribute('data-transaction-id') === holdA && await dialog.isVisible());
@@ -316,9 +324,15 @@ async function main() {
     phone.on('pageerror', error => report.errors.push(`/mobile: ${error.message}`));
     await phone.setViewportSize({ width: 390, height: 844 });
     await phone.goto(new URL('/mobile', target).href, { waitUntil: 'domcontentloaded' });
+    // Recovery may reopen the held transfer's questionnaire here too; leave it on hold first.
+    const reopened = phone.locator('dialog.cooling-modal[open]');
+    await reopened.waitFor({ timeout: 5000 }).catch(() => {});
+    if (await reopened.isVisible()) await reopened.locator('.cooling-later .secondary').click();
     await phone.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
     // Recovery may reopen this browser's last receipt (same origin storage); start a new transfer from it.
-    await phone.locator('.phone-stage.is-bare .phone-form, .phone-stage.is-bare .phone-receipt').first().waitFor();
+    await phone.locator('.phone-stage.is-bare').waitFor();
+    if (await phone.locator('.home-tools').isVisible()) await phone.locator('.home-tools .primary').click();
+    if (await phone.locator('.cooling-modal[open]').isVisible()) await phone.locator('.sheet-close').click();
     await phone.waitForTimeout(500);
     if (await phone.locator('.phone-receipt .receipt-new').isVisible()) await phone.locator('.phone-receipt .receipt-new').click();
     await phone.locator('.phone-stage.is-bare .phone-form').waitFor();
@@ -347,7 +361,8 @@ async function main() {
     const phoneDialog = phone.locator('dialog.mobile-cooling'); await phoneDialog.waitFor();
     const sheet = await phoneDialog.boundingBox();
     check('mobile_route_cooling_sheet_fits_390', sheet.x >= -1 && sheet.x + sheet.width <= 391 && sheet.height <= 845, sheet);
-    check('trusted_circle_hidden_when_integration_unavailable', await phoneDialog.locator('.trusted-circle').count() === 0);
+    await phoneDialog.locator('.trusted-circle .secondary').waitFor();
+    check('trusted_circle_unavailable_has_retry', await phoneDialog.locator('.trusted-circle .secondary').isVisible());
     // Trusted contact (advisory only): button -> queued -> sent -> suspicion; polling >= 2.1 s, stops at a terminal state.
     trustedMock.enabled = true; await phoneDialog.locator('.sheet-close').click();
     await phone.locator('.receipt-review').click(); await phoneDialog.waitFor();
@@ -380,7 +395,9 @@ async function main() {
     lan.on('pageerror', error => report.errors.push(`lan: ${error.message}`));
     await lan.setViewportSize({ width: 390, height: 844 });
     await lan.goto(`${lanOrigin}/mobile`, { waitUntil: 'domcontentloaded' });
-    await lan.locator('.phone-stage.is-bare .phone-form, .phone-stage.is-bare .phone-receipt').first().waitFor(); await lan.waitForTimeout(500);
+    await lan.locator('.phone-stage.is-bare').waitFor();
+    if (await lan.locator('.home-tools').isVisible()) await lan.locator('.home-tools .primary').click();
+    await lan.locator('.phone-form, .phone-receipt').first().waitFor();
     if (await lan.locator('.phone-receipt .receipt-new').isVisible()) await lan.locator('.phone-receipt .receipt-new').click();
     const capabilities = await lan.evaluate(() => ({ secure: window.isSecureContext, subtle: !!crypto.subtle, locks: !!navigator.locks, uuid: typeof crypto.randomUUID }));
     expectedPreset = 'normal';

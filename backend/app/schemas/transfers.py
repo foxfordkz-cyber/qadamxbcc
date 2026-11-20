@@ -16,6 +16,11 @@ class TransferContextIn(BaseModel):
     active_call: bool = Field(False, description="A phone call is active during the transfer")
     from_deposit: bool = Field(False, description="Funds were just withdrawn from a deposit")
     pasted_recipient: bool = False
+    duress: bool = Field(
+        False,
+        description="Silent alarm: the client held the confirm button. The transfer is "
+        "blocked and the screen stays calm so a fraudster nearby does not notice.",
+    )
     typing_duration_ms: int | None = Field(None, ge=0, le=3_600_000, strict=True)
     hesitation_count: int = Field(0, ge=0, le=100, strict=True)
     recipient_input_length: int | None = Field(

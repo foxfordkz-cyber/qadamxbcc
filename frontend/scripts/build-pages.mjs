@@ -16,7 +16,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const baseIndex = args.indexOf("--base");
 const base = baseIndex >= 0 ? args[baseIndex + 1] : "/qadamxbcc";
-const outArg = args.find((value, index) => !value.startsWith("--") && index !== baseIndex + 1);
+const outArg = args.find((value, index) => !value.startsWith("--") && (baseIndex < 0 || index !== baseIndex + 1));
 const out = path.resolve(outArg ?? path.join(root, "pages-out"));
 if (base && !/^\/[A-Za-z0-9._-]+$/.test(base)) throw new Error(`Invalid base path: ${base}`);
 
