@@ -22,7 +22,7 @@ try {
     return new URL(request.url()).origin === origin ? route.continue() : route.abort();
   });
   const page = await context.newPage();
-  await page.goto(origin + "/mobile", { waitUntil: "domcontentloaded" });
+  await page.goto(origin + "/mobile", { waitUntil: "networkidle" });
   const ru = page.getByRole("button", { name: "РУС", exact: true });
   await ru.click();
   const circle = page.locator(".home-tools").getByRole("button", { name: "Доверенный круг", exact: true });
