@@ -58,7 +58,14 @@ export function CaseInspector({ traceRevision = 0, detail, loading, error, recei
     {!current ? <p className="empty">{t(selectedId ? error ? "caseUnavailable" : "refreshing" : "select")}</p> : <>
       <div className="investigation-summary"><strong>{current.amount === undefined ? "— ₸" : money(current.amount, lang)}</strong><Gauge compact score={current.risk_score} /></div>
       <p className="case-recipient">{current.recipient.display_name} · {current.recipient.iban_masked}</p>
-      {!readOnly && current.reasons.some(reason => reason.code === "RETURN_REDIRECT_REPORTED") && <ReturnReviewControls key={current.transaction_id} id={current.transaction_id} disabled={loading || !!error || busy} onChanged={onRetry} />}
+      {!readOnly && current.reasons.some(reason => reason.code === "RETURN_REDIRECT_REPORTED") && (
+        <ReturnReviewControls
+          key={`${current.transaction_id}/${current.updated_at ?? current.reasons.length}`}
+          id={current.transaction_id}
+          disabled={loading || !!error || busy}
+          onChanged={onRetry}
+        />
+      )}
       {!readOnly && <RecipientFlagControls key={current.recipient.id} accountId={current.recipient.id} disabled={loading || !!error || busy} onChanged={onRetry} />}
       {typeof current.ml_score === "number" && <div className="investigation-model"><span className="ml-badge ready" title={t("mlScoreHint")}>{t("mlScore")}: {current.ml_score.toFixed(1)}%</span><small>{current.ml_model_version}</small></div>}
       <div className="investigation-id"><span>{t("caseId")}</span><code className="tabular-nums">{current.transaction_id}</code><button onClick={() => void copyId()} aria-label={t("copyCaseId")} title={t("copyCaseId")}><Copy size={15} /></button></div>

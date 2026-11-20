@@ -4,6 +4,7 @@ const { randomUUID } = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core');
+const { checkReturnAppeal } = require('./qa-return-appeal.cjs');
 
 const target = new URL(process.argv[2]);
 assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
@@ -92,6 +93,8 @@ async function run() {
     await story.screenshot({ path: path.join(output, 'case-story-kk.png') });
     assert.deepEqual(errors, []);
     console.log('PASS: confirmed linked refund, retry, receipt picker, chronological trace, bilingual role history');
+    await context.close();
+    await checkReturnAppeal(browser, target.origin, output, owner, payer);
   } catch (error) {
     await page.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {});
     throw error;

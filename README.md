@@ -130,6 +130,10 @@ Saq Bol — независимый прототип для кейса Bank Cente
 
 [![Клиент, сенімді адам және SOC оқиғалары / время действий клиента, доверенного контакта и SOC](docs/screenshots/readme/case-story-kk.png)](docs/screenshots/readme/case-story-kk.png)
 
+**Қайта қарау / Пересмотр.** SOC бастапқы жіберушіге **21 905,73 ₸** қайтаруға рұқсат берді. После пересмотра клиент видит решение в приложении и сам подтверждает возврат.
+
+<p align="center"><a href="docs/screenshots/readme/return-appeal-cleared.png"><img src="docs/screenshots/readme/return-appeal-cleared.png" width="310" alt="Қайта қараудан кейінгі шешім / решение SOC после обращения клиента"></a></p>
+
 </details>
 
 <details>
