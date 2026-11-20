@@ -15,6 +15,7 @@
 <p align="center">
   <a href="https://saq-bol-bcc.zerdeliportald.workers.dev/"><strong>Стенд / Открыть демо</strong></a> ·
   <a href="https://saq-bol-bcc.zerdeliportald.workers.dev/mobile">Клиент</a> ·
+  <a href="https://saq-bol-mobile.onrender.com/wallet/">Android әмияны / Веб-кошелёк Android</a> ·
   <a href="https://saq-bol-bcc.zerdeliportald.workers.dev/soc">Панель SOC</a> ·
   <a href="deliverables/demo/BCC-Shield-demo.webm">Демо бейне / Видео</a>
 </p>

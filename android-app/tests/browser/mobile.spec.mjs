@@ -146,7 +146,7 @@ test("live role gate is server-derived and errors do not trigger demo fallback",
   await page.locator('[name="origin"]').fill("http://127.0.0.1:18001");
   await page.locator('[name="code"]').fill("synthetic-test-access-code-12345");
   await page.locator("#login-form button").click();
-  await expect(page.locator(".role-tag")).toHaveText("CLIENT");
+  await expect(page.locator(".role-tag")).toHaveText("Клиент");
   await expect(page.locator('[data-nav="cases"]')).toHaveCount(0);
   await page.locator('[data-nav="safety"]').click();
   await page.locator('[data-action="contacts"]').click();

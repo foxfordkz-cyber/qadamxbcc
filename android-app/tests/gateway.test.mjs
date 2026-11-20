@@ -52,6 +52,16 @@ test("unknown delivery is surfaced once without automatic retry", async () => {
   );
   assert.equal(count, 1);
 });
+test("cold starts extend only the sign-in request deadline", async () => {
+  const timeouts = [];
+  const g = new Gateway("http://localhost:18001", async (_url, _options, timeoutMs) => {
+    timeouts.push(timeoutMs);
+    return new Response("{}");
+  });
+  await g.request("/auth/login", "POST", {});
+  await g.api("transfers/evaluate", "POST", {});
+  assert.deepEqual(timeouts, [120000, 20000]);
+});
 test("expired session is cleared and 429 retains Retry-After", async () => {
   const g = new Gateway(
     "http://localhost:18001",

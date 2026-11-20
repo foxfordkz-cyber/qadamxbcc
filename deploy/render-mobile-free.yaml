@@ -6,10 +6,10 @@ services:
     plan: free
     region: oregon
     branch: main
-    dockerContext: ./backend
+    dockerContext: .
     dockerfilePath: ./backend/Dockerfile.mobile-free
     healthCheckPath: /health
-    autoDeployTrigger: off
+    autoDeployTrigger: "off"
     envVars:
       - key: BCC_MOBILE_CLIENT_HASH
         sync: false

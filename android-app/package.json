@@ -1,9 +1,10 @@
 {
   "name": "bcc-shield-android",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "private": true,
   "description": "Saq Bol × BCC Android: synthetic client and SOC accounts",
   "scripts": {
+    "web": "npm run vendor && node scripts/build-wallet.mjs",
     "vendor": "node scripts/vendor.mjs",
     "sync": "npm run vendor && cap sync android",
     "test": "node --test tests/*.test.mjs",

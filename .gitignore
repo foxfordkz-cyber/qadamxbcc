@@ -22,3 +22,5 @@ deliverables/demo/raw/
 
 # Static GitHub Pages build output
 frontend/pages-out/
+
+/backend/.qadam-web/

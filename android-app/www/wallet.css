@@ -1,12 +1,12 @@
 /* Shared product primitives for the packaged client and SOC WebView. */
 :root {
-  --bg: #f5f7f4;
+  --bg: #f3f7f5;
   --paper: #fff;
-  --ink: #152820;
+  --ink: #142e26;
   --muted: #52665b;
-  --pine: #164d36;
+  --pine: #005c48;
   --green: #1c6847;
-  --mint: #e4efdc;
+  --mint: #def1e8;
   --line: #dce3da;
   --warn: #704411;
   --danger: #972d30;
@@ -178,6 +178,13 @@ label {
   margin: auto;
   min-height: 0;
 }
+.sign-heading {
+  padding:clamp(18px,5vw,32px);border-radius:var(--rad);color:white;background:#064e40;
+  position:relative;overflow:hidden;isolation:isolate;
+}
+.sign-heading::after{content:"";position:absolute;width:70%;height:190%;right:-20%;top:-30%;z-index:-1;border-radius:50%;border:1px solid #65a893;box-shadow:0 0 0 10px #064e40,0 0 0 11px #65a893,0 0 0 22px #064e40,0 0 0 23px #65a893,0 0 0 35px #064e40,0 0 0 36px #65a893;transform:rotate(32deg)}
+.sign-heading p{margin:7px 0 0;color:#d7ece4}
+.sign-heading h1{color:white}
 .sign-heading img {
   display: block;
   width: 58px;
@@ -195,11 +202,12 @@ label {
   margin: 0.55rem 0 1.6rem;
 }
 .entry.sign-in .form-stack {
-  background: transparent;
-  border: 0;
-  padding: 0;
-  display: grid;
-  gap: 16px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:var(--rad);
+  padding:clamp(16px,4vw,26px);
+  display:grid;
+  gap:16px;
 }
 .sign-in input,
 .sign-in .password-field {
@@ -288,7 +296,7 @@ label {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: #133e2e;
+  background: linear-gradient(115deg,#063f36 25%,#006d55 76%,#147b61);
   color: white;
   padding: clamp(16px, 5vw, 26px);
   border-radius: 22px;
@@ -301,7 +309,9 @@ label {
 .card-ribbon {
   position: absolute;
   inset: 0 0 0 auto;
-  width: 40%;
+  width: 49%;
+  color: #95d8a8;
+  opacity:.72;
   height: 100%;
   z-index: -1;
   pointer-events: none;
@@ -371,11 +381,8 @@ label {
 .wallet-quick {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: 10px 3px;
-  margin: 9px 0 12px;
-  background: white;
-  border: 1px solid var(--line);
-  border-radius: 18px;
+  gap:6px;padding:0;margin:10px 0 14px;
+  background:transparent;border:0;
 }
 .wallet-quick button,
 .people button {
@@ -391,10 +398,8 @@ label {
   font-size: 0.78rem;
   font-weight: 650;
 }
-.wallet-quick button + button {
-  border-left: 1px solid var(--line);
-  border-radius: 0;
-}
+.wallet-quick button{border:1px solid var(--line);border-radius:14px;background:white;padding:10px 1px;min-height:68px;}
+.wallet-quick button:first-child{background:var(--mint);border-color:#b4dbc8}
 .wallet-quick i {
   background: #edf3e8;
   color: var(--pine);
@@ -1050,3 +1055,28 @@ input:focus-visible {
 .trend-row{display:grid;grid-template-columns:minmax(5.5rem,auto) minmax(30px,1fr) 3ch;align-items:center;gap:8px;padding:.35rem 0;font-size:.85rem}.trend-row meter{width:100%;accent-color:var(--pine)}.trend-row b{text-align:end}
 
 .chart-steps{display:flex;justify-content:space-between;gap:8px}.chart-steps button{min-height:44px;padding:5px 9px;background:transparent;color:var(--pine);font-weight:650;font-size:.85rem}.chart-steps button:disabled{color:var(--muted);opacity:.55}
+
+.funds-outcome{margin:.8rem 0 0;border-top:1px solid #b4cebf;padding-top:.65rem;font-weight:650;color:var(--ink)}
+.projector-switch{display:block;width:auto;min-height:44px;margin:0 0 .55rem auto;padding:6px 14px;border:1px solid var(--line);border-radius:24px;background:var(--paper);color:var(--pine);font-weight:650}
+.projector .soc-hero strong{font-size:clamp(2.75rem,6vw,5rem)}
+.projector .soc-metrics,.projector .graph{font-size:1.15rem}
+@media(min-width:880px){
+ #app[data-actor]:not([data-actor=guest]) .shell{max-width:82rem;padding-inline:14rem 2rem}
+ #app[data-actor]:not([data-actor=guest]) .bottom-nav{left:max(12px,calc((100vw - 81rem)/2));top:5rem;bottom:auto;transform:none;width:12rem;display:flex;flex-direction:column;align-items:stretch;height:auto;border:1px solid var(--line);border-radius:20px;padding:10px;background:#fff}
+ #app[data-actor]:not([data-actor=guest]) .bottom-nav button{display:flex;align-items:center;justify-content:flex-start;gap:12px;text-align:start;min-height:48px;padding:0 12px}
+ .connected-nav button span{font-size:.95rem}
+ #app .wallet-overview{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:start}
+ #app .wallet-overview:not(:has(.wallet-checks)){grid-template-columns:minmax(0,1fr)}
+ .wallet-account{min-width:0}.wallet-checks{align-self:center}
+ #app[data-screen=case] .case-rail{border-inline-start:4px solid var(--pine);padding-inline:1rem}
+ #app[data-screen=graph] .graph{max-height:55vh;aspect-ratio:1.65}
+ #app[data-screen=login] .shell{max-width:62rem}
+ #app[data-screen=login] .entry.sign-in{display:grid;grid-template-columns:1fr 1fr;gap:12px 32px;max-width:58rem;margin:7vh auto}
+ #app[data-screen=login] .sign-heading{grid-column:1;grid-row:1/4;display:flex;flex-direction:column;justify-content:flex-end;min-height:300px}
+ #app[data-screen=login] .sign-intro,#app[data-screen=login] #personal-login,#app[data-screen=login] .sign-footer{grid-column:2;margin:0}
+}
+
+.case-investigation{display:grid;gap:12px}.case-investigation .graph{min-height:150px;max-height:250px}
+.graph-record{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:center;width:100%;background:transparent;color:var(--ink);border-bottom:1px solid var(--line);min-height:48px}
+#graph-records:empty{display:none}
+@media(min-width:880px){.case-investigation{grid-template-columns:1fr 1.2fr;align-items:center}}

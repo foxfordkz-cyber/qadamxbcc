@@ -32,7 +32,7 @@ export class GatewayError extends Error {
     this.retryAfter = retryAfter;
   }
 }
-async function gatewayFetch(url, options) {
+async function gatewayFetch(url, options, timeoutMs) {
   if (!Capacitor.isNativePlatform()) return fetch(url, options);
   const result = await CapacitorHttp.request({
     url,
@@ -41,7 +41,7 @@ async function gatewayFetch(url, options) {
     data: options.body === undefined ? undefined : JSON.parse(options.body),
     disableRedirects: true,
     connectTimeout: 10000,
-    readTimeout: 20000,
+    readTimeout: timeoutMs,
   });
   return new Response(
     result.status === 204 ? null : JSON.stringify(result.data),
@@ -67,8 +67,12 @@ export class Gateway {
     )
       throw new Error("invalid_path");
     const headers = { "Content-Type": "application/json" };
-    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    if (this.webSession) {
+      headers["X-Qadam-Web"] = "1";
+      if (this.subject) headers["X-Qadam-Subject"] = this.subject;
+    } else if (this.token) headers.Authorization = `Bearer ${this.token}`;
     if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+    const timeoutMs = path === "/auth/login" || path === "/sessions" ? 120000 : 20000;
     let response;
     try {
       response = await this.fetcher(`${this.origin}/mobile/v1${path}`, {
@@ -76,10 +80,10 @@ export class Gateway {
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         cache: "no-store",
-        credentials: "omit",
+        credentials: this.webSession ? "same-origin" : "omit",
         redirect: "error",
-        signal: AbortSignal.timeout(20000),
-      });
+        signal: AbortSignal.timeout(timeoutMs),
+      }, timeoutMs);
     } catch {
       throw new GatewayError(0);
     } // Never replay a mutation with an unknown outcome.

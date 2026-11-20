@@ -6,6 +6,7 @@ import fakeredis
 import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import SecretStr
+from redis.asyncio import Redis
 
 from app.core.config import Settings, get_settings
 from app.core.resources import Resources
@@ -24,7 +25,7 @@ async def test_disposable_store_supports_cross_role_transfer_and_isolation(
     monkeypatch.setenv("BCC_ENVIRONMENT", "demo")
     monkeypatch.setenv("BCC_DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'mobile.db'}")
     monkeypatch.setattr(
-        mobile_ephemeral.Redis,
+        Redis,
         "from_url",
         lambda *a, **k: fakeredis.FakeAsyncRedis(server=server),
     )

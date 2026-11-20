@@ -26,7 +26,7 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
     await page.locator('[name="code"]').fill(access[role]);
     await page.locator("#login-form button").click();
     await expect(page.locator(".role-tag")).toHaveText(
-      role === "client" ? "CLIENT" : "SOC",
+      role === "client" ? "Клиент" : "SOC",
     );
     await expect(page.locator(".busy-banner")).toHaveCount(0);
   }
@@ -88,7 +88,7 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
     await page.locator('[data-action="gateway"]').click();
     await page.locator('[name="identifier"]').selectOption("SYN-NETWORK-001");
     await page.locator("#gateway-form button").click();
-    await expect(page.getByText("INDICATORS · MOCK")).toBeVisible();
+    await expect(page.getByText("Есть сигналы риска · Учебный реестр")).toBeVisible();
     await page.locator('[data-nav="safety"]').click();
     await page.locator('[data-action="report"]').click();
     await page
@@ -130,13 +130,13 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
     ).toBeVisible();
     await page.locator("[data-open-case]").first().click();
     await page.locator('[data-action="case-review"]').click();
-    await expect(page.getByText(/IN_REVIEW · v/)).toBeVisible();
+    await expect(page.getByText(/В работе · v/)).toBeVisible();
     await page.screenshot({
       path: "test-results/live-soc-case.png",
       fullPage: true,
     });
     await page.locator('[data-nav="system"]').click();
-    await expect(page.getByText("fake_enabled", { exact: true })).toBeVisible();
+    await expect(page.getByText("Учебная доставка", { exact: true })).toBeVisible();
     await page.locator('[data-nav="settings"]').click();
     await page.locator('[data-action="logout"]').click();
   });
