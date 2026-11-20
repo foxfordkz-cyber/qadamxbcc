@@ -26,7 +26,7 @@ async function loadOwner(g, subject) {
 function clearVisible() {
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   gateway = null; step = offset = 0; pending = ownerScope = query = filter = "";
-  answers = {}; caseEvents = []; casePageCursor = null; page = "login"; presetMode = false;
+  answers = {}; caseEvents = []; casePageCursor = null; reportTx = null; expiryChecked = null; page = "login"; presetMode = false;
 }
 import { SAMPLE } from "./soc-sample.mjs";
 import { Gateway, gatewayOrigin, remainingSeconds } from "./gateway.mjs";
@@ -158,7 +158,7 @@ async function perform(task) {
     error = !navigator.onLine ? T("Нет интернета. Подключись и попробуй снова.", "Интернет жоқ. Қосылып, қайта көр.")
       : page === "login" && failure.status === 401 ? T("Неверный логин или пароль.","Логин немесе құпиясөз қате.")
       : failure.status === 499 ? T("Вход отменён. Можно выбрать другой способ.", "Кіру тоқтатылды. Басқа тәсілді таңда.")
-      : page === "login" && [0,503].includes(failure.status) ? T("Сервис входа пока недоступен. Попробуй позже или открой демонстрацию.", "Кіру қызметі әзірге қолжетімсіз. Кейін қайтала немесе демоны аш.")
+      : page === "login" && (failure.status === 0 || failure.status >= 500) ? T("Сервис входа пока недоступен. Попробуй позже или открой демонстрацию.", "Кіру қызметі әзірге қолжетімсіз. Кейін қайтала немесе демоны аш.")
       : failure.status === 0 && !mutationOutcome ? T("Сервис не ответил. Попробуй обновить данные.", "Қызмет жауап бермеді. Деректерді жаңартып көр.")
       : errText(failure.status);
     if (failure.status === 401) {
@@ -348,7 +348,7 @@ function transferView() {
     )}<button type="submit" class="primary">${T("Проверить детали", "Мәліметті тексеру")} →</button></form></section>`;
 }
 function reviewView() {
-  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}<section class="paper"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(draft.recipient_phone)}</h2><div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p></section>${button("submit-transfer", T("Отправить на анализ", "Талдауға жіберу"))}`;
+  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}<section class="paper"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name ?? draft.recipient_phone)}</h2><small>${E(draft.recipient_phone)}</small><div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p></section>${button("submit-transfer", T("Отправить на анализ", "Талдауға жіберу"))}`;
 }
 const questions = [
   [
@@ -647,6 +647,13 @@ function render() {
       root.querySelector("main").insertAdjacentHTML("beforeend",button("report",T("Сообщить о мошенничестве","Алаяқтық туралы хабарлау"),"secondary"));
     }
   }
+  root.querySelector("main").setAttribute("aria-busy", String(loading));
+  if (loading) {
+    for (const field of root.querySelectorAll("main input, main select, main textarea, main button")) {
+      field.disabled = true;
+    }
+  }
+
 }
 root.addEventListener("click", async (event) => {
   const b = event.target.closest("button");
