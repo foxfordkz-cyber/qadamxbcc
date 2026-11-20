@@ -491,7 +491,9 @@ async def test_family_one_recipient_actual_callback(
 
     from app.db.base import utcnow
     from app.integrations.models import ContactNotification, TrustedContact
+    from app.integrations.telegram.fake_adapter import FakeTelegramAdapter
     from app.integrations.telegram.service import TrustedContactService
+    from app.integrations.telegram.worker import deliver_one
 
     client, _ = mobile_world
     auth = await login(client)
@@ -516,17 +518,21 @@ async def test_family_one_recipient_actual_callback(
         reply = await client.post(path + "/notify", headers=auth)
         assert reply.status_code == 200, reply.text
         assert reply.json()["contact_state"] == "NOTIFICATION_QUEUED"
+    adapter = FakeTelegramAdapter()
+    assert await deliver_one(session_factory, adapter, cfg)
+    assert len(adapter.messages) == 1
+    assert "во время запроса шёл звонок" in next(iter(adapter.messages.values()))[1]
     async with session_factory() as db:
         notices = (await db.scalars(select(ContactNotification))).all()
         assert len(notices) == 1
         notice = notices[0]
         contact = await db.get(TrustedContact, notice.contact_id)
-        assert contact is not None and contact.telegram_chat_id is not None
-        notice.state = "NOTIFICATION_SENT"
-        notice.message_id = "synthetic-message"
-        await db.commit()
+        assert contact is not None
+        assert contact.telegram_chat_id is not None
+        assert notice.state == "NOTIFICATION_SENT"
+        assert notice.message_id is not None
         await TrustedContactService(db, cfg).callback(
-            notice.id, int(contact.telegram_chat_id), "synthetic-message", "ack"
+            notice.id, int(contact.telegram_chat_id), notice.message_id, "ack"
         )
     check = (await client.get(path + "/check", headers=auth)).json()
     assert check["contact_state"] == "CONTACT_ACKNOWLEDGED"

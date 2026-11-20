@@ -1,4 +1,4 @@
-import { shortcuts, familyView, checkView, packetContent } from "./guardian.mjs";
+import { navIcon, shortcuts, familyView, checkView, packetContent } from "./guardian.mjs";
 import { readScreenshot } from "./screenshot.mjs";
 import * as identity from "./identity.mjs";
 const product = document.documentElement.hasAttribute("data-product");
@@ -271,7 +271,7 @@ function historyView() {
       (offset ? button("prev",T("Назад","Артқа"),"secondary") : "") + (data?.has_more ? button("next",T("Ещё","Тағы"),"secondary") : "");
     return title(T("Добро пожаловать","Қош келдіңіз")) + `<section class="account-card"><small>${accountLabel()}</small><strong>${account ? amount(account.held) : "—"}</strong><p>${T("Сумма на защитной паузе","Қорғаныс кідірісіндегі сома")}</p></section>` +
       (pending ? button("recover",T("Уточнить результат перевода","Аударым нәтижесін нақтылау")) + button("abandon",T("Закрыть запрос после проверки","Тексерген соң сұрауды жабу"),"secondary") :
-       account?.active_pause ? `<button class="live-row" data-detail="${E(account.active_pause)}">${T("Перевод на паузе · открыть","Аударым кідіртілді · ашу")} →</button>` : "") +
+       account?.active_pause && account.active_pause !== account.pending_call ? `<button class="live-row" data-detail="${E(account.active_pause)}">${T("Перевод на паузе · открыть","Аударым кідіртілді · ашу")} →</button>` : "") +
       (account?.pending_call ? '<button class="live-row" data-call-id="'+E(account.pending_call)+'">'+T("Вернуться к проверке звонка","Қоңырауды тексеруге оралу")+' →</button>' : "") +
       shortcuts(T) + button("transfer",T("Перевести","Аудару")) + `<h2>${T("Недавние операции","Соңғы операциялар")}</h2>` + transactionRows(data?.items?.slice(0,3));
   }
@@ -613,7 +613,7 @@ function render() {
         ];
   if (product && gateway?.role === "client") nav.splice(0, nav.length,
     ["home","⌂",T("Главная","Басты бет")],["transfer","↗",T("Переводы","Аударымдар")],["safety","◇",T("Защита","Қорғаныс")],["history","◷",T("История","Тарих")]);
-  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>qadam</span></div><span class="role-tag">${gateway?.role === "admin" ? "SOC" : gateway?.role === "client" ? "CLIENT" : "ANDROID"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("ТЕСТОВЫЙ BACKEND · СИНТЕТИЧЕСКИЕ ДАННЫЕ", "ТЕСТ BACKEND · ЖАСАНДЫ ДЕРЕКТЕР") : "QADAM SHIELD · CLIENT / SOC"}</div><main>${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${page === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
+  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>qadam</span></div><span class="role-tag">${gateway?.role === "admin" ? "SOC" : gateway?.role === "client" ? "CLIENT" : "ANDROID"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("ТЕСТОВЫЙ BACKEND · СИНТЕТИЧЕСКИЕ ДАННЫЕ", "ТЕСТ BACKEND · ЖАСАНДЫ ДЕРЕКТЕР") : "QADAM SHIELD · CLIENT / SOC"}</div><main>${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${page === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? navIcon(key,mark) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
   if (product) {
     root.querySelector(".demo-strip")?.remove();
     root.querySelector(".role-tag")?.remove();

@@ -9,6 +9,14 @@ const icons = {
   "call-transfer":'<path d="M4 4l3-1 3 5-2 2c1 3 3 5 6 6l2-2 5 3-1 3c-1 4-9 0-13-4S1 5 4 4z"/>',
   family:'<path d="M12 21s8-4 8-12V5l-8-3-8 3v4c0 8 8 12 8 12z"/><path d="m8 11 3 3 5-6"/>'
 };
+const navPaths = {
+  home:'<path d="m3 10 9-7 9 7v10h-6v-6H9v6H3z"/>',
+  transfer:'<path d="M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4"/>',
+  safety:icons.family, history:'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
+  cases:'<path d="M3 7h18v13H3zM8 7V4h8v3"/>',system:'<path d="M2 12h5l3-7 4 14 3-7h5"/>',
+  settings:'<circle cx="12" cy="8" r="3.5"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>'
+};
+export const navIcon=(key,fallback)=>navPaths[key]?'<svg viewBox="0 0 24 24">'+navPaths[key]+'</svg>':fallback;
 export function shortcuts(T) {
   return '<div class="guard-actions">'+[["call-transfer",T("Идёт звонок","Қазір қоңырау жүріп жатыр")],["family",T("Семейный щит","Отбасы қорғанысы")]].map(([key,label])=>
     '<button data-action="'+key+'"><svg viewBox="0 0 24 24" aria-hidden="true">'+icons[key]+'</svg>'+label+'</button>').join("")+'</div>';
