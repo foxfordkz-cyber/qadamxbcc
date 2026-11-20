@@ -374,3 +374,160 @@ async def test_two_password_accounts_restore_and_revoke(
             assert (await client.delete("/mobile/v1/session", headers=headers)).status_code == 204
             assert (await client.get("/mobile/v1/session", headers=headers)).status_code == 401
     await fake.aclose()
+
+
+async def call_tx(client: AsyncClient, headers: dict[str, str]) -> str:
+    response = await client.post(
+        "/mobile/v1/api/transfers/evaluate",
+        headers=headers,
+        json={
+            "request_id": str(uuid.uuid4()),
+            "recipient_id": str(OTHER),
+            "amount": "900000",
+            "context": {"active_call": True, "is_new_recipient": True, "from_deposit": True},
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "cooling_off"
+    return str(response.json()["transaction_id"])
+
+
+async def test_post_call_quiet_period_and_packet(
+    mobile_world: tuple[AsyncClient, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from datetime import timedelta
+
+    from app.mobile_gateway import protection
+
+    client, _ = mobile_world
+    auth = await login(client)
+    txid = await call_tx(client, auth)
+    path = f"/mobile/v1/protection/{txid}"
+    assert (await client.get(path + "/check", headers=auth)).json()["state"] == "on_call"
+    from app.db.base import utcnow
+
+    now = utcnow()
+    monkeypatch.setattr(protection, "utcnow", lambda: now)
+    ended = (await client.post(path + "/end", headers=auth)).json()
+    now += timedelta(seconds=299)
+    assert (await client.post(path + "/end", headers=auth)).json()["ready_at"] == ended["ready_at"]
+    assert (
+        await client.post(path + "/answer", headers=auth, json={"answer": "pressure"})
+    ).status_code == 409
+    assert (await client.get("/mobile/v1/account", headers=auth)).json()["pending_call"] == txid
+    now += timedelta(seconds=1)
+    assert (await client.get(path + "/check", headers=auth)).json()["state"] == "ready"
+    for _ in range(2):
+        assert (
+            await client.post(path + "/answer", headers=auth, json={"answer": "pressure"})
+        ).json()["state"] == "answered"
+    assert (
+        await client.post(path + "/answer", headers=auth, json={"answer": "my_choice"})
+    ).status_code == 409
+    packet = (await client.get(path + "/packet", headers=auth)).json()
+    assert packet["status"] == "cooling_off"
+    assert [e["kind"] for e in packet["events"]].count("pressure") == 1
+    assert "phone" not in str(packet)
+    assert "iban" not in str(packet)
+    assert (await client.get("/mobile/v1/account", headers=auth)).json()["pending_call"] is None
+
+
+async def test_family_switch_delay_independent_of_contact(
+    mobile_world: tuple[AsyncClient, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from datetime import timedelta
+
+    from app.mobile_gateway import protection
+
+    client, _ = mobile_world
+    auth = await login(client)
+    base = "/mobile/v1/protection/family"
+    from app.db.base import utcnow
+
+    now = utcnow()
+    monkeypatch.setattr(protection, "utcnow", lambda: now)
+    assert not (await client.get(base, headers=auth)).json()["enabled"]
+    assert (await client.post(base, headers=auth, json={"action": "enable"})).json()["enabled"]
+    first = (await client.post(base, headers=auth, json={"action": "disable"})).json()
+    now += timedelta(hours=23, minutes=59)
+    assert (await client.post(base, headers=auth, json={"action": "disable"})).json() == first
+    now += timedelta(minutes=1)
+    assert not (await client.get(base, headers=auth)).json()["enabled"]
+    assert (await client.post(base, headers=auth, json={"action": "enable"})).json() == {
+        "enabled": True,
+        "disable_at": None,
+    }
+    txid = await call_tx(client, auth)
+    assert (
+        await client.post(f"/mobile/v1/protection/{txid}/notify", headers=auth)
+    ).status_code == 409
+
+
+async def test_protection_requires_owner(
+    mobile_world: tuple[AsyncClient, Any], session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    client, _ = mobile_world
+    owner = await login(client)
+    admin = await login(client, ADMIN_CODE)
+    txid = await call_tx(client, owner)
+    path = f"/mobile/v1/protection/{txid}"
+    assert (await client.get(path + "/packet")).status_code == 401
+    assert (await client.get(path + "/check", headers=admin)).status_code == 403
+    async with session_factory() as db:
+        tx = await db.get(Transaction, uuid.UUID(txid))
+        assert tx is not None
+        tx.sender_id = OTHER
+        await db.commit()
+    assert (await client.get(path + "/packet", headers=owner)).status_code == 404
+    assert (await client.post(path + "/end", headers=owner)).status_code == 404
+
+
+async def test_family_one_recipient_actual_callback(
+    mobile_world: tuple[AsyncClient, Any], session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    from datetime import timedelta
+
+    from sqlalchemy import select
+
+    from app.db.base import utcnow
+    from app.integrations.models import ContactNotification, TrustedContact
+    from app.integrations.telegram.service import TrustedContactService
+
+    client, _ = mobile_world
+    auth = await login(client)
+    txid = await call_tx(client, auth)
+    path = f"/mobile/v1/protection/{txid}"
+    await client.post("/mobile/v1/protection/family", headers=auth, json={"action": "enable"})
+    cfg = IntegrationSettings(enabled=True, signing_key=SecretStr("x" * 40))
+    async with session_factory() as db:
+        for chat in ["880001", "880002"]:
+            db.add(
+                TrustedContact(
+                    owner_id=OWNER,
+                    invitation_expires_at=utcnow() + timedelta(hours=1),
+                    language="ru",
+                    state="CONTACT_VERIFIED",
+                    contact_consented_at=utcnow(),
+                    telegram_chat_id=chat,
+                )
+            )
+        await db.commit()
+    for _ in range(2):
+        reply = await client.post(path + "/notify", headers=auth)
+        assert reply.status_code == 200, reply.text
+        assert reply.json()["contact_state"] == "NOTIFICATION_QUEUED"
+    async with session_factory() as db:
+        notices = (await db.scalars(select(ContactNotification))).all()
+        assert len(notices) == 1
+        notice = notices[0]
+        contact = await db.get(TrustedContact, notice.contact_id)
+        assert contact is not None and contact.telegram_chat_id is not None
+        notice.state = "NOTIFICATION_SENT"
+        notice.message_id = "synthetic-message"
+        await db.commit()
+        await TrustedContactService(db, cfg).callback(
+            notice.id, int(contact.telegram_chat_id), "synthetic-message", "ack"
+        )
+    check = (await client.get(path + "/check", headers=auth)).json()
+    assert check["contact_state"] == "CONTACT_ACKNOWLEDGED"
+    assert check["answer"] is None

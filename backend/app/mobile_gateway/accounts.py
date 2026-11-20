@@ -11,6 +11,7 @@ from app.integrations.models import (
     TrustedContact,
 )
 from app.mobile_gateway.app import IdentityDep
+from app.mobile_gateway.protection_models import PostCall
 from app.models import Account, Transaction, TransactionStatus
 
 RECIPIENTS = {"+77010000002", "+77010000003", "+77010000004"}
@@ -36,6 +37,19 @@ def install_accounts(app: FastAPI) -> None:
             .order_by(Transaction.created_at.desc())
             .limit(1)
         )
+        pending_call = await session.scalar(
+            select(Transaction.id)
+            .outerjoin(PostCall, PostCall.transaction_id == Transaction.id)
+            .where(
+                Transaction.sender_id == principal.subject,
+                Transaction.active_call.is_(True),
+                PostCall.answered_at.is_(None),
+                (PostCall.transaction_id.is_not(None))
+                | (Transaction.status == TransactionStatus.COOLING_OFF),
+            )
+            .order_by(Transaction.created_at.desc(), Transaction.id.desc())
+            .limit(1)
+        )
         recipients = (
             await session.scalars(
                 select(Account).where(Account.phone.in_(RECIPIENTS)).order_by(Account.full_name)
@@ -43,6 +57,7 @@ def install_accounts(app: FastAPI) -> None:
         ).all()
         return {
             "telegram_bot": app.state.mobile_bot or None,
+            "pending_call": pending_call,
             "held": str(held or 0),
             "currency": "KZT",
             "active_pause": pause,

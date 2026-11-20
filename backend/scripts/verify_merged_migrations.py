@@ -23,7 +23,7 @@ from app.models import Account
 
 ACCOUNT = uuid.UUID("00000000-0000-4000-8000-000000000901")
 CONTACT = uuid.UUID("00000000-0000-4000-8000-000000000902")
-HEAD = "0008_core_integration_merge"
+HEAD = "0009_mobile_protection"
 
 
 async def require_empty(url: str) -> None:

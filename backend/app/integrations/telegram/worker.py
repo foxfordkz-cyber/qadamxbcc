@@ -111,6 +111,15 @@ async def _deliver(
                     row.message_id = await adapter.send(
                         int(contact.telegram_chat_id),
                         ALERTS[contact.language]
+                        + (
+                            (
+                                " Клиент отметил, что во время запроса шёл звонок."
+                                if contact.language == "ru"
+                                else " Клиент сұрау кезінде қоңырау болғанын белгіледі."
+                            )
+                            if tx is not None and tx.active_call
+                            else ""
+                        )
                         + "\n"
                         + ("Актуально до: " if contact.language == "ru" else "Мерзімі: ")
                         + row.expires_at.strftime("%Y-%m-%d %H:%M UTC"),

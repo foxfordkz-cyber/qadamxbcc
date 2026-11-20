@@ -1,6 +1,9 @@
+import { shortcuts, familyView, checkView, packetContent } from "./guardian.mjs";
+import { readScreenshot } from "./screenshot.mjs";
 import * as identity from "./identity.mjs";
 const product = document.documentElement.hasAttribute("data-product");
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
+let guardRefreshed = "", guardReceived = 0;
 let savingDraft = Promise.resolve(), reportTx = null;
 let presetMode = false, mutationOutcome = false, expiryChecked = null;
 const accountLabel = () => T("Учебный счёт · виртуальные средства", "Оқу шоты · виртуалды қаражат");
@@ -205,6 +208,10 @@ async function open(next, id) {
         data = await gateway.request(`/transfers?limit=20&offset=${offset}`);
         if (product && next === "home") account = await gateway.request("/account");
       }
+    } else if (next === "family") data = await gateway.request("/protection/family");
+    else if (next === "guard" || next === "packet") {
+      data = await gateway.request("/protection/"+selectedId+(next === "guard"?"/check":"/packet"));
+      guardReceived=Date.now();
     } else if (product && next === "transfer") {
       account = await gateway.request("/account");
     } else if (next === "detail") {
@@ -262,10 +269,11 @@ function historyView() {
   if (product && gateway.role === "client") {
     if (page === "history") return title(T("История переводов","Аударым тарихы")) + transactionRows(data?.items) +
       (offset ? button("prev",T("Назад","Артқа"),"secondary") : "") + (data?.has_more ? button("next",T("Ещё","Тағы"),"secondary") : "");
-    return title(T("Добро пожаловать","Қош келдіңіз")) + `<section class="account-card"><small>${accountLabel()}</small><strong>Qadam · KZT</strong>${account ? `<p>${T("Сумма на проверке","Тексерілетін сома")} · ${amount(account.held)}</p>` : ""}</section>` +
+    return title(T("Добро пожаловать","Қош келдіңіз")) + `<section class="account-card"><small>${accountLabel()}</small><strong>${account ? amount(account.held) : "—"}</strong><p>${T("Сумма на защитной паузе","Қорғаныс кідірісіндегі сома")}</p></section>` +
       (pending ? button("recover",T("Уточнить результат перевода","Аударым нәтижесін нақтылау")) + button("abandon",T("Закрыть запрос после проверки","Тексерген соң сұрауды жабу"),"secondary") :
        account?.active_pause ? `<button class="live-row" data-detail="${E(account.active_pause)}">${T("Перевод на паузе · открыть","Аударым кідіртілді · ашу")} →</button>` : "") +
-      button("transfer",T("Перевести","Аудару")) + `<h2>${T("Недавние операции","Соңғы операциялар")}</h2>` + transactionRows(data?.items?.slice(0,3));
+      (account?.pending_call ? '<button class="live-row" data-call-id="'+E(account.pending_call)+'">'+T("Вернуться к проверке звонка","Қоңырауды тексеруге оралу")+' →</button>' : "") +
+      shortcuts(T) + button("transfer",T("Перевести","Аудару")) + `<h2>${T("Недавние операции","Соңғы операциялар")}</h2>` + transactionRows(data?.items?.slice(0,3));
   }
   const admin = gateway.role === "admin",
     stats = data?.stats;
@@ -317,7 +325,7 @@ function transferView() {
     <label>${T("Учебный получатель","Оқу аударымын алушы")}<select required name="recipient_phone"><option value="">${T("Выбери получателя","Алушыны таңда")}</option>
     ${(account?.recipients ?? []).map(r => `<option value="${E(r.phone)}" ${draft?.recipient_phone === r.phone ? "selected" : ""}>${E(r.name)}</option>`).join("")}</select></label>
     ${input("amount",T("Сумма, ₸","Сома, ₸"), draft?.amount ?? "", "number", 'required min="0.01" max="999999999" step="0.01" inputmode="decimal"')}
-    <label class="tick-field"><input type="checkbox" name="active_call">${T("Меня просят перевести во время звонка","Қоңырау кезінде аударуды сұрады")}</label>
+    <label class="tick-field"><input type="checkbox" name="active_call" ${draft?.context?.active_call ? "checked" : ""}>${T("Меня просят перевести во время звонка","Қоңырау кезінде аударуды сұрады")}</label>
     <button class="primary">${T("Проверить реквизиты","Деректемелерді тексеру")}</button></form></section>${button("presets",T("Демонстрационные сценарии","Демонстрациялық сценарийлер"),"secondary")}`;
   const value = draft ?? presetValues.normal;
   return `${title(T("Новый тестовый перевод", "Жаңа тест аударымы"), T("Сумму и признаки анализирует сервер: ML, частота операций и связи получателя.", "Сома мен белгілерді сервер талдайды: ML, әрекет жиілігі және алушы байланыстары."))}<div class="filter-row">${Object.keys(
@@ -551,6 +559,9 @@ function sampleView() {
   );
 }
 const screens = {
+  family: () => familyView(data,T,button,when),
+  guard: () => checkView(data,T,button,when,label),
+  packet: () => data ? '<article class="paper">'+packetContent(data,T,when,status).map((line,i)=>i===0?'<h1>'+E(line)+'</h1>':'<p>'+E(line)+'</p>').join("")+'</article>'+button("print-packet",T("Сохранить PDF","PDF сақтау")) : "",
   sample: sampleView,
   login: loginView,
   home: historyView,
@@ -612,6 +623,21 @@ function render() {
       `<button data-action="settings" class="profile-button" aria-label="${T("Профиль","Профиль")}">Q</button>`);
     if (page === "safety" || page === "settings" && gateway?.role === "client")
       root.querySelector("main").insertAdjacentHTML("beforeend",button("inbox",T("Сообщения безопасности","Қауіпсіздік хабарламалары"),"secondary"));
+    if (page === "safety") root.querySelector("main").insertAdjacentHTML("afterbegin",shortcuts(T));
+    if (page === "scan") {
+      const form=root.querySelector("#scan-form");
+      form.insertAdjacentHTML("afterbegin",'<label>'+T("Прочитать скриншот","Скриншотты оқу")+'<input class="ocr-input" type="file" accept="image/png,image/jpeg"></label><p class="hint" role="status" id="ocr-status">'+T("Изображение остаётся на телефоне. Перед проверкой можно исправить текст.","Сурет телефонда қалады. Тексерер алдында мәтінді түзете аласыз.")+'</p>');
+      form.querySelector("input[type=file]").onchange = async e => {
+        const file=e.target.files[0], message=form.querySelector("#ocr-status"), submit=form.querySelector("[type=submit]");
+        if(!file) return;
+        e.target.disabled=submit.disabled=true;
+        message.textContent=T("Распознаём на устройстве…","Құрылғыда мәтін танылуда…");
+        try {const text=await readScreenshot(file); if(text) form.elements.text.value=text;
+          message.textContent=text?T("Проверьте распознанный текст.","Танылған мәтінді тексеріңіз."):T("Не удалось прочитать текст. Введите его вручную.","Мәтін оқылмады. Қолмен енгізіңіз.");}
+        catch{message.textContent=T("Не удалось открыть изображение. Выберите PNG/JPEG до 8 МБ или введите текст.","Сурет ашылмады. 8 МБ дейінгі PNG/JPEG таңдаңыз немесе мәтінді енгізіңіз.");}
+        finally {e.target.disabled=submit.disabled=false;e.target.value="";}
+      };
+    }
     if (page === "call") root.querySelector("main").insertAdjacentHTML("beforeend",
       button("report",T("Сообщить о звонке","Қоңырау туралы хабарлау"),"secondary"));
     if (page === "contacts") {
@@ -651,6 +677,9 @@ function render() {
       button("case-assign",T("Назначить демо-аналитика","Демо-талдаушыны тағайындау"),"secondary"));
     if (page === "detail" && gateway?.role === "client" && evaluation) {
       root.querySelector(".paper")?.insertAdjacentHTML("afterbegin", `<small>${accountLabel()}</small>`);
+      root.querySelector("main").insertAdjacentHTML("beforeend",
+        (evaluation.context?.active_call || evaluation.status==="cooling_off" ? button("guard",T("Проверка после звонка","Қоңыраудан кейінгі тексеру"),"secondary") : "")+
+        button("packet",T("Хронология и заявление","Хронология мен өтініш"),"secondary"));
       root.querySelector("main").insertAdjacentHTML("beforeend",button("report",T("Сообщить о мошенничестве","Алаяқтық туралы хабарлау"),"secondary"));
     }
   }
@@ -665,6 +694,7 @@ function render() {
 root.addEventListener("click", async (event) => {
   const b = event.target.closest("button");
   if (!b || loading) return;
+  if (b.dataset.callId) { await open("guard",b.dataset.callId); return; }
   if (b.dataset.object) {
     const kind = b.dataset.object;
     await open(kind === "contact" ? "contacts" : kind === "report" ? "reportDetail" : "detail", b.dataset.objectId);
@@ -750,6 +780,18 @@ root.addEventListener("click", async (event) => {
     return;
   }
   const act = b.dataset.action;
+  if (product && ["family","guard","packet"].includes(act)) { await open(act); return; }
+  if (act === "call-transfer") { presetMode=false; draft={context:{active_call:true}}; await open("transfer"); return; }
+  if (act === "family-on" || act === "family-off") {
+    await perform(async()=>{data=await gateway.request("/protection/family","POST",{action:act==="family-on"?"enable":"disable"});}); return;
+  }
+  if (act === "guard-refresh") { await open("guard"); return; }
+  if (["call-end","choice","pressure","notify-family"].includes(act)) {
+    const path=act==="call-end"?"end":act==="notify-family"?"notify":"answer";
+    await perform(async()=>{guardReceived=Date.now();data=await gateway.request("/protection/"+selectedId+"/"+path,"POST",
+      path==="answer"?{answer:act==="choice"?"my_choice":"pressure"}:{});}); return;
+  }
+  if (act==="print-packet" && data) {await perform(()=>identity.printPacket(packetContent(data,T,when,status)));return;}
   if (act === "show-password") {
     const field = root.querySelector('[name=password]');
     const reveal = field.type === "password";
@@ -882,7 +924,12 @@ root.addEventListener("click", async (event) => {
       accept(value);
       await savePending("");
       page = "detail";
+      const guarded=product && draft.context?.active_call && value.status==="cooling_off";
       draft = null;
+      if (guarded) {
+        try { data=await gateway.request("/protection/"+selectedId+"/check"); page="guard"; }
+        catch (failure) { if(failure.status!==404) throw failure; }
+      }
     });
     return;
   }
@@ -1118,6 +1165,10 @@ installBackHandler(() => {
   return false;
 }).catch(() => {});
 setInterval(() => {
+  if (page==="guard" && data?.state==="waiting" && !loading && !document.hidden &&
+      Date.now()-guardReceived >= Date.parse(data.ready_at)-Date.parse(data.server_time) && guardRefreshed!==data.ready_at) {
+    guardRefreshed=data.ready_at; void open("guard"); return;
+  }
   const timer = document.querySelector("#countdown");
   if (timer) {
     timer.textContent = timerText();
@@ -1147,5 +1198,5 @@ root.addEventListener("input", event => {
   });
 });
 document.addEventListener("visibilitychange", () => {
-  if (product && !document.hidden && !loading && page === "detail") void open("detail",selectedId);
+  if (product && !document.hidden && !loading && ["guard","detail"].includes(page)) void open(page,selectedId);
 });

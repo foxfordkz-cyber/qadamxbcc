@@ -1,6 +1,6 @@
 {
   "name": "bcc-shield-android",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Qadam Shield Android: synthetic client and SOC accounts",
   "scripts": {
@@ -18,7 +18,10 @@
     "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.6.2",
     "@capacitor/splash-screen": "^8.0.2",
-    "jsqr": "^1.4.0"
+    "@tesseract.js-data/kaz": "1.0.0",
+    "@tesseract.js-data/rus": "1.0.0",
+    "jsqr": "^1.4.0",
+    "tesseract.js": "7.0.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^4.0.0",
