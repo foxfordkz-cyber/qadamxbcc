@@ -1,4 +1,4 @@
-import {revealChartSelection} from "./spending-chart.mjs";
+import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import {walletUI,icon as walletIcon} from "./wallet.mjs";
 import {offlineWallet} from "./offline-wallet.mjs";
 import {ledgerTime,ledgerInstant} from "./wallet-date.mjs";
@@ -221,6 +221,7 @@ app.addEventListener("click", async (event) => {
     return;
   }
   if(button.dataset.days){days=Number(button.dataset.days);selection=null;render();return;}
+  if(button.dataset.chartStep){stepChart(app,Number(button.dataset.chartStep));return;}
   if(button.dataset.chartDay){selection=offlineWallet(state).analytics(days).series.findIndex(d=>d.day===button.dataset.chartDay);render();return;}
   if(button.dataset.drillDay||button.hasAttribute("data-drill-status")){
     const stats=offlineWallet(state).analytics(days);

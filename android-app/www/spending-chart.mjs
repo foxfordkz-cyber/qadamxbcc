@@ -133,6 +133,7 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
     '</span><span>0</span></div><div class="plot-viewport" tabindex="0"><div class="plot-columns">' +
     cols +
     "</div></div></div>" +
+    '<div class="chart-steps"><button data-chart-step="-1" '+(selected===groups[0]?'disabled':'')+'>'+T("← Раньше","← Бұрын")+'</button><button data-chart-step="1" '+(selected===groups.at(-1)?'disabled':'')+'>'+T("Позже →","Кейін →")+'</button></div>' +
     '<button class="selected-day" data-drill-day="' +
     selected.from +
     '" data-through="' +
@@ -157,4 +158,10 @@ export function revealChartSelection(root) {
   if (!selected || viewport.scrollWidth <= viewport.clientWidth) return;
   const bounds=viewport.getBoundingClientRect(), item=selected.getBoundingClientRect();
   if(item.right>bounds.right || item.left<bounds.left) viewport.scrollLeft+=item.left-bounds.left-(bounds.width-item.width)/2;
+}
+
+export function stepChart(root,delta) {
+  const bars=[...root.querySelectorAll("[data-chart-day]")];
+  const i=bars.findIndex(b=>b.getAttribute("aria-pressed")==="true");
+  bars[i+delta]?.click();
 }

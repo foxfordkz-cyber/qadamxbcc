@@ -54,6 +54,7 @@ test("Scam Check keeps edited text on failure, locale change and retry until cle
   await field.fill(text);await page.locator("#scan-form [type=submit]").click();
   await expect(page.getByRole("alert")).toBeVisible();await expect(field).toHaveValue(text);
   await page.locator("[data-action=language]:visible").first().click();await expect(field).toHaveValue(text);
+  await expect(page.getByRole("alert")).toContainText("Қызмет уақытша");
   fixture.scan=200;await page.locator("#scan-form [type=submit]").click();await expect(page.getByText("Проверено")).toBeVisible();
   await page.locator("[data-action=clear-scan]").click();await expect(field).toHaveValue("");
 });

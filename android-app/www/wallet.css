@@ -1048,3 +1048,5 @@ input:focus-visible {
 .offline-source{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--pine);font-size:.85rem;border-bottom:1px solid var(--line);margin-bottom:.7rem}.offline-source button{background:transparent;color:inherit;padding:.6rem;font-weight:650}.shell .report-context{overflow-wrap:anywhere}
 
 .trend-row{display:grid;grid-template-columns:minmax(5.5rem,auto) minmax(30px,1fr) 3ch;align-items:center;gap:8px;padding:.35rem 0;font-size:.85rem}.trend-row meter{width:100%;accent-color:var(--pine)}.trend-row b{text-align:end}
+
+.chart-steps{display:flex;justify-content:space-between;gap:8px}.chart-steps button{min-height:44px;padding:5px 9px;background:transparent;color:var(--pine);font-weight:650;font-size:.85rem}.chart-steps button:disabled{color:var(--muted);opacity:.55}

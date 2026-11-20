@@ -1,4 +1,4 @@
-import {revealChartSelection} from "./spending-chart.mjs";
+import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera;
 import { ledgerTime } from "./wallet-date.mjs";
@@ -177,14 +177,23 @@ const errText = (code) =>
       "Сұрау шегі. Бір минут күтіп, қолмен жаңарт.",
     ),
     503: T(
-      "Функция временно недоступна на стенде. Данные не подменяются демо-результатом.",
-      "Функция стендте уақытша қолжетімсіз. Демо-нәтижемен алмастырылмайды.",
+      "Сервис временно недоступен. Попробуйте ещё раз.",
+      "Қызмет уақытша қолжетімсіз. Қайта көріңіз.",
     ),
   })[code] ?? T("Не удалось выполнить действие.", "Әрекет орындалмады.");
+let failureState = null;
+function failureText({status,login,offline,mutation}) {
+  return offline ? T("Нет интернета. Подключись и попробуй снова.", "Интернет жоқ. Қосылып, қайта көр.")
+      : login && status === 401 ? T("Неверный логин или пароль.","Логин немесе құпиясөз қате.")
+      : status === 499 ? T("Вход отменён. Можно выбрать другой способ.", "Кіру тоқтатылды. Басқа тәсілді таңда.")
+      : login && (status === 0 || status >= 500) ? T("Сервис входа пока недоступен. Попробуй позже или открой демонстрацию.", "Кіру қызметі әзірге қолжетімсіз. Кейін қайтала немесе демоны аш.")
+      : status === 0 && !mutation ? T("Сервис не ответил. Попробуй обновить данные.", "Қызмет жауап бермеді. Деректерді жаңартып көр.")
+      : errText(status);
+}
 async function perform(task) {
   if (loading) return;
   loading = true;
-  error = "";
+  error = ""; failureState=null;
   render();
   try {
     await task();
@@ -196,12 +205,8 @@ async function perform(task) {
         caseEvents = (await api("integrations/guardian/soc/cases/" + id + "/history")).items;
       } catch { data = null; }
     }
-    error = !navigator.onLine ? T("Нет интернета. Подключись и попробуй снова.", "Интернет жоқ. Қосылып, қайта көр.")
-      : page === "login" && failure.status === 401 ? T("Неверный логин или пароль.","Логин немесе құпиясөз қате.")
-      : failure.status === 499 ? T("Вход отменён. Можно выбрать другой способ.", "Кіру тоқтатылды. Басқа тәсілді таңда.")
-      : page === "login" && (failure.status === 0 || failure.status >= 500) ? T("Сервис входа пока недоступен. Попробуй позже или открой демонстрацию.", "Кіру қызметі әзірге қолжетімсіз. Кейін қайтала немесе демоны аш.")
-      : failure.status === 0 && !mutationOutcome ? T("Сервис не ответил. Попробуй обновить данные.", "Қызмет жауап бермеді. Деректерді жаңартып көр.")
-      : errText(failure.status);
+    failureState = {status:failure.status,login:page==="login",offline:!navigator.onLine,mutation:mutationOutcome};
+    error = failureText(failureState);
     if (failure.status === 401) {
       if (product) await identity.write("session", null);
       clearVisible();
@@ -539,7 +544,7 @@ function safetyView() {
   return `${title(T("Защита", "Қорғаныс"))}<div class="action-list">${cards.map(([key, label, sub]) => `<button data-action="${key}">${label}<small>${sub}</small></button>`).join("")}</div>`;
 }
 function scanView() {
-  return `${title("Scam Check", T("Вводи только синтетический текст, без кодов и реквизитов.", "Кодтар мен деректемелерсіз тек жасанды мәтін енгіз."))}<section class="paper"><form id="scan-form" class="form-stack"><label>${T("Текст сообщения", "Хабарлама мәтіні")}<textarea name="text" minlength="1" maxlength="2000" required autocomplete="off">${E(scanText)}</textarea></label><button class="primary" type="submit">${T("Проверить", "Тексеру")} →</button></form></section>${button("clear-scan",T("Очистить текст","Мәтінді тазарту"),"text-button")}${scanResult ? `<section class="paper"><h2>${T("Результат", "Нәтиже")}</h2><p>${E(scanResult.guidance)}</p>${(scanResult.signals ?? []).map((s) => `<div class="reason"><p>${E(s.explanation)}</p></div>`).join("")}<p class="fine">${E(scanResult.limitation)}</p></section>` : ""}`;
+  return `${title("Scam Check", T("Вставьте учебное сообщение или выберите скриншот. Уберите коды и реквизиты.", "Оқу хабарламасын енгізіңіз немесе скриншотты таңдаңыз. Кодтар мен деректемелерді алып тастаңыз."))}<section class="paper"><form id="scan-form" class="form-stack"><label>${T("Текст сообщения", "Хабарлама мәтіні")}<textarea name="text" minlength="1" maxlength="2000" required autocomplete="off">${E(scanText)}</textarea></label><button class="primary" type="submit">${T("Проверить", "Тексеру")} →</button></form></section>${button("clear-scan",T("Очистить текст","Мәтінді тазарту"),"text-button")}${scanResult ? `<section class="paper"><h2>${T("Результат", "Нәтиже")}</h2><p>${E(scanResult.guidance)}</p>${(scanResult.signals ?? []).map((s) => `<div class="reason"><p>${E(s.explanation)}</p></div>`).join("")}<p class="fine">${E(scanResult.limitation)}</p></section>` : ""}`;
 }
 function reportView() {
   if (reportChoice) return title(T("Выберите черновик","Нобайды таңдаңыз")) +
@@ -604,7 +609,7 @@ function enrichmentView() {
   return `${title(T("Доказательства интеграций", "Интеграция деректері"))}<section class="paper"><h2>Mock Gateway</h2>${(data?.external_checks ?? []).map((c) => `<p>${E(c[lang === "ru" ? "description_ru" : "description_kk"] ?? c.result?.status)}</p>`).join("") || `<p>${T("Проверок нет", "Тексерулер жоқ")}</p>`}<h2>${T("Уведомления", "Хабарламалар")}</h2>${(data?.notifications ?? []).map((n) => `<p>${E(n.state)}</p>`).join("") || `<p>${T("Отправок нет", "Жіберілімдер жоқ")}</p>`}</section>`;
 }
 function gatewayView() {
-  return `${title("Mock Gateway", T("Учебные данные. Это не обращение в НБК.", "Оқу деректері. Бұл ҰБ-ке сұрау емес."))}<section class="paper"><form id="gateway-form" class="form-stack"><label>${T("Синтетический идентификатор", "Жасанды идентификатор")}<select name="identifier"><option>SYN-CLEAR-001</option><option>SYN-REVIEW-001</option><option>SYN-NETWORK-001</option></select></label><button type="submit" class="primary">${T("Проверить", "Тексеру")} →</button></form>${data ? `<p>${E(data[lang === "ru" ? "description_ru" : "description_kk"])}</p><p class="fine">${E(data.result?.status)} · MOCK</p>` : ""}</section>`;
+  return `${title(T("Проверить получателя","Алушыны тексеру"), T("Проверка по учебному справочнику.", "Оқу анықтамалығы бойынша тексеру."))}<section class="paper"><form id="gateway-form" class="form-stack"><label>${T("Синтетический идентификатор", "Жасанды идентификатор")}<select name="identifier"><option>SYN-CLEAR-001</option><option>SYN-REVIEW-001</option><option>SYN-NETWORK-001</option></select></label><button type="submit" class="primary">${T("Проверить", "Тексеру")} →</button></form>${data ? `<p>${E(data[lang === "ru" ? "description_ru" : "description_kk"])}</p><p class="fine">${E(data.result?.status)} · MOCK</p>` : ""}</section>`;
 }
 function settingsView() {
   if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${gateway.role === "admin" ? T("Сотрудник безопасности","Қауіпсіздік қызметкері") : E(account?.display_name||"Qadam")}</h2><p>${accountLabel()}</p><small>Qadam Shield 2.4 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
@@ -810,6 +815,7 @@ root.addEventListener("click", async (event) => {
   const b = event.target.closest("button");
   if (!b || loading) return;
   if(b.dataset.days){const value=Number(b.dataset.days);if(gateway.role==="admin")socDays=value;else walletDays=value;selectedDay=null;await open(page);return;}
+  if(b.dataset.chartStep){stepChart(root,Number(b.dataset.chartStep));return;}
   if(b.dataset.chartDay){selectedDay=data.series.findIndex(v=>v.day===b.dataset.chartDay);render();root.querySelector('[data-chart-day="'+b.dataset.chartDay+'"]')?.focus({preventScroll:true});return;}
   if(b.hasAttribute("data-drill-status")||b.dataset.drillDay){ledgerFilter={...defaultLedger(),days:String(walletDays),status:b.dataset.drillStatus||"",day:b.dataset.drillDay||"",through:b.dataset.through||""};offset=0;await open("history");return;}
   if(b.dataset.payee){presetMode=false;draft={recipient_phone:b.dataset.payee,amount:"",context:{}};await open("transfer");return;}
@@ -992,6 +998,7 @@ root.addEventListener("click", async (event) => {
   if (act === "language") {
     lang = lang === "ru" ? "kk" : "ru";
     putLocal("qadam.language", lang);
+    if(error && failureState)error=failureText(failureState);
     render();
     return;
   }
