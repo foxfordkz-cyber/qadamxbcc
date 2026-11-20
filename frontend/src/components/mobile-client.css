@@ -278,3 +278,7 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .bank-call-demo { display: inline-flex; align-items: center; gap: 8px; width: 100%; justify-content: center; }
 @keyframes call-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(247, 144, 9, .35); } 50% { box-shadow: 0 0 0 6px rgba(247, 144, 9, 0); } }
 @media (prefers-reduced-motion: reduce) { .call-check-icon { animation: none; } }
+
+/* Silent alarm receipt: deliberately ordinary, nothing red for a fraudster to notice. */
+.receipt-processing .receipt-symbol { background: var(--surface-2, #F5F5FA); color: var(--muted); }
+.receipt-processing .receipt-explanation { background: var(--surface-2, #F5F5FA); color: var(--ink-2, #3A3A3B); }

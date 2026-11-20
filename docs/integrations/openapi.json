@@ -6501,6 +6501,12 @@
             "title": "Pasted Recipient",
             "default": false
           },
+          "duress": {
+            "type": "boolean",
+            "title": "Duress",
+            "description": "Silent alarm: the client held the confirm button. The transfer is blocked and the screen stays calm so a fraudster nearby does not notice.",
+            "default": false
+          },
           "typing_duration_ms": {
             "anyOf": [
               {

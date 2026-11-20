@@ -14,6 +14,9 @@ import type { Biometrics } from "./use-biometrics";
 import "./mobile-client.css";
 import "./mobile-tools.css";
 
+/** Holding «Перевести» this long sends the silent alarm instead of a normal confirmation. */
+export const DURESS_HOLD_MS = 1500;
+
 export type RecipientType = "phone" | "card" | "iban";
 interface Props {
   config: AppConfig;
@@ -25,7 +28,8 @@ interface Props {
   blocked?: boolean;
   completed?: boolean;
   error: MessageKey | null;
-  onSubmit: () => void;
+  /** duress: the client held the confirm button — the silent alarm («тихий код»). */
+  onSubmit: (duress?: boolean) => void;
   sensor: Biometrics;
   result: Evaluation | null;
   amount: string;
@@ -99,8 +103,18 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const receipt = result && !blocked ? result : null;
   useEffect(() => { if (receipt) setStep("details"); }, [receipt?.transaction_id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (step === "confirm" && !busy) confirmHeading.current?.focus({ preventScroll: true }); }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ReceiptIcon = receipt?.status === "approved" ? Check : receipt?.status === "cooling_off" ? Clock3 : receipt?.status === "cancelled" ? XCircle : ShieldX;
-  const receiptCopy = receipt?.status === "approved" ? "receiptApproved" : receipt?.status === "cooling_off" ? "receiptHeld" : receipt?.status === "cancelled" ? "receiptCancelled" : "receiptBlocked";
+  // Silent alarm: the bank has blocked the transfer, but a fraudster looking at the
+  // screen sees an ordinary "processing" receipt and has no reason to push harder.
+  const silent = !!receipt?.reasons?.some(reason => reason.code === "DURESS_SIGNAL");
+  const hold = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean }>({ timer: null, fired: false });
+  const pressStart = () => {
+    hold.current.fired = false;
+    if (hold.current.timer) clearTimeout(hold.current.timer);
+    hold.current.timer = setTimeout(() => { hold.current.fired = true; hold.current.timer = null; }, DURESS_HOLD_MS);
+  };
+  const pressEnd = () => { if (hold.current.timer) { clearTimeout(hold.current.timer); hold.current.timer = null; } };
+  const ReceiptIcon = silent ? Clock3 : receipt?.status === "approved" ? Check : receipt?.status === "cooling_off" ? Clock3 : receipt?.status === "cancelled" ? XCircle : ShieldX;
+  const receiptCopy = silent ? "receiptProcessing" : receipt?.status === "approved" ? "receiptApproved" : receipt?.status === "cooling_off" ? "receiptHeld" : receipt?.status === "cancelled" ? "receiptCancelled" : "receiptBlocked";
   const contacts = [
     { key: "normal", name: config.mode === "demo" ? "Данияр" : t("contactOne"), initials: "ДА", tone: "mint" },
     { key: "scam", name: config.mode === "demo" ? "Алексей" : t("contactTwo"), initials: "АК", tone: "lilac" },
@@ -130,11 +144,11 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           <button type="button" className="primary" onClick={() => { if (receipt && !blocked) onNewTransfer(); setScreen("transfer"); }}><ArrowLeftRight size={18}/>{m("homeTransfer")}</button>
           <button type="button" className="secondary" onClick={() => setScreen("circle")}><Users size={18}/>{m("circle")}</button>
           <button type="button" className="secondary" onClick={() => setScreen("scam")}><ScanText size={18}/>{m("scam")}</button>
-        </section> : screen === "circle" ? <CircleMembers /> : screen === "scam" ? <MessageCheck /> : receipt ? <section className={`phone-receipt receipt-${receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
+        </section> : screen === "circle" ? <CircleMembers /> : screen === "scam" ? <MessageCheck /> : receipt ? <section className={`phone-receipt receipt-${silent ? "processing" : receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
           <div className="receipt-symbol" aria-hidden="true"><ReceiptIcon size={32} strokeWidth={1.8} /></div>
-          <Badge status={receipt.status} />
+          {silent ? <span className="badge processing">{m("processingBadge")}</span> : <Badge status={receipt.status} />}
           <strong className="receipt-amount">{money(receipt.amount ?? amount, lang)}</strong>
-          <h3 id="phone-receipt-title">{lang === "kk" ? receipt.headline_kk : receipt.headline_ru}</h3>
+          <h3 id="phone-receipt-title">{silent ? m("processingTitle") : lang === "kk" ? receipt.headline_kk : receipt.headline_ru}</h3>
           <dl className="receipt-details">
             <div><dt>{m("recipientName")}</dt><dd>{receipt.recipient.display_name}<small>{receipt.recipient.iban_masked}</small></dd></div>
             <div><dt>{m("fromCard")}</dt><dd>#картакарта •••• 4821</dd></div>
@@ -163,7 +177,8 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           {showUnknown && <div className="phone-alert warning" role="status"><AlertTriangle size={18} aria-hidden="true" /><div><strong>{m("unknownTitle")}</strong><p>{m("unknownText")}</p></div></div>}
           {error && !showUnknown && <p className="error" role="alert">{t(error)}</p>}
           <div className="confirm-actions">
-            <button type="button" className="primary transfer-confirm" disabled={busy || blocked || completed || offline} onClick={onSubmit}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
+            <button type="button" className="primary transfer-confirm" disabled={busy || blocked || completed || offline} onPointerDown={pressStart} onPointerUp={pressEnd} onPointerCancel={pressEnd} onPointerLeave={pressEnd} onContextMenu={event => event.preventDefault()}
+              onClick={() => { const duress = hold.current.fired; hold.current.fired = false; onSubmit(duress); }}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
             <button type="button" className="secondary transfer-edit" disabled={busy} onClick={() => setStep("details")}>{m("editCta")}</button>
           </div>
         </section>
@@ -207,6 +222,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
               <summary><SlidersHorizontal size={16} aria-hidden="true" /><span>{m("demoContextTitle")}</span>{activeContext > 0 && <em>{activeContext} {m("demoContextActive")}</em>}<ChevronDown size={16} aria-hidden="true" className="chevron" /></summary>
               <div className="demo-context-body">
                 {config.mode === "demo" && <p className="context-demo-hint">{m("demoContextHint")}</p>}
+                {config.mode === "demo" && <p className="context-demo-hint">{m("duressHint")}</p>}
                 {contextKeys.map(key => {
                   const Icon = key === "active_call" ? PhoneCall : key === "from_deposit" ? Landmark : Smartphone;
                   return <button className="toggle-row" type="button" role="switch" aria-checked={form.context[key]} key={key} onClick={() => setForm(v => ({ ...v, context: { ...v.context, [key]: !v.context[key] } }))}><span><Icon size={16} aria-hidden="true" />{t(key)}</span><i className={form.context[key] ? "on" : ""}><b /></i></button>;
