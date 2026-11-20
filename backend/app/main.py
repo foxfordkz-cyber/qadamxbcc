@@ -16,6 +16,7 @@ from app.api.v1 import (
     call_check,
     external_checks,
     integrations,
+    scam_guide,
     soc,
     transfers,
     trusted_contacts,
@@ -120,6 +121,7 @@ def create_app(settings: Settings | None = None, resources: Resources | None = N
     api = APIRouter(prefix=cfg.api_prefix)
     api.include_router(transfers.router, dependencies=[Depends(require_transfer_access)])
     api.include_router(call_check.router, dependencies=[Depends(require_transfer_access)])
+    api.include_router(scam_guide.router, dependencies=[Depends(require_transfer_access)])
     api.include_router(soc.router, dependencies=[Depends(require_soc_access)])
     api.include_router(trusted_contacts.router)
     api.include_router(external_checks.router)

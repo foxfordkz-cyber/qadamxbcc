@@ -1,14 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, BatteryFull, Check, ChevronDown, Clock3, History, House, Landmark, LoaderCircle, LockKeyhole, Menu, PhoneCall, ReceiptText, ShieldCheck, ShieldX, Signal, SlidersHorizontal, Smartphone, Wifi, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, BatteryFull, Check, ChevronDown, Clock3, House, Landmark, LoaderCircle, LockKeyhole, Users, PhoneCall, ScanText, ShieldCheck, ShieldX, Signal, SlidersHorizontal, Smartphone, Wifi, XCircle } from "lucide-react";
 import { api, type AppConfig, type CallCheck, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
 import { groupAmount, rawAmount } from "@/lib/amount";
 import { Badge } from "./risk";
+import { CircleMembers } from "./circle-members";
+import { MessageCheck } from "./message-check";
+import { TrustedCircle } from "./trusted-circle";
 import type { Biometrics } from "./use-biometrics";
 import "./mobile-client.css";
+import "./mobile-tools.css";
+
+/** Holding «Перевести» this long sends the silent alarm instead of a normal confirmation. */
+export const DURESS_HOLD_MS = 1500;
 
 export type RecipientType = "phone" | "card" | "iban";
 interface Props {
@@ -21,12 +28,15 @@ interface Props {
   blocked?: boolean;
   completed?: boolean;
   error: MessageKey | null;
-  onSubmit: () => void;
+  /** duress: the client held the confirm button — the silent alarm («тихий код»). */
+  onSubmit: (duress?: boolean) => void;
   sensor: Biometrics;
   result: Evaluation | null;
   amount: string;
   onReview: () => void;
   onNewTransfer: () => void;
+  /** The bank-log answer for the current call, for the decision panel next to the phone. */
+  onCallCheck?: (value: CallCheck | null) => void;
   /** Full-screen on a real smartphone (/mobile): no bezel, fake status bar or caption. */
   bare?: boolean;
 }
@@ -39,34 +49,46 @@ function maskRecipient(value: string, type: RecipientType) {
   const compact = value.replace(/\s/g, "");
   if (type === "phone" && /^\+?7\d{10}$/.test(compact)) {
     const digits = compact.replace(/^\+?7/, "");
-    return `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`;
+    return `+7 ••• ••• ${digits.slice(6, 8)} ${digits.slice(8)}`;
   }
   if (type === "card" && compact.length >= 4) return `•••• ${compact.slice(-4)}`;
   if (type === "iban" && compact.length > 8) return `${compact.slice(0, 4)} •••• ${compact.slice(-4)}`;
   return value;
 }
 
-export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onNewTransfer, bare = false }: Props) {
+export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onNewTransfer, onCallCheck, bare = false }: Props) {
   const { lang, t } = useLocale();
   const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const contextDetails = useRef<HTMLDetailsElement>(null);
   const confirmHeading = useRef<HTMLHeadingElement>(null);
   const [step, setStep] = useState<"details" | "confirm">("details");
+  const [screen, setScreen] = useState<"home" | "transfer" | "circle" | "scam">(bare ? "home" : "transfer");
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine);
+    update(); window.addEventListener("online", update); window.addEventListener("offline", update);
+    return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); };
+  }, []);
+  useEffect(() => { if (result?.transaction_id) setScreen("transfer"); }, [result?.transaction_id]);
   const [callCheck, setCallCheck] = useState<CallCheck | null>(null);
   const [callChecking, setCallChecking] = useState(false);
   const [callCheckFailed, setCallCheckFailed] = useState(false);
   const [bankCallStarted, setBankCallStarted] = useState(false);
   const onCall = form.context.active_call;
-  // A check answers for this call and this customer only.
+  // A check answers for this call and this customer only. The phone notices the call by
+  // itself (CallKit / TelephonyManager in the bank app) and asks the bank's log at once.
   useEffect(() => {
-    setCallCheck(null); setCallCheckFailed(false);
+    setCallCheck(null); setCallCheckFailed(false); onCallCheck?.(null);
     setForm(v => v.context.bank_call_check_id ? { ...v, context: { ...v.context, bank_call_check_id: undefined } } : v);
+    if (!onCall || !/^[0-9a-f-]{36}$/i.test(form.sender.trim())) return;
+    const timer = setTimeout(() => void checkBankCall(), 300);
+    return () => clearTimeout(timer);
   }, [onCall, form.sender]); // eslint-disable-line react-hooks/exhaustive-deps
   async function checkBankCall() {
     setCallChecking(true); setCallCheckFailed(false);
     try {
       const value = await api<CallCheck>("call-check", { method: "POST", body: JSON.stringify({ customer_id: form.sender.trim() }) });
-      setCallCheck(value);
+      setCallCheck(value); onCallCheck?.(value);
       setForm(v => ({ ...v, context: { ...v.context, bank_call_check_id: value.check_id } }));
     } catch { setCallCheck(null); setCallCheckFailed(true); }
     finally { setCallChecking(false); }
@@ -81,8 +103,18 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const receipt = result && !blocked ? result : null;
   useEffect(() => { if (receipt) setStep("details"); }, [receipt?.transaction_id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (step === "confirm" && !busy) confirmHeading.current?.focus({ preventScroll: true }); }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ReceiptIcon = receipt?.status === "approved" ? Check : receipt?.status === "cooling_off" ? Clock3 : receipt?.status === "cancelled" ? XCircle : ShieldX;
-  const receiptCopy = receipt?.status === "approved" ? "receiptApproved" : receipt?.status === "cooling_off" ? "receiptHeld" : receipt?.status === "cancelled" ? "receiptCancelled" : "receiptBlocked";
+  // Silent alarm: the bank has blocked the transfer, but a fraudster looking at the
+  // screen sees an ordinary "processing" receipt and has no reason to push harder.
+  const silent = !!receipt?.reasons?.some(reason => reason.code === "DURESS_SIGNAL");
+  const hold = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean }>({ timer: null, fired: false });
+  const pressStart = () => {
+    hold.current.fired = false;
+    if (hold.current.timer) clearTimeout(hold.current.timer);
+    hold.current.timer = setTimeout(() => { hold.current.fired = true; hold.current.timer = null; }, DURESS_HOLD_MS);
+  };
+  const pressEnd = () => { if (hold.current.timer) { clearTimeout(hold.current.timer); hold.current.timer = null; } };
+  const ReceiptIcon = silent ? Clock3 : receipt?.status === "approved" ? Check : receipt?.status === "cooling_off" ? Clock3 : receipt?.status === "cancelled" ? XCircle : ShieldX;
+  const receiptCopy = silent ? "receiptProcessing" : receipt?.status === "approved" ? "receiptApproved" : receipt?.status === "cooling_off" ? "receiptHeld" : receipt?.status === "cancelled" ? "receiptCancelled" : "receiptBlocked";
   const contacts = [
     { key: "normal", name: config.mode === "demo" ? "Данияр" : t("contactOne"), initials: "ДА", tone: "mint" },
     { key: "scam", name: config.mode === "demo" ? "Алексей" : t("contactTwo"), initials: "АК", tone: "lilac" },
@@ -91,25 +123,32 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const chosenContact = recipientType === "phone" ? contacts.find(contact => config.presets[contact.key].recipient === form.recipient) : undefined;
   const activeContext = contextKeys.filter(key => form.context[key]).length;
   const numericAmount = Number(form.amount);
-  const title = receipt ? m("receiptTitle") : step === "confirm" ? m("stepConfirm") : t("transfer");
+  const title = screen === "home" ? m("tabHome") : screen === "circle" ? m("circle") : screen === "scam" ? m("scam")
+    : receipt ? m("receiptTitle") : step === "confirm" ? m("stepConfirm") : t("transfer");
   const showUnknown = blocked && !receipt;
 
   return <div className={`phone-stage${bare ? " is-bare" : ""}`}>
     <section className="phone-frame" aria-label={t("mobile")}>
       {!bare && <div className="phone-status" aria-hidden="true"><span>9:41</span><i /><div><Signal size={14} /><Wifi size={14} /><BatteryFull size={19} /></div></div>}
       <header className="phone-appbar">
-        {step === "confirm" && !receipt
+        {screen === "transfer" && step === "confirm" && !receipt
           ? <button type="button" className="appbar-back" disabled={busy} onClick={() => setStep("details")} aria-label={m("editCta")}><ArrowLeft size={20} /></button>
-          : <span className="appbar-back" aria-hidden="true"><ArrowLeft size={20} /></span>}
-        <div className="appbar-title"><h2>{title}</h2>{!receipt && <small>{step === "confirm" ? 2 : 1} / 2 · {m("stepOf")}</small>}</div>
+          : screen !== "home" ? <button className="appbar-back" type="button" aria-label={m("tabHome")} disabled={busy} onClick={() => setScreen("home")}><ArrowLeft size={20} /></button> : <span />}
+        <div className="appbar-title"><h2>{title}</h2>{screen === "transfer" && !receipt && <small>{step === "confirm" ? 2 : 1} / 2 · {m("stepOf")}</small>}</div>
         <span className="demo-tag">{m("demoBadge")}</span>
       </header>
       <div className="phone-body">
-        {receipt ? <section className={`phone-receipt receipt-${receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
+        {offline && <p className="phone-alert warning" role="status">{m("offline")}</p>}
+        {screen === "home" ? <section className="mobile-tool home-tools">
+          <div className="source-card"><small>{m("available")} · {m("demoValue")}</small><strong>{money(DEMO_BALANCE, lang)}</strong><span>•••• 4821</span></div>
+          <button type="button" className="primary" onClick={() => { if (receipt && !blocked) onNewTransfer(); setScreen("transfer"); }}><ArrowLeftRight size={18}/>{m("homeTransfer")}</button>
+          <button type="button" className="secondary" onClick={() => setScreen("circle")}><Users size={18}/>{m("circle")}</button>
+          <button type="button" className="secondary" onClick={() => setScreen("scam")}><ScanText size={18}/>{m("scam")}</button>
+        </section> : screen === "circle" ? <CircleMembers /> : screen === "scam" ? <MessageCheck /> : receipt ? <section className={`phone-receipt receipt-${silent ? "processing" : receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
           <div className="receipt-symbol" aria-hidden="true"><ReceiptIcon size={32} strokeWidth={1.8} /></div>
-          <Badge status={receipt.status} />
+          {silent ? <span className="badge processing">{m("processingBadge")}</span> : <Badge status={receipt.status} />}
           <strong className="receipt-amount">{money(receipt.amount ?? amount, lang)}</strong>
-          <h3 id="phone-receipt-title">{lang === "kk" ? receipt.headline_kk : receipt.headline_ru}</h3>
+          <h3 id="phone-receipt-title">{silent ? m("processingTitle") : lang === "kk" ? receipt.headline_kk : receipt.headline_ru}</h3>
           <dl className="receipt-details">
             <div><dt>{m("recipientName")}</dt><dd>{receipt.recipient.display_name}<small>{receipt.recipient.iban_masked}</small></dd></div>
             <div><dt>{m("fromCard")}</dt><dd>#картакарта •••• 4821</dd></div>
@@ -122,6 +161,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             <button type="button" className={receipt.status === "cooling_off" ? "secondary receipt-new" : "primary receipt-new"} disabled={busy} onClick={onNewTransfer}>{m("receiptNext")}</button>
           </div>
           <p className="receipt-disclaimer">{m("receiptHint")}</p>
+          {config.mode === "live" && receipt.status !== "cooling_off" && <TrustedCircle key={receipt.transaction_id} transactionId={receipt.transaction_id} active={false} historyOnly />}
         </section>
         : step === "confirm" ? <section className="phone-confirm" aria-labelledby="confirm-title" aria-busy={busy}>
           <h3 id="confirm-title" ref={confirmHeading} tabIndex={-1} className="sr-only">{m("stepConfirm")}</h3>
@@ -137,7 +177,8 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           {showUnknown && <div className="phone-alert warning" role="status"><AlertTriangle size={18} aria-hidden="true" /><div><strong>{m("unknownTitle")}</strong><p>{m("unknownText")}</p></div></div>}
           {error && !showUnknown && <p className="error" role="alert">{t(error)}</p>}
           <div className="confirm-actions">
-            <button type="button" className="primary transfer-confirm" disabled={busy || blocked || completed} onClick={onSubmit}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
+            <button type="button" className="primary transfer-confirm" disabled={busy || blocked || completed || offline} onPointerDown={pressStart} onPointerUp={pressEnd} onPointerCancel={pressEnd} onPointerLeave={pressEnd} onContextMenu={event => event.preventDefault()}
+              onClick={() => { const duress = hold.current.fired; hold.current.fired = false; onSubmit(duress); }}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
             <button type="button" className="secondary transfer-edit" disabled={busy} onClick={() => setStep("details")}>{m("editCta")}</button>
           </div>
         </section>
@@ -181,6 +222,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
               <summary><SlidersHorizontal size={16} aria-hidden="true" /><span>{m("demoContextTitle")}</span>{activeContext > 0 && <em>{activeContext} {m("demoContextActive")}</em>}<ChevronDown size={16} aria-hidden="true" className="chevron" /></summary>
               <div className="demo-context-body">
                 {config.mode === "demo" && <p className="context-demo-hint">{m("demoContextHint")}</p>}
+                {config.mode === "demo" && <p className="context-demo-hint">{m("duressHint")}</p>}
                 {contextKeys.map(key => {
                   const Icon = key === "active_call" ? PhoneCall : key === "from_deposit" ? Landmark : Smartphone;
                   return <button className="toggle-row" type="button" role="switch" aria-checked={form.context[key]} key={key} onClick={() => setForm(v => ({ ...v, context: { ...v.context, [key]: !v.context[key] } }))}><span><Icon size={16} aria-hidden="true" />{t(key)}</span><i className={form.context[key] ? "on" : ""}><b /></i></button>;
@@ -191,7 +233,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             </details>
             {onCall && <section className="call-check" aria-live="polite">
               <div className="call-check-row"><span className="call-check-icon"><PhoneCall size={18} aria-hidden="true" /></span><div><strong>{m("callActive")}</strong><p>{m("callCheckHint")}</p></div></div>
-              <button type="button" className="call-check-cta" disabled={callChecking || !form.sender.trim()} onClick={() => void checkBankCall()}>{callChecking ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" /> : <ShieldCheck size={16} aria-hidden="true" />}{m("callCheckCta")}</button>
+              <button type="button" className="call-check-cta" disabled={callChecking || !form.sender.trim()} onClick={() => void checkBankCall()}>{callChecking ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" /> : <ShieldCheck size={16} aria-hidden="true" />}{callChecking ? m("callChecking") : callCheck ? m("callRecheck") : m("callCheckCta")}</button>
               {callCheck && <div className={`call-check-result ${callCheck.verified ? "verified" : "denied"}`} role="status">{callCheck.verified ? <ShieldCheck size={18} aria-hidden="true" /> : <ShieldX size={18} aria-hidden="true" />}<div><strong>{callCheck.verified ? m("callVerified") : m("callDenied")}</strong><p>{lang === "kk" ? callCheck.message_kk : callCheck.message_ru}</p>{!callCheck.verified && <p className="call-check-note">{m("callDeniedNote")}</p>}{callCheck.simulated_log !== false && <p className="call-check-sim">{m("callLogSimulated")}</p>}</div></div>}
               {callCheckFailed && <p className="error" role="alert">{m("callCheckFailed")}</p>}
             </section>}
@@ -201,7 +243,11 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           </fieldset>
         </form>}
       </div>
-      <nav className="phone-tabbar" aria-hidden="true">{([["tabHome", House], ["tabPayments", ReceiptText], ["tabTransfers", ArrowLeftRight], ["tabHistory", History], ["tabMore", Menu]] as const).map(([key, Icon]) => <span key={key} className={key === "tabTransfers" ? "active" : ""}><Icon size={20} strokeWidth={key === "tabTransfers" ? 2.2 : 1.7} />{m(key)}</span>)}</nav>
+      <nav className="phone-tabbar" aria-label={t("mobile")}>
+        {([["home", "tabHome", House], ["transfer", "tabTransfers", ArrowLeftRight], ["circle", "circle", Users], ["scam", "scam", ScanText]] as const).map(([page, label, Icon]) =>
+          <button key={page} type="button" className={screen === page ? "active" : ""} aria-current={screen === page ? "page" : undefined}
+            disabled={busy} onClick={() => setScreen(page)}><Icon size={18} aria-hidden="true" />{m(label)}</button>)}
+      </nav>
       {!bare && <div className="home-indicator" aria-hidden="true" />}
     </section>
     {!bare && <p className="phone-caption">{m("phoneCaption")}</p>}

@@ -48,4 +48,11 @@ export function sanitizeNotifications(value: unknown): TrustedNotification[] {
 export const terminalNotification = (state: NotificationState) => state !== "NOTIFICATION_QUEUED" && state !== "NOTIFICATION_SENT";
 
 /** Safe 409 detail codes the phone can explain; anything else becomes a generic conflict. */
-export const knownConflicts = ["contact_consent_required", "contact_notifications_disabled", "active_cooling_required"] as const;
+export const knownConflicts = ["contact_consent_required", "contact_notifications_disabled", "active_cooling_required", "contact_limit_reached"] as const;
+
+export const memberSchema = contactSchema.extend({ state: z.enum(contactStates) });
+export const membershipSchema = z.object({ contacts: z.array(memberSchema) });
+export const invitationSchema = z.object({
+  contact: memberSchema, invitation_token: z.string().regex(/^[A-Za-z0-9_-]{20,64}$/),
+  expires_at: z.iso.datetime({ offset: true }),
+});

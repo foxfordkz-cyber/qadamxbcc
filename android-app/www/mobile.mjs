@@ -19,8 +19,12 @@ try {
 }
 const offlineEntry =
   new URLSearchParams(location.search).get("offline") === "1";
+try {
+  const preference = localStorage.getItem("qadam.language");
+  if (["kk", "ru"].includes(preference)) state.language = preference;
+} catch { storageFailed = true; }
 if (offlineEntry) state.welcomed = true;
-else if (state.welcomed) location.replace("connected.html");
+else if (state.welcomed) location.replace("index.html");
 let route = "home",
   preset = "everyday",
   currentId = null,
@@ -214,12 +218,12 @@ app.addEventListener("click", async (event) => {
     case "start":
       state.welcomed = true;
       save();
-      location.assign("connected.html");
+      location.assign("index.html");
       break;
     case "offline":
       state.welcomed = true;
       save();
-      history.replaceState(null, "", "index.html?offline=1");
+      history.replaceState(null, "", "demo.html?offline=1");
       navigate("home");
       break;
     case "transfer":
@@ -262,7 +266,7 @@ app.addEventListener("click", async (event) => {
       back();
       break;
     case "connect":
-      window.location.assign("connected.html");
+      window.location.assign("index.html");
       break;
     case "website":
       try {

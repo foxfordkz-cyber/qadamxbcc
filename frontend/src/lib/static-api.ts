@@ -8,16 +8,19 @@ import { z } from "zod";
 import { ApiError, answersSchema, feedQuerySchema, transferSchema } from "./contracts";
 import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "./demo";
 import { ids } from "./demo-ids";
+import { staticCircle, staticGuide } from "./static-circle";
 
 const STORE = "saqbol-static-demo-v1";
 const keys = ["bccDemoTransfers", "bccDemoDetails", "bccDemoRequests", "bccDemoAbandoned", "bccDemoBankCalls", "bccDemoCallChecks"] as const;
 type Root = Record<(typeof keys)[number], unknown>;
 const root = globalThis as unknown as Partial<Root>;
-let loaded = false;
+// Re-read on every call: the main page and the /pitch iframe share one store, and a
+// cached copy in one of them would overwrite transfers the other has just made.
+// After a failed write the in-memory copy is newer than storage, so it is kept.
+let unsaved = false;
 
 function load() {
-  if (loaded) return;
-  loaded = true;
+  if (unsaved) return;
   try {
     const saved = JSON.parse(localStorage.getItem(STORE) ?? "null") as Record<string, unknown> | null;
     if (!saved) return;
@@ -34,7 +37,8 @@ function save() {
       value[key] = item instanceof Map ? [...item.entries()] : item instanceof Set ? [...item] : item;
     }
     localStorage.setItem(STORE, JSON.stringify(value));
-  } catch { /* A full or blocked storage keeps the in-memory demo working. */ }
+    unsaved = false;
+  } catch { unsaved = true; /* A full or blocked storage keeps the in-memory demo working. */ }
 }
 
 const cards: Record<string, string> = { "4400000000000002": ids.friend, "4400000000000003": ids.stranger, "4400000000000004": ids.hub };
@@ -60,9 +64,21 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
     const { customer_id } = z.object({ customer_id: z.uuid() }).strict().parse(body);
     return route === "call-check" ? callCheckDemo(customer_id) : bankCallDemo(customer_id);
   }
-  // The trusted circle needs Bekzat's live integrations; the static demo has none.
-  if (route.startsWith("trusted-circle/")) throw new ApiError("unavailable", 404);
+  if (method === "GET" && route === "scam-check/guide") return staticGuide;
+  // Simulated in the browser: no Telegram here, the contact "replies" after a few seconds.
+  if (route.startsWith("trusted-circle/")) return staticCircle(method, route, body);
   throw new ApiError("notFound", 404);
+}
+
+/** Clears this browser's demo: transfers, receipts and drafts. The page reloads afterwards. */
+export function resetStaticDemo() {
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      for (const key of Object.keys(store)) if ((key.startsWith("bcc-shield.") && key !== "bcc-shield.locale") || key.startsWith("saqbol")) store.removeItem(key);
+    } catch { /* Blocked storage holds nothing to clear. */ }
+  }
+  unsaved = false;
+  for (const key of keys) delete root[key];
 }
 
 export async function staticApi(path: string, init?: RequestInit): Promise<unknown> {

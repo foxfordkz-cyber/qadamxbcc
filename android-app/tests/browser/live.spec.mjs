@@ -100,7 +100,7 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
     await page.locator('[name="consent"]').check();
     await page.locator("#report-form button").click();
     await expect(
-      page.getByText("SUBMITTED", { exact: true }).first(),
+      page.getByText("Передано на рассмотрение", { exact: true }).first(),
     ).toBeVisible();
     await page.locator('[data-nav="settings"]').click();
     await page.locator('[data-action="logout"]').click();
@@ -126,7 +126,7 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
     await page.locator('[data-action="reports"]').click();
     await page.locator("[data-ack]").first().click();
     await expect(
-      page.getByText("DEMO_ACKNOWLEDGED", { exact: true }).first(),
+      page.getByText("Отмечено оператором", { exact: true }).first(),
     ).toBeVisible();
     await page.locator("[data-open-case]").first().click();
     await page.locator('[data-action="case-review"]').click();

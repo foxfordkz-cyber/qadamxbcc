@@ -15,6 +15,7 @@ from app.core.resources import Resources
 from app.integrations.config import IntegrationSettings
 from app.mobile_gateway.app import create_mobile_app, session_key
 from app.mobile_gateway.config import MobileSettings
+from app.mobile_gateway.passwords import encode
 from app.models import Account, Transaction, TransactionStatus
 
 CLIENT_CODE = "synthetic-client-code-1234567890ABC"
@@ -305,3 +306,71 @@ async def test_mobile_health_does_not_expose_secrets(mobile_world: tuple[AsyncCl
     client, _ = mobile_world
     response = await client.get("/health")
     assert response.json() == {"status": "ok", "mode": "synthetic-test"}
+
+
+async def test_two_password_accounts_restore_and_revoke(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        session.add(
+            Account(
+                id=OWNER,
+                iin="900101300001",
+                iban=make_kz_iban("0000000000001"),
+                phone="+77010000001",
+                full_name="Test",
+                device_id="synthetic",
+            )
+        )
+        await session.commit()
+    fake = fakeredis.FakeAsyncRedis()
+    cfg = Settings(database_url="sqlite+aiosqlite:///:memory:")
+    res = Resources.build(cfg, session_factory=session_factory, redis=fake)
+    client_pw, staff_pw = str(uuid.uuid4()), str(uuid.uuid4())
+    mobile = MobileSettings(
+        enabled=True,
+        auth_mode="password",
+        client_hash=SecretStr(encode(client_pw)),
+        admin_hash=SecretStr(encode(staff_pw)),
+    )
+    app = create_mobile_app(mobile, cfg, res, IntegrationSettings())
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://stand") as client,
+    ):
+
+        async def sign(name: str, pw: str) -> Any:
+            return await client.post("/mobile/v1/auth/login", json={"login": name, "password": pw})
+
+        assert (await sign("client_demo", staff_pw)).status_code == 401
+        assert (await sign("admin_demo", client_pw)).status_code == 401
+        assert (
+            await client.post("/mobile/v1/sessions", json={"code": CLIENT_CODE})
+        ).status_code == 404
+        assert (
+            await client.post(
+                "/mobile/v1/auth/login",
+                json={"login": "client_demo", "password": client_pw, "role": "admin"},
+            )
+        ).status_code == 422
+        for name, password, role in [
+            ("client_demo", client_pw, "client"),
+            ("admin_demo", staff_pw, "admin"),
+        ]:
+            result = (await sign(name, password)).json()
+            headers = {"Authorization": "Bearer " + result["token"]}
+            assert result["role"] == role
+            assert (await client.get("/mobile/v1/session", headers=headers)).json()["role"] == role
+            assert (await client.get("/mobile/v1/account", headers=headers)).status_code == (
+                200 if role == "client" else 403
+            )
+            if role == "client":
+                assert (
+                    await client.get("/mobile/v1/api/soc/feed", headers=headers)
+                ).status_code == 403
+                assert (await client.get("/mobile/v1/inbox", headers=headers)).json() == {
+                    "items": []
+                }
+            assert (await client.delete("/mobile/v1/session", headers=headers)).status_code == 204
+            assert (await client.get("/mobile/v1/session", headers=headers)).status_code == 401
+    await fake.aclose()

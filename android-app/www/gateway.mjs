@@ -52,8 +52,9 @@ async function gatewayFetch(url, options) {
   );
 }
 export class Gateway {
-  constructor(origin, fetcher = gatewayFetch) {
-    this.origin = gatewayOrigin(origin);
+  constructor(origin, fetcher = gatewayFetch, pinnedOrigin = null) {
+    this.origin = pinnedOrigin && origin === pinnedOrigin &&
+      /^https:\/\/[a-z0-9.-]+$/i.test(origin) ? origin : gatewayOrigin(origin);
     if (!this.origin) throw new Error("invalid_origin");
     this.fetcher = fetcher;
     this.token = null;
@@ -61,7 +62,7 @@ export class Gateway {
   }
   async request(path, method = "GET", body, idempotencyKey) {
     if (
-      !/^\/(?:sessions?$|requests$|transfers(?:\?|$)|api\/)/.test(path) ||
+      !/^\/(?:sessions?$|auth\/login$|account$|inbox$|requests$|transfers(?:\?|$)|api\/)/.test(path) ||
       path.includes("..")
     )
       throw new Error("invalid_path");

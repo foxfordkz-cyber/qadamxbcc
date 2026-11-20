@@ -134,7 +134,7 @@ def create_mobile_app(
     if integrations is not None:
         core.state.integration_settings = integrations
     # This process never starts a Telegram worker. The gateway cannot enqueue notifications.
-    if core.state.integration_settings.telegram_mode == "test":
+    if core.state.integration_settings.telegram_mode == "test" and cfg.auth_mode != "password":
         raise ValueError("Mobile rehearsal requires fake or disabled Telegram")
 
     @asynccontextmanager
@@ -180,8 +180,42 @@ def create_mobile_app(
     async def health() -> dict[str, str]:
         return {"status": "ok", "mode": "synthetic-test"}
 
+    from app.mobile_gateway.accounts import install_accounts
+    from app.mobile_gateway.passwords import PasswordLogin, verify
+
+    app.state.mobile_bot = (
+        cfg.telegram_username if core.state.integration_settings.telegram_mode == "test" else ""
+    )
+    install_accounts(app)
+
+    @app.post("/mobile/v1/auth/login")
+    async def password_login(body: PasswordLogin, request: Request) -> dict[str, Any]:
+        if cfg.auth_mode != "password":
+            raise HTTPException(404, "unavailable")
+        res: Resources = request.app.state.resources
+        peer = request.client.host if request.client else "unknown"
+        await quota(res, f"password:{digest(peer)}", 24)
+        import asyncio
+
+        admin = body.login == "admin_demo"
+        encoded = cfg.admin_hash if admin else cfg.client_hash
+        matches = await asyncio.to_thread(
+            verify, body.password.get_secret_value(), encoded.get_secret_value()
+        )
+        if not matches or body.login not in ("client_demo", "admin_demo"):
+            raise HTTPException(401, "invalid_credentials")
+        return await issue_session(
+            res,
+            Identity(
+                role="admin" if admin else "client",
+                subject=cfg.officer_id if admin else cfg.customer_id,
+            ),
+        )
+
     @app.post("/mobile/v1/sessions")
     async def login(body: Login, request: Request) -> dict[str, Any]:
+        if cfg.auth_mode != "rehearsal":
+            raise HTTPException(404, "unavailable")
         res: Resources = request.app.state.resources
         peer = request.client.host if request.client else "unknown"
         await quota(res, f"login:{digest(peer)}", 8)
@@ -194,7 +228,10 @@ def create_mobile_app(
             role="client" if is_client else "admin",
             subject=cfg.customer_id if is_client else cfg.officer_id,
         )
-        if is_client:
+        return await issue_session(res, principal)
+
+    async def issue_session(res: Resources, principal: Identity) -> dict[str, Any]:
+        if principal.role == "client":
             async with res.session_factory() as session:
                 if await session.get(Account, principal.subject) is None:
                     raise HTTPException(503, "mobile_fixtures_missing")
@@ -207,6 +244,7 @@ def create_mobile_app(
             raise HTTPException(503, "mobile_unavailable") from exc
         return {
             "token": token,
+            "subject": str(principal.subject),
             "role": principal.role,
             "expires_in": cfg.session_seconds,
             "mode": "synthetic-test",
@@ -214,7 +252,7 @@ def create_mobile_app(
 
     @app.get("/mobile/v1/session")
     async def current(principal: IdentityDep) -> dict[str, str]:
-        return {"role": principal.role, "mode": "synthetic-test"}
+        return {"role": principal.role, "subject": str(principal.subject), "mode": "synthetic-test"}
 
     @app.delete("/mobile/v1/session", status_code=204)
     async def logout(request: Request, principal: IdentityDep) -> Response:
@@ -345,6 +383,11 @@ def create_mobile_app(
             if path == "transfers/evaluate" and body is not None:
                 if body.get("sender_id", str(principal.subject)) != str(principal.subject):
                     raise HTTPException(403, "mobile_owner_forbidden")
+                if cfg.auth_mode == "password":
+                    from app.mobile_gateway.accounts import RECIPIENTS
+
+                    if body.get("recipient_phone") not in RECIPIENTS or body.get("recipient_iban"):
+                        raise HTTPException(422, "mobile_recipient_unavailable")
                 body["sender_id"] = str(principal.subject)
                 # Replayed request IDs must also belong to this customer.
                 try:
