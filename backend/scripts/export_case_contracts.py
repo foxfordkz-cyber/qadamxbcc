@@ -2,7 +2,7 @@
 
 import json
 
-from app.integrations.cases.schemas import LABELS, QUESTIONS
+from app.integrations.cases.schemas import LABELS, QUESTIONS, PolicyComparison
 from scripts.export_integration_contracts import DOCS, export
 
 
@@ -65,6 +65,7 @@ def case_examples() -> None:
                 "by_source": {"owner_demo": 1},
                 "escalated_cases": 0,
                 "manually_reviewed_cases": 0,
+                "policy_comparison": PolicyComparison().model_dump(),
                 "manual_review_share": 0.0,
                 "oldest_current_status_seconds": {"NEW": 0.0},
                 "demonstration_only": True,

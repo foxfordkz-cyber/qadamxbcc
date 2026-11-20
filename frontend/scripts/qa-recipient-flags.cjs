@@ -48,6 +48,15 @@ const check = (name, value) => { assert.ok(value, name); report.checks.push(name
     await page.locator('.recipient-unflag-open').waitFor();
     check('inspector_explains_flagged_recipient', /помечен|отмечен|подтвержден|подтверждён/i.test(await page.locator('.analysis-panel').innerText()));
     await screenshot('flagged-recipient-ru');
+    await page.locator('.recipient-lookback summary').click();
+    const prior = page.getByRole('button', { name: `Открыть операцию ${approvedId}`, exact: true });
+    await prior.waitFor();
+    check('prior_receipts_exclude_blocked_attempt', await page.locator('.recipient-lookback').getByRole('button', { name: new RegExp(blockedId) }).count() === 0);
+    await page.locator('.topbar').getByRole('button', { name: 'ҚАЗ', exact: true }).click();
+    await page.getByRole('button', { name: `Операцияны ашу ${approvedId}`, exact: true }).click();
+    await page.locator(`.case-panel[data-transaction-id="${approvedId}"] .investigation-summary`).waitFor();
+    check('lookback_opens_original_receipt_in_kazakh', true);
+    await page.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
     await page.locator('.recipient-unflag-open').click();
     await page.locator('#recipient-flag-note').fill('Synthetic QA: investigation cleared this demo account');
     await page.locator('.recipient-flag-confirm').click();

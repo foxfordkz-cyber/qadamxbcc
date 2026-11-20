@@ -186,6 +186,7 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 | `GET` | `/api/v1/soc/feed` | `X-BCC-SOC-Key` | — | `FeedResponse` | 200, 422 |
 | `GET` | `/api/v1/soc/recipients/{account_id}/flag` | `X-BCC-SOC-Key` | — | `RecipientFlagState` | 200, 422 |
 | `POST` | `/api/v1/soc/recipients/{account_id}/flag` | `X-BCC-SOC-Key` | `RecipientFlagRequest` | `RecipientFlagResponse` | 200, 422 |
+| `GET` | `/api/v1/soc/recipients/{account_id}/prior-receipts` | `X-BCC-SOC-Key` | — | `PriorReceipts` | 200, 422 |
 | `GET` | `/api/v1/soc/graph/{account_id}` | `X-BCC-SOC-Key` | — | `GraphResponse` | 200, 422 |
 
 ### trusted contacts (advisory)

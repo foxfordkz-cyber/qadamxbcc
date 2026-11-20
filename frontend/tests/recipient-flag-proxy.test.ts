@@ -27,6 +27,8 @@ test("anonymous hosted SOC reads synthetic feed and graph while private operatio
     method: "POST", headers: { origin, "content-type": "application/json", "x-bcc-soc-key": settings.BCC_DEMO_UPSTREAM_SOC_KEY }, body: "{}",
   });
   const flag = `soc/recipients/${account}/flag`;
+  const history = ["soc", "recipients", account, "prior-receipts"];
+  assert.equal((await GET(new NextRequest(`${origin}/api/v1/${history.join("/")}?version=1`), { params: Promise.resolve({ path: history }) })).status, 403);
   assert.equal((await POST(post(flag), { params: Promise.resolve({ path: flag.split("/") }) })).status, 403);
   for (const route of ["guardian/soc/cases", `guardian/soc/cases/${account}/actions`]) {
     const request = post(`integrations/${route}`);

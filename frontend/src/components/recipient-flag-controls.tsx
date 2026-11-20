@@ -8,8 +8,9 @@ import { randomId } from "@/lib/secure-fallback";
 import { FLAG_PENDING_PREFIX, flagMarker, readFlagMarker, recipientFlagInputSchema, type RecipientFlag, type RecipientFlagInput, type RecipientFlagReceipt } from "@/lib/recipient-flag";
 import { flagText, type FlagMessage } from "@/lib/recipient-flag-copy";
 import "./recipient-flag.css";
+import { RecipientLookback } from "./recipient-lookback";
 
-export function RecipientFlagControls({ accountId, disabled, onChanged }: { accountId: string; disabled: boolean; onChanged: () => void }) {
+export function RecipientFlagControls({ accountId, disabled, onChanged, onSelect }: { accountId: string; disabled: boolean; onChanged: () => void; onSelect?: (id: string) => void }) {
   const { lang } = useLocale(); const t = (key: FlagMessage) => flagText(lang, key);
   const [value, setValue] = useState<RecipientFlag | null>(null);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
@@ -91,5 +92,6 @@ export function RecipientFlagControls({ accountId, disabled, onChanged }: { acco
     {draft !== null && !unknown && <form className="recipient-flag-confirmation" onSubmit={event => { event.preventDefault(); confirm(); }}><strong>{t(draft ? "flag" : "unflag")}</strong><code>{accountId}</code>{!draft && <p>{t("unflagScope")}</p>}<label htmlFor="recipient-flag-note">{t("reason")}<textarea id="recipient-flag-note" maxLength={200} minLength={1} required rows={2} value={note} onChange={event => setNote(event.target.value)} disabled={busy} aria-describedby="recipient-flag-note-hint" /></label><small id="recipient-flag-note-hint">{t("reasonHint")}</small><div><button className="primary recipient-flag-confirm" disabled={blocked || !note.trim()}>{busy ? t("saving") : t("confirm")}</button><button type="button" className="secondary" disabled={busy} onClick={() => { setDraft(null); setNote(""); }}>{t("back")}</button></div></form>}
     {message && message !== "unknown" && <p role={message === "saved" ? "status" : "alert"} className={message === "saved" ? "recipient-flag-success" : "recipient-flag-error"}>{t(message)}</p>}
     {receipt && <small className="recipient-flag-audit">{t("audit")}: {receipt.audit_id} · {t("service")}: {receipt.actor}</small>}
+    {onSelect && value?.flagged && value.updated_at && !readFailed && !unknown && <RecipientLookback key={value.version} accountId={accountId} version={value.version} onSelect={onSelect} />}
   </section>;
 }

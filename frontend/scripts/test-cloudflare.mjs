@@ -77,6 +77,7 @@ try {
   assert.deepEqual(await (await fetch("/api/v1/soc/feed")).json(), { items: [], total: 0 });
   const publicWrite = { method: "POST", headers: { origin, "content-type": "application/json" }, body: "{}" };
   assert.equal((await fetch(`/api/v1/soc/recipients/${config.vars.BCC_NORMAL_SENDER_ID}/flag`, publicWrite)).status, 403);
+  assert.equal((await fetch(`/api/v1/soc/recipients/${config.vars.BCC_NORMAL_SENDER_ID}/prior-receipts?version=1`)).status, 403);
   assert.equal((await fetch("/api/v1/integrations/guardian/soc/cases", publicWrite)).status, 403);
   const transfer = { sender_id: config.vars.BCC_NORMAL_SENDER_ID, recipient_phone: config.vars.BCC_NORMAL_RECIPIENT_PHONE, amount: "25000", context: {} };
   const post = source => fetch("/api/v1/transfers/evaluate", {

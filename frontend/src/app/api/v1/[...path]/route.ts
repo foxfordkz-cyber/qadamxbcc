@@ -3,6 +3,8 @@ import { returnActionInput, returnRoute, reviewInput } from "@/lib/payment-retur
 import { z } from "zod";
 import { traceRoute } from "@/lib/funds-trace";
 import { anchorsRoute } from "@/lib/trace-anchors";
+import { lookbackRoute, priorReceiptQuery } from "@/lib/recipient-lookback";
+import { priorReceiptsDemo } from "@/lib/demo";
 import { answersSchema, cancelSchema, feedQuerySchema, postCallSchema, transferSchema, validateApiResponse } from "@/lib/contracts";
 import { recipientFlagInputSchema } from "@/lib/recipient-flag";
 import { appConfig, ids } from "@/lib/config";
@@ -21,6 +23,7 @@ async function handle(request: NextRequest, context: RouteContext) {
   if (access) return json({ error: access.error }, access.status);
   const { path } = await context.params;
   const route = path.join("/");
+  const lookback = request.method === "GET" && lookbackRoute.test(route);
   const linked = returnRoute(route);
   if (linked && (request.nextUrl.search || (linked.kind === "list" && request.method !== "GET") || (linked.kind === "review" && request.method !== "POST"))) return json({error:"notFound"}, 404);
   const evaluate = request.method === "POST" && route === "transfers/evaluate";
@@ -37,8 +40,8 @@ async function handle(request: NextRequest, context: RouteContext) {
   const callCheck = request.method === "POST" && route === "call-check";
   const bankCall = request.method === "POST" && route === "call-check/demo/bank-call";
   const guide = request.method === "GET" && route === "scam-check/guide";
-  if (!linked && !evaluate && !resolve && !cancel && !postCall && !abandon && !detail && !feed && !graph && !fundsTrace && !recipientFlag && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
-  if ((abandon || graph || fundsTrace || recipientFlag) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
+  if (!linked && !evaluate && !resolve && !cancel && !postCall && !abandon && !detail && !feed && !graph && !fundsTrace && !recipientFlag && !lookback && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
+  if ((abandon || graph || fundsTrace || recipientFlag || lookback) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
   if ((resolve || cancel || postCall || detail) && !z.uuid().safeParse(path[1]).success) return json({ error: "invalid" }, 422);
   const admission = apiAdmission();
   if (admission.status !== 200) {
@@ -48,6 +51,13 @@ async function handle(request: NextRequest, context: RouteContext) {
   }
   try {
     const config = appConfig();
+    if (lookback) {
+      if (config.publicSocReadOnly || process.env.BCC_DEMO_PUBLIC_ORIGIN) return json({ error: "integrationForbidden" }, 403);
+      const params = request.nextUrl.searchParams;
+      if (params.size !== new Set(params.keys()).size) return json({ error: "invalid" }, 422);
+      const query = priorReceiptQuery.parse(Object.fromEntries(params));
+      if (config.mode === "demo") return json(priorReceiptsDemo(path[2], query));
+    }
     if (linked && (config.mode !== "live" || config.accountMode !== "test" || !config.demoActionsEnabled)) return json({error:"notFound"}, 404);
     if (fundsTrace && config.mode === "demo") return json({ error: "traceBackendRequired" }, 501);
     if (config.publicSocReadOnly && route.startsWith("soc/") && request.method !== "GET") {
@@ -144,7 +154,7 @@ async function handle(request: NextRequest, context: RouteContext) {
       try { return json(validateApiResponse(route, value, request.method)); }
       catch { return json({error:"invalidResponse"}, 502); }
     }
-    return json(recipientFlag || fundsTrace ? validateApiResponse(route, value, request.method) : value);
+    return json(recipientFlag || fundsTrace || lookback ? validateApiResponse(route + request.nextUrl.search, value, request.method) : value);
   } catch (error) {
     if (error instanceof RequestBodyError) return json({ error: error.code }, error.status);
     if (error instanceof DemoError) return json({ error: error.message }, error.status);

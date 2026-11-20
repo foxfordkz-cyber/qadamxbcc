@@ -2,6 +2,13 @@
 .recipient-flag-heading, .recipient-flag-heading h3 { display: flex; align-items: center; gap: 8px; }
 .recipient-flag-heading { justify-content: space-between; }
 .recipient-flag-heading h3 { margin: 0; font-size: 14px; }
+.recipient-lookback { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.recipient-lookback summary { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 650; }
+.recipient-lookback p, .recipient-lookback small { color: var(--muted); line-height: 1.55; }
+.recipient-lookback label, .recipient-lookback-pages, .recipient-lookback li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.recipient-lookback select { border: 1px solid var(--line-strong); background: white; color: inherit; border-radius: 8px; padding: 5px 8px; }
+.recipient-lookback ul { list-style: none; padding: 0; }
+.recipient-lookback li { justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
 .recipient-flag-scope { color: var(--muted); line-height: 1.7; }
 .recipient-flag-state { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 600; }
 .recipient-flag-state.flagged, .recipient-flag-error { color: #b42318; }

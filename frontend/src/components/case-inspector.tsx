@@ -13,11 +13,11 @@ import { ReturnReviewControls } from "./incoming-returns";
 import { DecisionEvidence } from "./decision-evidence";
 import { FundsTracePanel } from "./funds-trace-panel";
 
-type Props = { traceRevision?: number; detail: Evaluation | null; loading: boolean; error: MessageKey | null; receivedAt: number | null; selectedId: string | null; onReview?: (id: string) => void; readOnly?: boolean; busy: boolean; onRetry: () => void };
+type Props = { traceRevision?: number; detail: Evaluation | null; loading: boolean; error: MessageKey | null; receivedAt: number | null; selectedId: string | null; onReview?: (id: string) => void; onSelectReceipt?: (id: string) => void; readOnly?: boolean; busy: boolean; onRetry: () => void };
 const nextSteps = { approved: "caseNextApproved", cooling_off: "caseNextHeld", blocked: "caseNextBlocked", cancelled: "caseNextCancelled" } as const;
 const signals = { active_call: "active_call", from_deposit: "from_deposit", is_new_device: "is_new_device", is_new_recipient: "is_new_recipient", pasted_recipient: "pasteDetected" } as const;
 
-export function CaseInspector({ traceRevision = 0, detail, loading, error, receivedAt, selectedId, onReview, readOnly, busy, onRetry }: Props) {
+export function CaseInspector({ traceRevision = 0, detail, loading, error, receivedAt, selectedId, onReview, onSelectReceipt, readOnly, busy, onRetry }: Props) {
   const { t, lang } = useLocale();
   const [notice, setNotice] = useState<MessageKey | null>(null);
   useEffect(() => { setNotice(null); }, [selectedId]);
@@ -66,7 +66,7 @@ export function CaseInspector({ traceRevision = 0, detail, loading, error, recei
           onChanged={onRetry}
         />
       )}
-      {!readOnly && <RecipientFlagControls key={current.recipient.id} accountId={current.recipient.id} disabled={loading || !!error || busy} onChanged={onRetry} />}
+      {!readOnly && <RecipientFlagControls key={current.recipient.id} accountId={current.recipient.id} disabled={loading || !!error || busy} onChanged={onRetry} onSelect={onSelectReceipt} />}
       {typeof current.ml_score === "number" && <div className="investigation-model"><span className="ml-badge ready" title={t("mlScoreHint")}>{t("mlScore")}: {current.ml_score.toFixed(1)}%</span><small>{current.ml_model_version}</small></div>}
       <div className="investigation-id"><span>{t("caseId")}</span><code className="tabular-nums">{current.transaction_id}</code><button onClick={() => void copyId()} aria-label={t("copyCaseId")} title={t("copyCaseId")}><Copy size={15} /></button></div>
       {receivedAt !== null && <p className="investigation-updated">{error ? `${t("staleData")} · ` : ""}{t("lastUpdated")}: {date(receivedAt)} · UTC+5</p>}

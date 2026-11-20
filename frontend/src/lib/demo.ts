@@ -1,5 +1,6 @@
 import { latencySummary } from "./latency-summary";
 import { ids } from "./demo-ids";
+import type { PriorReceiptQuery, PriorReceipts } from "./recipient-lookback";
 import { feedQuerySchema, type FeedQuery } from "./contracts";
 import { countBlockedHubs } from "./feed-summary";
 import type { AbandonResult, Answers, Decision, Evaluation, Feed, FeedItem, Graph, GraphData, Party, Reason, Status, TransferInput } from "./contracts";
@@ -22,6 +23,25 @@ const flagReceipts = () => flagRoot.bccDemoFlagReceipts ??= new Map();
 export function recipientFlagDemo(accountId: string): RecipientFlag {
   if (!accounts.some(account => account.id === accountId)) throw new DemoError(404, "account_not_found");
   return structuredClone(flags().get(accountId) ?? { account_id: accountId, flagged: false, version: 0, updated_at: null });
+}
+export function priorReceiptsDemo(accountId: string, query: PriorReceiptQuery): PriorReceipts {
+  const flag = recipientFlagDemo(accountId);
+  if (!flag.flagged || !flag.updated_at || flag.version !== query.version) throw new DemoError(409, "reviewed_flag_required");
+  const until = Date.parse(flag.updated_at);
+  const since = until - query.days * 86_400_000;
+  const matches = rows().filter(item => item.recipient.id === accountId && item.sender.id !== accountId
+    && item.status === "approved" && item.currency === "KZT" && Date.parse(item.created_at) >= since
+    && Date.parse(item.created_at) <= until && Date.parse(item.resolved_at ?? item.created_at) <= until)
+    .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at) || right.transaction_id.localeCompare(left.transaction_id));
+  const start = query.cursor ? matches.findIndex(item => item.transaction_id === query.cursor) + 1 : 0;
+  if (query.cursor && !start) throw new DemoError(422, "invalid_receipt_cursor");
+  const page = matches.slice(start, start + 20);
+  return {
+    account_id: accountId, flag_version: flag.version, flagged_at: flag.updated_at, from_time: new Date(since).toISOString(),
+    items: page.map(item => ({ transaction_id: item.transaction_id, sender_ref: item.sender.id.slice(-8),
+      amount: String(item.amount), settled_at: item.resolved_at ?? item.created_at, status: "approved" })),
+    next_cursor: start + page.length < matches.length ? page[page.length - 1].transaction_id : null,
+  };
 }
 export function setRecipientFlagDemo(accountId: string, input: RecipientFlagInput): RecipientFlagReceipt {
   const body = recipientFlagInputSchema.parse(input);

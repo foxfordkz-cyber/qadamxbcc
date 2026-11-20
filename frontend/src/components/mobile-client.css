@@ -288,3 +288,11 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 /* Silent alarm receipt: deliberately ordinary, nothing red for a fraudster to notice. */
 .receipt-processing .receipt-symbol { background: var(--surface-2, #F5F5FA); color: var(--muted); }
 .receipt-processing .receipt-explanation { background: var(--surface-2, #F5F5FA); color: var(--ink-2, #3A3A3B); }
+
+.family-callback { display: grid; gap: 14px; }
+.family-callback h3 { font-size: 20px; line-height: 1.25; }
+.family-callback p { color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.family-payment { display: grid; gap: 6px; padding: 12px; background: var(--surface-2); border-radius: 12px; }
+.family-payment div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.family-payment dt { color: var(--muted); font-size: 13px; }
+.family-payment dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }

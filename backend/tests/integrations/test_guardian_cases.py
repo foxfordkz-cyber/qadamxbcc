@@ -11,6 +11,8 @@ from app.db.base import utcnow
 from app.integrations.cases.models import CaseContent, CaseEvent, FraudCase
 from app.integrations.cases.service import expire_cases
 from app.integrations.guardian_reports import ReportRequest, create_report
+from app.integrations.models import GuardianReport
+from app.models import Transaction
 from tests.integrations.conftest import IntegrationWorld
 
 ROOT = "/api/v1/integrations/guardian"
@@ -141,6 +143,58 @@ async def test_case_role_boundary_and_safe_validation(iw: IntegrationWorld) -> N
     assert response.status_code == 422
     assert invalid not in response.text
     assert response.headers["Cache-Control"] == "no-store"
+
+
+async def test_shadow_review_uses_initial_decision_and_retracts_reopened_label(
+    iw: IntegrationWorld,
+) -> None:
+    payment = await iw.transfer(cooling=False)
+    tx_id = uuid.UUID(str(payment["transaction_id"]))
+    case = await opened(iw)
+    async with iw.factory() as session:
+        report = await session.get(GuardianReport, uuid.UUID(case["report_id"]))
+        txn = await session.get(Transaction, tx_id)
+        assert report is not None
+        assert txn is not None
+        report.transaction_id = tx_id
+        txn.evaluation_snapshot = {
+            **txn.evaluation_snapshot,
+            "status": "approved",
+            "risk_score": 37,
+        }
+        await session.commit()
+    invalid = await iw.client.post(
+        f"{CASES}/{case['id']}/actions",
+        headers={**iw.auth("soc"), "Idempotency-Key": str(uuid.uuid4())},
+        json={
+            "expected_version": case["version"],
+            "action": "transition",
+            "state": "IN_REVIEW",
+            "reason": "confirmed_fraud",
+        },
+    )
+    assert invalid.status_code == 409
+    case = await act(iw, case, action="transition", state="CLOSED", reason="confirmed_fraud")
+    url = CASES + "/analytics"
+    comparison = (await iw.client.get(url, headers=iw.auth("soc"))).json()["policy_comparison"]
+    assert (
+        comparison["extra_holds"]
+        == comparison["candidate_detected"]
+        == comparison["fraud_labelled"]
+        == 1
+    )
+    assert comparison["baseline_detected"] == 0
+    case = await act(iw, case, action="transition", state="IN_REVIEW", reason="reopened")
+    comparison = (await iw.client.get(url, headers=iw.auth("soc"))).json()["policy_comparison"]
+    assert comparison["fraud_labelled"] == 0
+    await act(iw, case, action="transition", state="CLOSED", reason="legitimate_transfer")
+    comparison = (await iw.client.get(url, headers=iw.auth("soc"))).json()["policy_comparison"]
+    assert comparison["candidate_false_interventions"] == comparison["legitimate_labelled"] == 1
+    assert comparison["baseline_false_interventions"] == comparison["fraud_labelled"] == 0
+    async with iw.factory() as session:
+        txn = await session.get(Transaction, tx_id)
+        assert txn is not None
+        assert txn.status.value == payment["status"]
 
 
 async def test_case_idempotency_version_and_actor_scope(iw: IntegrationWorld) -> None:

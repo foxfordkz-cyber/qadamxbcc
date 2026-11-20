@@ -35,7 +35,9 @@ jobs:
           # The export must ignore a developer's inherited live configuration.
           BCC_API_MODE: live
           BCC_NORMAL_SENDER_ID: 11111111-1111-4111-8111-111111111111
-        run: node scripts/build-pages.mjs pages-out --base "/${{ github.event.repository.name }}"
+        run: |
+          node --test scripts/wallet-link.test.mjs
+          node scripts/build-pages.mjs pages-out --base "/${{ github.event.repository.name }}"
       - name: Verify static transfer and recipient flags
         working-directory: frontend
         env:
