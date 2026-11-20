@@ -6,6 +6,13 @@ from app.models import TransactionStatus
 
 # rule_code -> (kk template, ru template). Templates use str.format(**evidence).
 REASONS: Final[dict[str, tuple[str, str]]] = {
+    "ACTIVE_HOLD_RETRY": (
+        "Жіберушінің бұрынғы аударымы әлі тексерілуде. Сол немесе жаңа алушыға аударым "
+        "бастапқы күту мерзімі шегінде қосымша растауды қажет етеді. Бұл алаяқтықтың дәлелі емес.",
+        "Предыдущий перевод отправителя ещё на проверке. Перевод тому же или новому получателю "
+        "требует дополнительного подтверждения в пределах исходного срока. "
+        "Это не доказательство мошенничества.",
+    ),
     "PASTED_DURING_CALL": (
         "Реквизиттер белсенді қоңырау кезінде алмасу буферінен қойылды",
         "Реквизиты вставлены из буфера обмена во время активного звонка",
@@ -143,7 +150,16 @@ def render(code: str, **evidence: object) -> tuple[str, str]:
     return kk.format(**evidence), ru.format(**evidence)
 
 
-def headline(status: TransactionStatus, *, minutes: int) -> tuple[str, str]:
+def headline(
+    status: TransactionStatus, *, minutes: int, continuing_hold: bool = False
+) -> tuple[str, str]:
+    if status is TransactionStatus.COOLING_OFF and continuing_hold:
+        return (
+            "Бұрынғы тексеру жалғасуда. Бұл аударым бастапқы күту мерзімі аяқталған соң "
+            "қосымша растауды қажет етеді; мерзім ұзартылған жоқ.",
+            "Продолжается предыдущая проверка. Этот перевод требует дополнительного "
+            "подтверждения после исходного срока ожидания; срок не продлён.",
+        )
     kk, ru = HEADLINES[status]
     return kk.format(minutes=minutes), ru.format(minutes=minutes)
 

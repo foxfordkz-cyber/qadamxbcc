@@ -352,10 +352,17 @@ async function main() {
     const allFeedResponse = page.waitForResponse(response => response.url().includes('/soc/feed?') && new URL(response.url()).searchParams.get('alerts_only') !== 'true');
     await page.getByTestId('soc-alerts-only').click(); await allFeedResponse;
 
-    await preset('hub'); await page.locator('#tab-soc[aria-selected="true"]').waitFor();
-    const hubId = [...records.keys()].at(-1);
+    const hubResponse = page.waitForResponse(response => response.request().method() === 'POST'
+      && new URL(response.url()).pathname.endsWith('/transfers/evaluate'));
+    await preset('hub');
+    const hubId = (await (await hubResponse).json()).transaction_id;
+    await page.locator('#tab-soc[aria-selected="true"]').waitFor();
     await page.locator(`.case-panel[data-transaction-id="${hubId}"] .investigation-id code`).waitFor();
-    await page.locator('.react-flow__node').first().waitFor();
+    // The detail and graph requests settle independently. An old graph's first
+    // node can still be visible when the new case detail has already arrived.
+    const hubRecipientId = records.get(hubId).recipient.id;
+    await page.locator(`.react-flow__node[data-id="${hubRecipientId}"] .account-node.is-center`).waitFor();
+    await page.waitForFunction(() => document.querySelectorAll('.react-flow__node').length === 4);
     check('hub_preset_shows_blocked_case_and_graph', records.get(hubId).status === 'blocked' && await page.locator('.react-flow__node').count() === 4);
     check('graph_defaults_to_explicit_direct_neighbor_depth', report.requests.some(request => request.path.endsWith(`/soc/graph/${records.get(hubId).recipient.id}`) && new URLSearchParams(request.search).get('depth') === '1'));
     check('direct_graph_control_and_counts_visible', await page.locator('.graph-depth-controls button').first().getAttribute('aria-pressed') === 'true' && /4\s*\/\s*3/.test(await page.getByText('Показано счетов / связей', { exact: false }).innerText()));

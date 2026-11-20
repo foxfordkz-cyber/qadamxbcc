@@ -110,6 +110,7 @@ MULE_CORROBORATION: Final = frozenset(
 # Sender pass-through is grounded in settled incoming money; ML still requires
 # recipient-side movement or a reviewed flag before lifting a score into BLOCKED.
 HARD_BLOCK_EVIDENCE: Final = MULE_CORROBORATION | {"SENDER_PASS_THROUGH"}
+ACTIVE_HOLD_RULE: Final = "ACTIVE_HOLD_RETRY"
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +128,10 @@ class TransferContext:
     is_new_recipient: bool | None = None  # None → derived from the transfer graph
     # Internal locked SQL snapshot. Never accepted through TransferContextIn.
     recipient_flagged: bool | None = None
+    # Server SQL evidence only: a still-unresolved, original sender hold.
+    active_hold_id: str | None = None
+    active_hold_until: datetime | None = None
+    active_hold_recipient_changed: bool = False
     pasted_recipient: bool = False
     typing_duration_ms: int | None = None
     hesitation_count: int = 0
@@ -371,8 +376,35 @@ class AntifraudEngine:
             ]
             reasons.sort(key=lambda r: (-r.score_delta, r.code))
             score = BLOCK_THRESHOLD
+        if (
+            score < COOLING_OFF_THRESHOLD
+            and ctx.active_hold_id is not None
+            and ctx.active_hold_until is not None
+        ):
+            # This is a bounded review requirement, not another arbitrary risk
+            # weight. It can only raise the decision to the existing hold floor;
+            # independently justified holds retain their own full review window.
+            deficit = max(0, COOLING_OFF_THRESHOLD - score)
+            reasons.append(
+                _reason(
+                    ACTIVE_HOLD_RULE,
+                    LAYER_BEHAVIORAL,
+                    deficit,
+                    source="server",
+                    original_transaction_id=ctx.active_hold_id,
+                    cooling_off_until=ctx.active_hold_until.isoformat(),
+                    recipient_changed=ctx.active_hold_recipient_changed,
+                    minimum_score=COOLING_OFF_THRESHOLD,
+                )
+            )
+            score += deficit
+            reasons.sort(key=lambda r: (-r.score_delta, r.code))
         decision = decide(score)
-        head_kk, head_ru = explain.headline(decision, minutes=self.cooling_off_minutes)
+        head_kk, head_ru = explain.headline(
+            decision,
+            minutes=self.cooling_off_minutes,
+            continuing_hold=any(r.code == ACTIVE_HOLD_RULE for r in reasons),
+        )
         t4 = time.perf_counter()
 
         return Evaluation(

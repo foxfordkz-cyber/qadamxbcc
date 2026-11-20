@@ -194,6 +194,39 @@ def scenarios() -> tuple[Scenario, ...]:
             "approved",
             replace(base, active_call=True),
         ),
+        # This fixture represents an already validated server-side SQL anchor.
+        # It evaluates the policy floor, not SQL discovery/concurrency (API tests
+        # cover those). Identical observations can still have a legitimate purpose.
+        *(
+            Scenario(
+                identity,
+                title_ru,
+                title_kk,
+                fraudulent,
+                "cooling_off",
+                replace(
+                    base,
+                    active_hold_id="original-server-hold",
+                    active_hold_until=SCENARIO_TIME + timedelta(minutes=5),
+                    active_hold_recipient_changed=True,
+                ),
+                known_recipient=False,
+            )
+            for identity, title_ru, title_kk, fraudulent in (
+                (
+                    "active_hold_recipient_substitution",
+                    "Смена получателя во время серверной проверки",
+                    "Серверлік тексеру кезінде алушыны ауыстыру",
+                    True,
+                ),
+                (
+                    "legitimate_retry_during_review",
+                    "Честный новый перевод во время той же проверки",
+                    "Сол тексеру кезіндегі заңды жаңа аударым",
+                    False,
+                ),
+            )
+        ),
         Scenario(
             "family_tablet",
             "Общий семейный планшет",

@@ -82,6 +82,22 @@ async def test_ablations_remove_only_the_declared_input_or_model_uplift() -> Non
     assert no_browser["risk_score"] == 25
 
 
+async def test_active_hold_panel_retains_legitimate_false_alert_and_server_guard() -> None:
+    panel = {scenario.id: scenario for scenario in scenarios()}
+    fraud = panel["active_hold_recipient_substitution"]
+    legitimate = panel["legitimate_retry_during_review"]
+    assert fraud.context == legitimate.context
+    assert fraud.fraudulent
+    assert not legitimate.fraudulent
+    for variant in ("full_hybrid", "without_ml", "without_browser_biometrics"):
+        observed = await evaluate_scenario(fraud, variant)
+        control = await evaluate_scenario(legitimate, variant)
+        assert observed == control
+        assert observed["status"] == "cooling_off"
+        assert observed["risk_score"] == 40
+        assert "ACTIVE_HOLD_RETRY" in observed["reason_codes"]
+
+
 def test_cumulative_household_spending_is_not_rapid_mule_cashout() -> None:
     model = get_model(allow_training=False)
     # Observed on the normal seeded rehearsal: one incoming counterparty, old

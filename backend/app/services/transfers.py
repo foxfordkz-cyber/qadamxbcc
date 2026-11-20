@@ -11,13 +11,13 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from redis.exceptions import RedisError
-from sqlalchemy import case, or_, select
+from sqlalchemy import case, exists, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.locks import serialized_identity
+from app.db.locks import serialize_sender, serialized_identity
 from app.ml.model import MODEL_VERSION
 from app.models import (
     AbandonedRequest,
@@ -40,7 +40,7 @@ from app.schemas.transfers import (
     TransferEvaluateResponse,
 )
 from app.services import explain
-from app.services.antifraud import AntifraudEngine, Evaluation, TransferContext
+from app.services.antifraud import ACTIVE_HOLD_RULE, AntifraudEngine, Evaluation, TransferContext
 from app.services.call_check import CallCheckService
 from app.services.graph import MAX_GRAPH_NEIGHBOURS, GraphCapacityError, GraphStore
 
@@ -182,7 +182,11 @@ def transfer_detail(
     headline = (
         ("Аударым тоқтатылды.", "Перевод отменён.")
         if tx.status is TransactionStatus.CANCELLED
-        else explain.headline(tx.status, minutes=minutes)
+        else explain.headline(
+            tx.status,
+            minutes=minutes,
+            continuing_hold=any(r.code == ACTIVE_HOLD_RULE for r in reasons),
+        )
     )
     snapshot.update(
         transaction_id=tx.id,
@@ -362,7 +366,44 @@ class TransferService:
                     return TransferEvaluateResponse.model_validate(snapshot)
             if scoring_error is not None:
                 raise scoring_error
+            await serialize_sender(self.session, req.sender_id)
             return await self._evaluate(req, identity, request_hash)
+
+    async def _active_hold(
+        self, sender_id: uuid.UUID, recipient_id: uuid.UUID, now: datetime
+    ) -> Transaction | None:
+        """Find one original pause without trusting browser flags or graph cache.
+
+        A different established recipient remains usable. A retry to the held
+        recipient stays subject to that pause even if it was already familiar.
+        Descendants never become anchors, and cancelled/expired anchors no longer
+        apply. The row share lock orders this decision against cancel/resolve.
+        """
+        familiar = exists().where(
+            GraphEdge.source_id == sender_id,
+            GraphEdge.target_id == recipient_id,
+            GraphEdge.edge_type == EdgeType.TRANSFER,
+            GraphEdge.tx_count > 0,
+        )
+        descendant = exists().where(
+            RiskEvent.transaction_id == Transaction.id,
+            RiskEvent.rule_code == ACTIVE_HOLD_RULE,
+        )
+        return await self.session.scalar(
+            select(Transaction)
+            .where(
+                Transaction.sender_id == sender_id,
+                Transaction.status == TransactionStatus.COOLING_OFF,
+                Transaction.created_at <= now,
+                Transaction.cooling_until > now,
+                Transaction.created_at > now - timedelta(minutes=self.engine.cooling_off_minutes),
+                or_(Transaction.recipient_id == recipient_id, ~familiar),
+                ~descendant,
+            )
+            .order_by(Transaction.cooling_until, Transaction.id)
+            .limit(1)
+            .with_for_update(read=True)
+        )
 
     async def _evaluate(
         self, req: TransferEvaluateRequest, tx_id: uuid.UUID, request_hash: str
@@ -371,6 +412,15 @@ class TransferService:
         recipient = await self._resolve_recipient(req)
         if sender.id == recipient.id:
             raise InvalidTransferError("sender and recipient must differ")
+        active_hold = await self._active_hold(sender.id, recipient.id, datetime.now(UTC))
+        active_until = (
+            min(
+                active_hold.cooling_until,
+                active_hold.created_at + timedelta(minutes=self.engine.cooling_off_minutes),
+            )
+            if active_hold is not None and active_hold.cooling_until is not None
+            else None
+        )
 
         device_id = req.device_id or sender.device_id
         await self._refresh_device_peers(sender, recipient, device_id)
@@ -394,6 +444,11 @@ class TransferService:
             is_new_device=is_new_device,
             is_new_recipient=req.context.is_new_recipient,
             recipient_flagged=recipient.is_flagged,
+            active_hold_id=str(active_hold.id) if active_hold is not None else None,
+            active_hold_until=active_until,
+            active_hold_recipient_changed=(
+                active_hold is not None and active_hold.recipient_id != recipient.id
+            ),
             pasted_recipient=req.context.pasted_recipient,
             duress=req.context.duress,
             typing_duration_ms=req.context.typing_duration_ms,
@@ -409,8 +464,11 @@ class TransferService:
         evaluation = await self.engine.evaluate(ctx)
 
         received_at = datetime.now(UTC)
+        inherited_until = (
+            active_until if any(r.code == ACTIVE_HOLD_RULE for r in evaluation.reasons) else None
+        )
         cooling_until = (
-            received_at + timedelta(minutes=evaluation.cooling_off_minutes)
+            inherited_until or received_at + timedelta(minutes=evaluation.cooling_off_minutes)
             if evaluation.decision is TransactionStatus.COOLING_OFF
             else None
         )
@@ -533,6 +591,18 @@ class TransferService:
     ) -> TransferEvaluateResponse:
         await self.engine.ensure_consistent()
         async with self._serialized(tx_id):
+            # Match evaluate's sender-before-row ordering. In particular, never
+            # hold the source transaction while waiting behind a queued SOC
+            # account writer: an in-flight retry may already share-lock that
+            # account and be about to read this transaction as its hold anchor.
+            sender_id = await self.session.scalar(
+                select(Transaction.sender_id).where(Transaction.id == tx_id)
+            )
+            if sender_id is None:
+                raise NotFoundError(f"transaction {tx_id} not found")
+            await serialize_sender(self.session, sender_id)
+            # The scalar lookup deliberately does not populate the identity map;
+            # load the current lifecycle only after obtaining the sender lock.
             tx = await self._load(tx_id, locked=True)
             saved = answers.model_dump()
             if tx.status is not TransactionStatus.COOLING_OFF:

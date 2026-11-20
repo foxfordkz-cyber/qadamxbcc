@@ -305,7 +305,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   // /mobile: the same client logic on a real smartphone — no bezel, decision panel or SOC tab.
   if (layout === "phone") return <>
     <header className="topbar mobile-topbar"><div className="topbar-inner">
-      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span><div><strong>saq<span> bol</span></strong></div></div>
+      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span><div><strong>saq<span> bol × BCC</span></strong></div></div>
       {languageSwitch}
     </div></header>
     <main className="mobile-shell">
@@ -317,7 +317,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   </>;
   return <>
     <header className="topbar"><div className="topbar-inner">
-      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>saq<span> bol</span></strong><small>{t("tagline")}</small></div></div>
+      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("prototypeIdentity")}</small></div></div>
       <div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span>{languageSwitch}</div>
     </div></header>
     <main className="shell">
@@ -341,7 +341,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
           </div>
         </>}
       </div>
-      <footer className="page-footer"><span>Saq Bol · ITU Hackathon 2026</span><span>{config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
+      <footer className="page-footer"><a href="https://github.com/foxfordkz-cyber/qadamxbcc" target="_blank" rel="noopener noreferrer">Saq Bol × BCC · foxfordkz-cyber/qadamxbcc</a><span>{t("prototypeIdentity")} · {config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
     </main>
     {cooling}
   </>;

@@ -52,6 +52,7 @@ jobs:
           trap 'kill "$static_pid"' EXIT
           sleep 1
           node scripts/qa-recipient-flags.cjs "http://127.0.0.1:3014/$REPO_NAME/"
+          QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/pages-active-hold-ci" node scripts/qa-active-hold.cjs "http://127.0.0.1:3014/$REPO_NAME/"
       - name: Publish to gh-pages
         working-directory: frontend/pages-out
         env:

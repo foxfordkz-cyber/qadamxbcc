@@ -53,7 +53,7 @@ jobs:
         run: |
           uv run --no-sync python -m scripts.verify_merged_migrations
           uv run --no-sync python -m scripts.verify_case_migrations
-          uv run --no-sync pytest tests/integrations tests/test_postgres_concurrency.py tests/test_recipient_flag_postgres.py
+          uv run --no-sync pytest tests/integrations tests/test_postgres_concurrency.py tests/test_recipient_flag_postgres.py tests/test_active_hold_postgres.py
   compose-demo:
     # Pin the OS together with the browser harness; ubuntu-latest can change underneath it.
     runs-on: ubuntu-24.04
@@ -90,6 +90,7 @@ jobs:
           PLAYWRIGHT_MODULE=/tmp/bcc-browser-qa/node_modules/playwright QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/browser-ci" node frontend/scripts/qa-mobile-soc.cjs http://127.0.0.1:3000
           PLAYWRIGHT_MODULE=/tmp/bcc-browser-qa/node_modules/playwright QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/soc-cases-ci" node frontend/scripts/qa-soc-cases.cjs http://127.0.0.1:3000
           SOC_SYNTHETIC_REHEARSAL=1 PLAYWRIGHT_MODULE=/tmp/bcc-browser-qa/node_modules/playwright QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/recipient-flags-ci" node frontend/scripts/qa-recipient-flags.cjs http://127.0.0.1:3000
+          SOC_SYNTHETIC_REHEARSAL=1 PLAYWRIGHT_MODULE=/tmp/bcc-browser-qa/node_modules/playwright QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/active-hold-ci" node frontend/scripts/qa-active-hold.cjs http://127.0.0.1:3000
       - name: Save synthetic browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -99,6 +100,7 @@ jobs:
             .local-checks/browser-ci/
             .local-checks/soc-cases-ci/
             .local-checks/recipient-flags-ci/
+            .local-checks/active-hold-ci/
           if-no-files-found: ignore
           include-hidden-files: true
           retention-days: 7

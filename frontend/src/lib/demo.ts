@@ -83,6 +83,17 @@ function decision(status: Status, risk_score: number, transaction_id: string, re
   };
   return { transaction_id, status, risk_score, headline_kk: headlines[status][0], headline_ru: headlines[status][1], reasons_kk: reasons.map(r => r.reason_kk), reasons_ru: reasons.map(r => r.reason_ru) };
 }
+function activeOriginalHold(senderId: string, recipientId: string, now: number): FeedItem | undefined {
+  // Seeded friendship or settled history, never the caller's is_new_recipient override.
+  const known = (senderId === ids.sender && recipientId === ids.friend)
+    || rows().some(row => row.sender.id === senderId && row.recipient.id === recipientId && row.status === "approved");
+  return rows().filter(row => row.sender.id === senderId && row.status === "cooling_off"
+    && (row.recipient.id === recipientId || !known)
+    && !row.reasons.some(item => item.code === "ACTIVE_HOLD_RETRY")
+    && Date.parse(row.created_at) <= now && Date.parse(row.created_at) + 900000 > now
+    && row.cooling_until && Date.parse(row.cooling_until) > now)
+    .sort((a, b) => Date.parse(a.cooling_until!) - Date.parse(b.cooling_until!))[0];
+}
 export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 5000): Evaluation {
   if (input.request_id && abandoned().has(input.request_id)) throw new DemoError(409, "conflict");
   const replay = input.request_id ? requests().get(input.request_id) : undefined;
@@ -127,8 +138,19 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
     reasons.sort((a, b) => b.score_delta - a.score_delta || a.code.localeCompare(b.code));
     score = 75;
   }
+  // Only bridge an otherwise approved retry. Independent risk retains its own full hold.
+  const originalHold = score < 40 ? activeOriginalHold(sender.id, recipient.id, now) : undefined;
+  if (originalHold) {
+    const guard = reason("ACTIVE_HOLD_RETRY", "behavioral", 40 - score,
+      "Алдыңғы аударымды тексеру әлі аяқталған жоқ. Алушыны немесе реквизиттерді өзгерту қолданыстағы кідірісті жоймайды.",
+      "Проверка предыдущего перевода ещё не завершена. Повторная отправка или смена реквизитов не отменяет действующую паузу.");
+    guard.evidence = { source: "local_demo", original_transaction_id: originalHold.transaction_id, cooling_off_until: originalHold.cooling_until, recipient_changed: originalHold.recipient.id !== recipient.id, minimum_score: 40 };
+    reasons.push(guard); score = 40;
+  }
   const status: Status = score >= 75 ? "blocked" : score >= 40 ? "cooling_off" : "approved";
-  const until = status === "cooling_off" ? new Date(now + 900000).toISOString() : null;
+  const until = status === "cooling_off" ? new Date(originalHold
+    ? Math.min(Date.parse(originalHold.cooling_until!), Date.parse(originalHold.created_at) + 900000)
+    : now + 900000).toISOString() : null;
   const id = input.request_id ?? globalThis.crypto.randomUUID();
   const latency = Math.round((performance.now() - start) * 1000) / 1000;
   rows().unshift({ transaction_id: id, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(), status, risk_score: score, amount: input.amount, currency: "KZT", latency_ms: latency, sender, recipient, ...ctx, context: ctx, is_new_recipient: isNew, cooling_until: until, resolved_at: null, reasons });
@@ -137,6 +159,10 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
     cooling_off_until: until, is_new_recipient: isNew, is_new_device: ctx.is_new_device,
     recipient: { id: recipient.id, display_name: recipient.full_name, iban_masked: `KZ** •••• ${recipient.iban.slice(-4)}` },
     amount: input.amount, context: ctx, server_time: new Date(now).toISOString(), created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(), verification_answers: null, resolved_at: null, red_flags: [] };
+  if (originalHold) {
+    result.headline_kk = "Бұрын басталған тексеру жалғасуда. Бастапқы кідіріс мерзімі сақталды.";
+    result.headline_ru = "Продолжается ранее начатая проверка. Срок исходной паузы сохранён.";
+  }
   details().set(id, structuredClone(result));
   if (input.request_id) requests().set(input.request_id, { body: JSON.stringify(input), result: structuredClone(result) });
   return result;

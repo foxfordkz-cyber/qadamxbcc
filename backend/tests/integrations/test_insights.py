@@ -117,7 +117,9 @@ async def test_timeline_cursor_binding_and_tampering(iw: IntegrationWorld) -> No
     assert (
         await iw.client.get(path, headers=iw.auth("soc"), params={"cursor": cursor + "bad"})
     ).status_code == 422
-    other = await iw.transfer(cooling=False)
+    # Cursor binding needs a different transaction, not an approved retry to the
+    # same recipient while the sender's first review is still active.
+    other = await iw.transfer()
     assert (
         await iw.client.get(
             f"{ROOT}/soc/transactions/{other['transaction_id']}/timeline",
