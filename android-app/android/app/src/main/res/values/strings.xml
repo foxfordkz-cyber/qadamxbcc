@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Saq Bol</string>
-    <string name="title_activity_main">Saq Bol</string>
+    <string name="app_name">Qadam Shield</string>
+    <string name="title_activity_main">Qadam Shield</string>
     <string name="package_name">kz.qadamx.bccshield</string>
     <string name="custom_url_scheme">kz.qadamx.bccshield</string>
 </resources>

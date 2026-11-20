@@ -2,6 +2,12 @@ name: Android APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "android-app/**"
+      - "backend/app/mobile_gateway/**"
+      - "backend/scripts/mobile_demo.py"
+      - ".github/workflows/android-apk.yml"
   push:
     paths:
       - "android-app/**"
@@ -12,7 +18,7 @@ permissions:
 
 jobs:
   apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:
@@ -31,15 +37,23 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: npm ci
       - run: npm test
+      - name: Mobile browser acceptance (synthetic)
+        run: npm run test:ui
       - run: npm run sync
       - name: Build debug APK
         working-directory: android-app/android
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon --max-workers=2 assembleDebug lintDebug
       - name: Name the APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk "BCC-Shield-${GITHUB_SHA::7}.apk"
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "Qadam-Shield-${GITHUB_SHA::7}.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: BCC-Shield-android-apk
-          path: android-app/BCC-Shield-*.apk
+          name: Qadam-Shield-android-apk
+          path: android-app/Qadam-Shield-*.apk
           if-no-files-found: error
           retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qadam-mobile-ui-evidence
+          path: android-app/test-results/
+          retention-days: 7

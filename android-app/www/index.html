@@ -1,47 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="kk">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#00AB75">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob: mediastream:; connect-src 'self' http: https:">
-<title>Saq Bol</title>
-<link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<header class="hero">
-  <div class="bar">
-    <div class="brand"><span class="mark"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 12 48 18v13c0 10-7 17-16 21-9-4-16-11-16-21V18Z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/><path d="m24 31 6 6 11-12" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>saq<span> bol</span></strong></div>
-    <div class="lang" role="group" aria-label="Тіл / Язык"><button type="button" data-lang="kk">ҚАЗ</button><button type="button" data-lang="ru">РУС</button></div>
-  </div>
-  <h1 data-t="title"></h1>
-  <p data-t="intro"></p>
-</header>
-<main class="card">
-  <button type="button" class="primary" id="scan"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span data-t="scan"></span></button>
-  <div class="divider"><span data-t="or"></span></div>
-  <form id="manual" autocomplete="off">
-    <label for="address" data-t="addressLabel"></label>
-    <div class="field"><input id="address" inputmode="url" spellcheck="false" placeholder="192.168.1.23:3105"><button type="submit" class="secondary" data-t="connect"></button></div>
-  </form>
-  <section id="recent-wrap" hidden><h2 data-t="recent"></h2><div id="recent" class="chips"></div></section>
-  <p id="status" class="status" role="status" aria-live="polite"></p>
-  <button type="button" id="force" class="link" hidden data-t="openAnyway"></button>
-  <ol class="help">
-    <li data-t="help1"></li>
-    <li data-t="help2"></li>
-    <li data-t="help3"></li>
-  </ol>
-  <p class="fine" data-t="fine"></p>
-</main>
-<div id="scanner" class="scanner" hidden>
-  <video id="video" playsinline muted></video>
-  <div class="frame" aria-hidden="true"></div>
-  <p class="scanner-hint" data-t="scanHint"></p>
-  <button type="button" id="cancel" class="secondary" data-t="cancel"></button>
-</div>
-<canvas id="canvas" hidden></canvas>
-<script src="vendor/jsQR.js"></script>
-<script type="module" src="app.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#171b35" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"
+    />
+    <title>Qadam Shield</title>
+    <link rel="icon" href="mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="mobile.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <p id="notice" role="status" aria-live="polite" hidden></p>
+    <script type="module" src="mobile.mjs"></script>
+  </body>
 </html>

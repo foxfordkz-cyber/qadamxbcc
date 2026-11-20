@@ -1,42 +1,24 @@
 {
   "appId": "kz.qadamx.bccshield",
-  "appName": "BCC Shield",
+  "appName": "Qadam Shield",
+  "loggingBehavior": "none",
   "webDir": "www",
   "server": {
     "androidScheme": "https",
-    "cleartext": true,
-    "allowNavigation": [
-      "192.168.*.*",
-      "10.*.*.*",
-      "172.16.*.*",
-      "172.17.*.*",
-      "172.18.*.*",
-      "172.19.*.*",
-      "172.20.*.*",
-      "172.21.*.*",
-      "172.22.*.*",
-      "172.23.*.*",
-      "172.24.*.*",
-      "172.25.*.*",
-      "172.26.*.*",
-      "172.27.*.*",
-      "172.28.*.*",
-      "172.29.*.*",
-      "172.30.*.*",
-      "172.31.*.*",
-      "localhost"
-    ]
+    "cleartext": true
   },
   "android": {
-    "allowMixedContent": true,
-    "backgroundColor": "#00A859"
+    "allowMixedContent": false,
+    "backgroundColor": "#f6f7fb"
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 900,
-      "backgroundColor": "#00A859",
-      "showSpinner": false,
-      "androidScaleType": "CENTER_INSIDE"
+      "launchShowDuration": 0,
+      "backgroundColor": "#171b35",
+      "showSpinner": false
+    },
+    "SystemBars": {
+      "style": "DARK"
     }
   }
 }
