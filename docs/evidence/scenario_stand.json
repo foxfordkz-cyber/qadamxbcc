@@ -1,0 +1,1478 @@
+[
+  {
+    "id": "bank-01",
+    "story": "bank",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 60,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "bank-02",
+    "story": "bank",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "PASTED_DURING_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "bank-03",
+    "story": "bank",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "PASTED_DURING_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "bank-04",
+    "story": "bank",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 50,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "bank-05",
+    "story": "bank",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "PASTED_DURING_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "bank-06",
+    "story": "bank",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_DEVICE",
+      "PASTED_DURING_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "bank-07",
+    "story": "bank",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 62,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "bank-08",
+    "story": "bank",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "PASTED_DURING_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "police-01",
+    "story": "police",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 63,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "police-02",
+    "story": "police",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 61,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "police-03",
+    "story": "police",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 61,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "police-04",
+    "story": "police",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 62,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "police-05",
+    "story": "police",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "police-06",
+    "story": "police",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_DEVICE",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "police-07",
+    "story": "police",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 63,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "police-08",
+    "story": "police",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 64,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "reserve-01",
+    "story": "reserve",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "reserve-02",
+    "story": "reserve",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "reserve-03",
+    "story": "reserve",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "reserve-04",
+    "story": "reserve",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "reserve-05",
+    "story": "reserve",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "reserve-06",
+    "story": "reserve",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_DEVICE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "reserve-07",
+    "story": "reserve",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "reserve-08",
+    "story": "reserve",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "invest-01",
+    "story": "invest",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "invest-02",
+    "story": "invest",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "invest-03",
+    "story": "invest",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "invest-04",
+    "story": "invest",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "invest-05",
+    "story": "invest",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "invest-06",
+    "story": "invest",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_DEVICE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "invest-07",
+    "story": "invest",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "invest-08",
+    "story": "invest",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "relative-01",
+    "story": "relative",
+    "fraud": true,
+    "decision": "approved",
+    "score": 20,
+    "signals": [
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "relative-02",
+    "story": "relative",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 58,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "relative-03",
+    "story": "relative",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 45,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "relative-04",
+    "story": "relative",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 45,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "relative-05",
+    "story": "relative",
+    "fraud": true,
+    "decision": "approved",
+    "score": 37,
+    "signals": [
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "relative-06",
+    "story": "relative",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_DEVICE",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "relative-07",
+    "story": "relative",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 60,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "market-01",
+    "story": "market",
+    "fraud": true,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "market-02",
+    "story": "market",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 60,
+    "signals": [
+      "ACTIVE_CALL",
+      "PASTED_DURING_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "market-03",
+    "story": "market",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 60,
+    "signals": [
+      "ACTIVE_CALL",
+      "PASTED_DURING_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "market-04",
+    "story": "market",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 45,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "market-05",
+    "story": "market",
+    "fraud": true,
+    "decision": "approved",
+    "score": 20,
+    "signals": [
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS"
+    ]
+  },
+  {
+    "id": "market-06",
+    "story": "market",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_DEVICE",
+      "PASTED_DURING_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "market-07",
+    "story": "market",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 45,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "loan-01",
+    "story": "loan",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "loan-02",
+    "story": "loan",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "PASTED_DURING_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "loan-03",
+    "story": "loan",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "PASTED_DURING_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "loan-04",
+    "story": "loan",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "loan-05",
+    "story": "loan",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "PASTED_DURING_CALL",
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "loan-06",
+    "story": "loan",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_DEVICE",
+      "PASTED_DURING_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "loan-07",
+    "story": "loan",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 74,
+    "signals": [
+      "ACTIVE_CALL",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "hub-01",
+    "story": "hub",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 65,
+    "signals": [
+      "RECIPIENT_INSTANT_CASHOUT",
+      "RECIPIENT_MANY_SENDERS",
+      "RECIPIENT_TRANSIT_RATIO",
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "hub-02",
+    "story": "hub",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 65,
+    "signals": [
+      "RECIPIENT_INSTANT_CASHOUT",
+      "RECIPIENT_MANY_SENDERS",
+      "RECIPIENT_TRANSIT_RATIO",
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "hub-03",
+    "story": "hub",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 65,
+    "signals": [
+      "RECIPIENT_INSTANT_CASHOUT",
+      "RECIPIENT_MANY_SENDERS",
+      "RECIPIENT_TRANSIT_RATIO",
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "hub-04",
+    "story": "hub",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 65,
+    "signals": [
+      "RECIPIENT_INSTANT_CASHOUT",
+      "RECIPIENT_MANY_SENDERS",
+      "RECIPIENT_TRANSIT_RATIO",
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "hub-05",
+    "story": "hub",
+    "fraud": true,
+    "decision": "blocked",
+    "score": 89,
+    "signals": [
+      "RECIPIENT_INSTANT_CASHOUT",
+      "RECIPIENT_MANY_SENDERS",
+      "RECIPIENT_TRANSIT_RATIO",
+      "AMOUNT_SPIKE",
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "hub-06",
+    "story": "hub",
+    "fraud": true,
+    "decision": "blocked",
+    "score": 100,
+    "signals": [
+      "RECIPIENT_INSTANT_CASHOUT",
+      "RECIPIENT_MANY_SENDERS",
+      "NEW_DEVICE",
+      "RECIPIENT_TRANSIT_RATIO",
+      "AMOUNT_SPIKE",
+      "ML_RISK_UPLIFT",
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "hub-07",
+    "story": "hub",
+    "fraud": true,
+    "decision": "cooling_off",
+    "score": 65,
+    "signals": [
+      "RECIPIENT_INSTANT_CASHOUT",
+      "RECIPIENT_MANY_SENDERS",
+      "RECIPIENT_TRANSIT_RATIO",
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "family-01",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 0,
+    "signals": []
+  },
+  {
+    "id": "family-02",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 0,
+    "signals": []
+  },
+  {
+    "id": "family-03",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 0,
+    "signals": []
+  },
+  {
+    "id": "family-04",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 0,
+    "signals": []
+  },
+  {
+    "id": "family-05",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "NIGHT_HOURS"
+    ]
+  },
+  {
+    "id": "family-06",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 15,
+    "signals": [
+      "NEW_DEVICE"
+    ]
+  },
+  {
+    "id": "family-07",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 0,
+    "signals": []
+  },
+  {
+    "id": "family-08",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 0,
+    "signals": []
+  },
+  {
+    "id": "family-09",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 0,
+    "signals": []
+  },
+  {
+    "id": "family-10",
+    "story": "family",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "NIGHT_HOURS"
+    ]
+  },
+  {
+    "id": "seller-01",
+    "story": "seller",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "ACTIVE_CALL"
+    ]
+  },
+  {
+    "id": "seller-02",
+    "story": "seller",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "ACTIVE_CALL"
+    ]
+  },
+  {
+    "id": "seller-03",
+    "story": "seller",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "ACTIVE_CALL"
+    ]
+  },
+  {
+    "id": "seller-04",
+    "story": "seller",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "ACTIVE_CALL"
+    ]
+  },
+  {
+    "id": "seller-05",
+    "story": "seller",
+    "fraud": false,
+    "decision": "approved",
+    "score": 35,
+    "signals": [
+      "ACTIVE_CALL",
+      "NIGHT_HOURS"
+    ]
+  },
+  {
+    "id": "seller-06",
+    "story": "seller",
+    "fraud": false,
+    "decision": "cooling_off",
+    "score": 40,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_DEVICE"
+    ]
+  },
+  {
+    "id": "seller-07",
+    "story": "seller",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "ACTIVE_CALL"
+    ]
+  },
+  {
+    "id": "seller-08",
+    "story": "seller",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "ACTIVE_CALL"
+    ]
+  },
+  {
+    "id": "seller-09",
+    "story": "seller",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "ACTIVE_CALL"
+    ]
+  },
+  {
+    "id": "seller-10",
+    "story": "seller",
+    "fraud": false,
+    "decision": "approved",
+    "score": 35,
+    "signals": [
+      "ACTIVE_CALL",
+      "NIGHT_HOURS"
+    ]
+  },
+  {
+    "id": "purchase-01",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 20,
+    "signals": [
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "purchase-02",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "purchase-03",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "purchase-04",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "purchase-05",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 30,
+    "signals": [
+      "AMOUNT_SPIKE",
+      "NIGHT_HOURS"
+    ]
+  },
+  {
+    "id": "purchase-06",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 38,
+    "signals": [
+      "AMOUNT_SPIKE",
+      "NEW_DEVICE",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "purchase-07",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "purchase-08",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "purchase-09",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 20,
+    "signals": [
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "purchase-10",
+    "story": "purchase",
+    "fraud": false,
+    "decision": "approved",
+    "score": 30,
+    "signals": [
+      "AMOUNT_SPIKE",
+      "NIGHT_HOURS"
+    ]
+  },
+  {
+    "id": "savings-01",
+    "story": "savings",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "savings-02",
+    "story": "savings",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "savings-03",
+    "story": "savings",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "savings-04",
+    "story": "savings",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "savings-05",
+    "story": "savings",
+    "fraud": false,
+    "decision": "approved",
+    "score": 36,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE",
+      "NIGHT_HOURS",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "savings-06",
+    "story": "savings",
+    "fraud": false,
+    "decision": "cooling_off",
+    "score": 42,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "NEW_DEVICE",
+      "AMOUNT_SPIKE",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "savings-07",
+    "story": "savings",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "savings-08",
+    "story": "savings",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "savings-09",
+    "story": "savings",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE"
+    ]
+  },
+  {
+    "id": "savings-10",
+    "story": "savings",
+    "fraud": false,
+    "decision": "approved",
+    "score": 37,
+    "signals": [
+      "DEPOSIT_WITHDRAWAL",
+      "AMOUNT_SPIKE",
+      "NIGHT_HOURS",
+      "ML_RISK_UPLIFT"
+    ]
+  },
+  {
+    "id": "friend-01",
+    "story": "friend",
+    "fraud": false,
+    "decision": "cooling_off",
+    "score": 45,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "friend-02",
+    "story": "friend",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "friend-03",
+    "story": "friend",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "friend-04",
+    "story": "friend",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "friend-05",
+    "story": "friend",
+    "fraud": false,
+    "decision": "approved",
+    "score": 20,
+    "signals": [
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS"
+    ]
+  },
+  {
+    "id": "friend-06",
+    "story": "friend",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "NEW_DEVICE",
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "friend-07",
+    "story": "friend",
+    "fraud": false,
+    "decision": "cooling_off",
+    "score": 45,
+    "signals": [
+      "ACTIVE_CALL",
+      "NEW_RECIPIENT",
+      "SOCIAL_ENGINEERING_PATTERN"
+    ]
+  },
+  {
+    "id": "friend-08",
+    "story": "friend",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "friend-09",
+    "story": "friend",
+    "fraud": false,
+    "decision": "approved",
+    "score": 10,
+    "signals": [
+      "NEW_RECIPIENT"
+    ]
+  },
+  {
+    "id": "friend-10",
+    "story": "friend",
+    "fraud": false,
+    "decision": "approved",
+    "score": 20,
+    "signals": [
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS"
+    ]
+  },
+  {
+    "id": "collection-01",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 15,
+    "signals": [
+      "NEW_RECIPIENT",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  },
+  {
+    "id": "collection-02",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 15,
+    "signals": [
+      "NEW_RECIPIENT",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  },
+  {
+    "id": "collection-03",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 15,
+    "signals": [
+      "NEW_RECIPIENT",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  },
+  {
+    "id": "collection-04",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 15,
+    "signals": [
+      "NEW_RECIPIENT",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  },
+  {
+    "id": "collection-05",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  },
+  {
+    "id": "collection-06",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 30,
+    "signals": [
+      "NEW_DEVICE",
+      "NEW_RECIPIENT",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  },
+  {
+    "id": "collection-07",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 15,
+    "signals": [
+      "NEW_RECIPIENT",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  },
+  {
+    "id": "collection-08",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 15,
+    "signals": [
+      "NEW_RECIPIENT",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  },
+  {
+    "id": "collection-09",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 15,
+    "signals": [
+      "NEW_RECIPIENT",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  },
+  {
+    "id": "collection-10",
+    "story": "collection",
+    "fraud": false,
+    "decision": "approved",
+    "score": 25,
+    "signals": [
+      "NEW_RECIPIENT",
+      "NIGHT_HOURS",
+      "RECIPIENT_MANY_SENDERS",
+      "FAN_IN_UNCORROBORATED"
+    ]
+  }
+]

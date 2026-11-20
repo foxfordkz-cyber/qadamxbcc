@@ -517,7 +517,7 @@ async function main() {
     check('mobile_route_cooling_sheet_fits_390', sheet.x >= -1 && sheet.x + sheet.width <= 391 && sheet.height <= 845, sheet);
     await phoneDialog.locator('.trusted-circle .secondary').waitFor();
     check('trusted_circle_unavailable_has_retry', await phoneDialog.locator('.trusted-circle .secondary').isVisible());
-    // Trusted contact (advisory only): button -> queued -> sent -> suspicion; polling >= 2.1 s, stops at a terminal state.
+    // A trusted contact's suspicion prevents release through the questionnaire.
     trustedMock.enabled = true; await phoneDialog.locator('.sheet-close').click();
     await phone.locator('.receipt-review').click(); await phoneDialog.waitFor();
     await phoneDialog.locator('.trusted-notify').waitFor();
@@ -529,7 +529,11 @@ async function main() {
     await phoneDialog.locator('.trusted-status[data-state="NOTIFICATION_SENT"]').waitFor({ timeout: 10000 });
     trustedMock.notifications[0].state = 'SUSPICION_REPORTED';
     await phoneDialog.locator('.trusted-status[data-state="SUSPICION_REPORTED"]').waitFor({ timeout: 10000 });
-    check('trusted_circle_shows_suspicion_warning', (await phoneDialog.locator('.trusted-suspicion').innerText()).includes('Не подтверждайте'));
+    const suspicionAlert = phoneDialog.locator('.trusted-circle.has-suspicion').getByRole('alert');
+    check('trusted_circle_shows_suspicion_warning', (await suspicionAlert.innerText()).includes('Подтверждение этого перевода через анкету заблокировано.'));
+    await phoneDialog.getByRole('button', { name: 'ҚАЗ', exact: true }).click();
+    check('trusted_circle_shows_suspicion_warning_kk', (await suspicionAlert.innerText()).includes('Бұл аударымды сауалнама арқылы растауға тыйым салынды.'));
+    await phoneDialog.getByRole('button', { name: 'РУС', exact: true }).click();
     const pollsAtTerminal = trustedMock.polls.length; await phone.waitForTimeout(5000);
     const gaps = trustedMock.polls.slice(1).map((value, index) => value - trustedMock.polls[index]);
     check('trusted_circle_polls_no_faster_than_2100ms_and_stops', gaps.every(gap => gap >= 2100) && trustedMock.polls.length === pollsAtTerminal, { gaps, polls: trustedMock.polls.length });

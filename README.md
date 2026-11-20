@@ -15,8 +15,10 @@
 <p align="center">
   <a href="https://saq-bol-bcc.zerdeliportald.workers.dev/"><strong>Стенд / Открыть демо</strong></a> ·
   <a href="https://saq-bol-bcc.zerdeliportald.workers.dev/mobile">Клиент</a> ·
+  <a href="https://saq-bol-mobile.onrender.com/wallet/">Веб-әмиян / Веб-кошелёк</a> ·
+  <a href="https://saq-bol-mobile.onrender.com/wallet/install/">Android APK жүктеу / Скачать APK</a> ·
   <a href="https://saq-bol-bcc.zerdeliportald.workers.dev/soc">Панель SOC</a> ·
-  <a href="deliverables/demo/BCC-Shield-demo.webm">Видео · 2:55</a>
+  <a href="deliverables/demo/BCC-Shield-demo.webm">Демо бейне / Видео</a>
 </p>
 
 [![Saq Bol × BCC — қоңырау кезінде басталған 900 000 ₸ аударым, тәуекел 74/100 / перевод на 900 000 ₸ во время звонка, риск 74/100](docs/screenshots/readme/overview-kk.png)](docs/screenshots/readme/overview-kk.png)
@@ -26,6 +28,8 @@
 <a name="kk"></a>
 
 ## Қазақша
+
+SOC панелінде 120 синтетикалық аударым бойынша нақты шешімдерді көруге болады. Сенімді адам қауіп туралы хабарласа, сервер кідіртілген аударымды тексеру кезінде бұғаттайды. Бір жаңа алушыға бөліп жіберілген төлемдер соңғы 24 сағаттағы орындалған аударымдармен бірге бағаланады. [Сынақ нәтижелері](docs/SCENARIO_STAND.md) · [Android](docs/ANDROID.md)
 
 Saq Bol — Bank CenterCredit кейсіне арнап жасалған тәуелсіз прототип. Мысалы, біреу өзін банк қызметкері деп таныстырып, депозиттегі ақшаны «қауіпсіз шотқа» аударуды сұрайды. Saq Bol мұндай аударымды кідірте алады. Клиент алушы мен соманы қайта тексереді, ал қауіпсіздік қызметкері сол операцияны, шешімнің себептерін және алушының басқа шоттармен байланысын көреді.
 
@@ -62,6 +66,8 @@ Saq Bol — Bank CenterCredit кейсіне арнап жасалған тәу�
 <a name="ru"></a>
 
 ## Русский
+
+В панели SOC можно раскрыть результаты проверки на 120 синтетических переводах. Сигнал доверенного лица блокирует удержанный перевод при завершении проверки. Движок также учитывает сумму нескольких исполненных платежей одному новому получателю за 24 часа. [Результаты по сценариям](docs/SCENARIO_STAND.md) · [Приложение Android](docs/ANDROID.md)
 
 Saq Bol — независимый прототип для кейса Bank CenterCredit. Например, звонящий представляется сотрудником банка и просит перевести деньги с депозита на «безопасный счёт». Saq Bol может поставить перевод на паузу. Клиент сверяет сумму и получателя, а сотрудник безопасности видит ту же операцию, причины решения и связи получателя с другими счетами.
 
@@ -314,4 +320,4 @@ Wrangler сұраған кезде Render-дегі `BCC_API_KEY` және `BCC_S
 - [Қорғау / Интерактивный питч](https://saq-bol-bcc.zerdeliportald.workers.dev/pitch) · [Бейне / Видео](deliverables/demo/BCC-Shield-demo.webm) · [Қазақша субтитрлер](deliverables/demo/BCC-Shield-demo.kk.srt) · [Русские субтитры](deliverables/demo/BCC-Shield-demo.ru.srt)
 - [Таныстырылым / Презентация KK](deliverables/BCC-Shield-kk.pptx) · [RU](deliverables/BCC-Shield-ru.pptx) · [Скриншоттары бар нұсқа / Версия со скриншотами KK](deliverables/BCC-Shield-pitch-kk.pptx) · [RU](deliverables/BCC-Shield-pitch-ru.pptx) · [Команда материалдары / Комплект команды](docs/HACKATHON_HANDOFF.md)
 - [Браузердегі резервтік демо / Резерв на GitHub Pages](https://foxfordkz-cyber.github.io/qadamxbcc/) — жергілікті браузерлік симуляция / статическая версия с расчётом в браузере. Серверлік ML үшін негізгі стендті ашыңыз. Для серверного ML используйте основной стенд.
-- [Орналастыру / Развёртывание](docs/DEPLOY.md) · [Android](android-app/README.md) · [Хабарламаны тексеру / Проверка сообщений](docs/guardian/PRIVATE_SCAM_CHECK.md) · [Қолжетімділік және дизайн / Дизайн интерфейса](docs/DESIGN_SYSTEM.md)
+- [Орналастыру / Развёртывание](docs/DEPLOY.md) · [Android](docs/ANDROID.md) · [Хабарламаны тексеру / Проверка сообщений](docs/guardian/PRIVATE_SCAM_CHECK.md) · [Қолжетімділік және дизайн / Дизайн интерфейса](docs/DESIGN_SYSTEM.md)

@@ -11,7 +11,7 @@ import { ApiError, answersSchema, cancelSchema, feedQuerySchema, postCallSchema,
 import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, postCallDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "./demo";
 import { recipientFlagInputSchema } from "./recipient-flag";
 import { ids } from "./demo-ids";
-import { staticCircle, staticGuide } from "./static-circle";
+import { resetStaticCircle, staticCircle, staticContactSuspicion, staticGuide } from "./static-circle";
 
 const STORE = "saqbol-static-demo-v1";
 const keys = ["bccDemoTransfers", "bccDemoDetails", "bccDemoRequests", "bccDemoAbandoned", "bccDemoBankCalls", "bccDemoCallChecks", "bccDemoRecipientFlags", "bccDemoFlagReceipts"] as const;
@@ -58,7 +58,10 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
     }
     return evaluateDemo(rest);
   }
-  if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/resolve-cooling$/i.test(route)) return resolveDemo(uuid(path[1]), z.object({ answers: answersSchema }).strict().parse(body).answers);
+  if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/resolve-cooling$/i.test(route)) {
+    const id = uuid(path[1]);
+    return resolveDemo(id, z.object({ answers: answersSchema }).strict().parse(body).answers, Date.now(), staticContactSuspicion(id));
+  }
   if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/post-call$/i.test(route)) return postCallDemo(uuid(path[1]), postCallSchema.parse(body).action);
   if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/cancel$/i.test(route)) return cancelDemo(uuid(path[1]), Date.now(), cancelSchema.parse(body ?? {}).reason === "post_call_scam");
   if (method === "POST" && /^transfers\/requests\/[0-9a-f-]{36}\/abandon$/i.test(route)) return abandonDemo(uuid(path[2]));
@@ -82,6 +85,7 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
 
 /** Clears this browser's demo: transfers, receipts and drafts. The page reloads afterwards. */
 export function resetStaticDemo() {
+  resetStaticCircle();
   for (const store of [localStorage, sessionStorage]) {
     try {
       for (const key of Object.keys(store)) if ((key.startsWith("bcc-shield.") && key !== "bcc-shield.locale") || key.startsWith("saqbol")

@@ -1,0 +1,72 @@
+{
+  "bank": {
+    "approved": 0,
+    "cooling_off": 8,
+    "blocked": 0
+  },
+  "police": {
+    "approved": 0,
+    "cooling_off": 8,
+    "blocked": 0
+  },
+  "reserve": {
+    "approved": 0,
+    "cooling_off": 8,
+    "blocked": 0
+  },
+  "invest": {
+    "approved": 0,
+    "cooling_off": 8,
+    "blocked": 0
+  },
+  "relative": {
+    "approved": 2,
+    "cooling_off": 5,
+    "blocked": 0
+  },
+  "market": {
+    "approved": 2,
+    "cooling_off": 5,
+    "blocked": 0
+  },
+  "loan": {
+    "approved": 0,
+    "cooling_off": 7,
+    "blocked": 0
+  },
+  "hub": {
+    "approved": 0,
+    "cooling_off": 5,
+    "blocked": 2
+  },
+  "family": {
+    "approved": 10,
+    "cooling_off": 0,
+    "blocked": 0
+  },
+  "seller": {
+    "approved": 9,
+    "cooling_off": 1,
+    "blocked": 0
+  },
+  "purchase": {
+    "approved": 10,
+    "cooling_off": 0,
+    "blocked": 0
+  },
+  "savings": {
+    "approved": 9,
+    "cooling_off": 1,
+    "blocked": 0
+  },
+  "friend": {
+    "approved": 8,
+    "cooling_off": 2,
+    "blocked": 0
+  },
+  "collection": {
+    "approved": 10,
+    "cooling_off": 0,
+    "blocked": 0
+  }
+}

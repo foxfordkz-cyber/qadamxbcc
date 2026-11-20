@@ -212,6 +212,44 @@ async def test_sender_burst(engine: AntifraudEngine) -> None:
     assert "SENDER_BURST" in codes(result)
 
 
+@pytest.mark.parametrize(
+    ("first_age_hours", "amounts", "avg", "hold"),
+    [
+        (23, (50_000, 50_000, 50_000), 40_000, True),
+        (24, (50_000, 50_000, 50_000), 40_000, False),
+        (23, (25_000, 25_000, 25_000), 40_000, False),
+        (23, (50_000, 50_000, 50_000), 75_000, False),
+        (23, (1_000, 1_000, 160_000), 40_000, False),
+    ],
+)
+async def test_first_day_split_uses_settlements_and_sender_baseline(
+    engine: AntifraudEngine,
+    first_age_hours: int,
+    amounts: tuple[int, int, int],
+    avg: int,
+    hold: bool,
+) -> None:
+    first = ctx("sender", "new-payee", amounts[0], at=DAY - timedelta(hours=first_age_hours))
+    second = ctx("sender", "new-payee", amounts[1], at=DAY - timedelta(hours=1))
+    current = ctx("sender", "new-payee", amounts[2], avg=avg)
+    for prior in (first, second):
+        await engine.record_settled(prior)
+        engine.apply_transfer(prior)
+    # Re-delivery of one settlement and repeats of the pending attempt add no instalments.
+    await engine.record_settled(second)
+    engine.apply_transfer(second)
+    for _ in range(2):
+        result = await engine.evaluate(current)
+        reason = next((r for r in result.reasons if r.code == "SPLIT_TRANSFERS_24H"), None)
+        assert bool(reason) is hold
+        if reason:
+            assert result.decision is TransactionStatus.COOLING_OFF
+            assert reason.evidence["settled_count"] == 2
+            assert reason.evidence["total_kzt"] == 150_000
+            assert "24 сағат" in reason.reason_kk
+            assert "24 часа" in reason.reason_ru
+
+
 async def test_p95_latency_under_budget(engine: AntifraudEngine) -> None:
     for i in range(300):
         engine.graph.add_transfer(f"s{i % 40}", f"r{i % 25}", 1_000 + i)

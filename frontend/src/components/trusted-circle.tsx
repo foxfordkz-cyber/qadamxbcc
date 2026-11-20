@@ -85,6 +85,9 @@ export function TrustedCircle({ transactionId, active, historyOnly = false }: { 
   const notified = new Set(circle.notifications.map(item => item.contact_id));
   const alias = (id: string) => contacts.find(contact => contact.id === id)?.alias || m("trustedTitle");
   const suspicion = circle.notifications.some(item => item.state === "SUSPICION_REPORTED");
+  const simulatedReply = process.env.NEXT_PUBLIC_BCC_STATIC === "1" && active && !suspicion
+    ? circle.notifications.find(item => ["NOTIFICATION_SENT", "CONTACT_ACKNOWLEDGED"].includes(item.state) && Date.parse(item.expires_at) > Date.now())
+    : undefined;
   const pending = contacts.filter(contact => !notified.has(contact.id));
   return <section className={`trusted-circle${suspicion ? " has-suspicion" : ""}`} aria-labelledby="trusted-title" data-state={circle.notifications.at(-1)?.state ?? circle.contact_state ?? "none"}>
     <h3 id="trusted-title"><UserRound size={17} aria-hidden="true" />{m("trustedTitle")}</h3>
@@ -96,6 +99,16 @@ export function TrustedCircle({ transactionId, active, historyOnly = false }: { 
       })}
     </ul>}
     {suspicion && <p className="trusted-suspicion" role="alert"><AlertTriangle size={16} aria-hidden="true" />{m("trustedSuspicion")}</p>}
+    {simulatedReply && <button type="button" className="secondary" disabled={sending} onClick={async () => {
+      if (writing.current) return;
+      writing.current = true; read.current = false; ++version.current; setSending(true); setError(null);
+      try {
+        setCircle(await api<Circle>(`trusted-circle/${transactionId}/simulate-suspicion`, {
+          method: "POST", body: JSON.stringify({ notification_id: simulatedReply.id }),
+        }));
+      } catch (failure) { setError(errorFor(failure)); }
+      finally { writing.current = false; setSending(false); }
+    }}>{m("simulateSuspicion")}</button>}
     {circle.notifications.some(item => item.state === "NOTIFICATION_SENT") && <p className="trusted-note">{m("trustedSentNote")}</p>}
     {circle.notifications.length === 0 && <p className="trusted-note">{contacts.length ? m("trustedIntro") : `${m(circle.contact_state && circle.contact_state !== "CONTACT_VERIFIED" ? circle.contact_state : "CONTACT_NOT_CONFIGURED")}. ${m("trustedSetup")}`}</p>}
     {active && pending.length > 0 && <div className="trusted-actions">{pending.map(contact => <button key={contact.id} type="button" className="secondary trusted-notify" disabled={sending} onClick={() => void notify(contact.id)}>

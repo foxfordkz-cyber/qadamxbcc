@@ -133,6 +133,55 @@ async def test_legit_p2p_approved_and_persisted(
         assert edge.weight == pytest.approx(55_000)
 
 
+async def test_parallel_payments_to_first_day_payee_keep_one_approval_slot(world: World) -> None:
+    async def submit(key: str, recipient: str = "scammer") -> Any:
+        return await world.evaluate(
+            "alice",
+            recipient,
+            50_000,
+            request_id=key,
+            occurred_at=DAY.isoformat(),
+            context={"is_new_recipient": False},
+        )
+
+    first_key = str(uuid.uuid4())
+    assert (await submit(first_key))["status"] == "approved"
+    assert (await submit(first_key))["status"] == "approved"
+    second, third = await asyncio.gather(*(submit(str(uuid.uuid4())) for _ in range(2)))
+    assert sorted((second["status"], third["status"])) == ["approved", "cooling_off"]
+    held = second if second["status"] == "cooling_off" else third
+    evidence = next(r["evidence"] for r in held["reasons"] if r["code"] == "SPLIT_TRANSFERS_24H")
+    assert evidence["settled_count"] == 2
+    assert evidence["settled_amount_kzt"] == 100_000
+    assert evidence["total_kzt"] == 150_000
+    # Alice/Bob has legacy history in the graph before the 24-hour ledger window.
+    for _ in range(3):
+        known = await submit(str(uuid.uuid4()), "bob")
+        assert known["status"] == "approved"
+        assert all(r["code"] != "SPLIT_TRANSFERS_24H" for r in known["reasons"])
+
+
+async def test_cancelled_and_blocked_instalments_are_excluded_from_pair_history(
+    world: World,
+) -> None:
+    async def submit(**context: bool) -> Any:
+        return await world.evaluate(
+            "alice", "scammer", 50_000, occurred_at=DAY.isoformat(), context=context
+        )
+
+    held = await submit(active_call=True, is_new_recipient=True)
+    assert held["status"] == "cooling_off"
+    cancelled = await world.client.post(f"{API}/transfers/{held['transaction_id']}/cancel")
+    assert cancelled.json()["status"] == "cancelled"
+    blocked = await submit(duress=True)
+    assert blocked["status"] == "blocked"
+    assert (await submit())["status"] == "approved"
+    assert (await submit())["status"] == "approved"
+    third = await submit()
+    signal = next(r for r in third["reasons"] if r["code"] == "SPLIT_TRANSFERS_24H")
+    assert signal["evidence"]["settled_count"] == 2
+
+
 async def test_biometrics_and_ml_response(world: World) -> None:
     data = await world.evaluate(
         "victim",

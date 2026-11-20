@@ -1,0 +1,48 @@
+{
+  "recorded_at": "2026-11-20T15:12:29.088Z",
+  "synthetic": true,
+  "browser": "157.0.4341.60",
+  "executable": "msedge.exe",
+  "decisions": [
+    {
+      "preset": "normal",
+      "transaction_id": "1e881861-8566-417f-81cc-7c2b2d832562",
+      "status": "approved",
+      "ml_score": 0.0548,
+      "latency_ms": 2.651
+    },
+    {
+      "preset": "scam",
+      "transaction_id": "bc854506-5231-4cf3-a5c1-3fde495a4bc6",
+      "status": "cooling_off",
+      "ml_score": 86.1247,
+      "latency_ms": 2.877
+    },
+    {
+      "preset": "hub",
+      "transaction_id": "c47ea1cf-e027-4a87-ba07-a40c5899bcc2",
+      "status": "blocked",
+      "ml_score": 95.7175,
+      "latency_ms": 2.447
+    }
+  ],
+  "contact_signal": true,
+  "silent_transaction_id": "586dc680-c19d-407a-b210-2bc90fb4ea09",
+  "graph_nodes": 16,
+  "printed_transaction_id": "c47ea1cf-e027-4a87-ba07-a40c5899bcc2",
+  "api": "Live FastAPI, synthetic SQLite, fakeredis, local Telegram delivery double",
+  "assertions": [
+    "normal → approved",
+    "scam → cooling_off",
+    "server cooling deadline in future",
+    "worker delivered message through local adapter",
+    "contact signal prevents release after clean answers",
+    "long press produces server duress block",
+    "hub → blocked",
+    "dropper network graph loaded",
+    "model exposes feature contributions",
+    "generated police statement matches transfer",
+    "no browser or API errors: "
+  ],
+  "errors": []
+}

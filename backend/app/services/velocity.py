@@ -51,6 +51,13 @@ class FlowStats:
 
 
 @dataclass(frozen=True, slots=True)
+class SettledPayee:
+    count: int = 0
+    total: float = 0.0
+    largest: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
 class VelocitySnapshot:
     sender_out: FlowStats
     sender_in: FlowStats
@@ -60,6 +67,7 @@ class VelocitySnapshot:
     settled_sender_in: FlowStats = field(default_factory=FlowStats)
     settled_recipient_in: FlowStats = field(default_factory=FlowStats)
     settled_recipient_out: FlowStats = field(default_factory=FlowStats)
+    settled_payee: SettledPayee = field(default_factory=SettledPayee)
 
     def as_dict(self) -> dict[str, dict[str, dict[str, float]]]:
         return {
@@ -86,6 +94,20 @@ def _key(direction: str, account_id: str) -> str:
 
 def _decode(member: bytes | str) -> str:
     return member.decode() if isinstance(member, bytes) else member
+
+
+def _settled_payee(
+    rows: list[tuple[bytes | str, float]], recipient_id: str, tx_id: str | None
+) -> SettledPayee:
+    amounts = []
+    for member, _ in rows:
+        parts = _decode(member).split(":")
+        if len(parts) == 3 and parts[1] == recipient_id and parts[0] != tx_id:
+            try:
+                amounts.append(float(parts[2]))
+            except ValueError:
+                continue
+    return SettledPayee(len(amounts), fsum(amounts), max(amounts, default=0.0))
 
 
 def _aggregate(rows: list[tuple[bytes | str, float]], now: float) -> FlowStats:
@@ -214,6 +236,7 @@ class VelocityCounters:
             settled_sender_in=_aggregate(rows[5], ts),
             settled_recipient_in=_aggregate(rows[6], ts),
             settled_recipient_out=_aggregate(rows[7], ts),
+            settled_payee=_settled_payee(rows[4], recipient_id, tx_id),
         )
 
     async def record_settled(

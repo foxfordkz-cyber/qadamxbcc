@@ -1,0 +1,17 @@
+# Standalone Android demo. The web API, its Telegram test bot and its stores are independent.
+services:
+  - type: web
+    name: saq-bol-mobile
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile.mobile-free
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: BCC_MOBILE_CLIENT_HASH
+        sync: false
+      - key: BCC_MOBILE_ADMIN_HASH
+        sync: false

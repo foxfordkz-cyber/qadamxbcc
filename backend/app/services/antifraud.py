@@ -42,7 +42,7 @@ from app.services.graph import (
     GraphMetrics,
     GraphStore,
 )
-from app.services.velocity import VelocityCounters, VelocitySnapshot
+from app.services.velocity import SettledPayee, VelocityCounters, VelocitySnapshot
 
 LAYER_BEHAVIORAL: Final = "behavioral"
 LAYER_VELOCITY: Final = "velocity"
@@ -111,6 +111,13 @@ MULE_CORROBORATION: Final = frozenset(
 # recipient-side movement or a reviewed flag before lifting a score into BLOCKED.
 HARD_BLOCK_EVIDENCE: Final = MULE_CORROBORATION | {"SENDER_PASS_THROUGH"}
 ACTIVE_HOLD_RULE: Final = "ACTIVE_HOLD_RETRY"
+SPLIT_RULE: Final = "SPLIT_TRANSFERS_24H"
+SPLIT_MIN_TOTAL_KZT: Final = 150_000
+SPLIT_AVERAGE_MULTIPLE: Final = 3
+
+
+def split_total_threshold(sender_avg_amount: float) -> float:
+    return max(SPLIT_MIN_TOTAL_KZT, SPLIT_AVERAGE_MULTIPLE * sender_avg_amount)
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,6 +146,9 @@ class TransferContext:
     hesitation_ms: int | None = None
     bank_call_denied: bool = False
     duress: bool = False
+    # Complete first-day settled history, read under the sender lock by the API.
+    # Direct engine callers use the settled Redis projection and lifetime graph count.
+    first_day_payee: SettledPayee | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -376,6 +386,33 @@ class AntifraudEngine:
             ]
             reasons.sort(key=lambda r: (-r.score_delta, r.code))
             score = BLOCK_THRESHOLD
+        pair = ctx.first_day_payee
+        if pair is None:
+            recent = snapshot.settled_payee
+            if recent.count == self.graph.transfer_count(ctx.sender_id, ctx.recipient_id):
+                pair = recent
+        if pair is not None and pair.count >= 2:
+            total = round(pair.total + ctx.amount, 2)
+            threshold = split_total_threshold(ctx.sender_avg_amount)
+            # A single large purchase and token follow-ups are not a split.
+            if total >= threshold and max(pair.largest, ctx.amount) * 5 <= total * 4:
+                deficit = max(0, COOLING_OFF_THRESHOLD - score)
+                reasons.append(
+                    _reason(
+                        SPLIT_RULE,
+                        LAYER_VELOCITY,
+                        deficit,
+                        settled_count=pair.count,
+                        n=pair.count + 1,
+                        settled_amount_kzt=round(pair.total, 2),
+                        total_kzt=total,
+                        threshold_kzt=threshold,
+                        window_hours=24,
+                        amount=explain.fmt_tenge(total, with_tiyn=True),
+                    )
+                )
+                score += deficit
+                reasons.sort(key=lambda r: (-r.score_delta, r.code))
         if (
             score < COOLING_OFF_THRESHOLD
             and ctx.active_hold_id is not None

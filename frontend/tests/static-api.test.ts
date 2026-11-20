@@ -1,12 +1,39 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApiError } from "../src/lib/contracts";
+import { ApiError, type Evaluation } from "../src/lib/contracts";
 import { ids } from "../src/lib/demo-ids";
 import { resetStaticDemo, staticApi } from "../src/lib/static-api";
 import { staticCircle, staticGuide } from "../src/lib/static-circle";
 import { readFileSync } from "node:fs";
 
 const post = (body: unknown) => ({ method: "POST", body: JSON.stringify(body) });
+
+test("only the notified contact in the static rehearsal can signal suspicion for its held payment", async t => {
+  const storage = new Map<string, string>();
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+  } });
+  t.after(() => { if (previous) Object.defineProperty(globalThis, "localStorage", previous); else Reflect.deleteProperty(globalThis, "localStorage"); });
+  const held = await staticApi("transfers/evaluate", post({ sender_id: ids.sender, recipient_phone: "+77010000003",
+    amount: "900000", currency: "KZT", context: { active_call: true, from_deposit: true, is_new_device: false } })) as Evaluation;
+  const route = `trusted-circle/${held.transaction_id}`;
+  const panel = await staticApi(route) as { contacts: { id: string }[] };
+  const sent = await staticApi(route, post({ contact_id: panel.contacts[0].id })) as { notifications: { id: string }[] };
+  const reply = `${route}/simulate-suspicion`;
+  const clock = Date.now() + 3000;
+  assert.throws(() => staticCircle("POST", reply, { notification_id: crypto.randomUUID() }, clock));
+  staticCircle("POST", reply, { notification_id: sent.notifications[0].id }, clock);
+  const answers = { caller_claims_bank_or_police: false, asked_to_move_to_safe_account: false,
+    asked_to_keep_secret_or_install_app: false, initiated_by_customer: true, knows_recipient_personally: true };
+  const resolve = `transfers/${held.transaction_id}/resolve-cooling`;
+  const blocked = await staticApi(resolve, post({ answers })) as Evaluation;
+  assert.equal(blocked.status, "blocked");
+  assert.equal(blocked.reasons[0].code, "TRUSTED_CONTACT_SUSPICION");
+  const replay = await staticApi(resolve, post({ answers })) as Evaluation;
+  assert.deepEqual(replay.reasons, blocked.reasons);
+});
 
 test("the static Pages build answers the demo routes in the browser", async () => {
   const held = await staticApi("transfers/evaluate", post({ sender_id: ids.sender, recipient_phone: "+77010000003", amount: "900000", currency: "KZT", context: { active_call: true, from_deposit: true, is_new_device: false } })) as { status: string; transaction_id: string };
@@ -36,7 +63,7 @@ test("the static build simulates the trusted circle without Telegram", async () 
   assert.equal(circle.contacts.length, 1);
   const sent = await staticApi(`trusted-circle/${held.transaction_id}`, post({ contact_id: circle.contacts[0].id })) as { notifications: { state: string }[] };
   assert.equal(sent.notifications.length, 1);
-  // Without storage each call starts from the default circle, so time is checked on the pure function.
+  // Advance only the local rehearsal clock to observe simulated consent.
   const later = staticCircle("GET", "trusted-circle/members", undefined, Date.now() + 60_000) as { contacts: { state: string }[] };
   assert.ok(later.contacts.every(contact => contact.state === "CONTACT_VERIFIED"));
   const approved = await staticApi("transfers/evaluate", post({ sender_id: ids.sender, recipient_phone: "+77010000002", amount: "5000", currency: "KZT", context: { active_call: false, from_deposit: false, is_new_device: false } })) as { transaction_id: string; status: string };

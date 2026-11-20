@@ -11,13 +11,15 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from redis.exceptions import RedisError
-from sqlalchemy import case, exists, or_, select
+from sqlalchemy import and_, case, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.locks import serialize_sender, serialized_identity
+from app.integrations.models import ContactNotification
+from app.integrations.telegram.schemas import NotificationState
 from app.ml.model import MODEL_VERSION
 from app.models import (
     AbandonedRequest,
@@ -42,9 +44,16 @@ from app.schemas.transfers import (
     TransferEvaluateResponse,
 )
 from app.services import explain
-from app.services.antifraud import ACTIVE_HOLD_RULE, AntifraudEngine, Evaluation, TransferContext
+from app.services.antifraud import (
+    ACTIVE_HOLD_RULE,
+    AntifraudEngine,
+    Evaluation,
+    TransferContext,
+    split_total_threshold,
+)
 from app.services.call_check import CallCheckService
 from app.services.graph import MAX_GRAPH_NEIGHBOURS, GraphCapacityError, GraphStore
+from app.services.velocity import MAX_HISTORY_ROWS, SettledPayee, VelocityCapacityError
 
 QUESTIONNAIRE_LAYER = "questionnaire"
 BLOCKED_AFTER_RED_FLAG_SCORE = 90
@@ -307,8 +316,17 @@ class TransferService:
             raise NotFoundError(f"account {account_id} not found")
         return account
 
-    async def _resolve_recipient(self, req: TransferEvaluateRequest) -> Account:
-        stmt = select(Account)
+    async def _resolve_recipient(
+        self, req: TransferEvaluateRequest, sender: Account
+    ) -> tuple[Account, SettledPayee]:
+        stmt = select(Account, GraphEdge.tx_count, GraphEdge.weight).outerjoin(
+            GraphEdge,
+            and_(
+                GraphEdge.source_id == sender.id,
+                GraphEdge.target_id == Account.id,
+                GraphEdge.edge_type == EdgeType.TRANSFER,
+            ),
+        )
         if req.recipient_id is not None:
             stmt = stmt.where(Account.id == req.recipient_id)
         elif req.recipient_phone is not None:
@@ -317,10 +335,48 @@ class TransferService:
             stmt = stmt.where(Account.iban == req.recipient_iban)
         # A confirmed flag cannot commit between our authoritative recipient read
         # and the persisted decision. SOC writes take the conflicting row lock.
-        account = (await self.session.execute(stmt.with_for_update(read=True))).scalar_one_or_none()
-        if account is None:
+        result = await self.session.execute(stmt.with_for_update(read=True, of=Account))
+        row = result.one_or_none()
+        if row is None:
             raise NotFoundError("recipient not found")
-        return account
+        account, lifetime_count, weight = row
+        threshold = split_total_threshold(float(sender.avg_tx_amount))
+        if (lifetime_count or 0) < 2 or round((weight or 0) + float(req.amount), 2) < threshold:
+            return account, SettledPayee()
+
+        # A concurrent approval can already be committed while its Redis outbox
+        # is still pending. Confirm the pair from the ledger under the sender lock.
+        # The existing sender/status/settlement index bounds the scan to one day.
+        now = datetime.now(UTC)
+        settled_at = func.coalesce(Transaction.resolved_at, Transaction.created_at)
+        recent = (
+            select(Transaction.recipient_id, Transaction.amount)
+            .where(
+                Transaction.sender_id == sender.id,
+                Transaction.status == TransactionStatus.APPROVED,
+                settled_at > now - timedelta(days=1),
+                settled_at <= now,
+            )
+            .limit(MAX_HISTORY_ROWS + 1)
+            .subquery()
+        )
+        same_payee = recent.c.recipient_id == account.id
+        size, count, total, largest = (
+            await self.session.execute(
+                select(
+                    func.count(),
+                    func.count().filter(same_payee),
+                    func.sum(recent.c.amount).filter(same_payee),
+                    func.max(recent.c.amount).filter(same_payee),
+                ).select_from(recent)
+            )
+        ).one()
+        if size > MAX_HISTORY_ROWS:
+            raise VelocityCapacityError("Settled sender history exceeds scorer capacity")
+        if count != lifetime_count:
+            # Older history or a legacy edge without its complete ledger: familiarity wins.
+            return account, SettledPayee()
+        return account, SettledPayee(count, float(total), float(largest))
 
     async def _refresh_device_peers(
         self, sender: Account, recipient: Account, supplied_device: str
@@ -459,7 +515,7 @@ class TransferService:
         refund: PaymentReturn | None = None,
     ) -> TransferEvaluateResponse:
         sender = await self._get_account(req.sender_id)
-        recipient = await self._resolve_recipient(req)
+        recipient, first_day_payee = await self._resolve_recipient(req, sender)
         if sender.id == recipient.id:
             raise InvalidTransferError("sender and recipient must differ")
         active_hold = await self._active_hold(sender.id, recipient.id, datetime.now(UTC))
@@ -489,6 +545,7 @@ class TransferService:
             device_id=device_id,
             occurred_at=occurred_at,
             sender_avg_amount=float(sender.avg_tx_amount),
+            first_day_payee=first_day_payee,
             active_call=req.context.active_call,
             from_deposit=req.context.from_deposit,
             is_new_device=is_new_device,
@@ -664,8 +721,21 @@ class TransferService:
                     return transfer_detail(tx, tx.recipient)
                 raise ConflictError(f"transaction is {tx.status.value}, not cooling_off")
 
+            contact_suspicion = await self.session.scalar(
+                select(
+                    exists().where(
+                        ContactNotification.transaction_id == tx.id,
+                        ContactNotification.owner_id == tx.sender_id,
+                        ContactNotification.state == NotificationState.SUSPICION,
+                    )
+                )
+            )
             codes = {event.rule_code for event in tx.risk_events}
-            if "POST_CALL_ENDED" in codes and "POST_CALL_RECOGNIZED" not in codes:
+            if (
+                not contact_suspicion
+                and "POST_CALL_ENDED" in codes
+                and "POST_CALL_RECOGNIZED" not in codes
+            ):
                 raise ConflictError("post_call_answer_required")
             now = datetime.now(UTC)
             flags = red_flags(answers, active_call=tx.active_call, from_deposit=tx.from_deposit)
@@ -673,7 +743,11 @@ class TransferService:
             # Refresh DB-held SOC flag at the final authorization boundary.
             await self.session.refresh(tx.recipient, with_for_update={"read": True})
             register_account(self.engine.graph, tx.recipient)
-            if flags:
+            if contact_suspicion:
+                code = "TRUSTED_CONTACT_SUSPICION"
+                kk, ru = explain.render(code)
+                final_status = TransactionStatus.BLOCKED
+            elif flags:
                 kk = explain.REASONS["QUESTIONNAIRE_RED_FLAG"][0].format(
                     flags="; ".join(RED_FLAG_LABELS[f][0] for f in flags)
                 )

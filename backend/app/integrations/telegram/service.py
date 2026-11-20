@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import utcnow
+from app.db.locks import serialized_identity
 from app.integrations.audit import record
 from app.integrations.config import IntegrationSettings
 from app.integrations.errors import IntegrationError
@@ -21,6 +22,8 @@ from app.integrations.telegram.schemas import (
     NotificationState,
 )
 from app.models import Account, Transaction, TransactionStatus
+
+CONTACT_LIMIT = 3
 
 
 class TrustedContactService:
@@ -45,7 +48,7 @@ class TrustedContactService:
                 )
             ).all()
         )
-        if len(existing) >= 3:
+        if len(existing) >= CONTACT_LIMIT:
             raise IntegrationError(409, "contact_limit_reached")
         token = secrets.token_urlsafe(32)
         contact = TrustedContact(
@@ -249,10 +252,28 @@ class TrustedContactService:
         message_id: str | None,
         action: str,
     ) -> ContactNotification:
-        # Same contact -> notification lock order as revoke/delivery to avoid deadlocks.
-        row = await self.session.get(ContactNotification, notification_id)
-        if row is None:
-            raise IntegrationError(404, "notification_not_found")
+        # SQLite's gate covers the whole database and must precede even the
+        # first SELECT: an in-memory database may have a single connection.
+        identity = notification_id
+        if self.session.get_bind().dialect.name == "postgresql":
+            tx_id = await self.session.scalar(
+                select(ContactNotification.transaction_id).where(
+                    ContactNotification.id == notification_id
+                )
+            )
+            if tx_id is None:
+                raise IntegrationError(404, "notification_not_found")
+            identity = tx_id
+        async with serialized_identity(self.session, identity):
+            row = await self.session.get(ContactNotification, notification_id)
+            if row is None:
+                raise IntegrationError(404, "notification_not_found")
+            return await self._apply_callback(row, chat_id, message_id, action)
+
+    async def _apply_callback(
+        self, row: ContactNotification, chat_id: int, message_id: str | None, action: str
+    ) -> ContactNotification:
+        # Delivery and revocation acquire contact before notification too.
         contact = await self.get_contact(row.contact_id)
         await self.session.refresh(row, with_for_update=True)
         if (
@@ -277,6 +298,14 @@ class TrustedContactService:
         )
         # A late acknowledgment never erases a suspicion; replay produces no audit duplicates.
         if row.state not in {target, NotificationState.SUSPICION}:
+            if target == NotificationState.SUSPICION:
+                status = await self.session.scalar(
+                    select(Transaction.status).where(
+                        Transaction.id == row.transaction_id, Transaction.sender_id == row.owner_id
+                    )
+                )
+                if status != TransactionStatus.COOLING_OFF:
+                    raise IntegrationError(409, "active_cooling_required")
             row.state = target
             record(self.session, row.owner_id, row.id, row.correlation_id, row.state)
             await self.session.commit()

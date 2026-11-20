@@ -1,22 +1,32 @@
 {
   "name": "bcc-shield-android",
-  "version": "1.0.0",
+  "version": "2.5.0",
   "private": true,
-  "description": "Android app for BCC Shield: opens the demo's /mobile client on a real phone.",
+  "description": "Saq Bol × BCC Android: synthetic client and SOC accounts",
   "scripts": {
-    "vendor": "node -e \"require('fs').mkdirSync('www/vendor',{recursive:true});require('fs').copyFileSync(require.resolve('jsqr/dist/jsQR.js'),'www/vendor/jsQR.js')\"",
+    "web": "npm run vendor && node scripts/build-wallet.mjs",
+    "vendor": "node scripts/vendor.mjs",
     "sync": "npm run vendor && cap sync android",
     "test": "node --test tests/*.test.mjs",
-    "apk": "npm run sync && cd android && ./gradlew assembleDebug"
+    "apk": "npm run sync && cd android && ./gradlew assembleDebug",
+    "pretest": "npm run vendor",
+    "preview": "node scripts/serve.mjs",
+    "test:ui": "playwright test"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.6.2",
     "@capacitor/splash-screen": "^8.0.2",
-    "jsqr": "^1.4.0"
+    "@tesseract.js-data/kaz": "1.0.0",
+    "@tesseract.js-data/rus": "1.0.0",
+    "jsqr": "^1.4.0",
+    "tesseract.js": "7.0.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^4.0.0",
-    "@capacitor/cli": "^8.6.2"
+    "@capacitor/cli": "^8.6.2",
+    "@playwright/test": "^1.58.2"
   }
 }

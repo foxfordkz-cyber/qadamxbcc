@@ -320,6 +320,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers));
     }} onClose={() => setModal(false)} onResolved={resolved} />;
   const languageSwitch = <div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>;
+  const walletLink = config.demoActionsEnabled !== false && <a className="pitch-link" href="https://saq-bol-mobile.onrender.com/wallet/">{t("connectedWallet")}<ArrowRight size={15} aria-hidden="true" /></a>;
   if (layout === "officer") return <>
     <header className="topbar"><div className="topbar-inner"><div className="brand">
       <span className="brand-mark"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("officerWorkspace")}</small></div>
@@ -336,6 +337,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       {languageSwitch}
     </div></header>
     <main className="mobile-shell">
+      {walletLink}
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
       <TransferPhone bare config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} submissionPaused={!!submissionRetryAt} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onReviewReturn={id => void review(id)} onNewTransfer={freshTransfer} />
@@ -352,6 +354,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
         <div className="demo-bar-label"><CircleHelp size={16} aria-hidden="true" /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "demoScenarios")}</span></div>
         <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map(key => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || !!submissionRetryAt || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
         {STATIC_DEMO && <button type="button" className="demo-reset" disabled={busy} onClick={() => { if (window.confirm(t("resetDemoConfirm"))) { resetStaticDemo(); window.location.reload(); } }}>{t("resetDemo")}</button>}
+        {walletLink}
         {config.demoActionsEnabled !== false && <Link href="/pitch" className="pitch-link">{t("pitchLink")}<ArrowRight size={15} aria-hidden="true" /></Link>}
       </section>
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />

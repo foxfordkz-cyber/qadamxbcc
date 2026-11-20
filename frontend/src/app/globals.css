@@ -609,3 +609,16 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
 .investigation-export-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 .cooling-legal { margin: 4px 0 12px; font-size: 12px; line-height: 1.45; color: var(--muted); }
 .badge.processing { color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); }
+.scenario-results { margin-top: 1rem; padding: 1rem 1.25rem; color: var(--ink); }
+.scenario-results summary { cursor: pointer; font-weight: 650; }
+.scenario-results p { margin: .75rem 0; }
+.scenario-results table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.scenario-results th, .scenario-results td { padding: .45rem .3rem; text-align: right; }
+.scenario-results th:first-child { text-align: left; }
+.scenario-results th[scope=row] { font-weight: 400; }
+.scenario-results th[scope=rowgroup] { padding-top: 1rem; color: #00834b; }
+@media (max-width: 480px) {
+  .scenario-results { padding: .85rem; }
+  .scenario-results table { font-size: .82rem; }
+  .scenario-results th, .scenario-results td { padding: .4rem .18rem; }
+}

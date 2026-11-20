@@ -19,12 +19,36 @@ from app.schemas.transfers import TransferEvaluateRequest
 from app.services import transfers
 from app.services.recipient_flags import set_flag
 from app.services.transfers import TransferService
+from app.services.velocity import SettledPayee
 from tests.test_active_hold_guard import guard_reason, original_hold
 from tests.test_active_hold_guard import server_clock as server_clock
 from tests.test_api import API, CLEAN, World
 from tests.test_api import world as world
 from tests.test_postgres_concurrency import session_factory as session_factory
 from tests.test_recipient_flags import resources
+
+
+async def test_split_payment_boundary_is_shared_by_two_postgres_workers(world: World) -> None:
+    other = Resources.build(
+        Settings(), session_factory=world.sessions, redis=resources(world).redis
+    )
+    await other.start()
+    app = create_app(Settings(), other)
+    app.state.resources = other
+    body = {"sender_id": world.id("alice"), "recipient_id": world.id("scammer"), "amount": "50000"}
+    path = f"{API}/transfers/evaluate"
+    first = await world.client.post(path, json={**body, "request_id": str(uuid.uuid4())})
+    assert first.json()["status"] == "approved"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as peer:
+        results = await asyncio.gather(
+            world.client.post(path, json={**body, "request_id": str(uuid.uuid4())}),
+            peer.post(path, json={**body, "request_id": str(uuid.uuid4())}),
+        )
+    decisions = [response.json() for response in results]
+    assert sorted(item["status"] for item in decisions) == ["approved", "cooling_off"]
+    held = next(item for item in decisions if item["status"] == "cooling_off")
+    evidence = next(r["evidence"] for r in held["reasons"] if r["code"] == "SPLIT_TRANSFERS_24H")
+    assert evidence["total_kzt"] == 150_000
 
 
 async def test_separate_workers_serialize_first_hold_and_cleared_retry(
@@ -119,12 +143,12 @@ async def test_retry_resolve_and_queued_soc_writer_do_not_form_a_lock_cycle(
     original_sender_lock = serialize_sender
 
     async def paused_recipient(
-        service: TransferService, request: TransferEvaluateRequest
-    ) -> Account:
-        account = await original_recipient(service, request)
+        service: TransferService, request: TransferEvaluateRequest, sender: Account
+    ) -> tuple[Account, SettledPayee]:
+        result = await original_recipient(service, request, sender)
         account_locked.set()
         await child_resume.wait()
-        return account
+        return result
 
     async def paused_source(
         service: TransferService, identity: uuid.UUID, *, locked: bool = False
