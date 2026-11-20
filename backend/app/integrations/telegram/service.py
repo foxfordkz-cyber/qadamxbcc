@@ -23,6 +23,9 @@ from app.integrations.telegram.schemas import (
 from app.models import Account, Transaction, TransactionStatus
 
 
+CONTACT_LIMIT = 3
+
+
 class TrustedContactService:
     def __init__(self, session: AsyncSession, cfg: IntegrationSettings) -> None:
         self.session = session
@@ -45,7 +48,7 @@ class TrustedContactService:
                 )
             ).all()
         )
-        if len(existing) >= 3:
+        if len(existing) >= CONTACT_LIMIT:
             raise IntegrationError(409, "contact_limit_reached")
         token = secrets.token_urlsafe(32)
         contact = TrustedContact(

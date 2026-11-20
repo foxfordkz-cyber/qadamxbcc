@@ -10,8 +10,10 @@ from app.integrations.models import (
     IntegrationAudit,
     TrustedContact,
 )
+from app.integrations.telegram.service import CONTACT_LIMIT
 from app.mobile_gateway.app import IdentityDep
 from app.mobile_gateway.protection_models import PostCall
+from app.mobile_gateway.wallet import balance
 from app.models import Account, Transaction, TransactionStatus
 
 RECIPIENTS = {"+77010000002", "+77010000003", "+77010000004"}
@@ -55,7 +57,16 @@ def install_accounts(app: FastAPI) -> None:
                 select(Account).where(Account.phone.in_(RECIPIENTS)).order_by(Account.full_name)
             )
         ).all()
+        customer = await session.get(Account, principal.subject)
+        if customer is None:
+            raise HTTPException(404, "account_not_found")
         return {
+            "display_name": customer.full_name,
+            "card_last4": customer.iban[-4:],
+            "balance": await balance(session, principal.subject),
+            "guardian_username": app.state.guardian_username or None,
+            "telegram_mode": app.state.telegram_mode,
+            "contact_limit": CONTACT_LIMIT,
             "telegram_bot": app.state.mobile_bot or None,
             "pending_call": pending_call,
             "held": str(held or 0),
@@ -79,14 +90,13 @@ def install_accounts(app: FastAPI) -> None:
                 select(Transaction)
                 .where(
                     Transaction.sender_id == owner,
-                    Transaction.status == TransactionStatus.COOLING_OFF,
                 )
-                .order_by(Transaction.created_at.desc())
+                .order_by(Transaction.updated_at.desc())
                 .limit(30)
             )
         ).all()
         for t in pauses:
-            add("transfer", t.id, "cooling_off", t.created_at)
+            add("transfer", t.id, t.status, t.resolved_at or t.created_at)
         contacts = (
             await session.scalars(
                 select(TrustedContact)

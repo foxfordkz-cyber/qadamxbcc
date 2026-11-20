@@ -537,3 +537,74 @@ async def test_family_one_recipient_actual_callback(
     check = (await client.get(path + "/check", headers=auth)).json()
     assert check["contact_state"] == "CONTACT_ACKNOWLEDGED"
     assert check["answer"] is None
+
+
+async def test_wallet_amounts_history_and_role_boundaries(
+    mobile_world: tuple[AsyncClient, Any],
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    client, _ = mobile_world
+    # Only approved receipts belong to the recipient's wallet.
+    ids = []
+    async with session_factory() as session:
+        for sender, receiver, value, state in [
+            (OWNER, OTHER, "145.54", TransactionStatus.APPROVED),
+            (OTHER, OWNER, "40.04", TransactionStatus.APPROVED),
+            (OWNER, OTHER, "700", TransactionStatus.BLOCKED),
+            (OTHER, OWNER, "900", TransactionStatus.COOLING_OFF),
+        ]:
+            ident = uuid.uuid4()
+            ids.append(str(ident))
+            session.add(
+                Transaction(
+                    id=ident,
+                    request_id=ident,
+                    sender_id=sender,
+                    recipient_id=receiver,
+                    amount=Decimal(value),
+                    currency="KZT",
+                    status=state,
+                    device_id="wallet-test",
+                )
+            )
+        await session.commit()
+    headers = await login(client)
+    base = "/mobile/v1/wallet/"
+    account = (await client.get("/mobile/v1/account", headers=headers)).json()
+    assert account["balance"] == "4999894.50"
+    assert len(account["card_last4"]) == 4
+    ledger = (await client.get(base + "operations", headers=headers)).json()["items"]
+    assert {r["transaction_id"] for r in ledger} == set(ids[:3])
+    assert (await client.get(base + "incoming/" + ids[1], headers=headers)).json()[
+        "amount"
+    ] == "40.04"
+    assert (await client.get(base + "incoming/" + ids[3], headers=headers)).status_code == 404
+    for days in (7, 30, 90):
+        stats = (await client.get(base + f"analytics?days={days}", headers=headers)).json()
+        assert (stats["incoming"], stats["outgoing"], stats["count"], stats["blocked"]) == (
+            "40.04",
+            "145.54",
+            3,
+            1,
+        )
+        nonempty = [r for r in stats["series"] if r["count"]]
+        assert len(nonempty) == 1
+        assert len(stats["series"]) == days
+        query = {
+            "day": nonempty[0]["day"],
+            "q": ids[2],
+            "status": "blocked",
+            "direction": "outgoing",
+        }
+        filtered = (await client.get(base + "operations", params=query, headers=headers)).json()
+        assert [r["transaction_id"] for r in filtered["items"]] == [ids[2]]
+    assert (await client.get(base + "analytics?days=2", headers=headers)).status_code == 422
+    assert (await client.get(base + "soc", headers=headers)).status_code == 403
+    assert (await client.get(base + "cases", headers=headers)).status_code == 403
+    admin = await login(client, ADMIN_CODE)
+    stats = (await client.get(base + "soc", headers=admin)).json()
+    assert stats["states"]["blocked"]["amount"] == "700.00"
+    assert stats["states"]["cooling_off"]["amount"] == "900.00"
+    assert stats["blocked_recipients"] == 1
+    assert (await client.get(base + "analytics", headers=admin)).status_code == 403
+    assert (await client.get(base + "cases?state=NEW", headers=admin)).json()["items"] == []

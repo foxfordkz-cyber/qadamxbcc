@@ -47,6 +47,8 @@ CLIENT_PATHS = [
     ("GET", r"integrations/guardian/reports"),
     ("POST", r"integrations/guardian/reports"),
     ("GET", rf"integrations/guardian/reports/{UUID_PATTERN}(?:/history)?"),
+    ("GET", rf"integrations/guardian/reports/{UUID_PATTERN}/information-requests"),
+    ("POST", rf"integrations/guardian/reports/{UUID_PATTERN}/information-requests/{UUID_PATTERN}"),
     ("POST", r"integrations/guardian/scam-check"),
     ("POST", r"external-checks"),
     ("GET", rf"external-checks/{UUID_PATTERN}"),
@@ -62,7 +64,7 @@ ADMIN_PATHS = [
     ("POST", rf"integrations/guardian/reports/{UUID_PATTERN}/acknowledge"),
     ("GET", r"integrations/guardian/soc/cases(?:/analytics)?"),
     ("POST", r"integrations/guardian/soc/cases"),
-    ("GET", rf"integrations/guardian/soc/cases/{UUID_PATTERN}(?:/events)?"),
+    ("GET", rf"integrations/guardian/soc/cases/{UUID_PATTERN}(?:/events|/history|/evidence)?"),
     ("POST", rf"integrations/guardian/soc/cases/{UUID_PATTERN}/actions"),
 ]
 
@@ -183,11 +185,15 @@ def create_mobile_app(
     from app.mobile_gateway.accounts import install_accounts
     from app.mobile_gateway.passwords import PasswordLogin, verify
 
+    app.state.guardian_username = cfg.telegram_username
+    app.state.telegram_mode = core.state.integration_settings.telegram_mode
     app.state.mobile_bot = (
         cfg.telegram_username if core.state.integration_settings.telegram_mode == "test" else ""
     )
     from app.mobile_gateway.protection import install_protection
+    from app.mobile_gateway.wallet import install_wallet
 
+    install_wallet(app)
     install_accounts(app)
     install_protection(app, core.state.integration_settings)
 
@@ -289,6 +295,8 @@ def create_mobile_app(
                 headers["Idempotency-Key"] = str(uuid.UUID(key))
             except ValueError as exc:
                 raise HTTPException(422, "mobile_input_invalid") from exc
+        if path.startswith("integrations/guardian/soc/cases/") and path.endswith("/events"):
+            path = path.removesuffix("/events") + "/history"
         result = await request.app.state.core_client.request(
             request.method,
             f"{core_cfg.api_prefix}/{path}",

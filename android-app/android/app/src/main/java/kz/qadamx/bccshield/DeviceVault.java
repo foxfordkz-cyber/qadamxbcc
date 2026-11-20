@@ -40,6 +40,22 @@ public class DeviceVault extends Plugin {
         if (!slot.matches("[a-zA-Z0-9._-]{1,180}")) throw new IllegalArgumentException();
         return slot;
     }
+    @PluginMethod public void openGuardian(PluginCall call) {
+        String username = call.getString("username", "");
+        if (!username.matches("(?i)[a-z][a-z0-9_]{3,28}bot")) { call.reject("invalid_bot"); return; }
+        try {
+            getActivity().startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                android.net.Uri.parse("tg://resolve?domain=" + username)));
+        } catch (android.content.ActivityNotFoundException absent) {
+            try {
+                getActivity().startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse("https://t.me/" + username)));
+            } catch (android.content.ActivityNotFoundException noBrowser) {
+                call.reject("no_handler"); return;
+            }
+        }
+        call.resolve();
+    }
     @PluginMethod public void shareInvite(PluginCall call) {
         String url = call.getString("url", "");
         if (!url.matches("https://t[.]me/[A-Za-z][A-Za-z0-9_]{3,31}\\?start=[A-Za-z0-9_-]{20,64}")) {
