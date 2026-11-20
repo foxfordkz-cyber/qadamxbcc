@@ -1,117 +1,121 @@
 {
-  "recorded_at": "2026-11-18T05:35:47.596Z",
-  "source": "http://127.0.0.1:3218",
+  "recorded_at": "2026-11-20T15:14:06.714Z",
   "synthetic": true,
-  "api": "live, no request interception",
-  "width": 1920,
-  "height": 1080,
-  "duration_seconds": 174.0142249,
-  "approximate_preroll_seconds": 1.3042785,
-  "audio": false,
-  "sha256": "abcc3d5d78804d2adc003948e27e621e5f630ce3aaa52d865bd82fbc48e384fa",
+  "browser": "158.0.8127.36",
+  "executable": "chrome.exe",
   "decisions": [
     {
       "preset": "normal",
-      "transaction_id": "80ce07f7-9ac6-48df-99b4-8cd6706c81af",
+      "transaction_id": "ebbcd588-ff34-4aa9-a104-d100819cac5e",
       "status": "approved",
-      "risk_score": 15,
       "ml_score": 0.0548,
-      "latency_ms": 3.332
+      "latency_ms": 4.241
     },
     {
       "preset": "scam",
-      "transaction_id": "fd7becc1-c5dd-416b-b6e4-e93c1c311b42",
+      "transaction_id": "56479344-8068-4372-b505-6659128d7b67",
       "status": "cooling_off",
-      "risk_score": 74,
-      "ml_score": 100,
-      "latency_ms": 9.068
+      "ml_score": 86.1247,
+      "latency_ms": 4.827
     },
     {
       "preset": "hub",
-      "transaction_id": "6664814e-03e5-47f0-8c9c-08686f3b032d",
+      "transaction_id": "5afc7727-4a4f-4893-b57f-e88ff60a5e43",
       "status": "blocked",
-      "risk_score": 100,
       "ml_score": 95.7175,
-      "latency_ms": 7.636
+      "latency_ms": 2.621
     }
   ],
-  "graph_nodes": {
-    "direct": 16,
-    "expanded": 60
-  },
-  "traffic": {
-    "blocked_simulated_amount_label": "250 000 ₸",
-    "stopped": true
-  },
+  "contact_signal": true,
+  "silent_transaction_id": "ec556a39-33a0-4a83-95f0-6cedb7432356",
+  "graph_nodes": 16,
+  "printed_transaction_id": "5afc7727-4a4f-4893-b57f-e88ff60a5e43",
+  "api": "Live FastAPI, synthetic SQLite, fakeredis, local Telegram delivery double",
   "assertions": [
-    "three preset decisions",
-    "saved answers remain held",
-    "explicit cancellation",
-    "direct and expanded graph scopes",
-    "live traffic started and stopped",
-    "nonzero simulated blocked amount",
-    "no browser/API errors"
+    "normal → approved",
+    "scam → cooling_off",
+    "server cooling deadline in future",
+    "worker delivered message through local adapter",
+    "contact signal prevents release after clean answers",
+    "long press produces server duress block",
+    "hub → blocked",
+    "dropper network graph loaded",
+    "model exposes feature contributions",
+    "generated police statement matches transfer",
+    "no browser or API errors: ",
+    "film duration fits the 2.5–3 minute target"
+  ],
+  "errors": [],
+  "width": 1920,
+  "height": 1080,
+  "duration_seconds": 164.9996932,
+  "audio": false,
+  "sha256": "80ddfa649cde9b32f40f15d70aded34ee91ae5cdc3d261c98ebd10d8f0d83545",
+  "screenshots": [
+    "01-normal.png",
+    "02-cooling.png",
+    "06-guardian.png",
+    "07-duress.png",
+    "03-soc.png",
+    "04-ml.png",
+    "05-traffic.png",
+    "08-report.png"
   ],
   "chapters": [
     {
-      "seconds": 0,
-      "ru": "BCC Shield: синтетическое демо на живом API",
-      "kk": "BCC Shield: нақты API-дегі синтетикалық демо"
+      "seconds": 1.97,
+      "ru": "Saq Bol × BCC. Перевод проходит через антифрод до отправки денег.",
+      "kk": "Saq Bol × BCC. Ақша жіберілгенге дейін аударым тексеріледі."
     },
     {
-      "seconds": 14.01,
-      "ru": "Обычный перевод: решение и квитанция",
-      "kk": "Қалыпты аударым: шешім және түбіртек"
+      "seconds": 6.55,
+      "ru": "Перевод знакомому получателю одобрен. Клиент видит сумму и квитанцию.",
+      "kk": "Таныс алушыға аударым мақұлданды. Клиент сома мен түбіртекті көреді."
     },
     {
-      "seconds": 34.01,
-      "ru": "Звонок и вывод депозита: предупреждение о «безопасном счёте»",
-      "kk": "Қоңырау және депозиттен алу: «қауіпсіз шот» туралы ескерту"
+      "seconds": 16.38,
+      "ru": "Звонок и перевод с депозита. Включилась 15-минутная пауза.",
+      "kk": "Қоңырау кезінде депозиттен аударым жасалды. 15 минуттық кідіріс басталды."
     },
     {
-      "seconds": 50.28,
-      "ru": "Пять явных ответов и проверка перед подтверждением",
-      "kk": "Бес нақты жауап және растау алдындағы тексеру"
+      "seconds": 29.25,
+      "ru": "После звонка клиент видит сумму и получателя в вопросе «Это вы?».",
+      "kk": "Қоңыраудан кейін клиентке аударымның сомасы мен алушысы көрсетіліп, «Бұл сіз бе?» деп сұралады."
     },
     {
-      "seconds": 88.1,
-      "ru": "Ответы сохранены; 15-минутное удержание остаётся",
-      "kk": "Жауаптар сақталды; 15 минуттық кідіріс жалғасады"
+      "seconds": 39.57,
+      "ru": "Доверенный контакт получил запрос через локальный имитатор Telegram.",
+      "kk": "Сенімді адамға жергілікті Telegram симуляторы арқылы сұрау жеткізілді."
     },
     {
-      "seconds": 96.1,
-      "ru": "Клиент отменяет перевод; средства не отправляются",
-      "kk": "Клиент аударымнан бас тартады; қаражат жіберілмейді"
+      "seconds": 52.1,
+      "ru": "Тестовый контакт сообщил о подозрении. Предупреждение появилось у клиента.",
+      "kk": "Сынақтағы сенімді адам күдігін хабарлады. Клиентке ескерту көрсетілді."
     },
     {
-      "seconds": 104.5,
-      "ru": "Дропперский хаб: блокировка по совокупности сигналов",
-      "kk": "Дроппер торабы: сигналдар жиынтығы бойынша бұғаттау"
+      "seconds": 74.39,
+      "ru": "Чистая анкета получена. Сигнал доверенного лица блокирует отправку.",
+      "kk": "Сауалнама жауаптары қауіпсіз болғанымен, сенімді адамның сигналы аударымды бұғаттады."
     },
     {
-      "seconds": 115.21,
-      "ru": "SOC: измеренный p95, заблокированные хабы и граф связей",
-      "kk": "SOC: өлшенген p95, бұғатталған тораптар және байланыс графы"
+      "seconds": 90.66,
+      "ru": "Тихий код. Клиент видит «В обработке», сервер блокирует перевод под давлением.",
+      "kk": "Жасырын белгі. Клиент «Өңделуде» күйін көреді, сервер қысыммен жасалған аударымды бұғаттады."
     },
     {
-      "seconds": 126.66,
-      "ru": "ML и причины: вклад признаков, правила и граф",
-      "kk": "ML және себептер: белгілердің үлесі, ережелер және граф"
+      "seconds": 105.7,
+      "ru": "Дроп-счёт заблокирован. Сотрудник видит входящие связи получателя на графе.",
+      "kk": "Дроп-шот бұғатталды. Қызметкер графтан алушының кіріс байланыстарын көреді."
     },
     {
-      "seconds": 142.09,
-      "ru": "ҚАЗ / РУС: объяснения переводятся без перезагрузки",
-      "kk": "ҚАЗ / РУС: түсіндірмелер бет жаңартылмай аударылады"
+      "seconds": 120.27,
+      "ru": "В одной операции видны оценка модели и причины решения.",
+      "kk": "Бір операцияда модель бағасы мен шешімнің себептері көрсетілген."
     },
     {
-      "seconds": 156.02,
-      "ru": "Живой поток: сумма заблокированных переводов симуляции",
-      "kk": "Тікелей ағын: симуляцияда бұғатталған аударымдар сомасы"
-    },
-    {
-      "seconds": 171.38,
-      "ru": "Поток остановлен; следующий этап — контролируемый пилот",
-      "kk": "Ағын тоқтатылды; келесі кезең — бақыланатын пилот"
+      "seconds": 142.34,
+      "ru": "Из карточки дела сотрудник открывает справку с хронологией и доказательствами.",
+      "kk": "Іс карточкасынан қызметкер оқиғалар реті мен дәлелдер көрсетілген анықтаманы ашады."
     }
   ]
 }

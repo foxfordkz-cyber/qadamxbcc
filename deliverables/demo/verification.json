@@ -1,12 +1,22 @@
 {
-  "verified_at": "2026-11-18T05:37:16.7055959Z",
-  "container_duration_seconds": 174.76,
+  "verified_at": "2026-11-20T15:17:56.310Z",
+  "container_duration_seconds": 162.56,
+  "scenario_duration_seconds": 164.9996932,
   "width": 1920,
   "height": 1080,
   "fps": 25,
-  "codec": "VP9",
-  "verified_with": "FFmpeg media metadata and decoded frame at135s",
+  "codec": "vp8",
   "audio": false,
-  "subtitle_offset_seconds": 0.745775100000003,
-  "sha256": "abcc3d5d78804d2adc003948e27e621e5f630ce3aaa52d865bd82fbc48e384fa"
+  "decoded_frame_seconds": [
+    20,
+    53,
+    92,
+    152
+  ],
+  "subtitle_tracks": [
+    "kk",
+    "ru"
+  ],
+  "caption_wall_clock_offset_seconds": 2.4396931999999936,
+  "sha256": "80ddfa649cde9b32f40f15d70aded34ee91ae5cdc3d261c98ebd10d8f0d83545"
 }
