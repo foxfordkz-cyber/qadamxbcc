@@ -42,7 +42,7 @@ jobs:
       - run: npm run sync
       - name: Build debug APK
         working-directory: android-app/android
-        run: ./gradlew --no-daemon --max-workers=2 assembleDebug lintDebug
+        run: ./gradlew --no-daemon --max-workers=2 assembleDebug
       - name: Name the APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk "Qadam-Shield-${GITHUB_SHA::7}.apk"
       - uses: actions/upload-artifact@v4
@@ -51,6 +51,9 @@ jobs:
           path: android-app/Qadam-Shield-*.apk
           if-no-files-found: error
           retention-days: 30
+      - name: Android lint
+        working-directory: android-app/android
+        run: ./gradlew --no-daemon --max-workers=2 :app:lintDebug
       - uses: actions/upload-artifact@v4
         if: always()
         with:

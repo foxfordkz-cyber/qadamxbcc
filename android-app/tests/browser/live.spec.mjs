@@ -94,7 +94,8 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
     await page
       .locator('[name="description"]')
       .fill(
-        "Тестовый звонящий представился банком и попросил срочно перевести деньги.",
+        "Тестовый звонящий представился банком и попросил срочно перевести деньги. " +
+          Array.from(crypto.getRandomValues(new Uint8Array(8)), n => String.fromCharCode(97 + n % 26)).join(""),
       );
     await page.locator('[name="consent"]').check();
     await page.locator("#report-form button").click();
