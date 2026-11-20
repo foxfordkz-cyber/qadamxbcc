@@ -13,6 +13,7 @@ import { MLInspector } from "./ml-inspector";
 import { countBlockedHubs } from "@/lib/feed-summary";
 import { useSocPoll } from "./use-soc-poll";
 import { CaseInspector } from "./case-inspector";
+import { ScenarioResults } from "./scenario-results";
 import { TraceAnchorPicker } from "./trace-anchor-picker";
 import { TransferStory } from "./transfer-story";
 import { MobileQr } from "./mobile-qr";
@@ -166,5 +167,6 @@ export function SocDashboard({ liveLedger, initialSelection, revision, traffic, 
         <div className="analysis-body">{selected && selected.transaction_id === inspectedId ? <><div className="analysis-score"><Gauge score={selected.risk_score} /><div><Badge status={selected.status} /><p className="result-headline">{lang === "kk" ? selected.headline_kk : selected.headline_ru}</p></div></div><MLInspector details={selected} reasons={selected.reasons} /><Explain kk={selected.reasons_kk} ru={selected.reasons_ru} /></> : <p className="empty">{t("analysisEmpty")}</p>}</div></section>
       <CaseInspector traceRevision={traceFocus && traceFocus.id === inspectedId ? traceFocus.revision : 0} detail={selected} loading={detail.loading} error={detail.error} receivedAt={detail.receivedAt} selectedId={inspectedId} onReview={onReview} readOnly={readOnly} busy={busy} onRetry={() => setRefresh(value => value + 1)} />
     </div>}
+    {!stage && <ScenarioResults />}
   </div>;
 }

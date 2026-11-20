@@ -19,6 +19,7 @@ from app.schemas.transfers import TransferEvaluateRequest
 from app.services import transfers
 from app.services.recipient_flags import set_flag
 from app.services.transfers import TransferService
+from app.services.velocity import SettledPayee
 from tests.test_active_hold_guard import guard_reason, original_hold
 from tests.test_active_hold_guard import server_clock as server_clock
 from tests.test_api import API, CLEAN, World
@@ -119,12 +120,12 @@ async def test_retry_resolve_and_queued_soc_writer_do_not_form_a_lock_cycle(
     original_sender_lock = serialize_sender
 
     async def paused_recipient(
-        service: TransferService, request: TransferEvaluateRequest
-    ) -> Account:
-        account = await original_recipient(service, request)
+        service: TransferService, request: TransferEvaluateRequest, sender: Account
+    ) -> tuple[Account, SettledPayee]:
+        result = await original_recipient(service, request, sender)
         account_locked.set()
         await child_resume.wait()
-        return account
+        return result
 
     async def paused_source(
         service: TransferService, identity: uuid.UUID, *, locked: bool = False

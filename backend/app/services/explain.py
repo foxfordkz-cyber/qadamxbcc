@@ -74,6 +74,12 @@ REASONS: Final[dict[str, tuple[str, str]]] = {
         "Жіберуші соңғы 10 минутта {n} аударым жасады.",
         "Отправитель совершил {n} переводов за последние 10 минут.",
     ),
+    "SPLIT_TRANSFERS_24H": (
+        "Соңғы 24 сағатта жаңа алушыға бірнеше рет ақша жібердіңіз. "
+        "Осы аударымды қоса есептегенде, жалпы сома {amount} ₸ болады.",
+        "За последние 24 часа вы несколько раз отправили деньги новому получателю. "
+        "С учётом этого перевода общая сумма составит {amount} ₸.",
+    ),
     "DROP_HUB_FAN_IN": (
         "Алушы соңғы 30 минутта {n} түрлі жіберушіден аударым алды — дроп-хаб белгісі.",
         "Получатель принял переводы от {n} разных отправителей за 30 минут — признак дроп-хаба.",
@@ -119,6 +125,10 @@ REASONS: Final[dict[str, tuple[str, str]]] = {
         "Получатель отмечен SOC как подозреваемый дроп.",
     ),
     # Cooling-off questionnaire outcomes
+    "TRUSTED_CONTACT_SUSPICION": (
+        "Сенімді адамыңыз алаяқтыққа күдіктенетінін хабарлады. Аударым бұғатталды.",
+        "Доверенное лицо сообщило о подозрении на мошенничество. Перевод заблокирован.",
+    ),
     "QUESTIONNAIRE_RED_FLAG": (
         "Сауалнама алаяқтық белгілерін көрсетті: {flags}.",
         "Анкета выявила признаки мошенничества: {flags}.",
@@ -164,8 +174,10 @@ def headline(
     return kk.format(minutes=minutes), ru.format(minutes=minutes)
 
 
-def fmt_tenge(amount: float) -> str:
-    """Kazakh/Russian style thousands grouping: 1 250 000."""
+def fmt_tenge(amount: float, *, with_tiyn: bool = False) -> str:
+    """Format KZT with thousands grouping and optional nonzero fractional tiyn."""
+    if with_tiyn:
+        return f"{amount:,.2f}".replace(",", " ").replace(".", ",").removesuffix(",00")
     return f"{amount:,.0f}".replace(",", " ")
 
 

@@ -192,6 +192,10 @@ class GraphStore:
     def has_transfer(self, source: str, target: str) -> bool:
         return bool(self._g.has_edge(source, target))
 
+    def transfer_count(self, source: str, target: str) -> int:
+        edge = self._g.get_edge_data(source, target)
+        return int(edge["count"]) if edge else 0
+
     def accounts_on_device(self, device_id: str) -> set[str]:
         accounts = self._device_accounts.get(device_id, set())
         if len(accounts) > MAX_GRAPH_NEIGHBOURS:

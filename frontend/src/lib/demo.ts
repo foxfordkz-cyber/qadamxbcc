@@ -94,6 +94,35 @@ function activeOriginalHold(senderId: string, recipientId: string, now: number):
     && row.cooling_until && Date.parse(row.cooling_until) > now)
     .sort((a, b) => Date.parse(a.cooling_until!) - Date.parse(b.cooling_until!))[0];
 }
+function splitPayeeReason(senderId: string, recipientId: string, amount: number, score: number, now: number): Reason | null {
+  if (senderId === ids.sender && recipientId === ids.friend) return null;
+  let settledCount = 0;
+  let settledCents = 0;
+  const currentCents = Math.round(amount * 100);
+  let largestCents = currentCents;
+  for (const row of rows()) {
+    if (row.sender.id !== senderId || row.recipient.id !== recipientId || row.status !== "approved") continue;
+    const paidAt = Date.parse(row.resolved_at ?? row.created_at);
+    if (paidAt <= now - 86_400_000 || paidAt > now) return null;
+    const cents = Math.round(Number(row.amount) * 100);
+    settledCount += 1;
+    settledCents += cents;
+    largestCents = Math.max(largestCents, cents);
+  }
+  // The static demo uses a 40,000 KZT sender baseline (its 3x amount spike is 120,000).
+  const threshold = 150_000;
+  const totalCents = settledCents + currentCents;
+  if (settledCount < 2 || totalCents < threshold * 100 || largestCents * 5 > totalCents * 4) return null;
+  const n = settledCount + 1;
+  const total = totalCents / 100;
+  const formatted = total.toLocaleString("ru-RU", { minimumFractionDigits: totalCents % 100 ? 2 : 0, maximumFractionDigits: 2 });
+  return {
+    ...reason("SPLIT_TRANSFERS_24H", "velocity", Math.max(0, 40 - score),
+      `Соңғы 24 сағатта жаңа алушыға бірнеше рет ақша жібердіңіз. Осы аударымды қоса есептегенде, жалпы сома ${formatted} ₸ болады.`,
+      `За последние 24 часа вы несколько раз отправили деньги новому получателю. С учётом этого перевода общая сумма составит ${formatted} ₸.`),
+    evidence: { settled_count: settledCount, n, settled_amount_kzt: settledCents / 100, total_kzt: total, threshold_kzt: threshold, window_hours: 24, amount: formatted },
+  };
+}
 export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 5000): Evaluation {
   if (input.request_id && abandoned().has(input.request_id)) throw new DemoError(409, "conflict");
   const replay = input.request_id ? requests().get(input.request_id) : undefined;
@@ -138,6 +167,11 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
     reasons.sort((a, b) => b.score_delta - a.score_delta || a.code.localeCompare(b.code));
     score = 75;
   }
+  const split = splitPayeeReason(sender.id, recipient.id, Number(input.amount), score, now);
+  if (split) {
+    reasons.push(split);
+    score += split.score_delta;
+  }
   // Only bridge an otherwise approved retry. Independent risk retains its own full hold.
   const originalHold = score < 40 ? activeOriginalHold(sender.id, recipient.id, now) : undefined;
   if (originalHold) {
@@ -178,7 +212,7 @@ export function abandonDemo(id: string, now = Date.now(), capacity = 5000): Aban
   abandoned().add(id);
   return { request_id: id, status: "abandoned", server_time: new Date(now).toISOString() };
 }
-export function resolveDemo(id: string, answers: Answers, now = Date.now()): Evaluation {
+export function resolveDemo(id: string, answers: Answers, now = Date.now(), contactSuspicion = false): Evaluation {
   const row = rows().find(r => r.transaction_id === id);
   if (!row) throw new DemoError(404, "notFound");
   const detail = detailDemo(id, now);
@@ -186,11 +220,11 @@ export function resolveDemo(id: string, answers: Answers, now = Date.now()): Eva
     if (row.status !== "cancelled" && JSON.stringify(detail.verification_answers) === JSON.stringify(answers)) return detail;
     throw new DemoError(409, "conflict");
   }
-  if (detail.reasons.some(r => r.code === "POST_CALL_ENDED") && !detail.reasons.some(r => r.code === "POST_CALL_RECOGNIZED")) throw new DemoError(409, "conflict");
+  if (!contactSuspicion && detail.reasons.some(r => r.code === "POST_CALL_ENDED") && !detail.reasons.some(r => r.code === "POST_CALL_RECOGNIZED")) throw new DemoError(409, "conflict");
   const unknownUnderPressure = !answers.knows_recipient_personally && (row.active_call || row.from_deposit);
   const flagged = answers.caller_claims_bank_or_police || answers.asked_to_move_to_safe_account || answers.asked_to_keep_secret_or_install_app || !answers.initiated_by_customer || unknownUnderPressure;
   const recipientFlagged = flags().get(row.recipient.id)?.flagged === true;
-  const blocked = flagged || recipientFlagged;
+  const blocked = contactSuspicion || flagged || recipientFlagged;
   const previousRisk = row.risk_score;
   row.verification_answers = answers;
   detail.verification_answers = answers;
@@ -208,6 +242,9 @@ export function resolveDemo(id: string, answers: Answers, now = Date.now()): Eva
     "Алушы SOC тарапынан күдікті дроп ретінде белгіленген.", "Получатель отмечен SOC как подозреваемый дроп.")] : [reason("QUESTIONNAIRE", "questionnaire", flagged ? 90 : 0,
     flagged ? "Жауаптарда алаяқтық белгілері бар. Аударым бұғатталды." : "Қауіпсіздік тексеруі аяқталды. Аударым мақұлданды.",
     flagged ? "В ответах обнаружены признаки обмана. Перевод заблокирован." : "Проверка безопасности пройдена. Перевод одобрен."), ...row.reasons];
+  if (contactSuspicion) row.reasons = [reason("TRUSTED_CONTACT_SUSPICION", "questionnaire", Math.max(0, row.risk_score - previousRisk),
+    "Сенімді адамыңыз алаяқтыққа күдіктенетінін хабарлады. Аударым бұғатталды.",
+    "Доверенное лицо сообщило о подозрении на мошенничество. Перевод заблокирован."), ...detail.reasons];
   const result = { ...detail, ...decision(row.status, row.risk_score, id, row.reasons), reasons: row.reasons, cooling_off_until: null, resolved_at: row.resolved_at };
   details().set(id, result);
   return structuredClone(result);

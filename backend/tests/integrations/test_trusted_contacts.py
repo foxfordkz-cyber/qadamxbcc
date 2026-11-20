@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import timedelta
 
@@ -8,10 +9,17 @@ from sqlalchemy import func, select
 from app.db.base import utcnow
 from app.integrations.models import ContactNotification, IntegrationAudit, TrustedContact
 from app.integrations.telegram.schemas import NotificationState
-from app.models import Transaction, TransactionStatus
+from app.models import EdgeType, GraphEdge, Transaction, TransactionStatus
 from tests.integrations.conftest import IntegrationWorld
 
 ROOT = "/api/v1/trusted-contacts"
+CLEAN_ANSWERS = {
+    "caller_claims_bank_or_police": False,
+    "asked_to_move_to_safe_account": False,
+    "asked_to_keep_secret_or_install_app": False,
+    "initiated_by_customer": True,
+    "knows_recipient_personally": True,
+}
 
 
 async def test_no_contact(iw: IntegrationWorld) -> None:
@@ -181,6 +189,79 @@ async def test_callbacks_are_advisory_monotonic_and_idempotent(iw: IntegrationWo
             )
             == 4
         )
+
+
+@pytest.mark.parametrize("signal", ["ack", "suspect"])
+async def test_saved_answers_are_rechecked_against_the_contact_signal(
+    iw: IntegrationWorld, signal: str
+) -> None:
+    queued = await iw.queue(await iw.verified())
+    await iw.deliver()
+    tx_id = uuid.UUID(str(queued["transaction_id"]))
+    path = f"/api/v1/transfers/{tx_id}/resolve-cooling"
+    answers = {"answers": CLEAN_ANSWERS}
+    early = await iw.client.post(path, json=answers)
+    assert early.json()["status"] == "cooling_off"
+
+    async with iw.factory() as session:
+        row = await session.get(ContactNotification, uuid.UUID(str(queued["id"])))
+        assert row
+        assert row.message_id
+        message_id = row.message_id
+    assert await callback(iw.client, iw, str(queued["id"]), signal, message_id=message_id) == 200
+    async with iw.factory() as session:
+        tx = await session.get(Transaction, tx_id)
+        assert tx
+        tx.cooling_until = utcnow() - timedelta(seconds=1)
+        await session.commit()
+
+    response = await iw.client.post(path, json=answers)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    reported = signal == "suspect"
+    assert result["status"] == ("blocked" if reported else "approved")
+    reasons = [r for r in result["reasons"] if r["code"] == "TRUSTED_CONTACT_SUSPICION"]
+    assert len(reasons) == int(reported)
+    if reasons:
+        assert "Сенімді" in reasons[0]["reason_kk"]
+        assert "Доверенное" in reasons[0]["reason_ru"]
+    replay = await iw.client.post(path, json=answers)
+    assert replay.json()["reasons"] == result["reasons"]
+    async with iw.factory() as session:
+        transfers = await session.scalar(
+            select(GraphEdge.tx_count).where(
+                GraphEdge.source_id == iw.owner.id,
+                GraphEdge.target_id == iw.recipient.id,
+                GraphEdge.edge_type == EdgeType.TRANSFER,
+            )
+        )
+        assert transfers == (None if reported else 1)
+
+
+async def test_concurrent_contact_signal_and_final_release_have_one_outcome(
+    iw: IntegrationWorld,
+) -> None:
+    queued = await iw.queue(await iw.verified())
+    await iw.deliver()
+    async with iw.factory() as session:
+        row = await session.get(ContactNotification, uuid.UUID(str(queued["id"])))
+        assert row
+        assert row.message_id
+        tx_id, message_id = row.transaction_id, row.message_id
+        tx = await session.get(Transaction, tx_id)
+        assert tx
+        # Keep the simulated Telegram message valid while opening the release window.
+        tx.cooling_until = utcnow() - timedelta(seconds=1)
+        await session.commit()
+
+    signal, response = await asyncio.gather(
+        callback(iw.client, iw, str(queued["id"]), "suspect", message_id=message_id),
+        iw.client.post(
+            f"/api/v1/transfers/{tx_id}/resolve-cooling", json={"answers": CLEAN_ANSWERS}
+        ),
+    )
+    assert response.status_code == 200, response.text
+    assert (signal, response.json()["status"]) in {(200, "blocked"), (409, "approved")}
 
 
 @pytest.mark.parametrize(("chat", "message_id"), [(999, "wrong"), (123, "wrong"), (123, None)])

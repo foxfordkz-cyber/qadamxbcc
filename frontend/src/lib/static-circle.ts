@@ -27,30 +27,36 @@ export const staticGuide = {
 };
 
 interface Contact { id: string; alias: string; invitedAt: number | null }
-interface Sent { id: string; contact_id: string; at: number }
+interface Sent { id: string; contact_id: string; at: number; expires_at?: string; suspect?: boolean }
 interface State { contacts: Contact[]; sent: Record<string, Sent[]> }
 
 const initial = (): State => ({ contacts: [{ id: "6b1f3c2a-5d4e-4f60-8a71-2c3d4e5f6a7b", alias: "Мама · Анам", invitedAt: null }], sent: {} });
+let unsaved: State | null = null;
+export function resetStaticCircle() { unsaved = null; }
 function read(): State {
+  if (unsaved) return unsaved;
   try {
     const value = JSON.parse(localStorage.getItem(STORE) ?? "null") as State | null;
     if (value && Array.isArray(value.contacts) && value.sent && typeof value.sent === "object") return value;
   } catch { /* A fresh circle below. */ }
   return initial();
 }
-function load(): State { return read(); }
-function save(state: State) { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { /* In-memory only. */ } }
+function save(state: State) {
+  try { localStorage.setItem(STORE, JSON.stringify(state)); unsaved = null; }
+  catch { unsaved = state; }
+}
 
 const verified = (contact: Contact, now: number) => contact.invitedAt === null || now - contact.invitedAt >= CONSENT_MS;
 const member = (contact: Contact, now: number) => ({ id: contact.id, alias: contact.alias, state: verified(contact, now) ? "CONTACT_VERIFIED" : "CONTACT_PENDING_CONSENT", notifications_enabled: true });
 const notification = (item: Sent, now: number) => ({
-  id: item.id, contact_id: item.contact_id, attempts: 1, expires_at: new Date(item.at + 15 * 60_000).toISOString(),
-  state: now - item.at < SENT_MS ? "NOTIFICATION_QUEUED" : now - item.at < ACK_MS ? "NOTIFICATION_SENT" : "CONTACT_ACKNOWLEDGED",
+  id: item.id, contact_id: item.contact_id, attempts: 1, expires_at: item.expires_at ?? new Date(item.at + 15 * 60_000).toISOString(),
+  state: item.suspect ? "SUSPICION_REPORTED" : now - item.at < SENT_MS ? "NOTIFICATION_QUEUED" : now - item.at < ACK_MS ? "NOTIFICATION_SENT" : "CONTACT_ACKNOWLEDGED",
 });
+export const staticContactSuspicion = (id: string) => read().sent[id]?.some(item => item.suspect === true) ?? false;
 const token = () => Array.from(crypto.getRandomValues(new Uint8Array(24)), byte => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"[byte % 64]).join("");
 
 export function staticCircle(method: string, route: string, body: unknown, now = Date.now()): unknown {
-  const state = load();
+  const state = read();
   if (route === "trusted-circle/members") {
     if (method === "GET") return { state: "CONTACT_VERIFIED", contacts: state.contacts.map(contact => member(contact, now)) };
     if (method === "POST") {
@@ -68,20 +74,33 @@ export function staticCircle(method: string, route: string, body: unknown, now =
       return { ...member(contact, now), state: "CONTACT_REVOKED" };
     }
   }
-  const match = /^trusted-circle\/([0-9a-f-]{36})$/i.exec(route);
+  const match = /^trusted-circle\/([0-9a-f-]{36})(\/simulate-suspicion)?$/i.exec(route);
   if (match) {
     const transfer = z.uuid().parse(match[1]);
     const contacts = state.contacts.filter(contact => verified(contact, now)).map(({ id, alias }) => ({ id, alias }));
     const view = (current: State) => ({ channel: "telegram", contact_state: contacts.length ? "CONTACT_VERIFIED" : "CONTACT_NOT_CONFIGURED", contacts, notifications: (current.sent[transfer] ?? []).map(item => notification(item, now)) });
+    if (match[2]) {
+      if (method !== "POST") throw new ApiError("notFound", 404);
+      const { notification_id } = z.object({ notification_id: z.uuid() }).strict().parse(body);
+      const item = state.sent[transfer]?.find(sent => sent.id === notification_id);
+      if (!item || !contacts.some(contact => contact.id === item.contact_id)) throw new ApiError("contact_consent_required", 409);
+      if (item.suspect) return view(state);
+      const detail = detailDemo(transfer, now);
+      if (detail.status !== "cooling_off" || !detail.cooling_off_until || now >= Date.parse(detail.cooling_off_until)
+          || now < item.at + SENT_MS || now >= item.at + 15 * 60_000) throw new ApiError("active_cooling_required", 409);
+      item.suspect = true;
+      save(state);
+      return view(state);
+    }
     if (method === "GET") { detailDemo(transfer); return view(state); }
     if (method === "POST") {
       const { contact_id } = z.object({ contact_id: z.uuid() }).strict().parse(body);
       if (!contacts.some(contact => contact.id === contact_id)) throw new ApiError("contact_consent_required", 409);
-      const detail = detailDemo(transfer);
-      if (detail.status !== "cooling_off") throw new ApiError("active_cooling_required", 409);
       const sent = state.sent[transfer] ?? [];
       if (sent.some(item => item.contact_id === contact_id)) return view(state);
-      const next = { ...state, sent: { ...state.sent, [transfer]: [...sent, { id: crypto.randomUUID(), contact_id, at: now }].slice(-10) } };
+      const detail = detailDemo(transfer, now);
+      if (detail.status !== "cooling_off" || !detail.cooling_off_until || Date.parse(detail.cooling_off_until) <= now) throw new ApiError("active_cooling_required", 409);
+      const next = { ...state, sent: { ...state.sent, [transfer]: [...sent, { id: crypto.randomUUID(), contact_id, at: now, expires_at: detail.cooling_off_until }].slice(-10) } };
       save(next);
       return view(next);
     }
