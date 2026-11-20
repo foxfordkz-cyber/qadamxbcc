@@ -4,7 +4,7 @@ test("wallet card and chart remain usable at phone widths", async ({
   page,
 }) => {
   await page.goto("/");
-  for (const width of [320, 393]) {
+  for (const width of [320, 360, 412]) {
     await page.setViewportSize({ width, height: 720 });
     await page.evaluate(async () => {
       const { walletUI } = await import("/wallet.mjs");

@@ -1,3 +1,4 @@
+import { ledgerTime } from "./wallet-date.mjs";
 import { walletUI, icon } from "./wallet.mjs";
 import { shortcuts, familyView, checkView, packetContent } from "./guardian.mjs";
 import { packetView } from "./packet.mjs";
@@ -6,7 +7,7 @@ import * as identity from "./identity.mjs";
 const product = document.documentElement.hasAttribute("data-product");
 let initializingAccount = product;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
-const defaultLedger=()=>({q:"",status:"",direction:"",day:"",days:""});
+const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""});
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
 let walletDays=7,socDays=7,selectedDay=null,caseFilter="",caseOffset=0,backStack=[];
 let lastRead=null;
@@ -107,18 +108,7 @@ const productStatuses={approved:["Выполнен","Орындалды"],coolin
 const status = (value) => product && productStatuses[value] ? T(...productStatuses[value]) : (statuses[value] ? T(...statuses[value]) : value);
 const amount = (value) =>
   `${new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "kk-KZ").format(Number(value) || 0)} ₸`;
-const when = (value) => {
-  const d = new Date(value);
-  return Number.isFinite(d.getTime())
-    ? d.toLocaleString(lang === "ru" ? "ru-RU" : "kk-KZ", {
-        timeZone: "Asia/Almaty",
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
-};
+const when = ledgerTime;
 const button = (action, label, style = "primary", attributes = "") =>
   `<button class="${style}" data-action="${action}" ${attributes} ${loading ? "disabled" : ""}>${E(label)}<span aria-hidden="true">→</span></button>`;
 const title = (heading, intro = "") =>
@@ -285,14 +275,13 @@ async function open(next, id, remember=true) {
   window.scrollTo(0, 0);
 }
 function loginView() {
-  if (product) return `<section class="entry"><div class="shield-art" aria-hidden="true"><img src="mark.svg" alt=""></div>
-    <small class="demo-label">${T("Демонстрационная версия","Демо нұсқа")}</small><h1>Qadam Shield</h1><p>${T("Проверяй переводы и получай помощь, когда тебя торопят.", "Аударымды тексер. Асықтырған кезде сенімді көмек ал.")}</p>
+  if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><h1>Qadam Shield</h1></div><p class="sign-intro">${T("Войдите в свой учебный аккаунт.","Оқу аккаунтыңызға кіріңіз.")}</p>
     <form id="personal-login" class="form-stack">
     ${input("login",T("Логин","Логин"),"", "text",'autocomplete="username" required maxlength="64" autocapitalize="none" spellcheck="false"')}
     <label>${T("Пароль","Құпиясөз")}<span class="password-field"><input type="password" name="password" required minlength="1" maxlength="128" autocomplete="current-password">
     <button type="button" data-action="show-password" aria-pressed="false">${T("Показать","Көрсету")}</button></span></label>
     <button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти","Кіру")}</button></form>
-    ${button("offline",T("Посмотреть демонстрацию","Демонстрацияны көру"),"text-button")}</section>`;
+    <div class="sign-footer"><small>${T("Демонстрационная версия","Демо нұсқа")}</small>${button("offline",T("Офлайн-обзор","Офлайн шолу"),"text-button")}</div></section>`;
   return `${title(T("Всё начинается с тебя", "Бәрі сенен басталады"), T("Выбери свою роль и войди на тестовый стенд.", "Рөліңді таңдап, тест стендіне кір."))}<div class="role-choice"><button data-role="client" aria-pressed="${chosenRole === "client"}">${T("Клиент", "Клиент")}<small>${T("Свои переводы и защита", "Өз аударымдарың мен қорғаныс")}</small></button><button data-role="admin" aria-pressed="${chosenRole === "admin"}">SOC / ${T("Администратор", "Әкімші")}<small>${T("Мониторинг и расследования", "Мониторинг пен тексеру")}</small></button></div><section class="paper login-card"><form id="login-form" class="form-stack" autocomplete="off">${input("origin", T("Адрес тестового сервера", "Тест серверінің мекенжайы"), loginOrigin, "text", 'required inputmode="url" placeholder="127.0.0.1:18001"')}${input("code", T("Код доступа твоей роли", "Өз рөліңнің кіру коды"), "", "password", 'required minlength="24" maxlength="128" autocomplete="off" spellcheck="false"')}<button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти", "Кіру")} →</button></form><p class="fine">${T("Код выдаёт владелец тестового стенда. Роль проверяет сервер. Это отдельный тестовый код, не пароль банка.", "Кодты тест стендінің иесі береді. Рөлді сервер тексереді. Бұл банк құпиясөзі емес, бөлек тест коды.")}</p></section>${button("offline", T("Попробовать без сервера", "Серверсіз байқап көру"), "secondary")}`;
 }
 function transactionRows(items, soc = false) {
@@ -355,7 +344,7 @@ const presetValues = {
 function transferView() {
   if (pending)
     return `${title(T("Сначала проверь предыдущий запрос", "Алдыңғы сұрауды тексер"))}${button("recover", T("Проверить статус", "Күйін тексеру"))}${button("abandon", T("Безопасно закрыть запрос", "Сұрауды қауіпсіз жабу"), "secondary")}`;
-  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + `<section class="paper"><form id="transfer-form" class="form-stack">
+  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + `<div class="from-account">${icon("outgoing")}<span><small>${T("Со счёта","Шоттан")}</small><strong>Qadam Shield · •••• ${E(account?.card_last4)}</strong></span></div><section class="paper transfer-sheet"><form id="transfer-form" class="form-stack">
     <label>${T("Учебный получатель","Оқу аударымын алушы")}<select required name="recipient_phone"><option value="">${T("Выбери получателя","Алушыны таңда")}</option>
     ${(account?.recipients ?? []).map(r => `<option value="${E(r.phone)}" ${draft?.recipient_phone === r.phone ? "selected" : ""}>${E(r.name)}</option>`).join("")}</select></label>
     ${input("amount",T("Сумма, ₸","Сома, ₸"), draft?.amount ?? "", "number", 'required min="0.01" max="999999999" step="0.01" inputmode="decimal"')}
@@ -505,7 +494,12 @@ function safetyView() {
       ),
     ],
   ];
-  return `${title(T("Защита рядом", "Қорғаныс жаныңда"))}<div class="action-list">${cards.map(([key, label, sub]) => `<button data-action="${key}">${label}<small>${sub}</small></button>`).join("")}</div>`;
+  if(product){
+    const symbols={scan:"safety",call:"call",report:"cases",reports:"history",gateway:"system"};
+    const actions=cards.filter(([k])=>k!=="contacts").map(([k,n,sub])=>`<button data-action="${k}"><i>${icon(symbols[k])}</i><span><strong>${E(n)}</strong><small>${E(sub)}</small></span>${icon("arrow")}</button>`).join("");
+    return title(T("Защита","Қорғаныс"))+'<section class="safety-list">'+actions+'</section>';
+  }
+  return `${title(T("Защита", "Қорғаныс"))}<div class="action-list">${cards.map(([key, label, sub]) => `<button data-action="${key}">${label}<small>${sub}</small></button>`).join("")}</div>`;
 }
 function scanView() {
   return `${title("Scam Check", T("Вводи только синтетический текст, без кодов и реквизитов.", "Кодтар мен деректемелерсіз тек жасанды мәтін енгіз."))}<section class="paper"><form id="scan-form" class="form-stack"><label>${T("Текст сообщения", "Хабарлама мәтіні")}<textarea name="text" minlength="1" maxlength="2000" required autocomplete="off"></textarea></label><button class="primary" type="submit">${T("Проверить", "Тексеру")} →</button></form></section>${scanResult ? `<section class="paper"><h2>${T("Результат", "Нәтиже")}</h2><p>${E(scanResult.guidance)}</p>${(scanResult.signals ?? []).map((s) => `<div class="reason"><p>${E(s.explanation)}</p></div>`).join("")}<p class="fine">${E(scanResult.limitation)}</p></section>` : ""}`;
@@ -572,7 +566,7 @@ function casesView() {
 }
 function caseView() {
   return data
-    ? `${title(T("Работа с делом", "Іспен жұмыс"))}<section class="paper"><h2>${E(product?label(data.category):data.category)}</h2><p>${product?caseState(data.state):E(data.state)} · v${Number(data.version)}</p><p class="fine">${E(data.assignee ?? T("Не назначено", "Тағайындалмаған"))}</p><p class="break-id">${E(data.id)}</p></section>${data.state === "NEW" ? button("case-review", T("Взять в рассмотрение", "Қарауға алу")) : ""}${data.state === "IN_REVIEW" ? button("case-resolve", T("Завершить демо-разбор", "Демо-тексеруді аяқтау")) : ""}<p class="fine">${T("Действия фиксируются в журнале. Это не решение банка.", "Әрекеттер журналда сақталады. Бұл банк шешімі емес.")}</p>`
+    ? `${title(T("Работа с делом", "Іспен жұмыс"))}<section class="paper case-summary"><small>SOC · ${when(data.created_at)}</small><h2>${E(product?label(data.category):data.category)}</h2><p>${product?caseState(data.state):E(data.state)} · v${Number(data.version)}</p><p class="fine">${E(data.assignee ?? T("Не назначено", "Тағайындалмаған"))}</p><p class="break-id">${E(data.id)}</p></section>${data.state === "NEW" ? button("case-review", T("Взять в рассмотрение", "Қарауға алу")) : ""}${data.state === "IN_REVIEW" ? button("case-resolve", T("Завершить демо-разбор", "Демо-тексеруді аяқтау")) : ""}<p class="fine">${T("Действия фиксируются в журнале. Это не решение банка.", "Әрекеттер журналда сақталады. Бұл банк шешімі емес.")}</p>`
     : "";
 }
 function enrichmentView() {
@@ -582,7 +576,7 @@ function gatewayView() {
   return `${title("Mock Gateway", T("Учебные данные. Это не обращение в НБК.", "Оқу деректері. Бұл ҰБ-ке сұрау емес."))}<section class="paper"><form id="gateway-form" class="form-stack"><label>${T("Синтетический идентификатор", "Жасанды идентификатор")}<select name="identifier"><option>SYN-CLEAR-001</option><option>SYN-REVIEW-001</option><option>SYN-NETWORK-001</option></select></label><button type="submit" class="primary">${T("Проверить", "Тексеру")} →</button></form>${data ? `<p>${E(data[lang === "ru" ? "description_ru" : "description_kk"])}</p><p class="fine">${E(data.result?.status)} · MOCK</p>` : ""}</section>`;
 }
 function settingsView() {
-  if (product) return title(T("Профиль","Профиль")) + `<section class="paper"><h2>${gateway.role === "admin" ? T("Сотрудник безопасности","Қауіпсіздік қызметкері") : E(account?.display_name||"Qadam")}</h2><p>${accountLabel()}</p><small>Qadam Shield 2.2 · ${T("Учебный стенд","Оқу стенді")}</small></section>` +
+  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${gateway.role === "admin" ? T("Сотрудник безопасности","Қауіпсіздік қызметкері") : E(account?.display_name||"Qadam")}</h2><p>${accountLabel()}</p><small>Qadam Shield 2.3 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
     button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
     (gateway.role === "client" ? button("contacts",T("Мои согласия","Келісімдерім"),"secondary")+button("open-guardian","Telegram Guardian","secondary") : "") + button("logout",T("Выйти","Шығу"));
   return `${title(T("Профиль доступа", "Кіру профилі"))}<section class="paper"><h2>${gateway.role === "admin" ? "SOC / Admin" : T("Клиент", "Клиент")}</h2><p>${T("Роль назначена сервером. Сессия действует 30 минут, затем нужен повторный вход.", "Рөлді сервер тағайындады. Сессия 30 минутқа жарамды, содан кейін қайта кіру қажет.")}</p><p class="fine">${E(gateway.origin)}</p></section>${button("logout", T("Выйти из аккаунта", "Аккаунттан шығу"), "secondary")}`;
@@ -651,6 +645,7 @@ const screens = {
 };
 function render() {
   document.documentElement.lang = lang;
+  root.dataset.screen=page;root.dataset.actor=gateway?.role||"guest";
   const nav =
     gateway?.role === "admin"
       ? [
@@ -668,7 +663,10 @@ function render() {
   if(product && gateway?.role==="admin")nav.splice(0,nav.length,["home","",T("Обзор","Шолу")],["cases","",T("Дела","Істер")],["socAnalytics","",T("Аналитика","Талдау")],["system","",T("Система","Жүйе")],["settings","",T("Профиль","Профиль")]);
   if (product && gateway?.role === "client") nav.splice(0, nav.length,
     ["home","",T("Главная","Басты")],["history","",T("Операции","Амалдар")],["safety","",T("Защита","Қорғаныс")],["analytics","",T("Аналитика","Талдау")],["settings","",T("Профиль","Профиль")]);
-  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>qadam</span></div><span class="role-tag">${gateway?.role === "admin" ? "SOC" : gateway?.role === "client" ? "CLIENT" : "ANDROID"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("ТЕСТОВЫЙ BACKEND · СИНТЕТИЧЕСКИЕ ДАННЫЕ", "ТЕСТ BACKEND · ЖАСАНДЫ ДЕРЕКТЕР") : "QADAM SHIELD · CLIENT / SOC"}</div><main>${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${page === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
+  const navPage=nav.some(([key])=>key===page)?page:
+    (gateway?.role==="admin"?({case:"cases",reports:"cases",reportDetail:"cases",gateway:"system"}[page]||"home"):
+    ({detail:"history",incoming:"history",contacts:"safety",scan:"safety",call:"safety",family:"safety",guard:"safety",report:"safety",reports:"safety",reportDetail:"safety",invite:"safety",questionnaire:"history",confirmCancel:"history"}[page]||"home"));
+  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>qadam</span></div><span class="role-tag">${gateway?.role === "admin" ? "SOC" : gateway?.role === "client" ? "CLIENT" : "ANDROID"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("ТЕСТОВЫЙ BACKEND · СИНТЕТИЧЕСКИЕ ДАННЫЕ", "ТЕСТ BACKEND · ЖАСАНДЫ ДЕРЕКТЕР") : "QADAM SHIELD · CLIENT / SOC"}</div><main>${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
   if (product) {
     if(error && lastRead?.page===page && gateway?.token && !loading)root.querySelector(".error-banner")?.insertAdjacentHTML("beforeend",button("reload-screen",T("Обновить экран","Экранды жаңарту"),"secondary"));
     root.querySelector(".demo-strip")?.remove();
@@ -676,19 +674,14 @@ function render() {
     const back = root.querySelector(".back");
     if (["login","home"].includes(page)) back.remove();
     if (gateway?.token && page!=="home") root.querySelector(".topbar").insertAdjacentHTML("beforeend",
-      `<button data-action="settings" class="profile-button" aria-label="${T("Профиль","Профиль")}">Q</button>`);
-    if (page === "safety" || page === "settings" && gateway?.role === "client")
+      `<button data-action="settings" class="profile-button" aria-label="${T("Профиль","Профиль")}">${icon("settings")}</button>`);
+    if (page === "settings" && gateway?.role === "client")
       root.querySelector("main").insertAdjacentHTML("beforeend",button("inbox",T("Сообщения безопасности","Қауіпсіздік хабарламалары"),"secondary"));
     if (page === "safety") {
       const section=root.querySelector("main");
-      section.insertAdjacentHTML("afterbegin",wallet.telegram(account,circle));
-      section.insertAdjacentHTML("beforeend",shortcuts(T));
+      section.querySelector(".heading")?.insertAdjacentHTML("afterend",wallet.telegram(account,circle)+shortcuts(T));
     }
-    if(page==="analytics" && !loading){
-      const chart=root.querySelector(".chart-scroll");
-      const day=chart?.querySelector('[aria-pressed="true"]');
-      if(day)chart.scrollLeft=day.offsetLeft-chart.offsetLeft-chart.clientWidth/2+day.offsetWidth/2;
-    }
+
     if (page === "scan") {
       const form=root.querySelector("#scan-form");
       form.insertAdjacentHTML("afterbegin",'<label>'+T("Прочитать скриншот","Скриншотты оқу")+'<input class="ocr-input" type="file" accept="image/png,image/jpeg"></label><p class="hint" role="status" id="ocr-status">'+T("Изображение остаётся на телефоне. Перед проверкой можно исправить текст.","Сурет телефонда қалады. Тексерер алдында мәтінді түзете аласыз.")+'</p>');
@@ -757,7 +750,7 @@ function render() {
       };
     }
     if (page === "case" && data) root.querySelector("main").insertAdjacentHTML("beforeend",
-      `<section class="paper"><h2>${T("История дела","Іс тарихы")}</h2>${caseEvents.map(e => `<p>${E(e[lang === "ru" ? "description_ru" : "description_kk"])} · ${when(e.timestamp)}</p>`).join("")}</section>
+      `<section class="paper case-rail"><h2>${T("История дела","Іс тарихы")}</h2>${caseEvents.map(e => `<p>${E(e[lang === "ru" ? "description_ru" : "description_kk"])} · ${when(e.timestamp)}</p>`).join("")}</section>
       <form id="case-note" class="form-stack paper"><label>${T("Заметка аналитика","Талдаушы жазбасы")}<textarea name="note" required minlength="10" maxlength="500"></textarea></label><button>${T("Сохранить","Сақтау")}</button></form>` +
       (caseEvidence?.transaction_id?'<button class="secondary" data-detail="'+E(caseEvidence.transaction_id)+'">'+T("Связанная операция","Байланысты операция")+'</button>':"") +
       (data.source==="owner_demo" && ["IN_REVIEW","ESCALATED"].includes(data.state)?button("case-information",T("Спросить, что требовал звонящий","Қоңырау шалушының талабын сұрау"),"secondary"):"") +
@@ -784,7 +777,7 @@ root.addEventListener("click", async (event) => {
   if (!b || loading) return;
   if(b.dataset.days){const value=Number(b.dataset.days);if(gateway.role==="admin")socDays=value;else walletDays=value;selectedDay=null;await open(page);return;}
   if(b.dataset.chartDay){selectedDay=data.series.findIndex(v=>v.day===b.dataset.chartDay);render();root.querySelector('[data-chart-day="'+b.dataset.chartDay+'"]')?.focus({preventScroll:true});return;}
-  if(b.hasAttribute("data-drill-status")||b.dataset.drillDay){ledgerFilter={...defaultLedger(),days:String(walletDays),status:b.dataset.drillStatus||"",day:b.dataset.drillDay||""};offset=0;await open("history");return;}
+  if(b.hasAttribute("data-drill-status")||b.dataset.drillDay){ledgerFilter={...defaultLedger(),days:String(walletDays),status:b.dataset.drillStatus||"",day:b.dataset.drillDay||"",through:b.dataset.through||""};offset=0;await open("history");return;}
   if(b.dataset.payee){presetMode=false;draft={recipient_phone:b.dataset.payee,amount:"",context:{}};await open("transfer");return;}
   if(b.dataset.incoming){await open("incoming",b.dataset.incoming);return;}
   if (b.dataset.callId) { await open("guard",b.dataset.callId); return; }

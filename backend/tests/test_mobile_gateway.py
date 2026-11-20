@@ -601,6 +601,12 @@ async def test_wallet_amounts_history_and_role_boundaries(
         }
         filtered = (await client.get(base + "operations", params=query, headers=headers)).json()
         assert [r["transaction_id"] for r in filtered["items"]] == [ids[2]]
+    day = nonempty[0]["day"]
+    params = {"day": day, "through": day, "days": 7}
+    grouped = (await client.get(base + "operations", params=params, headers=headers)).json()
+    assert {r["transaction_id"] for r in grouped["items"]} == set(ids[:3])
+    invalid = await client.get(base + "operations", params={"through": day}, headers=headers)
+    assert invalid.status_code == 422
     assert (await client.get(base + "analytics?days=2", headers=headers)).status_code == 422
     assert (await client.get(base + "soc", headers=headers)).status_code == 403
     assert (await client.get(base + "cases", headers=headers)).status_code == 403
