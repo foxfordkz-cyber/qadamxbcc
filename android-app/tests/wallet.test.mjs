@@ -1,3 +1,4 @@
+import { ledgerInstant, ledgerTime } from "../www/wallet-date.mjs";
 import { bucketDays, scaleMax } from "../www/spending-chart.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -102,4 +103,10 @@ test("period bins preserve chronological ranges and exact posted amounts", () =>
   assert.throws(() =>
     bucketDays([{ day: "2026-11-01", incoming: "nan", outgoing: "0" }], 7),
   );
+});
+
+test("ledger dates agree across the Kazakhstan midnight boundary", () => {
+  assert.equal(ledgerTime("2026-11-20T19:08:00Z"), "21.11 · 00:08");
+  assert.equal(ledgerInstant("2026-11-20T18:59:00Z").day, "2026-11-20");
+  assert.equal(ledgerTime("invalid"), "—");
 });

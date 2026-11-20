@@ -1,3 +1,4 @@
+import { ledgerTime } from "./wallet-date.mjs";
 import { walletUI, icon } from "./wallet.mjs";
 import { shortcuts, familyView, checkView, packetContent } from "./guardian.mjs";
 import { packetView } from "./packet.mjs";
@@ -107,18 +108,7 @@ const productStatuses={approved:["Выполнен","Орындалды"],coolin
 const status = (value) => product && productStatuses[value] ? T(...productStatuses[value]) : (statuses[value] ? T(...statuses[value]) : value);
 const amount = (value) =>
   `${new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "kk-KZ").format(Number(value) || 0)} ₸`;
-const when = (value) => {
-  const d = new Date(value);
-  return Number.isFinite(d.getTime())
-    ? d.toLocaleString(lang === "ru" ? "ru-RU" : "kk-KZ", {
-        timeZone: "Asia/Almaty",
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
-};
+const when = ledgerTime;
 const button = (action, label, style = "primary", attributes = "") =>
   `<button class="${style}" data-action="${action}" ${attributes} ${loading ? "disabled" : ""}>${E(label)}<span aria-hidden="true">→</span></button>`;
 const title = (heading, intro = "") =>

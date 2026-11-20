@@ -1,3 +1,4 @@
+import { ledgerInstant, shortDate } from "./wallet-date.mjs";
 import { cashPlot } from "./spending-chart.mjs";
 // Shared product views. Every amount passed here comes from the mobile gateway.
 const paths = {
@@ -49,19 +50,6 @@ export function walletUI({ T, E, amount, when, button, status }) {
     "·";
   const badge = (s) =>
     '<span class="wb ' + E(s) + '">' + mark(s) + " " + E(status(s)) + "</span>";
-  const dayOf = (v) =>
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Almaty",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(v));
-  const dateLabel = (v, short = false) =>
-    new Intl.DateTimeFormat(T("ru-KZ", "kk-KZ"), {
-      timeZone: "Asia/Almaty",
-      day: "numeric",
-      month: short ? "short" : "long",
-    }).format(new Date(v));
   function rows(items, group = false) {
     if (!items?.length)
       return (
@@ -74,11 +62,11 @@ export function walletUI({ T, E, amount, when, button, status }) {
       '<div class="ledger">' +
       items
         .map((r) => {
-          const day = dayOf(r.created_at),
+          const day = ledgerInstant(r.created_at)?.day || "",
             incoming = r.direction === "incoming";
           const h =
             group && day !== last
-              ? '<h3 class="day-title">' + dateLabel(r.created_at) + "</h3>"
+              ? '<h3 class="day-title">' + shortDate(day) + "</h3>"
               : "";
           last = day;
           return (

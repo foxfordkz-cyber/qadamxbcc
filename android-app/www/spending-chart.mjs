@@ -1,3 +1,4 @@
+import { shortDate } from "./wallet-date.mjs";
 // The mobile gateway supplies decimal KZT amounts and one row per Kazakhstan date.
 function cents(value) {
   const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(String(value));
@@ -40,12 +41,6 @@ export function scaleMax(groups) {
   return [1, 2, 5, 10].find((n) => n * power >= peak) * power;
 }
 export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
-  const dayLabel = (v) =>
-    new Intl.DateTimeFormat(T("ru-KZ", "kk-KZ"), {
-      timeZone: "Asia/Almaty",
-      day: "numeric",
-      month: "short",
-    }).format(new Date(v + "T12:00:00Z"));
   let groups;
   try {
     groups = bucketDays(d.series, d.days);
@@ -78,10 +73,11 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
   const selected =
     groups.find((g) => selectedDate >= g.from && selectedDate <= g.to) ||
     groups.at(-1);
-  const fmt = new Intl.NumberFormat(T("ru-KZ", "kk-KZ"), {
-    notation: "compact",
-    maximumFractionDigits: 2,
-  });
+  const tickLabel = (value) => {
+    const unit = value >= 1e9 ? [1e9, T("млрд", "млрд")] :
+      value >= 1e6 ? [1e6, "млн"] : value >= 1e3 ? [1e3, T("тыс.", "мың")] : [1, ""];
+    return String(Number((value / unit[0]).toPrecision(3))).replace(".", ",") + (unit[1] ? " " + unit[1] : "");
+  };
   const cols = groups
     .map((g, i) => {
       const inc = (Number(g.incoming) * 100) / maximum,
@@ -91,7 +87,7 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
         i === 0 ||
         i === groups.length - 1 ||
         i === Math.floor(groups.length / 2)
-          ? dayLabel(g.from)
+          ? shortDate(g.from)
           : "";
       return (
         '<button class="plot-col" data-chart-day="' +
@@ -100,9 +96,9 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
         (g === selected) +
         '" aria-label="' +
         E(
-          dayLabel(g.from) +
+          shortDate(g.from) +
             " / " +
-            dayLabel(g.to) +
+            shortDate(g.to) +
             " · " +
             amount(g.incoming) +
             " / " +
@@ -123,17 +119,17 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
     })
     .join("");
   const range =
-    dayLabel(selected.from) +
-    (selected.from === selected.to ? "" : " – " + dayLabel(selected.to));
+    shortDate(selected.from) +
+    (selected.from === selected.to ? "" : " – " + shortDate(selected.to));
   return (
     '<div class="plot-legend"><span>' +
     T("Поступления", "Кіріс") +
     "</span><span>" +
     T("Расходы", "Шығыс") +
     '</span></div><div class="plot-unit">₸</div><div class="chart-scroll plot-layout"><div class="plot-scale"><span>' +
-    E(fmt.format(maximum)) +
+    E(tickLabel(maximum)) +
     "</span><span>" +
-    E(fmt.format(maximum / 2)) +
+    E(tickLabel(maximum / 2)) +
     '</span><span>0</span></div><div class="plot-columns">' +
     cols +
     "</div></div>" +
