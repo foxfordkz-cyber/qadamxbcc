@@ -16,6 +16,7 @@ export const write = async (slot, value) => {
 };
 export const scopeKey = async (origin, owner) => Array.from(new Uint8Array(
   await crypto.subtle.digest("SHA-256", utf8.encode(origin+"|"+owner))), b=>b.toString(16).padStart(2,"0")).join("");
+export const printPacket = lines => native ? registerPlugin("PacketPrinter").print({lines}) : window.print();
 export const shareInvite = url => native ? vault.shareInvite({url}) : navigator.share({url});
 let origin;
 async function getGateway() {

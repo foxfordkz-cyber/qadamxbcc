@@ -186,7 +186,10 @@ def create_mobile_app(
     app.state.mobile_bot = (
         cfg.telegram_username if core.state.integration_settings.telegram_mode == "test" else ""
     )
+    from app.mobile_gateway.protection import install_protection
+
     install_accounts(app)
+    install_protection(app, core.state.integration_settings)
 
     @app.post("/mobile/v1/auth/login")
     async def password_login(body: PasswordLogin, request: Request) -> dict[str, Any]:
