@@ -577,6 +577,8 @@ async def test_family_one_recipient_actual_callback(
             await service.callback(
                 notice.id, int(contact.telegram_chat_id), notice.message_id, action
             )
+    notification = (await client.get(path + "/check", headers=auth)).json()
+    assert notification["contact_state"] == "SUSPICION_REPORTED"
     core_path = "/mobile/v1/api/transfers/" + txid
     assert (await client.get(core_path, headers=auth)).json()["status"] == "cooling_off"
     assert (await client.get("/mobile/v1/account", headers=auth)).json()[
