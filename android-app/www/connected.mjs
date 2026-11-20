@@ -5,15 +5,22 @@ let savingDraft = Promise.resolve(), reportTx = null;
 let presetMode = false, mutationOutcome = false, expiryChecked = null;
 const accountLabel = () => T("Учебный счёт · виртуальные средства", "Оқу шоты · виртуалды қаражат");
 const pendingKey = () => "qadam.mobile.pending." + ownerScope;
+async function savePending(id) {
+  if (product) await identity.write("pending." + ownerScope, {id});
+  const saved = putLocal(pendingKey(), id);
+  if (!saved && !product) throw new Error("storage unavailable");
+  pending = id;
+}
 async function loadOwner(g, subject) {
   gateway = g;
   ownerScope = await identity.scopeKey(g.origin, subject);
-  pending = getLocal(pendingKey(), "");
+  const durable = product ? await identity.read("pending." + ownerScope) : null;
+  pending = durable?.id ?? getLocal(pendingKey(), "");
   const old = getLocal("qadam.mobile.pending", "");
   if (!pending && old && getLocal("qadam.gateway", "") === g.origin && g.role === "client") {
     try {
       await g.api("transfers/" + old);
-      if (putLocal(pendingKey(), old)) { pending = old; putLocal("qadam.mobile.pending", ""); }
+      await savePending(old); putLocal("qadam.mobile.pending", "");
     } catch { /* Preserve an unproven legacy request in quarantine. */ }
   }
   if (product) {
@@ -256,7 +263,7 @@ function historyView() {
     if (page === "history") return title(T("История переводов","Аударым тарихы")) + transactionRows(data?.items) +
       (offset ? button("prev",T("Назад","Артқа"),"secondary") : "") + (data?.has_more ? button("next",T("Ещё","Тағы"),"secondary") : "");
     return title(T("Добро пожаловать","Қош келдіңіз")) + `<section class="account-card"><small>${accountLabel()}</small><strong>Qadam · KZT</strong>${account ? `<p>${T("Сумма на проверке","Тексерілетін сома")} · ${amount(account.held)}</p>` : ""}</section>` +
-      (pending ? button("recover",T("Уточнить результат перевода","Аударым нәтижесін нақтылау")) :
+      (pending ? button("recover",T("Уточнить результат перевода","Аударым нәтижесін нақтылау")) + button("abandon",T("Закрыть запрос после проверки","Тексерген соң сұрауды жабу"),"secondary") :
        account?.active_pause ? `<button class="live-row" data-detail="${E(account.active_pause)}">${T("Перевод на паузе · открыть","Аударым кідіртілді · ашу")} →</button>` : "") +
       button("transfer",T("Перевести","Аудару")) + `<h2>${T("Недавние операции","Соңғы операциялар")}</h2>` + transactionRows(data?.items?.slice(0,3));
   }
@@ -865,17 +872,15 @@ root.addEventListener("click", async (event) => {
     if (pending || !draft) return;
     await perform(async () => {
       const { request_id: id } = await gateway.request("/requests", "POST", {});
-      if (!putLocal(pendingKey(), id))
-        throw new Error("storage unavailable");
-      pending = id; mutationOutcome = true;
+      await savePending(id);
+      mutationOutcome = true;
       const value = await api("transfers/evaluate", "POST", {
         ...draft,
         request_id: id,
         currency: "KZT",
       });
       accept(value);
-      pending = "";
-      putLocal(pendingKey(), "");
+      await savePending("");
       page = "detail";
       draft = null;
     });
@@ -884,8 +889,7 @@ root.addEventListener("click", async (event) => {
   if (act === "recover") {
     await perform(async () => {
       accept(await api(`transfers/${pending}`));
-      pending = "";
-      putLocal(pendingKey(), "");
+      await savePending("");
       page = "detail";
     });
     return;
@@ -902,8 +906,7 @@ root.addEventListener("click", async (event) => {
         accept(result.evaluation);
         page = "detail";
       } else page = "home";
-      pending = "";
-      putLocal(pendingKey(), "");
+      await savePending("");
     });
     if (!error && page === "home") await open("home");
     return;
