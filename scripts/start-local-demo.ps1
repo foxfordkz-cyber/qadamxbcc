@@ -2,7 +2,8 @@ param(
     [ValidateRange(1, 65535)][int]$FrontendPort = 3000,
     [ValidateRange(1, 65535)][int]$BackendPort = 8000,
     [switch]$NoBuild,
-    [switch]$FreshRehearsal
+    [switch]$FreshRehearsal,
+    [switch]$SocDemo
 )
 
 $ErrorActionPreference = 'Stop'
@@ -68,6 +69,7 @@ function Wait-Healthy([System.Diagnostics.Process]$Child, [string]$Url, [int]$Ti
 }
 
 try {
+    if ($SocDemo) { $FreshRehearsal = $true }
     if ($FreshRehearsal) {
         # Separate ports give each rehearsal its own browser origin/recovery storage.
         if (-not $PSBoundParameters.ContainsKey('FrontendPort')) { $FrontendPort = Get-FreeLoopbackPort }
@@ -106,8 +108,25 @@ try {
     foreach ($entry in $demoEnvironment.GetEnumerator()) {
         Set-ChildEnvironment $entry.Key $entry.Value
     }
-    foreach ($name in @('BCC_API_KEY', 'BCC_SOC_API_KEY', 'BCC_PILOT_USER', 'BCC_PILOT_PASSWORD', 'BCC_DB_PASSWORD', 'BCC_PUBLIC_ORIGIN')) {
+    foreach ($name in @('BCC_API_KEY', 'BCC_SOC_API_KEY', 'BCC_PILOT_USER', 'BCC_PILOT_PASSWORD', 'BCC_DB_PASSWORD', 'BCC_PUBLIC_ORIGIN',
+        'BCC_SOC_CAPABILITY', 'BCC_DEMO_PUBLIC_ORIGIN', 'BCC_MOBILE_LAN', 'NEXT_PUBLIC_BCC_STATIC', 'BCC_INTEGRATIONS_SIGNING_KEY',
+        'BCC_INTEGRATIONS_TELEGRAM_TOKEN')) {
         Set-ChildEnvironment $name $null
+    }
+    Set-ChildEnvironment 'BCC_INTEGRATIONS_ENABLED' 'false'
+    if ($SocDemo) {
+        # Issuance happens only in the local operator launcher. No secret is a
+        # command argument, stdout value, browser field, or launch-record entry.
+        $randomBytes = New-Object byte[] 32
+        $randomSource = [Security.Cryptography.RandomNumberGenerator]::Create()
+        try { $randomSource.GetBytes($randomBytes) } finally { $randomSource.Dispose() }
+        $socSigningKey = ([BitConverter]::ToString($randomBytes)).Replace('-', '').ToLowerInvariant()
+        Set-ChildEnvironment 'BCC_INTEGRATIONS_ENABLED' 'true'
+        Set-ChildEnvironment 'BCC_INTEGRATIONS_ENVIRONMENT' 'local'
+        Set-ChildEnvironment 'BCC_INTEGRATIONS_TELEGRAM_MODE' 'fake'
+        Set-ChildEnvironment 'BCC_INTEGRATIONS_TELEGRAM_ALLOWED_CHAT_IDS' '[]'
+        Set-ChildEnvironment 'BCC_INTEGRATIONS_GATEWAY_ENABLED' 'true'
+        Set-ChildEnvironment 'BCC_INTEGRATIONS_SIGNING_KEY' $socSigningKey
     }
 
     if (-not $NoBuild) {
@@ -133,7 +152,7 @@ try {
         }
     }
     # Verify the backend's development dependencies as well as the interpreter itself.
-    & $pythonPath -c 'import fastapi, sqlalchemy, aiosqlite, fakeredis, sklearn, uvicorn'
+    & $pythonPath -c 'import fastapi, sqlalchemy, aiosqlite, fakeredis, sklearn, uvicorn, aiogram'
     if ($LASTEXITCODE -ne 0) { throw 'Backend dependencies are incomplete. Run this script without -NoBuild.' }
     Assert-PortAvailable $FrontendPort
     Assert-PortAvailable $BackendPort
@@ -148,7 +167,8 @@ try {
     $databasePath = if ($FreshRehearsal) { Join-Path $logPath "rehearsals\$runId.db" } else { Join-Path $logPath 'local-demo.db' }
     $backendArguments = @('-m', 'scripts.run_local_demo', '--port', "$BackendPort", '--database', ('"' + $databasePath + '"'))
     if ($FreshRehearsal) { $backendArguments += '--fresh' }
-    $launchRecord = [ordered]@{ started_at = [DateTime]::UtcNow.ToString('o'); state = 'starting'; repository = $repoPath; fresh_rehearsal = [bool]$FreshRehearsal; database = $databasePath; backend = $null; frontend = $null }
+    if ($SocDemo) { $backendArguments += '--soc-demo' }
+    $launchRecord = [ordered]@{ started_at = [DateTime]::UtcNow.ToString('o'); state = 'starting'; repository = $repoPath; fresh_rehearsal = [bool]$FreshRehearsal; soc_demo = [bool]$SocDemo; database = $databasePath; backend = $null; frontend = $null }
 
     Write-Host 'Starting local demo backend (SQLite, in-process Redis, real rules/graph/ML)...'
     $backendProcess = Start-Process -FilePath $pythonPath -ArgumentList $backendArguments -WorkingDirectory $backendPath -WindowStyle Hidden -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -PassThru
@@ -156,6 +176,18 @@ try {
     $launchRecord.backend = @{ pid = $backendProcess.Id; url = "http://127.0.0.1:$BackendPort"; stdout = $backendOut; stderr = $backendErr }
     $launchRecord | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $recordPath -Encoding UTF8
     Wait-Healthy $backendProcess "http://127.0.0.1:$BackendPort/ready" -ExpectedStatus 'ready'
+
+    if ($SocDemo) {
+        $capabilityExpiry = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 3600
+        $capabilityPayload = "soc:00000000-0000-4000-8000-000000000001:$capabilityExpiry"
+        $hmac = New-Object Security.Cryptography.HMACSHA256
+        try {
+            $hmac.Key = [Text.Encoding]::UTF8.GetBytes($socSigningKey)
+            $signature = ([BitConverter]::ToString($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($capabilityPayload)))).Replace('-', '').ToLowerInvariant()
+            Set-ChildEnvironment 'BCC_SOC_CAPABILITY' "${capabilityPayload}:$signature"
+        } finally { $hmac.Dispose() }
+        $launchRecord.soc_capability_expires_at = [DateTimeOffset]::FromUnixTimeSeconds($capabilityExpiry).ToString('o')
+    }
 
     Write-Host 'Starting the bilingual frontend...'
     $frontendProcess = Start-Process -FilePath $nodeCommand.Source -ArgumentList @(('"' + $nextPath + '"'), 'start', '--hostname', '127.0.0.1', '--port', "$FrontendPort") -WorkingDirectory $frontendPath -WindowStyle Hidden -RedirectStandardOutput $frontendOut -RedirectStandardError $frontendErr -PassThru
@@ -172,6 +204,7 @@ try {
     Write-Host "Dedicated synthetic database: $databasePath"
     if ($FreshRehearsal) { Write-Host 'Fresh rehearsal: new synthetic history. Earlier demo databases are untouched.' }
     else { Write-Host 'Existing demo data are preserved. Use -FreshRehearsal for a separate clean stage run.' }
+    if ($SocDemo) { Write-Host 'SOC enabled for one hour: two linked synthetic cases, fake Telegram, MOCK gateway; loopback only.' }
 } catch {
     foreach ($child in $startedProcesses) {
         try {

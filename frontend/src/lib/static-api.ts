@@ -67,6 +67,7 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
   if (method === "GET" && route === "scam-check/guide") return staticGuide;
   // Simulated in the browser: no Telegram here, the contact "replies" after a few seconds.
   if (route.startsWith("trusted-circle/")) return staticCircle(method, route, body);
+  if (route.startsWith("integrations/")) throw new ApiError("integrationsUnavailable", 503);
   throw new ApiError("notFound", 404);
 }
 

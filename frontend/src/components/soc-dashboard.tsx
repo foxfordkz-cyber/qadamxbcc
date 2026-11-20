@@ -14,9 +14,13 @@ import { countBlockedHubs } from "@/lib/feed-summary";
 import { useSocPoll } from "./use-soc-poll";
 import { CaseInspector } from "./case-inspector";
 import { MobileQr } from "./mobile-qr";
+import { SocCasesWorkspace } from "./soc-cases-workspace";
+import { SocIntegrationInsights } from "./soc-integration-insights";
+import { integrationText } from "@/lib/soc-integration-copy";
+import { readSocDashboardSession, writeSocDashboardSession, SOC_SESSION_KEY } from "@/lib/soc-dashboard-session";
 
 const NetworkGraph = dynamic(() => import("./network-graph"), { ssr: false });
-export function SocDashboard({ initialSelection, revision, traffic, onTrafficSync, stream, onReview, busy }: { initialSelection: string | null; revision: number; evaluations: Record<string, Evaluation>; traffic: Record<string, TrafficRecord>; onTrafficSync: (items: FeedItem[]) => void; stream: TrafficStream; onReview: (id: string) => void; busy: boolean }) {
+export function SocDashboard({ initialSelection, revision, traffic, onTrafficSync, stream, onReview, busy, focusTransfer, onFocusConsumed }: { initialSelection: string | null; revision: number; evaluations: Record<string, Evaluation>; traffic: Record<string, TrafficRecord>; onTrafficSync: (items: FeedItem[]) => void; stream: TrafficStream; onReview: (id: string) => void; busy: boolean; focusTransfer?: boolean; onFocusConsumed?: () => void }) {
   const { lang, t } = useLocale();
   const [refresh, setRefresh] = useState(0);
   const [selection, setSelection] = useState(initialSelection);
@@ -27,11 +31,31 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
   const [stage, setStage] = useState(false);
   const [showStageFeed, setShowStageFeed] = useState(false);
   const [graphDepth, setGraphDepth] = useState<1 | 2>(1);
+  const [mode, setMode] = useState<"transfers" | "cases">("transfers");
+  const [caseTransactionId, setCaseTransactionId] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = readSocDashboardSession(sessionStorage.getItem(SOC_SESSION_KEY));
+      setMode(saved.mode); setGraphDepth(saved.graphDepth);
+      if (!initialSelection) { setSelection(saved.selectedId); setFilter(saved.filter); }
+    } catch { /* Unavailable storage keeps a functional in-memory workspace. */ }
+    setRestored(true);
+    // Restore once. Explicit later preset selections are handled below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (focusTransfer) { setMode("transfers"); onFocusConsumed?.(); }
+  }, [focusTransfer, onFocusConsumed]);
+  useEffect(() => {
+    if (!restored) return;
+    try { sessionStorage.setItem(SOC_SESSION_KEY, writeSocDashboardSession({ mode, selectedId: selection, filter, graphDepth })); } catch { /* Storage is optional. */ }
+  }, [mode, selection, filter, graphDepth, restored]);
   const dashboard = useRef<HTMLDivElement>(null);
   const stageToggle = useRef<HTMLButtonElement>(null);
   const searchPending = search.trim() !== query;
   const streaming = stream.active;
-  const feed = useSocPoll<Feed>(socFeedPath(filter, query, offset), revision + refresh, 3000);
+  const feed = useSocPoll<Feed>(restored && mode === "transfers" ? socFeedPath(filter, query, offset) : null, revision + refresh, 3000);
   useEffect(() => {
     if (!stage) return;
     const onEscape = (event: KeyboardEvent) => {
@@ -57,9 +81,10 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
     if (feed.data) setSelection(previous => initialCaseSelection(previous, feed.data!.items.map(item => item.transaction_id)));
   }, [feed.data]);
   const items = feed.data?.items ?? [];
-  const detail = useSocPoll<Evaluation>(selection ? `transfers/${selection}` : null, revision + refresh, 3000);
+  const inspectedId = mode === "cases" ? caseTransactionId : selection;
+  const detail = useSocPoll<Evaluation>(restored && inspectedId ? `transfers/${inspectedId}` : null, revision + refresh, mode === "cases" ? 30_000 : 3000);
   const selected = detail.data;
-  const graph = useSocPoll<Graph>(selected ? `soc/graph/${selected.recipient.id}?depth=${graphDepth}` : null, revision + refresh, 6000);
+  const graph = useSocPoll<Graph>(selected ? `soc/graph/${selected.recipient.id}?depth=${graphDepth}` : null, revision + refresh, mode === "cases" ? 30_000 : 6000);
   const stats = feed.data?.stats;
   const pagination = feed.data?.pagination;
   const outsidePage = selection !== null && !!feed.data && !items.some(item => item.transaction_id === selection);
@@ -80,13 +105,16 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
   const time = (value: number | string) => new Date(value).toLocaleTimeString(lang === "kk" ? "kk-KZ" : "ru-KZ", { timeZone: "Asia/Qyzylorda", hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const locale = lang === "kk" ? "kk-KZ" : "ru-KZ";
   const hubCount = stats?.blocked_hubs ?? (feed.data ? countBlockedHubs(items) : undefined);
-  return <div ref={dashboard} className={`soc-dashboard${stage ? " is-stage" : ""}`}>
+  return <div ref={dashboard} className={`soc-dashboard${stage ? " is-stage" : ""}${mode === "cases" ? " soc-cases-mode" : ""}`}>
     <div className="section-heading soc-heading"><div><h1>{t("socTitle")}</h1><p className="muted">{t(stage ? "stageHint" : "socIntro")}</p></div><div className="soc-actions">
-      <button className={streaming ? "traffic-button active" : "traffic-button"} aria-pressed={streaming} disabled={!streaming && (!canStream || stream.inFlight)} onClick={stream.toggle}>{streaming ? <Square size={15} /> : <Play size={15} />}{t(streaming ? "trafficStop" : "liveTraffic")}</button>
+      {mode === "transfers" && <button className={streaming ? "traffic-button active" : "traffic-button"} aria-pressed={streaming} disabled={!streaming && (!canStream || stream.inFlight)} onClick={stream.toggle}>{streaming ? <Square size={15} /> : <Play size={15} />}{t(streaming ? "trafficStop" : "liveTraffic")}</button>}
       <button ref={stageToggle} className="secondary soc-stage-toggle" aria-pressed={stage} aria-keyshortcuts={stage ? "Escape" : undefined} onClick={toggleStage}>{stage ? <Minimize2 size={16} /> : <Presentation size={16} />}{t(stage ? "stageExit" : "stageMode")}</button>
       <MobileQr />
-      <button className="secondary icon-button" onClick={() => setRefresh(n => n + 1)} disabled={feed.loading} aria-label={t("refresh")} title={t("refresh")}><RefreshCw size={16} className={feed.loading ? "animate-spin" : ""} /></button>
+      {mode === "transfers" && <button className="secondary icon-button" onClick={() => setRefresh(n => n + 1)} disabled={feed.loading} aria-label={t("refresh")} title={t("refresh")}><RefreshCw size={16} className={feed.loading ? "animate-spin" : ""} /></button>}
     </div></div>
+    <nav className="soc-investigation-nav" aria-label={t("socTitle")}>{(["transfers", "cases"] as const).map(value => <button type="button" data-testid={`soc-mode-${value}`} key={value} aria-pressed={mode === value} onClick={() => { setMode(value); if (value === "cases" && streaming) stream.toggle(); }}>{integrationText(lang, value)}</button>)}</nav>
+    {restored && mode === "cases" && <><SocCasesWorkspace revision={revision} onSelectTransaction={setCaseTransactionId} /><SocIntegrationInsights key={caseTransactionId ?? "unlinked"} transactionId={caseTransactionId} revision={revision} /></>}
+    {mode === "transfers" && <>
     <div className="traffic-strip"><span className={`live-dot ${streaming ? "" : "offline"}`} /><p>{t(stream.inFlight && !streaming ? "trafficDraining" : canStream ? "trafficHint" : "trafficMissing")}</p><span className="tabular-nums">{t("trafficSession")}: {Object.keys(traffic).length}</span></div>
     {stream.error && <p className="error" role="alert">{t(stream.error)}</p>}
     <div className="soc-kpis">
@@ -110,14 +138,17 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
       <div className="soc-pagination" aria-label={t("recoveryPages")}><p role="status">{t("resultsCount")}: <strong className="tabular-nums">{pagination ? `${items.length ? offset + 1 : 0}–${items.length ? offset + items.length : 0} / ${pagination.total_filtered}` : "—"}</strong>{selection && <a className="soc-open-case" href="#soc-investigation">{t("openCaseDetails")}<ArrowRight size={14} /></a>}</p><div><button type="button" className="secondary" disabled={!offset || feed.loading || searchPending} onClick={() => setOffset(0)}>{t("firstPage")}</button><button type="button" className="secondary icon-button" aria-label={t("pagePrevious")} disabled={!offset || feed.loading || searchPending} onClick={() => setOffset(value => Math.max(0, value - SOC_PAGE_SIZE))}><ArrowLeft size={16} /></button><button type="button" className="secondary icon-button" aria-label={t("pageNext")} disabled={!pagination?.has_more || offset + SOC_PAGE_SIZE > SOC_MAX_OFFSET || feed.loading || !!feed.error || searchPending} onClick={() => setOffset(value => value + SOC_PAGE_SIZE)}><ArrowRight size={16} /></button></div></div>
     </section>
     {outsidePage && <p className="soc-selection-note" role="status"><ShieldCheck size={17} /><span>{t("selectedOutsidePage")}</span><a className="soc-open-case" href="#soc-investigation">{t("openCaseDetails")}<ArrowRight size={14} /></a></p>}
+    </>}
+    {(mode === "transfers" || caseTransactionId) &&
     <div className="soc-bottom" id="soc-investigation" tabIndex={-1}>
       <section className="panel graph-panel"><div className="panel-heading"><div><h2><Network size={18} />{t("graph")}</h2><p className="panel-subtitle">{t("graphHint")}</p></div><div className="graph-depth-controls segmented" role="group" aria-label={t("graph")}><button type="button" aria-pressed={graphDepth === 1} onClick={() => setGraphDepth(1)}>{t("graphDirect")}</button><button type="button" aria-pressed={graphDepth === 2} onClick={() => setGraphDepth(2)}>{t("graphExpanded")}</button></div></div>
         <div className="graph-meta">{graph.data && <p className="graph-scope" role="status">{t("graphScope")}: <strong className="tabular-nums">{graph.data.nodes.length} / {graph.data.edges.length}</strong></p>}{graph.receivedAt !== null && <p role="status">{graph.error ? `${t("staleData")} · ` : ""}{t("lastUpdated")}: <span className="tabular-nums">{time(graph.receivedAt)}</span></p>}</div>
         {graph.error && <p role="alert" className="error panel-error">{t(graph.error)}</p>}
+        {selected && <p className="soc-center-recipient">{integrationText(lang, "selectedRecipient")}: <strong>{selected.recipient.display_name}</strong> · {selected.recipient.iban_masked}</p>}
         {graph.data ? <NetworkGraph graph={graph.data} streaming={streaming} /> : <p className="empty">{t(selected ? "refreshing" : "select")}</p>}</section>
       <section className="panel analysis-panel" aria-labelledby="analysis-title"><div className="panel-heading"><div><h2 id="analysis-title"><BrainCircuit size={18} />{t("analysisPanel")}</h2><p className="panel-subtitle">{t("caseSnapshotHint")}</p></div></div>
-        <div className="analysis-body">{selected && selected.transaction_id === selection ? <><div className="analysis-score"><Gauge score={selected.risk_score} /><div><Badge status={selected.status} /><p className="result-headline">{lang === "kk" ? selected.headline_kk : selected.headline_ru}</p></div></div><MLInspector details={selected} reasons={selected.reasons} /><Explain kk={selected.reasons_kk} ru={selected.reasons_ru} /></> : <p className="empty">{t("analysisEmpty")}</p>}</div></section>
-      <CaseInspector detail={selected} loading={detail.loading} error={detail.error} receivedAt={detail.receivedAt} selectedId={selection} onReview={onReview} busy={busy} onRetry={() => setRefresh(value => value + 1)} />
-    </div>
+        <div className="analysis-body">{selected && selected.transaction_id === inspectedId ? <><div className="analysis-score"><Gauge score={selected.risk_score} /><div><Badge status={selected.status} /><p className="result-headline">{lang === "kk" ? selected.headline_kk : selected.headline_ru}</p></div></div><MLInspector details={selected} reasons={selected.reasons} /><Explain kk={selected.reasons_kk} ru={selected.reasons_ru} /></> : <p className="empty">{t("analysisEmpty")}</p>}</div></section>
+      <CaseInspector detail={selected} loading={detail.loading} error={detail.error} receivedAt={detail.receivedAt} selectedId={inspectedId} onReview={onReview} busy={busy} onRetry={() => setRefresh(value => value + 1)} />
+    </div>}
   </div>;
 }

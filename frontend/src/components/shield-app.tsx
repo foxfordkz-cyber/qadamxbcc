@@ -24,6 +24,7 @@ import { randomId } from "@/lib/secure-fallback";
 import { mobileRecovery } from "@/lib/mobile-recovery";
 import { resetStaticDemo } from "@/lib/static-api";
 import type { RecoveryRecord } from "@/lib/recovery";
+import { readAppTab, saveAppTab, type AppTab } from "@/lib/app-tab-session";
 
 const STATIC_DEMO = process.env.NEXT_PUBLIC_BCC_STATIC === "1";
 
@@ -32,7 +33,17 @@ const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
 export type AppLayout = "full" | "phone";
 function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayout }) {
   const { lang, setLang, t } = useLocale();
-  const [tab, setTab] = useState<"mobile" | "soc">("mobile");
+  const [tab, setTabState] = useState<AppTab>("mobile");
+  const setTab = useCallback((value: AppTab) => {
+    const next = layout === "phone" ? "mobile" : value;
+    setTabState(next);
+    if (layout !== "phone") { try { saveAppTab(next, window.sessionStorage); } catch { /* Storage may be blocked. */ } }
+  }, [layout]);
+  useEffect(() => {
+    // Read after hydration. The standalone client never restores an operator tab.
+    if (layout === "phone") return;
+    try { setTabState(readAppTab(window.sessionStorage)); } catch { /* Keep the mobile default. */ }
+  }, [layout]);
   const [form, setForm] = useState<PresetForm>(config.presets.normal);
   const [recipientType, setRecipientType] = useState<"phone" | "card" | "iban">("phone");
   const [result, setResult] = useState<Evaluation | null>(null);
@@ -58,6 +69,8 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const [modal, setModal] = useState(false);
   const [coolingDrafts, setCoolingDrafts] = useState<Record<string, Partial<Answers>>>({});
   const [revision, setRevision] = useState(0);
+  const [socFocus, setSocFocus] = useState(false);
+  const consumeSocFocus = useCallback(() => setSocFocus(false), []);
   const [preset, setPreset] = useState<Preset | null>(null);
   const sensor = useBiometrics();
   const [resultContext, setResultContext] = useState<Partial<Context>>({});
@@ -196,7 +209,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       setRoundtrip(performance.now() - started); setResult(evaluated); setResultAmount(evaluated.amount ?? current.input.amount); setRevision(n => n + 1);
       setResultContext(evaluated.context ?? current.input.context); sensor.complete(); setCompletedIdentity(attemptIdentity.current);
       setModal(evaluated.status === "cooling_off");
-      if (chosen) { if (chosen !== "hub") stream.stop(); setTab(chosen === "hub" ? "soc" : "mobile"); }
+      if (chosen) { setSocFocus(true); if (chosen !== "hub") stream.stop(); setTab(chosen === "hub" ? "soc" : "mobile"); }
     } catch (failure) {
       const ambiguous = isUnknownOutcome(failure);
       setUnknown(true); setError(ambiguous ? "outcomeUnknown" : errorKey(failure)); setTab("mobile");
@@ -317,7 +330,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       {error && tab === "soc" && <p className="error" role="alert">{t(error)}</p>}
       <div className="tabs" role="tablist" aria-label="Saq Bol">{(["mobile", "soc"] as const).map(key => { const Icon = key === "mobile" ? Smartphone : Activity; return <button key={key} type="button" role="tab" id={`tab-${key}`} aria-selected={tab === key} aria-controls={`panel-${key}`} tabIndex={tab === key ? 0 : -1} onKeyDown={e => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); const next = e.key === "Home" ? "mobile" : e.key === "End" ? "soc" : key === "mobile" ? "soc" : "mobile"; changeTab(next); document.getElementById(`tab-${next}`)?.focus(); } }} onClick={() => changeTab(key)}><Icon size={17} />{t(key === "mobile" ? "tabMobile" : "tabSoc")}</button>; })}</div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} /> : <>
+        {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} focusTransfer={socFocus} onFocusConsumed={consumeSocFocus} /> : <>
           <div className="client-wrap">
           <div className="transfer-grid">
             <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={() => void evaluate(form)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} onCallCheck={setCallVerdict} />

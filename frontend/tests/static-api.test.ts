@@ -22,6 +22,7 @@ test("the static Pages build answers the demo routes in the browser", async () =
 });
 
 test("the static build refuses what needs a server", async () => {
+  await assert.rejects(staticApi("integrations/guardian/soc/cases"), (error: unknown) => error instanceof ApiError && error.status === 503 && error.code === "integrationsUnavailable");
   await assert.rejects(staticApi("trusted-circle/" + ids.sender), (error: unknown) => error instanceof ApiError && error.status === 404);
   await assert.rejects(staticApi("trusted-circle/other"), (error: unknown) => error instanceof ApiError && error.status === 404);
   await assert.rejects(staticApi("transfers/evaluate", post({ sender_id: "not-a-uuid" })), (error: unknown) => error instanceof ApiError && error.status === 422);
