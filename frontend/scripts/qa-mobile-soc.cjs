@@ -318,7 +318,9 @@ async function main() {
     await phone.goto(new URL('/mobile', target).href, { waitUntil: 'domcontentloaded' });
     await phone.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
     // Recovery may reopen this browser's last receipt (same origin storage); start a new transfer from it.
-    await phone.locator('.phone-stage.is-bare .phone-form, .phone-stage.is-bare .phone-receipt').first().waitFor();
+    await phone.locator('.phone-stage.is-bare').waitFor();
+    if (await phone.locator('.home-tools').isVisible()) await phone.locator('.home-tools .primary').click();
+    if (await phone.locator('.cooling-modal[open]').isVisible()) await phone.locator('.sheet-close').click();
     await phone.waitForTimeout(500);
     if (await phone.locator('.phone-receipt .receipt-new').isVisible()) await phone.locator('.phone-receipt .receipt-new').click();
     await phone.locator('.phone-stage.is-bare .phone-form').waitFor();
@@ -347,7 +349,8 @@ async function main() {
     const phoneDialog = phone.locator('dialog.mobile-cooling'); await phoneDialog.waitFor();
     const sheet = await phoneDialog.boundingBox();
     check('mobile_route_cooling_sheet_fits_390', sheet.x >= -1 && sheet.x + sheet.width <= 391 && sheet.height <= 845, sheet);
-    check('trusted_circle_hidden_when_integration_unavailable', await phoneDialog.locator('.trusted-circle').count() === 0);
+    await phoneDialog.locator('.trusted-circle .secondary').waitFor();
+    check('trusted_circle_unavailable_has_retry', await phoneDialog.locator('.trusted-circle .secondary').isVisible());
     // Trusted contact (advisory only): button -> queued -> sent -> suspicion; polling >= 2.1 s, stops at a terminal state.
     trustedMock.enabled = true; await phoneDialog.locator('.sheet-close').click();
     await phone.locator('.receipt-review').click(); await phoneDialog.waitFor();
@@ -380,7 +383,9 @@ async function main() {
     lan.on('pageerror', error => report.errors.push(`lan: ${error.message}`));
     await lan.setViewportSize({ width: 390, height: 844 });
     await lan.goto(`${lanOrigin}/mobile`, { waitUntil: 'domcontentloaded' });
-    await lan.locator('.phone-stage.is-bare .phone-form, .phone-stage.is-bare .phone-receipt').first().waitFor(); await lan.waitForTimeout(500);
+    await lan.locator('.phone-stage.is-bare').waitFor();
+    if (await lan.locator('.home-tools').isVisible()) await lan.locator('.home-tools .primary').click();
+    await lan.locator('.phone-form, .phone-receipt').first().waitFor();
     if (await lan.locator('.phone-receipt .receipt-new').isVisible()) await lan.locator('.phone-receipt .receipt-new').click();
     const capabilities = await lan.evaluate(() => ({ secure: window.isSecureContext, subtle: !!crypto.subtle, locks: !!navigator.locks, uuid: typeof crypto.randomUUID }));
     expectedPreset = 'normal';

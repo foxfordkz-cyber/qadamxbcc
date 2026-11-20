@@ -7,7 +7,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import SimpleEventIsolation
 from aiogram.types import Update
 
-from app.integrations.telegram.guardian import QUESTIONS, TEXT, build_router, recipient_view
+from app.integrations.guardian_education import QUESTIONS
+from app.integrations.telegram.guardian import TEXT, build_router, recipient_view
 from app.schemas.transfers import CoolingQuestionnaire
 from tests.integrations.conftest import IntegrationWorld
 

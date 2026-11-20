@@ -28,7 +28,7 @@ An explicit localhost URL is required. The result JSON and screenshots are writt
 
 The common catalog has 273 nonempty KK/RU pairs; the mobile catalog has 61. All stage controls, graph depth controls, and p95 scope text use the same live locale provider. The mobile questionnaire uses explicit yes/no answers in both languages, without default answers. Server-provided reasons and feature labels remain bilingual.
 
-The copy distinguishes a scoring target from measured p95, held transfers from prevented losses, model scores from proof of fraud, and a simulated decision from an actual bank payment. Cancellation is separate from leaving the transfer held. The security sheet explains that unsent answers exist only in the current page and that a timer never sends money by itself. Receipt cancellation and independent-recipient-check wording were aligned in both languages.
+The copy distinguishes a scoring target from measured p95, held transfers from prevented losses, model scores from proof of fraud, and a simulated decision from an actual bank payment. Cancellation is separate from leaving the transfer held. The security sheet explains that unsent answers can be restored on this device and that a timer never sends money by itself. Receipt cancellation and independent-recipient-check wording were aligned in both languages.
 
 This review checks meaning, consistency, and interaction behavior. It does not replace a bank-approved native-language terminology review before a client pilot.
 

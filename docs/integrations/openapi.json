@@ -514,6 +514,55 @@
         }
       }
     },
+    "/api/v1/scam-check/guide": {
+      "get": {
+        "tags": [
+          "scam-check"
+        ],
+        "summary": "Guide",
+        "operationId": "guide_api_v1_scam_check_guide_get",
+        "parameters": [
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScamGuide"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/soc/feed": {
       "get": {
         "tags": [
@@ -4713,6 +4762,34 @@
         ],
         "title": "GraphResponse"
       },
+      "GuideQuestion": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "ru": {
+            "type": "string",
+            "title": "Ru"
+          },
+          "kk": {
+            "type": "string",
+            "title": "Kk"
+          },
+          "caution_answer": {
+            "type": "boolean",
+            "title": "Caution Answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "ru",
+          "kk",
+          "caution_answer"
+        ],
+        "title": "GuideQuestion"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -6172,6 +6249,32 @@
           "privacy"
         ],
         "title": "ScamCheckResult"
+      },
+      "ScamGuide": {
+        "properties": {
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/GuideQuestion"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "advice_ru": {
+            "type": "string",
+            "title": "Advice Ru"
+          },
+          "advice_kk": {
+            "type": "string",
+            "title": "Advice Kk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "questions",
+          "advice_ru",
+          "advice_kk"
+        ],
+        "title": "ScamGuide"
       },
       "ScamSignal": {
         "properties": {

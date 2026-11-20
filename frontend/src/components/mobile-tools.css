@@ -1,0 +1,25 @@
+.mobile-tool {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  min-width: 0;
+}
+.mobile-tool form, .mobile-tool fieldset { display: grid; gap: .65rem; min-width: 0; }
+.mobile-tool textarea { width: 100%; resize: vertical; padding: .75rem; border: 1px solid #91a59c; border-radius: .7rem; background: white; color: #172722; }
+.mobile-tool input[type="checkbox"], .mobile-tool input[type="radio"] { width: 1.1rem; height: 1.1rem; accent-color: #087757; vertical-align: middle; }
+.mobile-tool fieldset { padding: .75rem 0; }
+.mobile-tool fieldset label { display: flex; align-items: center; gap: .5rem; }
+.mobile-tool summary { cursor: pointer; font-weight: 600; }
+.home-tools .source-card { display: grid; gap: .5rem; padding: 1rem; }
+.home-tools .source-card strong { font-size: 1.7rem; }
+.mobile-tool button, .phone-tabbar button { min-height: 44px; }
+.tool-heading, .circle-list li { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+.circle-list { list-style: none; padding: 0; }
+.circle-list li { padding: .65rem 0; border-bottom: 1px solid #cfddd6; }
+.circle-list b, .circle-list small, .safety-result small { display: block; overflow-wrap: anywhere; }
+.safety-result { background: #eef6f1; border-radius: .75rem; padding: .85rem; color: #193e30; }
+.safety-result code { display: block; overflow-wrap: anywhere; user-select: all; margin-block: .5rem; }
+.mobile-tool button:focus-visible, .phone-tabbar button:focus-visible { outline: 3px solid #00734f; outline-offset: 2px; }
+.phone-frame .phone-tabbar { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); }
+.phone-tabbar button { display: grid; justify-items: center; align-content: center; gap: .2rem; line-height: 1.15; font-size: .72rem; color: #42534c; }
+.phone-tabbar button.active { color: #006d4b; font-weight: 700; }
