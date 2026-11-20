@@ -48,7 +48,10 @@ export function receipt(value: Evaluation, previous?: RecoveryRecord): RecoveryR
 }
 /** Kept only in memory. Storage receives a SHA-256 digest, never recipient, amount or biometric contents. */
 export function draftIdentity(form: PresetForm, type: "phone" | "card" | "iban") {
-  return JSON.stringify([form.sender.trim().toLowerCase(), type, form.recipient.replace(/[\s()-]/g, "").toUpperCase(), Number(form.amount).toFixed(2), form.context.active_call, form.context.from_deposit, form.context.is_new_device]);
+  const fields = [form.sender.trim().toLowerCase(), type, form.recipient.replace(/[\s()-]/g, "").toUpperCase(), Number(form.amount).toFixed(2), form.context.active_call, form.context.from_deposit, form.context.is_new_device];
+  // Keep recovery keys for existing drafts without a report byte-for-byte compatible.
+  if (form.context.payment_requested_after_call) fields.push("post-call-request");
+  return JSON.stringify(fields);
 }
 export async function digestDraft(identity: string): Promise<string> {
   // A non-secure LAN page has no WebCrypto; the plain SHA-256 yields the same key.

@@ -17,6 +17,18 @@ REASONS: Final[dict[str, tuple[str, str]]] = {
         "Реквизиттер белсенді қоңырау кезінде алмасу буферінен қойылды",
         "Реквизиты вставлены из буфера обмена во время активного звонка",
     ),
+    "POST_CALL_PAYMENT_REQUEST": (
+        "Клиенттің айтуынша, жаңа алушыға осы аударымды жасауды жаңа ғана аяқталған "
+        "қоңырау кезінде сұраған.",
+        "По словам клиента, во время только что завершившегося звонка его попросили "
+        "сделать именно этот перевод новому получателю.",
+    ),
+    "NEW_PAYEE_NIGHT_SPIKE": (
+        "Осы алушыға алғаш рет түнде ({time}) ақша аударып жатырсыз. Сома әдеттегі "
+        "орташа аударымыңыздан {ratio} есе көп.",
+        "Первый перевод этому получателю совершается ночью ({time}). Сумма в "
+        "{ratio} раза выше вашего обычного среднего перевода.",
+    ),
     "ML_RISK_UPLIFT": (
         "Синтетикалық деректерде үйретілген ML моделі қосымша тәуекелді анықтады "
         "(ML бағасы: {ml_score}/100).",
@@ -161,7 +173,12 @@ def render(code: str, **evidence: object) -> tuple[str, str]:
 
 
 def headline(
-    status: TransactionStatus, *, minutes: int, continuing_hold: bool = False
+    status: TransactionStatus,
+    *,
+    minutes: int,
+    continuing_hold: bool = False,
+    post_call_request: bool = False,
+    night_spike: bool = False,
 ) -> tuple[str, str]:
     if status is TransactionStatus.COOLING_OFF and continuing_hold:
         return (
@@ -169,6 +186,18 @@ def headline(
             "қосымша растауды қажет етеді; мерзім ұзартылған жоқ.",
             "Продолжается предыдущая проверка. Этот перевод требует дополнительного "
             "подтверждения после исходного срока ожидания; срок не продлён.",
+        )
+    if status is TransactionStatus.COOLING_OFF and post_call_request:
+        return (
+            f"Аударым {minutes} минутқа кідіртілді. Өтінішті бұрыннан білетін "
+            "байланыс арнасы арқылы тексеріңіз.",
+            f"Перевод на паузе на {minutes} минут. Перепроверьте просьбу через "
+            "знакомый вам канал связи.",
+        )
+    if status is TransactionStatus.COOLING_OFF and night_spike:
+        return (
+            f"Аударым {minutes} минутқа кідіртілді. Алушының деректемелері мен соманы тексеріңіз.",
+            f"Перевод на паузе на {minutes} минут. Проверьте реквизиты получателя и сумму.",
         )
     kk, ru = HEADLINES[status]
     return kk.format(minutes=minutes), ru.format(minutes=minutes)

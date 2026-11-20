@@ -296,3 +296,5 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .family-payment div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .family-payment dt { color: var(--muted); font-size: 13px; }
 .family-payment dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.reported-call-request { display: flex; align-items: flex-start; gap: .65rem; padding-block: .75rem; cursor: pointer; }
+.reported-call-request input { flex: 0 0 auto; width: 1.15rem; height: 1.15rem; margin-top: .15rem; accent-color: var(--green, #008f4c); }

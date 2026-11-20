@@ -1,0 +1,66 @@
+[
+  {
+    "id": "relative-01",
+    "amount": 100800,
+    "baseline": {
+      "score": 20,
+      "decision": "approved"
+    },
+    "unchanged": {
+      "score": 20,
+      "decision": "approved"
+    },
+    "reported": {
+      "score": 40,
+      "decision": "cooling_off"
+    }
+  },
+  {
+    "id": "relative-05",
+    "amount": 137200,
+    "baseline": {
+      "score": 37,
+      "decision": "approved"
+    },
+    "unchanged": {
+      "score": 40,
+      "decision": "cooling_off"
+    },
+    "reported": {
+      "score": 40,
+      "decision": "cooling_off"
+    }
+  },
+  {
+    "id": "market-01",
+    "amount": 32400,
+    "baseline": {
+      "score": 10,
+      "decision": "approved"
+    },
+    "unchanged": {
+      "score": 10,
+      "decision": "approved"
+    },
+    "reported": {
+      "score": 40,
+      "decision": "cooling_off"
+    }
+  },
+  {
+    "id": "market-05",
+    "amount": 44100,
+    "baseline": {
+      "score": 20,
+      "decision": "approved"
+    },
+    "unchanged": {
+      "score": 20,
+      "decision": "approved"
+    },
+    "reported": {
+      "score": 40,
+      "decision": "cooling_off"
+    }
+  }
+]

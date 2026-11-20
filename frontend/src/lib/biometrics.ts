@@ -69,8 +69,10 @@ export class BiometricSensor {
 export function warningKeys(context: Partial<Context>, reasons: Reason[]) {
   const codes = new Set(reasons.map(r => r.code));
   const call = context.active_call || codes.has("ACTIVE_CALL");
-  const keys: ("warningSafeAccount" | "warningPaste" | "warningDevice" | "warningCall" | "warningGeneric" | "warningActiveHold")[] = [];
+  const keys: ("warningSafeAccount" | "warningPaste" | "warningDevice" | "warningCall" | "warningGeneric" | "warningActiveHold" | "warningPostCallRequest" | "warningNightSpike")[] = [];
   if (codes.has("ACTIVE_HOLD_RETRY")) keys.push("warningActiveHold");
+  if (codes.has("POST_CALL_PAYMENT_REQUEST")) keys.push("warningPostCallRequest");
+  if (codes.has("NEW_PAYEE_NIGHT_SPIKE")) keys.push("warningNightSpike");
   if (call && (context.from_deposit || codes.has("DEPOSIT_WITHDRAWAL"))) keys.push("warningSafeAccount");
   if ((call && context.pasted_recipient) || codes.has("PASTED_DURING_CALL")) keys.push("warningPaste");
   if (context.is_new_device || codes.has("NEW_DEVICE")) keys.push("warningDevice");

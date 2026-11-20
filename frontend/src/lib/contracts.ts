@@ -11,6 +11,7 @@ export type Status = "approved" | "cooling_off" | "blocked" | "cancelled";
 export type Preset = "normal" | "scam" | "hub";
 export const contextSchema = z.object({
   active_call: z.boolean().default(false),
+  payment_requested_after_call: z.boolean().optional(),
   from_deposit: z.boolean().default(false),
   is_new_device: z.boolean().default(false),
   is_new_recipient: z.boolean().optional(),

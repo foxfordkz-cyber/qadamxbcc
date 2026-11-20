@@ -32,6 +32,8 @@ test("duplicate-draft metadata contains a digest, excludes biometrics, and norma
   const formatted = { ...original, amount: "25000.00", recipient: "+7 (701) 000-00-02", context: { ...original.context, pasted_recipient: true, typing_duration_ms: 999 } };
   const key = await digestDraft(draftIdentity(original, "phone"));
   assert.equal(key, await digestDraft(draftIdentity(formatted, "phone")));
+  assert.equal(key, await digestDraft(draftIdentity({ ...original, context: { ...original.context, payment_requested_after_call: false } }, "phone")));
+  assert.notEqual(key, await digestDraft(draftIdentity({ ...original, context: { ...original.context, payment_requested_after_call: true } }, "phone")));
   assert.match(key, /^[a-f0-9]{64}$/);
   assert.notEqual(key, await digestDraft(draftIdentity({ ...original, amount: "25001" }, "phone")));
   const old = { ...record("resolved", 10), draftKey: key };

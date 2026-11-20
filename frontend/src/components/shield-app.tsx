@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import Link from "next/link";
 import connectedWallet from "@/lib/connected-wallet.json";
 import { Activity, ArrowRight, CircleHelp, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
@@ -47,7 +47,17 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     if (layout !== "full") return;
     try { const saved = readAppTab(window.sessionStorage); activeTab.current = saved; setTabState(saved); } catch { /* Keep the mobile default. */ }
   }, [layout]);
-  const [form, setForm] = useState<PresetForm>(config.presets.normal);
+  const [form, writeForm] = useState<PresetForm>(config.presets.normal);
+  function setForm(update: SetStateAction<PresetForm>) {
+    writeForm(previous => {
+      const next = typeof update === "function" ? update(previous) : update;
+      if (next.context.payment_requested_after_call && (next.context.active_call
+        || next.sender !== previous.sender || next.recipient !== previous.recipient || next.amount !== previous.amount)) {
+        return { ...next, context: { ...next.context, payment_requested_after_call: undefined } };
+      }
+      return next;
+    });
+  }
   const [recipientType, setRecipientType] = useState<"phone" | "card" | "iban">("phone");
   const [result, setResult] = useState<Evaluation | null>(null);
   const [resultAmount, setResultAmount] = useState("0");
@@ -311,6 +321,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   function changeTab(value: "mobile" | "soc") { if (value === "mobile") stream.stop(); setTab(value); }
   function freshTransfer() {
     if (lock.current || hasUnknown) return;
+    setForm(v => v.context.payment_requested_after_call ? { ...v, context: { ...v.context, payment_requested_after_call: undefined } } : v);
     selectTransfer(null); forceNext.current = true; attempt.current = null;
     setCompletedIdentity(null); sensor.reset(); setResult(null); setPreset(null); setError(null);
   }

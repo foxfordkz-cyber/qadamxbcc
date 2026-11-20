@@ -14,6 +14,12 @@ class TransferContextIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     active_call: bool = Field(False, description="A phone call is active during the transfer")
+    payment_requested_after_call: bool = Field(
+        False,
+        strict=True,
+        description="The customer reports that the caller specifically requested this payment "
+        "during a call that has just ended. An ended call by itself does not set this field.",
+    )
     from_deposit: bool = Field(False, description="Funds were just withdrawn from a deposit")
     pasted_recipient: bool = False
     duress: bool = Field(

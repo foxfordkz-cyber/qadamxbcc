@@ -103,10 +103,13 @@ function decision(status: Status, risk_score: number, transaction_id: string, re
   };
   return { transaction_id, status, risk_score, headline_kk: headlines[status][0], headline_ru: headlines[status][1], reasons_kk: reasons.map(r => r.reason_kk), reasons_ru: reasons.map(r => r.reason_ru) };
 }
-function activeOriginalHold(senderId: string, recipientId: string, now: number): FeedItem | undefined {
+function knownPayee(senderId: string, recipientId: string, now: number) {
   // Seeded friendship or settled history, never the caller's is_new_recipient override.
-  const known = (senderId === ids.sender && recipientId === ids.friend)
-    || rows().some(row => row.sender.id === senderId && row.recipient.id === recipientId && row.status === "approved");
+  return (senderId === ids.sender && recipientId === ids.friend) || rows().some(row =>
+    row.sender.id === senderId && row.recipient.id === recipientId && row.status === "approved" && Date.parse(row.resolved_at ?? row.created_at) <= now);
+}
+function activeOriginalHold(senderId: string, recipientId: string, now: number): FeedItem | undefined {
+  const known = knownPayee(senderId, recipientId, now);
   return rows().filter(row => row.sender.id === senderId && row.status === "cooling_off"
     && (row.recipient.id === recipientId || !known)
     && !row.reasons.some(item => item.code === "ACTIVE_HOLD_RETRY")
@@ -143,6 +146,7 @@ function splitPayeeReason(senderId: string, recipientId: string, amount: number,
     evidence: { settled_count: settledCount, n, settled_amount_kzt: settledCents / 100, total_kzt: total, threshold_kzt: threshold, window_hours: 24, amount: formatted },
   };
 }
+const almatyHour = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Almaty", hour: "2-digit", hourCycle: "h23" });
 export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 5000): Evaluation {
   if (input.request_id && abandoned().has(input.request_id)) throw new DemoError(409, "conflict");
   const replay = input.request_id ? requests().get(input.request_id) : undefined;
@@ -157,7 +161,11 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
   if (!sender || !recipient) throw new DemoError(404, "notFound");
   if (sender.id === recipient.id) throw new DemoError(422, "invalid");
   const ctx = input.context;
-  const isNew = ctx.is_new_recipient ?? recipient.id !== ids.friend;
+  const requested = !!ctx.payment_requested_after_call && !ctx.active_call;
+  // The static demo uses a 40,000 KZT reference average; the live engine uses the sender's own average.
+  const nightSpike = Number(input.amount) >= 120000 && Number(almatyHour.format(now)) < 6;
+  const isNew = requested || nightSpike ? !knownPayee(sender.id, recipient.id, now)
+    : (ctx.is_new_recipient ?? recipient.id !== ids.friend);
   const reasons: Reason[] = [];
   // Same rule and text as backend DURESS_SIGNAL: the client's own alarm blocks the transfer.
   if (ctx.duress) reasons.push(reason("DURESS_SIGNAL", "behavioral", 100, "Клиент жасырын дабыл берді (растау батырмасын ұстап тұрды): аударым тоқтатылды, экран клиенттің жанындағы адамға ештеңе көрсетпейді.", "Клиент подал тихий сигнал тревоги (удержал кнопку подтверждения): перевод остановлен, экран ничего не выдаёт человеку рядом с клиентом."));
@@ -191,6 +199,20 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
   if (split) {
     reasons.push(split);
     score += split.score_delta;
+  }
+  if (isNew && (requested || nightSpike)) {
+    if (nightSpike) {
+      reasons.push(reason("NEW_PAYEE_NIGHT_SPIKE", "behavioral", Math.max(0, 40 - score),
+        "Жаңа алушыға түнде әдеттегіден кемінде үш есе көп сома аударылып жатыр.",
+        "Первый перевод получателю ночью на сумму как минимум втрое выше обычной."));
+      score = Math.max(score, 40);
+    }
+    if (requested) {
+      reasons.push({ ...reason("POST_CALL_PAYMENT_REQUEST", "behavioral", Math.max(0, 40 - score),
+        "Клиент жаңа алушыға осы аударымды жасауды қоңырауда сұрағанын хабарлады.",
+        "Клиент сообщил, что во время завершившегося звонка его попросили сделать этот перевод новому получателю."), evidence: { source: "customer_report" } });
+      score = Math.max(score, 40);
+    }
   }
   // Only bridge an otherwise approved retry. Independent risk retains its own full hold.
   const originalHold = score < 40 ? activeOriginalHold(sender.id, recipient.id, now) : undefined;
@@ -241,7 +263,7 @@ export function resolveDemo(id: string, answers: Answers, now = Date.now(), cont
     throw new DemoError(409, "conflict");
   }
   if (!contactSuspicion && detail.reasons.some(r => r.code === "POST_CALL_ENDED") && !detail.reasons.some(r => r.code === "POST_CALL_RECOGNIZED")) throw new DemoError(409, "conflict");
-  const unknownUnderPressure = !answers.knows_recipient_personally && (row.active_call || row.from_deposit);
+  const unknownUnderPressure = !answers.knows_recipient_personally && (row.active_call || row.from_deposit || detail.reasons.some(r => r.code === "POST_CALL_PAYMENT_REQUEST"));
   const flagged = answers.caller_claims_bank_or_police || answers.asked_to_move_to_safe_account || answers.asked_to_keep_secret_or_install_app || !answers.initiated_by_customer || unknownUnderPressure;
   const recipientFlagged = flags().get(row.recipient.id)?.flagged === true;
   const blocked = contactSuspicion || flagged || recipientFlagged;

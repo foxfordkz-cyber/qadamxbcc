@@ -130,6 +130,19 @@ async def history(engine: AntifraudEngine, story: Story, tx: TransferContext) ->
         engine.apply_transfer(outgoing)
 
 
+async def evaluate_case(engine: AntifraudEngine, story: Story, tx: TransferContext) -> Result:
+    await history(engine, story, tx)
+    evaluation = await engine.evaluate(tx)
+    return Result(
+        tx.tx_id,
+        story.key,
+        story.fraud,
+        evaluation.decision.value,
+        evaluation.score,
+        [r.code for r in evaluation.reasons],
+    )
+
+
 async def replay() -> list[Result]:
     redis = FakeAsyncRedis()
     try:
@@ -137,19 +150,7 @@ async def replay() -> list[Result]:
         results = []
         for story in STORIES:
             for i in range(story.count):
-                tx = transfer(story, i)
-                await history(engine, story, tx)
-                evaluation = await engine.evaluate(tx)
-                results.append(
-                    Result(
-                        tx.tx_id,
-                        story.key,
-                        story.fraud,
-                        evaluation.decision.value,
-                        evaluation.score,
-                        [r.code for r in evaluation.reasons],
-                    )
-                )
+                results.append(await evaluate_case(engine, story, transfer(story, i)))
         return results
     finally:
         await redis.aclose()
@@ -169,7 +170,77 @@ def summary(results: list[Result]) -> dict[str, dict[str, int]]:
     }
 
 
-def report(results: list[Result]) -> str:
+# Outcomes independently reproduced from ea6280c before changing the engine.
+# Neither the scenario labels nor these earlier scores are passed to evaluate().
+OLD_MISSES = {"relative-01": 20, "relative-05": 37, "market-01": 10, "market-05": 20}
+OLD_HONEST_HOLDS = frozenset({"seller-06", "savings-06", "friend-01", "friend-07"})
+
+
+@dataclass(frozen=True)
+class CallComparison:
+    amount: int
+    ordinary: Result
+    reported: Result
+
+
+async def compare_call_request(case_id: str, *, honest_twin: bool = False) -> CallComparison:
+    key, variant = case_id.split("-")
+    story = next(s for s in STORIES if s.key == key)
+    # The seller control was on the phone in the original set. Both paired arms
+    # below observe the call already over. The four historical misses already
+    # had active_call=False, so none of their telemetry is rewritten.
+    tx = replace(transfer(story, int(variant) - 1), active_call=False)
+    if honest_twin:
+        story = replace(story, key="honest-twin", fraud=False)
+        tx = replace(
+            tx,
+            tx_id="honest-twin",
+            sender_id="honest-twin-payer",
+            recipient_id="honest-twin-payee",
+            device_id="honest-twin-device",
+        )
+
+    async def isolated(observed: TransferContext) -> Result:
+        redis = FakeAsyncRedis()
+        try:
+            return await evaluate_case(AntifraudEngine(redis, GraphStore()), story, observed)
+        finally:
+            await redis.aclose()
+
+    ordinary = await isolated(tx)
+    reported = await isolated(replace(tx, payment_requested_after_call=True))
+    return CallComparison(round(tx.amount), ordinary, reported)
+
+
+async def call_comparisons() -> dict[str, CallComparison]:
+    pairs = {
+        key: await compare_call_request(key)
+        for key in (*OLD_MISSES, "family-01", "seller-01", "friend-02")
+    }
+    pairs["honest-twin"] = await compare_call_request("relative-05", honest_twin=True)
+    return pairs
+
+
+def decision_cell(result: Result) -> str:
+    names = {"approved": "одобрено", "cooling_off": "пауза", "blocked": "блок"}
+    return f"{names[result.decision]} · {result.score}"
+
+
+def call_scorecard(calls: dict[str, CallComparison]) -> list[dict[str, object]]:
+    return [
+        {
+            "id": key,
+            "amount": pair.amount,
+            "baseline": {"score": OLD_MISSES[key], "decision": "approved"},
+            "unchanged": {"score": pair.ordinary.score, "decision": pair.ordinary.decision},
+            "reported": {"score": pair.reported.score, "decision": pair.reported.decision},
+        }
+        for key, pair in calls.items()
+        if key in OLD_MISSES
+    ]
+
+
+def report(results: list[Result], calls: dict[str, CallComparison]) -> str:
     lines = [
         "# Проверка антифрода на 120 синтетических переводах",
         "",
@@ -203,6 +274,60 @@ def report(results: list[Result]) -> str:
         "",
         "Повторить из `backend/` — `uv run python -m scripts.scenario_stand`. "
         "Решение и коды причин для каждого примера есть в [JSON](evidence/scenario_stand.json).",
+        "",
+        "## Повтор четырёх ранее одобренных переводов",
+        "",
+        "В версии [ea6280c](https://github.com/foxfordkz-cyber/qadamxbcc/blob/ea6280c/"
+        "docs/evidence/scenario_stand.json) все четыре были одобрены. В обоих повторах никто "
+        "не разговаривает по телефону в момент платежа. В последнем столбце клиент сообщил, "
+        "что во время недавнего звонка его попросили сделать именно этот перевод. "
+        "В остальных столбцах у движка нет сведений о предшествующем звонке.",
+        "",
+        "| Перевод | Сумма, ₸ | В ea6280c | Сейчас, исходный запрос | Сейчас, с ответом |",
+        "| --- | ---: | --- | --- | --- |",
+    ]
+    for key, old_score in OLD_MISSES.items():
+        pair = calls[key]
+        amount = f"{pair.amount:,}".replace(",", " ")
+        lines.append(
+            f"| {key} | {amount} | одобрено · {old_score} | {decision_cell(pair.ordinary)} "
+            f"| {decision_cell(pair.reported)} |"
+        )
+    honest_holds = {r.id for r in results if not r.fraud and stopped(r)}
+    lines += [
+        "",
+        f"Из 60 исходных честных переводов движок задержал {len(OLD_HONEST_HOLDS)} до изменения "
+        f"и {len(honest_holds)} после. Дополнительно задержано "
+        f"{len(honest_holds - OLD_HONEST_HOLDS)}, снято прежних ограничений — "
+        f"{len(OLD_HONEST_HOLDS - honest_holds)}.",
+        "",
+        "### Отдельные честные контрольные примеры",
+        "",
+        "Одинаковые платёжные признаки в каждой паре. Слева клиент не сообщал о просьбе "
+        "(в том числе если недавний звонок был о другом), справа он явно указал на просьбу "
+        "об этом платеже. Для знакомого продавца в обеих пробах звонок уже завершён. "
+        "Эти пробы не входят в основной набор из 120 переводов.",
+        "",
+        "| Честная ситуация | Без сообщения | Клиент сообщил о просьбе |",
+        "| --- | --- | --- |",
+    ]
+    controls = {
+        "family-01": "Перевод знакомому родственнику",
+        "seller-01": "Оплата знакомому продавцу",
+        "friend-02": "Первый перевод новому другу",
+        "honest-twin": "Первый перевод новому знакомому ночью, 4,9 средней суммы",
+    }
+    for key, label in controls.items():
+        pair = calls[key]
+        lines.append(
+            f"| {label} | {decision_cell(pair.ordinary)} | {decision_cell(pair.reported)} |"
+        )
+    lines += [
+        "",
+        "Последняя строка воспроизводит платёжные признаки relative-05 с честным намерением. "
+        "У движка нет способа различить эти намерения по одинаковым данным. Пауза на честной "
+        "просьбе к новому получателю отражает цену вмешательства. Для оценки частоты таких "
+        "случаев потребуются размеченные операции банка.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -212,10 +337,14 @@ def main() -> None:
     parser.add_argument("--write", action="store_true", help="Refresh checked-in evidence")
     args = parser.parse_args()
     results = asyncio.run(replay())
-    rendered = report(results)
+    calls = asyncio.run(call_comparisons())
+    rendered = report(results, calls)
     if args.write:
         (ROOT / "frontend/src/lib/scenario-summary.json").write_text(
             json.dumps(summary(results), indent=2) + "\n", encoding="utf-8"
+        )
+        (ROOT / "frontend/src/lib/post-call-replay.json").write_text(
+            json.dumps(call_scorecard(calls), indent=2) + "\n", encoding="utf-8"
         )
         (ROOT / "docs/SCENARIO_STAND.md").write_text(rendered, encoding="utf-8")
         (ROOT / "docs/evidence/scenario_stand.json").write_text(

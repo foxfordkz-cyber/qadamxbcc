@@ -46,6 +46,8 @@ from app.schemas.transfers import (
 from app.services import explain
 from app.services.antifraud import (
     ACTIVE_HOLD_RULE,
+    NEW_PAYEE_NIGHT_RULE,
+    POST_CALL_PAYMENT_RULE,
     AntifraudEngine,
     Evaluation,
     TransferContext,
@@ -108,8 +110,10 @@ RED_FLAG_LABELS: dict[str, tuple[str, str]] = {
         "перевод инициирован не самим клиентом",
     ),
     "unknown_recipient_under_pressure": (
-        "қоңырау не депозиттен алу кезінде клиент алушыны жеке танымайтынын растады",
-        "клиент не знает получателя лично при звонке или выводе средств с депозита",
+        "клиент алушыны жеке танымайды және ақшаны қоңырау кезінде, қоңыраудағы "
+        "өтініштен кейін немесе депозиттен алып аударуда",
+        "клиент не знает получателя лично и переводит деньги во время звонка, "
+        "по просьбе из недавнего звонка или после снятия с депозита",
     ),
 }
 
@@ -141,9 +145,7 @@ def mask_iban(iban: str) -> str:
     return f"{iban[:2]}** •••• {iban[-4:]}"
 
 
-def red_flags(
-    answers: CoolingQuestionnaire, *, active_call: bool = False, from_deposit: bool = False
-) -> list[str]:
+def red_flags(answers: CoolingQuestionnaire, tx: Transaction) -> list[str]:
     flags: list[str] = []
     if answers.caller_claims_bank_or_police:
         flags.append("caller_claims_bank_or_police")
@@ -153,7 +155,11 @@ def red_flags(
         flags.append("asked_to_keep_secret_or_install_app")
     if not answers.initiated_by_customer:
         flags.append("initiated_by_customer")
-    if not answers.knows_recipient_personally and (active_call or from_deposit):
+    if not answers.knows_recipient_personally and (
+        tx.active_call
+        or tx.from_deposit
+        or any(r.rule_code == POST_CALL_PAYMENT_RULE for r in tx.risk_events)
+    ):
         flags.append("unknown_recipient_under_pressure")
     return flags
 
@@ -233,6 +239,8 @@ def transfer_detail(
             tx.status,
             minutes=minutes,
             continuing_hold=any(r.code == ACTIVE_HOLD_RULE for r in reasons),
+            post_call_request=any(r.code == POST_CALL_PAYMENT_RULE for r in reasons),
+            night_spike=any(r.code == NEW_PAYEE_NIGHT_RULE for r in reasons),
         )
     )
     snapshot.update(
@@ -266,11 +274,7 @@ def transfer_detail(
         server_time=datetime.now(UTC),
         verification_answers=tx.verification_answers,
         resolved_at=tx.resolved_at,
-        red_flags=red_flags(
-            CoolingQuestionnaire.model_validate(tx.verification_answers),
-            active_call=tx.active_call,
-            from_deposit=tx.from_deposit,
-        )
+        red_flags=red_flags(CoolingQuestionnaire.model_validate(tx.verification_answers), tx)
         if tx.verification_answers
         else [],
     )
@@ -318,7 +322,7 @@ class TransferService:
 
     async def _resolve_recipient(
         self, req: TransferEvaluateRequest, sender: Account
-    ) -> tuple[Account, SettledPayee]:
+    ) -> tuple[Account, bool, SettledPayee]:
         stmt = select(Account, GraphEdge.tx_count, GraphEdge.weight).outerjoin(
             GraphEdge,
             and_(
@@ -342,7 +346,7 @@ class TransferService:
         account, lifetime_count, weight = row
         threshold = split_total_threshold(float(sender.avg_tx_amount))
         if (lifetime_count or 0) < 2 or round((weight or 0) + float(req.amount), 2) < threshold:
-            return account, SettledPayee()
+            return account, not lifetime_count, SettledPayee()
 
         # A concurrent approval can already be committed while its Redis outbox
         # is still pending. Confirm the pair from the ledger under the sender lock.
@@ -375,8 +379,8 @@ class TransferService:
             raise VelocityCapacityError("Settled sender history exceeds scorer capacity")
         if count != lifetime_count:
             # Older history or a legacy edge without its complete ledger: familiarity wins.
-            return account, SettledPayee()
-        return account, SettledPayee(count, float(total), float(largest))
+            return account, False, SettledPayee()
+        return account, False, SettledPayee(count, float(total), float(largest))
 
     async def _refresh_device_peers(
         self, sender: Account, recipient: Account, supplied_device: str
@@ -430,6 +434,9 @@ class TransferService:
         identity = req.request_id or uuid.uuid4()
         async with self._serialized(identity):
             payload = req.model_dump(mode="json", exclude={"request_id"})
+            if not req.context.payment_requested_after_call:
+                # Preserve request IDs hashed before this optional signal was introduced.
+                payload["context"].pop("payment_requested_after_call", None)
             payload["amount"] = str(req.amount.quantize(Decimal("0.01")))
             request_hash = hashlib.sha256(
                 json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
@@ -515,7 +522,7 @@ class TransferService:
         refund: PaymentReturn | None = None,
     ) -> TransferEvaluateResponse:
         sender = await self._get_account(req.sender_id)
-        recipient, first_day_payee = await self._resolve_recipient(req, sender)
+        recipient, is_first_payment, first_day_payee = await self._resolve_recipient(req, sender)
         if sender.id == recipient.id:
             raise InvalidTransferError("sender and recipient must differ")
         active_hold = await self._active_hold(sender.id, recipient.id, datetime.now(UTC))
@@ -546,7 +553,9 @@ class TransferService:
             occurred_at=occurred_at,
             sender_avg_amount=float(sender.avg_tx_amount),
             first_day_payee=first_day_payee,
+            settled_payee_is_new=is_first_payment,
             active_call=req.context.active_call,
+            payment_requested_after_call=req.context.payment_requested_after_call,
             from_deposit=req.context.from_deposit,
             is_new_device=is_new_device,
             is_new_recipient=req.context.is_new_recipient,
@@ -615,6 +624,7 @@ class TransferService:
         ]
         tx.context_snapshot = TransferContextIn(
             active_call=ctx.active_call,
+            payment_requested_after_call=ctx.payment_requested_after_call,
             from_deposit=ctx.from_deposit,
             is_new_device=ctx.is_new_device,
             is_new_recipient=evaluation.is_new_recipient,
@@ -738,7 +748,7 @@ class TransferService:
             ):
                 raise ConflictError("post_call_answer_required")
             now = datetime.now(UTC)
-            flags = red_flags(answers, active_call=tx.active_call, from_deposit=tx.from_deposit)
+            flags = red_flags(answers, tx)
             blocking_score = BLOCKED_AFTER_RED_FLAG_SCORE
             # Refresh DB-held SOC flag at the final authorization boundary.
             await self.session.refresh(tx.recipient, with_for_update={"read": True})
@@ -858,6 +868,7 @@ class TransferService:
             occurred_at=now,
             sender_avg_amount=float(sender.avg_tx_amount),
             active_call=tx.active_call,
+            payment_requested_after_call=original.payment_requested_after_call,
             from_deposit=tx.from_deposit,
             is_new_device=tx.is_new_device,
             recipient_flagged=tx.recipient.is_flagged,

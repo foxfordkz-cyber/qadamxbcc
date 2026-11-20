@@ -144,7 +144,7 @@ async def test_retry_resolve_and_queued_soc_writer_do_not_form_a_lock_cycle(
 
     async def paused_recipient(
         service: TransferService, request: TransferEvaluateRequest, sender: Account
-    ) -> tuple[Account, SettledPayee]:
+    ) -> tuple[Account, bool, SettledPayee]:
         result = await original_recipient(service, request, sender)
         account_locked.set()
         await child_resume.wait()

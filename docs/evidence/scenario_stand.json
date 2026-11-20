@@ -68,7 +68,8 @@
       "AMOUNT_SPIKE",
       "NEW_RECIPIENT",
       "NIGHT_HOURS",
-      "SOCIAL_ENGINEERING_PATTERN"
+      "SOCIAL_ENGINEERING_PATTERN",
+      "NEW_PAYEE_NIGHT_SPIKE"
     ]
   },
   {
@@ -183,7 +184,8 @@
       "NEW_RECIPIENT",
       "NIGHT_HOURS",
       "SOCIAL_ENGINEERING_PATTERN",
-      "ML_RISK_UPLIFT"
+      "ML_RISK_UPLIFT",
+      "NEW_PAYEE_NIGHT_SPIKE"
     ]
   },
   {
@@ -297,7 +299,8 @@
       "DEPOSIT_WITHDRAWAL",
       "NEW_RECIPIENT",
       "NIGHT_HOURS",
-      "SOCIAL_ENGINEERING_PATTERN"
+      "SOCIAL_ENGINEERING_PATTERN",
+      "NEW_PAYEE_NIGHT_SPIKE"
     ]
   },
   {
@@ -415,7 +418,8 @@
       "DEPOSIT_WITHDRAWAL",
       "NEW_RECIPIENT",
       "NIGHT_HOURS",
-      "SOCIAL_ENGINEERING_PATTERN"
+      "SOCIAL_ENGINEERING_PATTERN",
+      "NEW_PAYEE_NIGHT_SPIKE"
     ]
   },
   {
@@ -516,13 +520,14 @@
     "id": "relative-05",
     "story": "relative",
     "fraud": true,
-    "decision": "approved",
-    "score": 37,
+    "decision": "cooling_off",
+    "score": 40,
     "signals": [
       "AMOUNT_SPIKE",
       "NEW_RECIPIENT",
       "NIGHT_HOURS",
-      "ML_RISK_UPLIFT"
+      "ML_RISK_UPLIFT",
+      "NEW_PAYEE_NIGHT_SPIKE"
     ]
   },
   {
@@ -707,7 +712,8 @@
       "PASTED_DURING_CALL",
       "NEW_RECIPIENT",
       "NIGHT_HOURS",
-      "SOCIAL_ENGINEERING_PATTERN"
+      "SOCIAL_ENGINEERING_PATTERN",
+      "NEW_PAYEE_NIGHT_SPIKE"
     ]
   },
   {
@@ -804,7 +810,8 @@
       "AMOUNT_SPIKE",
       "NEW_RECIPIENT",
       "NIGHT_HOURS",
-      "ML_RISK_UPLIFT"
+      "ML_RISK_UPLIFT",
+      "NEW_PAYEE_NIGHT_SPIKE"
     ]
   },
   {

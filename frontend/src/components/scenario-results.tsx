@@ -1,7 +1,8 @@
 "use client";
 
-import { useLocale } from "@/lib/i18n";
+import { money, useLocale } from "@/lib/i18n";
 import results from "@/lib/scenario-summary.json";
+import postCallReplay from "@/lib/post-call-replay.json";
 
 const labels: Record<keyof typeof results, [string, string]> = {
   bank: ["Банктің қауіпсіздік қызметі", "Звонок от службы безопасности"],
@@ -41,7 +42,7 @@ export function ScenarioResults() {
   const kk = lang === "kk";
   const scams = counts(groups[0]);
   const honest = counts(groups[1]);
-  return <details className="panel scenario-results">
+  return <details id="scenario-results" className="panel scenario-results">
     <summary>{kk ? "Антифродты тексеру · 120 синтетикалық аударым" : "Проверка антифрода · 120 синтетических переводов"}</summary>
     <p>{kk
       ? `Жүйе ${scams.heldOrBlocked} алаяқтық аударымды тоқтатты (барлығы ${scams.total}). ${honest.total} адал аударым бойынша ${honest.heldOrBlocked} жалған дабыл тіркелді.`
@@ -56,5 +57,17 @@ export function ScenarioResults() {
       <tbody key={group[0]}><tr><th colSpan={4} scope="rowgroup">{i === 0 ? (kk ? "Алаяқтық" : "Мошеннические переводы") : (kk ? "Адал аударымдар" : "Честные переводы")}</th></tr>
         {group.map(key => <tr key={key}><th scope="row">{labels[key][kk ? 0 : 1]}</th><td>{results[key].approved}</td><td>{results[key].cooling_off}</td><td>{results[key].blocked}</td></tr>)}
       </tbody>)}</table>
+    <h3>{kk ? "Қоңыраудан кейінгі төрт аударымды қайта тексеру" : "Повторная проверка четырёх переводов после звонка"}</h3>
+    <p>{kk ? "«Сол деректер» бағанында бастапқы сұрау өзгеріссіз қалды. Соңғы бағанда клиент дәл осы аударымды телефон арқылы сұрағанын хабарлады."
+      : "В колонке «Те же данные» повторён исходный запрос. В последней колонке клиент сообщил, что в завершившемся звонке его попросили сделать именно этот перевод."}</p>
+    <table className="post-call-replay"><thead><tr>
+      <th scope="col">{kk ? "Операция" : "Операция"}</th><th scope="col">{kk ? "Бұрын" : "Раньше"}</th>
+      <th scope="col">{kk ? "Сол деректер" : "Те же данные"}</th><th scope="col">{kk ? "Клиент хабарлады" : "Клиент сообщил"}</th>
+    </tr></thead><tbody>{postCallReplay.map(row => <tr key={row.id}>
+      <th scope="row">{row.id.startsWith("relative") ? (kk ? "Туысқа" : "Родственнику") : (kk ? "Алдын ала төлем" : "Предоплата")}<small>{money(row.amount, lang)}</small></th>
+      {[row.baseline, row.unchanged, row.reported].map((result, index) => <td key={index}>
+        <b>{result.score}</b><small>{result.decision === "cooling_off" ? (kk ? "Кідіріс" : "Пауза") : (kk ? "Мақұл" : "Одобрено")}</small>
+      </td>)}
+    </tr>)}</tbody></table>
   </details>;
 }

@@ -8224,6 +8224,12 @@
             "description": "A phone call is active during the transfer",
             "default": false
           },
+          "payment_requested_after_call": {
+            "type": "boolean",
+            "title": "Payment Requested After Call",
+            "description": "The customer reports that the caller specifically requested this payment during a call that has just ended. An ended call by itself does not set this field.",
+            "default": false
+          },
           "from_deposit": {
             "type": "boolean",
             "title": "From Deposit",

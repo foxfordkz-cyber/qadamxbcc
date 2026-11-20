@@ -57,6 +57,7 @@ BEHAVIORAL_ONLY_CAP: Final = BLOCK_THRESHOLD - 1
 W_ACTIVE_CALL: Final = 25
 W_DEPOSIT: Final = 15
 W_NEW_RECIPIENT: Final = 10
+AMOUNT_SPIKE_RATIO: Final = 3
 W_AMOUNT_3X: Final = 10
 W_AMOUNT_10X: Final = 20
 W_NEW_DEVICE: Final = 15
@@ -111,6 +112,8 @@ MULE_CORROBORATION: Final = frozenset(
 # recipient-side movement or a reviewed flag before lifting a score into BLOCKED.
 HARD_BLOCK_EVIDENCE: Final = MULE_CORROBORATION | {"SENDER_PASS_THROUGH"}
 ACTIVE_HOLD_RULE: Final = "ACTIVE_HOLD_RETRY"
+POST_CALL_PAYMENT_RULE: Final = "POST_CALL_PAYMENT_REQUEST"
+NEW_PAYEE_NIGHT_RULE: Final = "NEW_PAYEE_NIGHT_SPIKE"
 SPLIT_RULE: Final = "SPLIT_TRANSFERS_24H"
 SPLIT_MIN_TOTAL_KZT: Final = 150_000
 SPLIT_AVERAGE_MULTIPLE: Final = 3
@@ -149,6 +152,8 @@ class TransferContext:
     # Complete first-day settled history, read under the sender lock by the API.
     # Direct engine callers use the settled Redis projection and lifetime graph count.
     first_day_payee: SettledPayee | None = None
+    payment_requested_after_call: bool = False
+    settled_payee_is_new: bool | None = None  # SQL pair history held under the sender lock
 
 
 @dataclass(frozen=True, slots=True)
@@ -290,12 +295,22 @@ class AntifraudEngine:
         t0 = time.perf_counter()
         await self.flush_settlements()
 
+        local = ctx.occurred_at.astimezone(self._tz)
+        is_night = local.hour in NIGHT_HOURS
+        ratio = ctx.amount / ctx.sender_avg_amount if ctx.sender_avg_amount > 0 else 1.0
+        night_spike = is_night and ratio >= AMOUNT_SPIKE_RATIO
+        post_call_request = ctx.payment_requested_after_call and not ctx.active_call
+        # New-payee review uses the settled relationship, including in demo mode.
+        # Direct scorers without the locked SQL observation use the settled graph.
+        new_payee = (
+            ctx.settled_payee_is_new if post_call_request or night_spike else ctx.is_new_recipient
+        )
         is_new_recipient = (
-            ctx.is_new_recipient
-            if ctx.is_new_recipient is not None
+            new_payee
+            if new_payee is not None
             else not self.graph.has_transfer(ctx.sender_id, ctx.recipient_id)
         )
-        behavioral = self._behavioral(ctx, is_new_recipient)
+        behavioral = self._behavioral(ctx, is_new_recipient, ratio, local, is_night)
         t1 = time.perf_counter()
 
         snapshot = (
@@ -328,8 +343,8 @@ class AntifraudEngine:
 
         network = _corroborate([*velocity, *graph])
         features = Features(
-            amount_ratio=ctx.amount / ctx.sender_avg_amount if ctx.sender_avg_amount > 0 else 1.0,
-            night_hour=ctx.occurred_at.astimezone(self._tz).hour in NIGHT_HOURS,
+            amount_ratio=ratio,
+            night_hour=is_night,
             new_recipient=is_new_recipient,
             active_call=ctx.active_call,
             deposit_withdrawal=ctx.from_deposit,
@@ -413,6 +428,29 @@ class AntifraudEngine:
                 )
                 score += deficit
                 reasons.sort(key=lambda r: (-r.score_delta, r.code))
+        if is_new_recipient and night_spike:
+            deficit = max(0, COOLING_OFF_THRESHOLD - score)
+            reasons.append(
+                _reason(
+                    NEW_PAYEE_NIGHT_RULE,
+                    LAYER_BEHAVIORAL,
+                    deficit,
+                    ratio=explain.fmt_ratio(ratio),
+                    time=local.strftime("%H:%M"),
+                )
+            )
+            score += deficit
+        reported_request = post_call_request and is_new_recipient
+        if reported_request:
+            # A customer report can require verification. It must not increase an
+            # independently justified hold/block or push ML over the block threshold.
+            deficit = max(0, COOLING_OFF_THRESHOLD - score)
+            reasons.append(
+                _reason(POST_CALL_PAYMENT_RULE, LAYER_BEHAVIORAL, deficit, source="customer_report")
+            )
+            score += deficit
+        if is_new_recipient and (night_spike or post_call_request):
+            reasons.sort(key=lambda r: (-r.score_delta, r.code))
         if (
             score < COOLING_OFF_THRESHOLD
             and ctx.active_hold_id is not None
@@ -441,6 +479,8 @@ class AntifraudEngine:
             decision,
             minutes=self.cooling_off_minutes,
             continuing_hold=any(r.code == ACTIVE_HOLD_RULE for r in reasons),
+            post_call_request=reported_request,
+            night_spike=is_new_recipient and night_spike,
         )
         t4 = time.perf_counter()
 
@@ -479,7 +519,14 @@ class AntifraudEngine:
         )
 
     # --------------------------------------------------------------- layer 1
-    def _behavioral(self, ctx: TransferContext, is_new_recipient: bool) -> list[RiskReason]:
+    def _behavioral(
+        self,
+        ctx: TransferContext,
+        is_new_recipient: bool,
+        ratio: float,
+        local: datetime,
+        is_night: bool,
+    ) -> list[RiskReason]:
         out: list[RiskReason] = []
         if ctx.duress:
             out.append(_reason("DURESS_SIGNAL", LAYER_BEHAVIORAL, W_DURESS))
@@ -493,24 +540,19 @@ class AntifraudEngine:
             out.append(_reason("DEPOSIT_WITHDRAWAL", LAYER_BEHAVIORAL, W_DEPOSIT))
         if is_new_recipient:
             out.append(_reason("NEW_RECIPIENT", LAYER_BEHAVIORAL, W_NEW_RECIPIENT))
-        if ctx.sender_avg_amount > 0:
-            ratio = ctx.amount / ctx.sender_avg_amount
-            delta = W_AMOUNT_10X if ratio >= 10 else W_AMOUNT_3X if ratio >= 3 else 0
-            if delta:
-                out.append(
-                    _reason(
-                        "AMOUNT_SPIKE",
-                        LAYER_BEHAVIORAL,
-                        delta,
-                        ratio=explain.fmt_ratio(ratio),
-                        amount=explain.fmt_tenge(ctx.amount),
-                        avg=explain.fmt_tenge(ctx.sender_avg_amount),
-                    )
+        if ratio >= AMOUNT_SPIKE_RATIO:
+            out.append(
+                _reason(
+                    "AMOUNT_SPIKE",
+                    LAYER_BEHAVIORAL,
+                    W_AMOUNT_10X if ratio >= 10 else W_AMOUNT_3X,
+                    ratio=explain.fmt_ratio(ratio),
+                    amount=explain.fmt_tenge(ctx.amount),
+                    avg=explain.fmt_tenge(ctx.sender_avg_amount),
                 )
+            )
         if ctx.is_new_device:
             out.append(_reason("NEW_DEVICE", LAYER_BEHAVIORAL, W_NEW_DEVICE))
-        local = ctx.occurred_at.astimezone(self._tz)
-        is_night = local.hour in NIGHT_HOURS
         if is_night:
             out.append(
                 _reason("NIGHT_HOURS", LAYER_BEHAVIORAL, W_NIGHT, time=local.strftime("%H:%M"))

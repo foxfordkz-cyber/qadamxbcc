@@ -16,6 +16,7 @@ export function Telemetry({ callCheck, result, amount, roundtrip, busy, error, o
   const typing = snap.typing_duration_ms == null ? "—" : `${snap.typing_duration_ms.toLocaleString(lang === "kk" ? "kk-KZ" : "ru-KZ")} ${t("ms")} · ${snap.hesitation_count} ${t("sigPauses")}`;
   const signals: { key: string; label: MessageKey; value: string; risk: boolean }[] = [
     { key: "call", label: "sigCall", value: t(context?.active_call ? "sigCallOn" : "sigNo"), risk: !!context?.active_call },
+    ...(context?.payment_requested_after_call ? [{ key: "reported-call-request", label: "reportedCallRequest" as const, value: t("sigYes"), risk: true }] : []),
     { key: "bank-log", label: "sigBankLog", value: callCheck ? t(callCheck.verified ? "sigBankCalling" : "sigBankNotCalling") : context?.active_call ? t("sigChecking") : "—", risk: !!callCheck && !callCheck.verified },
     { key: "deposit", label: "sigDeposit", value: t(context?.from_deposit ? "sigYes" : "sigNo"), risk: !!context?.from_deposit },
     { key: "paste", label: "sigRequisites", value: snap.pasted_recipient ? t("pasteDetected") : snap.edits ? t("sigTyped") : "—", risk: !!snap.pasted_recipient },

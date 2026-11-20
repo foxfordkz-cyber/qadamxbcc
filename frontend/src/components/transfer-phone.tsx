@@ -208,6 +208,10 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             <div className="confirm-total"><dt>{m("totalLabel")}</dt><dd><b className="tabular-nums">{money(form.amount, lang)}</b></dd></div>
           </dl>
           <p className="confirm-note"><ShieldCheck size={16} aria-hidden="true" />{m("confirmNote")}</p>
+          {!onCall && <label className="reported-call-request"><input type="checkbox" checked={!!form.context.payment_requested_after_call}
+            disabled={busy || blocked || completed || submissionPaused}
+            onChange={event => { const checked = event.target.checked; setForm(v => ({ ...v, context: { ...v.context, payment_requested_after_call: checked || undefined } })); }} />
+            <span>{t("payment_requested_after_call")}</span></label>}
           {config.demoActionsEnabled && (config.mode === "demo" || config.accountMode === "test") &&
             <MarketOrderCheck key={form.recipient + recipientType} phone={recipientType === "phone" ? form.recipient : ""} disabled={busy || submissionPaused || blocked} onEdit={() => setStep("details")} />}
           {showUnknown && <div className="phone-alert warning" role="status"><AlertTriangle size={18} aria-hidden="true" /><div><strong>{m("unknownTitle")}</strong><p>{m("unknownText")}</p></div></div>}

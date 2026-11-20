@@ -619,6 +619,27 @@ async function main() {
     await lan.locator('.phone-receipt .badge.approved').waitFor();
     const lanId = await lan.locator('.phone-receipt').getAttribute('data-transaction-id');
     check('mobile_route_transfer_works_in_insecure_lan_context', !capabilities.secure && !capabilities.subtle && !capabilities.locks && /^[0-9a-f-]{36}$/.test(lanId) && records.get(lanId)?.status === 'approved', capabilities);
+    check('unreported_call_is_not_submitted_by_default', !records.get(lanId).context.payment_requested_after_call);
+    await lan.locator('.receipt-new').click();
+    await lan.locator('.contact').first().click();
+    await lan.locator('.phone-form .transfer-cta').click();
+    const callReport = lan.locator('.reported-call-request input');
+    check('post_call_report_starts_unchecked', !await callReport.isChecked());
+    await callReport.check();
+    await lan.locator('.topbar').getByRole('button', { name: 'ҚАЗ', exact: true }).click();
+    check('post_call_report_translates_without_losing_selection',
+      await callReport.isChecked() && (await lan.locator('.reported-call-request').innerText()).includes('осы аударымды'));
+    await lan.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
+    await lan.locator('.transfer-edit').click();
+    await lan.locator('.contact').nth(1).click();
+    await lan.locator('.phone-form .transfer-cta').click();
+    check('changed_recipient_clears_previous_call_report',
+      !await callReport.isChecked() && (await lan.locator('.reported-call-request').innerText()).includes('этот перевод'));
+    await callReport.check();
+    const submitted = lan.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/transfers/evaluate'));
+    await lan.locator('.phone-confirm .transfer-confirm').click();
+    const sentContext = (await submitted).postDataJSON().context;
+    check('confirmed_call_report_reaches_evaluate_after_hangup', sentContext.payment_requested_after_call === true && sentContext.active_call === false);
     await lan.close();
     check('all_mutations_intercepted', report.mutations.length > 0 && report.mutations.every(m => m.intercepted));
     check('no_browser_runtime_errors', report.errors.length === 0, report.errors);

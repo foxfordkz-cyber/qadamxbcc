@@ -12,6 +12,11 @@ async function enter(page,baseURL,fixture={}) {
     if(path==="auth/login")json={role:"client",subject:"audit-fixture",token:"fixture-session"};
     else if(path==="inbox")json={items:fixture.messages || []};
     else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",recipients:[{name:"Арман",phone:"+77010000002"}]};
+    else if(path==="requests")json={request_id:ids[0]};
+    else if(path==="api/transfers/evaluate"){
+      fixture.evaluated=route.request().postDataJSON();
+      json={...items[0],recipient:{display_name:"Арман"},reasons:[],risk_score:0,context:fixture.evaluated.context};
+    }
     else if(path==="wallet/operations")json={items};
     else if(path==="wallet/analytics"){status=fixture.analytics||200;json={outgoing:"25000"};}
     else if(path.startsWith("api/transfers/"))json={...items.find(r=>r.transaction_id===path.split("/").at(-1)),recipient:{display_name:"Алия"}};
@@ -53,6 +58,24 @@ test("both edit and toolbar Back retain the transfer draft",async({page,baseURL}
     await expect(page.locator("[name=recipient_phone]")).toHaveValue("+77010000002");
     await expect(page.locator("[name=active_call]")).toBeChecked();
   }
+});
+test("the payer reports a request from an ended call for the reviewed draft only",async({page,baseURL})=>{
+  const fixture={};await enter(page,baseURL,fixture);
+  await page.locator("[data-action=transfer]").click();
+  await page.locator("[name=recipient_phone]").selectOption("+77010000002");
+  await page.locator("[name=amount]").fill("22000");
+  await page.locator("#transfer-form button").click();
+  const report=page.getByRole("checkbox",{name:/завершившемся звонке/});
+  await expect(report).not.toBeChecked();
+  await report.check();
+  await page.locator("[data-action=edit-transfer]").click();
+  await page.locator("[name=amount]").fill("32000");
+  await page.locator("#transfer-form button").click();
+  await expect(report).not.toBeChecked();
+  await report.check();
+  await page.locator("[data-action=submit-transfer]").click();
+  await expect.poll(()=>fixture.evaluated?.context?.payment_requested_after_call).toBe(true);
+  expect(fixture.evaluated.context.active_call).toBe(false);
 });
 test("Scam Check keeps edited text on failure, locale change and retry until cleared",async({page,baseURL})=>{
   const fixture={scan:503};await enter(page,baseURL,fixture);

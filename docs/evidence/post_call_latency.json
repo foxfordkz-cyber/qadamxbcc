@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-20",
+  "baseline_commit": "ea6280c9e01e9c76cea71a697c6d09f976b84dc4",
+  "candidate": "Same baseline with POST_CALL_PAYMENT_REQUEST and NEW_PAYEE_NIGHT_SPIKE, same trained model",
+  "model_sha256_both_versions": "27484bf2d98edead12f477813469b026ef8d87f6356a47d831bd03849b29a47d",
+  "reproduce_one_run_from_backend": "uv run python -m scripts.benchmark_ordinary_transfers",
+  "reproduce_comparison": "Use separate checkouts of the baseline and candidate. Copy the same benchmark module to backend/scripts in the baseline checkout, use the same model artifact and dependency lock in both, and invoke each run in a new process in the listed order.",
+  "method": {
+    "order": ["before", "after", "before", "after", "before", "after"],
+    "runs_per_version": 3,
+    "warmup_requests_excluded_per_run": 25,
+    "measured_requests_per_run": 180,
+    "simultaneous_requests": 1,
+    "backend": "Local Windows process; fresh in-memory SQLite and fakeredis per run; in-process FastAPI ASGI transport",
+    "workload": "Each transfer uses its own synthetic sender/payee pair. Of the 180 measured pairs, 90 have three prior payments and 90 have no previous payment. Amounts cycle through 5000, 12500, 22000 and 31000 KZT. Sender average is 42000 KZT. Time is fixed at 14:00 Asia/Almaty. No active call or reported payment request.",
+    "scorer": "Engine latency_ms from the response, excluding HTTP and SQL persistence",
+    "request": "Wall time from immediately before httpx.post until the full ASGI response completes, including SQL persistence and projections; excludes response parsing by the benchmark client",
+    "percentiles": "Inclusive linear interpolation per run. Summary is the median of three per-run percentiles; these are not pooled request percentiles."
+  },
+  "runs": [
+    {"version": "before", "trial": 1, "approved": 180, "scorer_p50_ms": 1.709, "scorer_p95_ms": 2.435, "request_p50_ms": 20.400, "request_p95_ms": 26.129},
+    {"version": "after",  "trial": 1, "approved": 180, "scorer_p50_ms": 1.509, "scorer_p95_ms": 2.030, "request_p50_ms": 17.228, "request_p95_ms": 20.639},
+    {"version": "before", "trial": 2, "approved": 180, "scorer_p50_ms": 1.531, "scorer_p95_ms": 1.969, "request_p50_ms": 17.661, "request_p95_ms": 20.502},
+    {"version": "after",  "trial": 2, "approved": 180, "scorer_p50_ms": 1.648, "scorer_p95_ms": 2.768, "request_p50_ms": 19.372, "request_p95_ms": 33.732},
+    {"version": "before", "trial": 3, "approved": 180, "scorer_p50_ms": 1.501, "scorer_p95_ms": 1.846, "request_p50_ms": 16.784, "request_p95_ms": 19.114},
+    {"version": "after",  "trial": 3, "approved": 180, "scorer_p50_ms": 1.560, "scorer_p95_ms": 1.907, "request_p50_ms": 17.801, "request_p95_ms": 19.937}
+  ],
+  "summary": {
+    "before": {"measured": 540, "approved": 540, "scorer_p50_ms": 1.531, "scorer_p95_ms": 1.969, "request_p50_ms": 17.661, "request_p95_ms": 20.502},
+    "after": {"measured": 540, "approved": 540, "scorer_p50_ms": 1.560, "scorer_p95_ms": 2.030, "request_p50_ms": 17.801, "request_p95_ms": 20.639}
+  },
+  "interpretation": "No additional holds in this workload. Median per-run scorer p95 increased by 0.061 ms and full-request p95 by 0.137 ms. All six scorer p95 values were below 15 ms. Full-request p95 varies across runs, including 33.732 ms in candidate trial 2. These single-process measurements do not establish production latency, throughput, or a statistically significant difference."
+}
