@@ -1,0 +1,135 @@
+{
+  "measured_at": "2026-11-20T10:02:40.1449878+00:00",
+  "finished_at": "2026-11-20T10:03:46.3339394+00:00",
+  "source_commit": "656133e82e1de357ba12db63695c119c6bfe642c",
+  "source_git_blobs": {
+    "app/services/antifraud.py": "5e9ee84e88c5a2b484d12493da0708f3f0235b7c",
+    "app/services/transfers.py": "1489385f13f76a1dceea39f02b98c0c9e623690e",
+    "app/db/locks.py": "706b060e7c26cf2bd8de05e07a4aa7eb10971466",
+    "scripts/benchmark_antifraud.py": "04eb6d1d2cb4ae5eddc9b20bde41d8fafd0e37ed",
+    "scripts/benchmark_http.py": "77db75d357cfc9a92cf23647094cafc86fe53c0d"
+  },
+  "baseline_file": "performance-20261120.json",
+  "dataset": {
+    "accounts": 299,
+    "seed_transactions": 2514,
+    "seed_graph_edges": 1432,
+    "http_sender_pool": 200,
+    "money": "synthetic KZT"
+  },
+  "environment": {
+    "os": "Windows 11 10.0.26200",
+    "cpu": "AMD Ryzen 5 7535HS, 6 cores / 12 logical",
+    "host_memory_gib": 15.25,
+    "python": "3.12.14",
+    "postgresql": "16.15",
+    "redis": "7.4.12",
+    "docker": "29.1.5",
+    "docker_reported_cpu": 2,
+    "docker_reported_memory_bytes": 4108050432,
+    "postgres_synchronous_commit": "on",
+    "redis_appendonly": "no",
+    "redis_save": "",
+    "api_workers": 1,
+    "request_rate_limit_per_minute": 10000,
+    "migration": "0009_recipient_flags"
+  },
+  "measurement": {
+    "order": [
+      "engine",
+      "http_c1",
+      "http_c8"
+    ],
+    "warmup_per_phase": 30,
+    "money_path": "POST /api/v1/transfers/evaluate including PostgreSQL and Redis, no ledger",
+    "database_continues_between_http_phases": true,
+    "seed_active_hold_retry_events": 0,
+    "persisted_transfer_count_after_http_c1_and_c8_including_warmups": 3574,
+    "active_hold_retry_events_after_http_c1_and_c8_including_warmups": 0,
+    "limits": [
+      "Engine microbenchmark excludes SQL lookup, sender lock, HTTP and persistence.",
+      "Mixed HTTP percentiles cover the full write path and combine outcomes.",
+      "No population fraud accuracy or bank infrastructure performance inferred.",
+      "Earlier run did not record the WSL quota. Differences are not attributable to one code change."
+    ]
+  },
+  "engine": {
+    "scope": "single-request warmed scoring; HTTP and SQL persistence excluded",
+    "workload": "40 senders, 25 recipients; 300 initial transfer updates; short histories",
+    "redis": "real",
+    "samples": 500.0,
+    "quantiles": "inclusive linear interpolation",
+    "ml_p95_ms": 0.175505,
+    "engine_p50_ms": 3.78365,
+    "engine_p95_ms": 4.9969399999999995,
+    "engine_p99_ms": 5.458784
+  },
+  "http": [
+    {
+      "scope": "HTTP response including persistence (client-observed; see target setup)",
+      "base_url": "http://127.0.0.1:8765",
+      "requests": 500,
+      "warmup": 30,
+      "concurrency": 1,
+      "load_model": "closed_loop; at most concurrency in flight; queue wait excluded",
+      "traffic": "mixed accounts",
+      "quantiles": "inclusive linear interpolation; all measured requests",
+      "samples": 500,
+      "p50_ms": 67.17,
+      "p95_ms": 98.86,
+      "p99_ms": 157.1,
+      "max_ms": 237.23,
+      "successful_requests": {
+        "samples": 500,
+        "p50_ms": 67.17,
+        "p95_ms": 98.86,
+        "p99_ms": 157.1,
+        "max_ms": 237.23
+      },
+      "error_rate": 0.0,
+      "errors": {},
+      "warmup_errors": {},
+      "measured_seconds": 34.241,
+      "throughput_rps": 14.6,
+      "status_mix": {
+        "hub:blocked": 50,
+        "ordinary:approved": 389,
+        "ordinary:cooling_off": 11,
+        "scam:cooling_off": 50
+      }
+    },
+    {
+      "scope": "HTTP response including persistence (client-observed; see target setup)",
+      "base_url": "http://127.0.0.1:8765",
+      "requests": 500,
+      "warmup": 30,
+      "concurrency": 8,
+      "load_model": "closed_loop; at most concurrency in flight; queue wait excluded",
+      "traffic": "mixed accounts",
+      "quantiles": "inclusive linear interpolation; all measured requests",
+      "samples": 500,
+      "p50_ms": 281.99,
+      "p95_ms": 505.58,
+      "p99_ms": 605.44,
+      "max_ms": 652.55,
+      "successful_requests": {
+        "samples": 500,
+        "p50_ms": 281.99,
+        "p95_ms": 505.58,
+        "p99_ms": 605.44,
+        "max_ms": 652.55
+      },
+      "error_rate": 0.0,
+      "errors": {},
+      "warmup_errors": {},
+      "measured_seconds": 17.811,
+      "throughput_rps": 28.1,
+      "status_mix": {
+        "hub:blocked": 50,
+        "ordinary:approved": 319,
+        "ordinary:cooling_off": 81,
+        "scam:cooling_off": 50
+      }
+    }
+  ]
+}
