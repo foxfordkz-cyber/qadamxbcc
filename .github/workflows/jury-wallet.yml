@@ -1,0 +1,84 @@
+name: Jury wallet
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &jury_paths
+      - "README.md"
+      - "docker-compose.jury.yml"
+      - "backend/Dockerfile.mobile-free*"
+      - "backend/scripts/mobile_ephemeral.py"
+      - "backend/scripts/jury_wallet.py"
+      - "backend/app/mobile_gateway/jury_rooms.py"
+      - "backend/app/mobile_gateway/passwords.py"
+      - "android-app/tests/browser/roles-live.spec.mjs"
+      - "android-app/tests/browser/jury-rooms.spec.mjs"
+      - ".github/workflows/jury-wallet.yml"
+  push:
+    branches: [main]
+    paths: *jury_paths
+
+permissions:
+  contents: read
+
+jobs:
+  three-roles:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: android-app/package-lock.json
+      - name: Check the public credentials and loopback entry point
+        env:
+          QADAM_ACCESS_FILE: ${{ runner.temp }}/jury-wallet.json
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          readme = Path("README.md").read_text(encoding="utf-8")
+          section = readme.split('<a name="jury"></a>', 1)[1].split('<a name="kk"></a>', 1)[0]
+          rows = re.findall(r"^\|[^|]+\| `(\w+)` \| `([^`|]+)` \|$", section, re.M)
+          accounts = {"client": "client_demo", "admin": "admin_demo", "platform_admin": "platform_demo"}
+          assert sorted(login for login, _ in rows) == sorted(accounts.values())
+          assert len({password for _, password in rows}) == len(accounts)
+          credentials = dict(rows)
+          compose = json.loads(subprocess.check_output(
+              ["docker", "compose", "-f", "docker-compose.jury.yml", "config", "--format", "json"]
+          ))
+          ports = compose["services"]["wallet"]["ports"]
+          assert [(p["host_ip"], str(p["published"]), p["target"]) for p in ports] == [("127.0.0.1", "18002", 8000)]
+          Path(os.environ["QADAM_ACCESS_FILE"]).write_text(json.dumps({
+              role: credentials[login] for role, login in accounts.items()
+          }))
+          PY
+      - name: Start the jury wallet
+        run: docker compose -f docker-compose.jury.yml up -d --build --wait --wait-timeout 180
+      - run: npm ci
+        working-directory: android-app
+      - name: Sign in as all three roles and verify the case workflow
+        working-directory: android-app
+        env:
+          QADAM_PASSWORD_E2E: "1"
+          QADAM_GATEWAY: http://127.0.0.1:18002
+          QADAM_ACCESS_FILE: ${{ runner.temp }}/jury-wallet.json
+        run: npm run test:ui -- tests/browser/roles-live.spec.mjs
+      - name: Start the hosted jury configuration on loopback
+        run: |
+          docker compose -f docker-compose.jury.yml run -d --name saq-jury-rooms-ci --publish 127.0.0.1:18003:8000 wallet python -m scripts.jury_wallet
+          curl -fsS --retry 40 --retry-delay 2 --retry-all-errors http://127.0.0.1:18003/health
+      - name: Verify invitations and isolation between two jury rooms
+        working-directory: android-app
+        env:
+          QADAM_JURY_E2E: "1"
+          QADAM_JURY_ORIGIN: http://127.0.0.1:18003
+        run: npm run test:ui -- tests/browser/jury-rooms.spec.mjs
+      - if: always()
+        run: docker compose -f docker-compose.jury.yml down --remove-orphans

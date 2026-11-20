@@ -1,0 +1,20 @@
+# Separate synthetic jury service. Use the three public hashes from docker-compose.jury.yml.
+services:
+  - type: web
+    name: saq-bol-jury
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile.mobile-free
+    dockerCommand: python -m scripts.jury_wallet
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: BCC_MOBILE_CLIENT_HASH
+        sync: false
+      - key: BCC_MOBILE_ADMIN_HASH
+        sync: false
+      - key: BCC_MOBILE_PLATFORM_HASH
+        sync: false

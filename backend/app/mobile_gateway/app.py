@@ -18,7 +18,7 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
@@ -74,6 +74,7 @@ ADMIN_PATHS = [
 
 
 WEB_COOKIE = "__Host-qadam-session"
+WEB_ASSETS = Path(__file__).resolve().parents[2] / ".qadam-web"
 
 
 def check_web_origin(request: Request) -> None:
@@ -166,6 +167,8 @@ def create_mobile_app(
     settings: Settings | None = None,
     resources: Resources | None = None,
     integrations: IntegrationSettings | None = None,
+    *,
+    browser_only: bool = False,
 ) -> FastAPI:
     cfg = mobile or MobileSettings()
     core_cfg = settings or Settings()
@@ -559,9 +562,18 @@ def create_mobile_app(
         await session.rollback()
         return await dispatch(request, principal, path, body)
 
-    web_assets = Path(__file__).resolve().parents[2] / ".qadam-web"
-    if (web_assets / "index.html").is_file():
-        app.mount("/wallet", StaticFiles(directory=web_assets, html=True), name="connected_wallet")
+    index = WEB_ASSETS / "index.html"
+    if index.is_file():
+        if browser_only:
+            # The downloadable team APK connects to a different service than a browser room.
+            browser_shell = index.read_text(encoding="utf-8").replace(" data-install>", ">", 1)
+
+            @app.api_route("/wallet/", methods=["GET", "HEAD"], include_in_schema=False)
+            @app.api_route("/wallet/index.html", methods=["GET", "HEAD"], include_in_schema=False)
+            async def browser_wallet() -> HTMLResponse:
+                return HTMLResponse(browser_shell)
+
+        app.mount("/wallet", StaticFiles(directory=WEB_ASSETS, html=True), name="connected_wallet")
     return app
 
 

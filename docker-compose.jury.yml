@@ -1,0 +1,20 @@
+name: saq-bol-jury
+
+services:
+  wallet:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.mobile-free
+    ports:
+      - "127.0.0.1:18002:8000"
+    # Intentionally public fixtures for this disposable local wallet.
+    environment:
+      BCC_MOBILE_CLIENT_HASH: "s1:05f177922a01f253a4f3aa6429db7244:1b5bb6116ba495b96376a2db49065053ecc31cefff310950f98d28d250105f0d"
+      BCC_MOBILE_ADMIN_HASH: "s1:3403f242afa5a8fae44995b557b97caa:06501d1f7b6f2773ad3c33419dbf00ebc21b53c06b87ad358deae5ccbb58a038"
+      BCC_MOBILE_PLATFORM_HASH: "s1:8ffffd5ec021fd7d55810bbb4055b388:249ad9c09b8540ac3b1b4febf511df15d05fff0af846506d95e5e2b41b93bd2c"
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=3).close()"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
