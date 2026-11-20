@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "overrides": {
-    "fflate@0.7.3": "0.7.5"
+    "satori": {
+      "fflate": "0.7.5"
+    },
+    "@shuding/opentype.js": {
+      "fflate": "0.7.5"
+    }
   },
   "scripts": {
     "dev": "next dev --webpack",
