@@ -89,6 +89,7 @@ def install_wallet(app: FastAPI) -> None:
         status: TransactionStatus | None = None,
         direction: Direction | None = None,
         day: date | None = None,
+        through: date | None = None,
         q: Annotated[str, Query(max_length=128)] = "",
         limit: Annotated[int, Query(ge=1, le=50)] = 20,
         offset: Annotated[int, Query(ge=0, le=10000)] = 0,
@@ -106,9 +107,15 @@ def install_wallet(app: FastAPI) -> None:
         if days is not None:
             _, start, end = window(days)
             stmt = stmt.where(T.created_at.between(start, end))
+        if through and (not day or not 0 <= (through - day).days < 90):
+            raise HTTPException(422, "wallet_date_range")
         if day:
+            stop_day = through or day
+            if stop_day == date.max:
+                raise HTTPException(422, "wallet_date_range")
             start = datetime.combine(day, time.min, KZ)
-            stmt = stmt.where(T.created_at >= start, T.created_at < start + timedelta(days=1))
+            end = datetime.combine(stop_day + timedelta(days=1), time.min, KZ)
+            stmt = stmt.where(T.created_at >= start, T.created_at < end)
         if status:
             stmt = stmt.where(T.status == status)
         if direction:
