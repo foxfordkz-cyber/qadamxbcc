@@ -37,7 +37,7 @@ export function checkView(d,T,B,when,label) {
 }
 export function packetContent(d,T,when,status) {
   const heading=T("Материалы по операции","Операция құжаттары");
-  const lines=[heading, d.transaction_id, when(d.created_at)+" · "+d.amount+" "+d.currency+" · "+status(d.status),
+  const lines=[heading, d.transaction_id, when(d.created_at)+" · "+new Intl.NumberFormat(undefined,{maximumFractionDigits:2}).format(Number(d.amount))+" "+d.currency+" · "+status(d.status),
     T("Хронология","Оқиғалар реті"),...d.events.map(e=>when(e.at)+" — "+T(...eventNames[e.kind])),
     T("Черновик заявления","Өтініш жобасы"),T("Прошу проверить обстоятельства учебной операции с указанным номером. Моё описание разговора и сведения о потерях я добавлю самостоятельно.","Көрсетілген нөмірлі оқу операциясының мән-жайын тексеруді сұраймын. Әңгіме сипаттамасы мен шығын туралы мәліметтерді өзім қосамын."),
     T("Синтетические данные. Заявление никуда не отправлено.","Жасанды деректер. Өтініш ешқайда жіберілген жоқ.")];

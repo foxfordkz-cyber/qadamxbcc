@@ -24,13 +24,15 @@ public class PacketPrinter extends Plugin {
             return;
         }
         StringBuilder html = new StringBuilder("<!doctype html><meta charset=utf-8><style>"
-            + "body{font:12pt sans-serif;color:#173d33;margin:32pt}header{color:#236451;font-weight:bold}"
-            + "h1{font-size:24pt}p{line-height:1.5;page-break-inside:avoid}</style><header>QADAM SHIELD</header>");
+            + "body{font:11pt sans-serif;color:#173d33;margin:28pt}header{color:#fff;background:#173f38;padding:14pt;font-weight:bold;letter-spacing:2pt}"
+            + "h1{font-size:22pt}h2{font-size:15pt;border-bottom:1pt solid #9db8a9;padding-bottom:6pt;margin-top:18pt}p{line-height:1.4;page-break-inside:avoid}.event{border-left:2pt solid #a6c8b2;padding-left:10pt}.draft{background:#f7eddf;padding:10pt}small{color:#456555}</style><header>QADAM SHIELD</header>");
         for (int i = 0; i < lines.length(); i++) {
             String line = lines.optString(i, "");
             if (line.length() > 640) { call.reject("Line too long"); return; }
-            String tag = i == 0 ? "h1" : "p";
-            html.append("<").append(tag).append(">").append(TextUtils.htmlEncode(line))
+            int total = lines.length();
+            String tag = i == 0 ? "h1" : (i == 3 || i == total - 3) ? "h2" : i == total - 1 ? "small" : "p";
+            String style = i >= 4 && i < total - 3 ? " class='event'" : i == total - 2 ? " class='draft'" : "";
+            html.append("<").append(tag).append(style).append(">").append(TextUtils.htmlEncode(line))
                 .append("</").append(tag).append(">");
         }
         getActivity().runOnUiThread(() -> {

@@ -1,4 +1,5 @@
 import { navIcon, shortcuts, familyView, checkView, packetContent } from "./guardian.mjs";
+import { packetView } from "./packet.mjs";
 import { readScreenshot } from "./screenshot.mjs";
 import * as identity from "./identity.mjs";
 const product = document.documentElement.hasAttribute("data-product");
@@ -561,7 +562,7 @@ function sampleView() {
 const screens = {
   family: () => familyView(data,T,button,when),
   guard: () => checkView(data,T,button,when,label),
-  packet: () => data ? '<article class="paper">'+packetContent(data,T,when,status).map((line,i)=>i===0?'<h1>'+E(line)+'</h1>':'<p>'+E(line)+'</p>').join("")+'</article>'+button("print-packet",T("Сохранить PDF","PDF сақтау")) : "",
+  packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Сохранить PDF","PDF сақтау")) : "",
   sample: sampleView,
   login: loginView,
   home: historyView,
