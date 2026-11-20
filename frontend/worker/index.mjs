@@ -5,7 +5,7 @@ import { isIP } from "node:net";
 export default {
   async fetch(request, env, ctx) {
     if (env.BCC_EDGE_SUBMISSION_LIMITS === "true" && request.method === "POST"
-      && new URL(request.url).pathname.replace(/\/+$/, "") === "/api/v1/transfers/evaluate") {
+      && /^\/api\/v1\/(?:transfers\/evaluate|returns\/[0-9a-f-]{36})\/?$/i.test(new URL(request.url).pathname)) {
       const address = request.headers.get("cf-connecting-ip") || "";
       const key = env.BCC_DEMO_UPSTREAM_API_KEY || env.BCC_API_KEY;
       if (!key) return Response.json({ error: "apiError" }, { status: 503 });

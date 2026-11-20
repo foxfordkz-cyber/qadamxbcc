@@ -1,0 +1,19 @@
+.panel { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.head, .head h3, .links li > div, .accounts { display: flex; align-items: center; gap: 8px; }
+.head, .links li > div { justify-content: space-between; flex-wrap: wrap; }
+.head h3 { margin: 0; font-size: 15px; }
+.head h3 svg, .accounts svg { color: var(--emerald-ink); }
+.panel p, .totals dt, .links time { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.head + p { margin-top: 8px; }
+.button { width: fit-content; min-height: 34px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); padding: 5px 12px; color: var(--emerald-ink); font-weight: 600; }
+.button:focus-visible { outline: 2px solid var(--emerald-ink); outline-offset: 2px; }
+.body, .links, .links li { display: grid; gap: 8px; }
+.body { margin-top: 12px; }
+.body strong { font-size: 14px; }
+.totals { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--emerald-soft); }
+.totals dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+.links { list-style: none; max-height: 340px; overflow: auto; margin: 0; padding: 0; }
+.links li { gap: 3px; padding: 8px 10px; border-inline-start: 3px solid var(--emerald-line); background: var(--surface-2); font-size: 12px; }
+.links li > .accounts { justify-content: flex-start; }
+.links p, .links time { font-variant-numeric: tabular-nums; }
+.body p.warning { color: var(--amber-deep); }

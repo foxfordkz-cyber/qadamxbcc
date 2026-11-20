@@ -49,21 +49,23 @@ async def evaluate_transfer(
     body: TransferEvaluateRequest, session: SessionDep, engine: EngineDep, request: Request
 ) -> TransferEvaluateResponse:
     """Score once per request_id; retries replay the original persisted evaluation."""
-    source = request.headers.get("x-bcc-submission-source")
-    if source is not None and request.app.state.settings.api_key:
-        if not re.fullmatch(r"[a-f0-9]{64}", source):
-            raise HTTPException(422, detail="invalid_submission_source")
-        retry = await submission_limits.admit(
-            request.app.state.resources.redis, source, body.request_id
-        )
-        if retry:
-            raise HTTPException(
-                429, detail="submission_cooldown", headers={"Retry-After": str(retry)}
-            )
+    await admit_submission(request, body.request_id)
     try:
         return await TransferService(session, engine).evaluate(body)
     except DomainError as exc:
         raise _http(exc) from exc
+
+
+async def admit_submission(request: Request, request_id: uuid.UUID | None) -> None:
+    source = request.headers.get("x-bcc-submission-source")
+    if source is not None and request.app.state.settings.api_key:
+        if not re.fullmatch(r"[a-f0-9]{64}", source):
+            raise HTTPException(422, detail="invalid_submission_source")
+        retry = await submission_limits.admit(request.app.state.resources.redis, source, request_id)
+        if retry:
+            raise HTTPException(
+                429, detail="submission_cooldown", headers={"Retry-After": str(retry)}
+            )
 
 
 @router.get("/{transaction_id}", response_model=TransferEvaluateResponse)

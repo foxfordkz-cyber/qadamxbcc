@@ -5,6 +5,8 @@
  * The live FastAPI backend, PostgreSQL and the ML model are not part of this build.
  */
 import { z } from "zod";
+import { traceRoute } from "./funds-trace";
+import { anchorsRoute } from "./trace-anchors";
 import { ApiError, answersSchema, cancelSchema, feedQuerySchema, postCallSchema, transferSchema } from "./contracts";
 import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, postCallDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "./demo";
 import { recipientFlagInputSchema } from "./recipient-flag";
@@ -47,6 +49,7 @@ const uuid = (value: string | undefined) => z.uuid().parse(value);
 
 function dispatch(method: string, route: string, search: URLSearchParams, body: unknown): unknown {
   const path = route.split("/");
+  if (method === "GET" && (traceRoute.test(route) || anchorsRoute.test(route))) throw new ApiError("traceBackendRequired", 501);
   if (method === "POST" && route === "transfers/evaluate") {
     const { recipient_card, ...rest } = transferSchema.parse(body);
     if (recipient_card) {

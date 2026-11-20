@@ -11,8 +11,18 @@ from app.integrations.guardian_summary import IncidentSummary, summarize
 from app.integrations.health_details import HealthDetails, HealthSampler
 from app.integrations.security import ConfigDep, PrincipalDep, require_role, verify_token
 from app.integrations.timeline import TimelinePage, timeline
+from app.integrations.transfer_story import PrivateStory, private_story
 
 router = APIRouter()
+
+
+@router.get("/soc/transactions/{transaction_id}/story", response_model=PrivateStory)
+async def transaction_story(
+    transaction_id: uuid.UUID, session: SessionDep, principal: PrincipalDep, response: Response
+) -> PrivateStory:
+    require_role(principal, "soc")
+    response.headers["Cache-Control"] = "no-store"
+    return await private_story(session, transaction_id)
 
 
 @router.get("/soc/transactions/{transaction_id}/timeline", response_model=TimelinePage)

@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { incomingSchema, paymentSchema, returnRoute } from "./payment-returns";
+import { fundsTraceSchema, traceRoute } from "./funds-trace";
+import { anchorsRoute, traceAnchorsSchema } from "./trace-anchors";
 import { validateSocIntegrationResponse } from "./soc-integrations";
 import { recipientFlagReceiptSchema, recipientFlagSchema } from "./recipient-flag";
 
@@ -104,7 +107,7 @@ export interface Graph {
 export interface PresetForm { sender: string; recipient: string; amount: string; context: Context }
 export type City = "astana" | "almaty" | "shymkent" | "atyrau";
 export interface TrafficAccount { id: string; city: City; role: "normal" | "scam" | "hub" }
-export interface AppConfig { accountMode?: "test" | "pilot"; publicSocReadOnly?: boolean; mode: "demo" | "live"; presets: Record<Preset, PresetForm>; trafficAccounts?: TrafficAccount[]; demoActionsEnabled?: boolean }
+export interface AppConfig { privateStoryAccess?: boolean; accountMode?: "test" | "pilot"; publicSocReadOnly?: boolean; mode: "demo" | "live"; presets: Record<Preset, PresetForm>; trafficAccounts?: TrafficAccount[]; demoActionsEnabled?: boolean }
 
 export class ApiError extends Error {
   constructor(public code: string, public status = 0, public retryAfter = 0) { super(code); }
@@ -158,6 +161,27 @@ const feedResponseSchema = z.object({
 const graphResponseSchema = z.object({ center: z.string(), depth: z.number(), nodes: z.array(z.object({ id: z.string(), type: z.string(), position: z.object({ x: z.number(), y: z.number() }), data: z.object({ label: z.string(), role: z.enum(["center", "hub", "mule", "normal"]), depth: z.number(), device_id: z.string(), flagged: z.boolean(), suspected_mule: z.boolean(), in_degree: z.number(), out_degree: z.number(), in_weight: z.number(), out_weight: z.number(), transit_ratio: z.number(), shared_device_accounts: z.number() }).passthrough() })), edges: z.array(z.object({ id: z.string(), source: z.string(), target: z.string(), type: z.string(), animated: z.boolean(), label: z.string().nullable(), data: z.object({ edge_type: z.enum(["transfer", "shared_device"]), weight: z.number(), tx_count: z.number(), highlight: z.boolean() }) })) });
 export function validateApiResponse(path: string, value: unknown, method = "GET") {
   const route = path.split("?")[0];
+  if (anchorsRoute.test(route)) {
+    const anchors = traceAnchorsSchema.safeParse(value);
+    if (!anchors.success || anchors.data.account_id.toLowerCase() !== route.split("/")[2].toLowerCase()) throw new ApiError("invalidResponse", 502);
+    return anchors.data;
+  }
+  const linked = returnRoute(route);
+  if (linked) {
+    if (linked.kind === "list") {
+      const parsed = incomingSchema.safeParse(value);
+      if (!parsed.success) throw new ApiError("invalidResponse", 502);
+      return parsed.data;
+    }
+    const parsed = paymentSchema.safeParse(value);
+    if (!parsed.success || parsed.data.original_id.toLowerCase() !== linked.id.toLowerCase()) throw new ApiError("invalidResponse", 502);
+    return parsed.data;
+  }
+  if (traceRoute.test(route)) {
+    const trace = fundsTraceSchema.safeParse(value);
+    if (!trace.success || trace.data.transaction_id.toLowerCase() !== route.split("/")[2].toLowerCase()) throw new ApiError("invalidResponse", 502);
+    return trace.data;
+  }
   if (route.startsWith("integrations/")) {
     try { return validateSocIntegrationResponse(path, value, method.toUpperCase()); }
     catch { throw new ApiError("invalidResponse", 502); }

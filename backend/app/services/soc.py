@@ -56,7 +56,9 @@ async def feed(
         stmt = stmt.where(
             or_(
                 Transaction.status.in_((TransactionStatus.COOLING_OFF, TransactionStatus.BLOCKED)),
-                Transaction.risk_events.any(RiskEvent.rule_code == "POST_CALL_SCAM_REPORTED"),
+                Transaction.risk_events.any(
+                    RiskEvent.rule_code.in_(("POST_CALL_SCAM_REPORTED", "RETURN_REDIRECT_REPORTED"))
+                ),
             )
         )
     if min_score:

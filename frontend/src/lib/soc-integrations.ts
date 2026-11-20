@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { privateStorySchema } from "./transfer-story";
 
 const id = z.uuid();
 const timestamp = z.iso.datetime({ offset: true });
@@ -88,6 +89,7 @@ export type IncidentSummary = z.infer<typeof incidentSummarySchema>;
 export function socIntegrationSchema(path: string): z.ZodType | undefined {
   const route = path.split("?")[0];
   if (route === "integrations/guardian/soc/cases") return casePageSchema;
+  if (/^integrations\/soc\/transactions\/[0-9a-f-]{36}\/story$/i.test(route)) return privateStorySchema;
   if (route === "integrations/guardian/soc/cases/analytics") return caseAnalyticsSchema;
   const caseMatch = /^integrations\/guardian\/soc\/cases\/([0-9a-f-]{36})(?:\/(actions|history|notes|evidence|export))?$/i.exec(route);
   if (caseMatch) return ({ history: caseHistorySchema, notes: caseNotesSchema, evidence: caseEvidenceSchema, export: caseExportSchema } as Record<string, z.ZodType>)[caseMatch[2]] ?? caseSchema;
@@ -104,7 +106,7 @@ export function validateSocIntegrationResponse(path: string, value: unknown, met
   if (!schema) return value;
   const result = schema.parse(value);
   const caseMatch = /^integrations\/guardian\/soc\/cases\/([0-9a-f-]{36})(?:\/actions)?$/i.exec(route);
-  const txMatch = /^integrations\/soc\/transactions\/([0-9a-f-]{36})(?:\/(?:timeline|summary))?$/i.exec(route);
+  const txMatch = /^integrations\/soc\/transactions\/([0-9a-f-]{36})(?:\/(?:timeline|summary|story))?$/i.exec(route);
   if (caseMatch && (result as CaseOut).id.toLowerCase() !== caseMatch[1].toLowerCase()) throw new Error("Mismatched case response");
   if (txMatch && (result as IntegrationSummary).transaction_id.toLowerCase() !== txMatch[1].toLowerCase()) throw new Error("Mismatched transaction response");
   return result;

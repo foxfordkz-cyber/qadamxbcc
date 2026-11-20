@@ -18,6 +18,7 @@ from app.models import (
     Account,
     EdgeType,
     GraphEdge,
+    PaymentReturn,
     ProjectionEvent,
     RecipientFlagAudit,
     Transaction,
@@ -71,6 +72,11 @@ async def test_seed_is_idempotent_with_exact_demo_accounts(
     async with session_factory() as session:
         transaction_id = await session.scalar(select(Transaction.id).limit(1))
         assert transaction_id is not None
+        reversal_id = await session.scalar(
+            select(Transaction.id).where(Transaction.id != transaction_id).limit(1)
+        )
+        assert reversal_id is not None
+        session.add(PaymentReturn(original_id=transaction_id, refund_transaction_id=reversal_id))
         session.add(ProjectionEvent(transaction_id=transaction_id))
         session.add(AbandonedRequest(request_id=abandoned_id))
         await session.commit()
@@ -102,6 +108,7 @@ async def test_seed_is_idempotent_with_exact_demo_accounts(
     async with session_factory() as session:
         assert await session.scalar(select(func.count()).select_from(ProjectionEvent)) == 0
         assert await session.scalar(select(func.count()).select_from(RecipientFlagAudit)) == 0
+        assert await session.scalar(select(func.count()).select_from(PaymentReturn)) == 0
         assert await session.get(AbandonedRequest, abandoned_id) is not None
         accounts = {a.id: a for a in (await session.execute(select(Account))).scalars()}
         for spec in DEMO_ACCOUNTS:

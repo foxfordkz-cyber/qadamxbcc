@@ -44,6 +44,7 @@ from app.models import (
     Account,
     EdgeType,
     GraphEdge,
+    PaymentReturn,
     ProjectionEvent,
     RecipientFlagAudit,
     RiskEvent,
@@ -518,7 +519,15 @@ async def _clear(session: AsyncSession, redis: Redis) -> int:
     # Explicit demo reset removes stale deliveries even with SQLite foreign keys disabled.
     # Abandoned UUID promises survive resets so late old requests cannot execute.
     # SOC flag history belongs to the disposable synthetic accounts being replaced.
-    for model in (RecipientFlagAudit, ProjectionEvent, RiskEvent, Transaction, GraphEdge, Account):
+    for model in (
+        PaymentReturn,
+        RecipientFlagAudit,
+        ProjectionEvent,
+        RiskEvent,
+        Transaction,
+        GraphEdge,
+        Account,
+    ):
         await session.execute(delete(model))
     await session.commit()
     keys = [k async for k in redis.scan_iter(match=f"{KEY_PREFIX}:*", count=1_000)]

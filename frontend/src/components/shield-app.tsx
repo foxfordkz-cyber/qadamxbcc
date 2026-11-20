@@ -324,7 +324,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     <header className="topbar"><div className="topbar-inner"><div className="brand">
       <span className="brand-mark"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("officerWorkspace")}</small></div>
     </div>{languageSwitch}</div></header>
-    <main className="shell"><SocDashboard readOnly={config.publicSocReadOnly} initialSelection={null} revision={revision} evaluations={evaluations} traffic={traffic}
+    <main className="shell"><SocDashboard privateStoryAccess={config.privateStoryAccess} liveLedger={config.mode === "live" && !STATIC_DEMO} readOnly={config.publicSocReadOnly} initialSelection={null} revision={revision} evaluations={evaluations} traffic={traffic}
       onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} busy={busy} />
       <footer className="page-footer"><Link href="/">{t("bothWorkspaces")}</Link><span>{t(config.accountMode === "test" ? "testDataScope" : "prototypeIdentity")}</span></footer>
     </main>
@@ -338,7 +338,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     <main className="mobile-shell">
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
-      <TransferPhone bare config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} submissionPaused={!!submissionRetryAt} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} />
+      <TransferPhone bare config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} submissionPaused={!!submissionRetryAt} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onReviewReturn={id => void review(id)} onNewTransfer={freshTransfer} />
     </main>
     {cooling}
   </>;
@@ -361,10 +361,10 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       <div className="role-summary"><p>{t(tab === "mobile" ? "customerPurpose" : "officerPurpose")} {config.accountMode === "test" && t("testDataScope")}</p>
         <Link href={tab === "mobile" ? "/mobile" : "/soc"}>{t(tab === "mobile" ? "openCustomer" : "openOfficer")} <ArrowRight size={15} /></Link></div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === "soc" ? <SocDashboard readOnly={config.publicSocReadOnly} initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} focusTransfer={socFocus} onFocusConsumed={consumeSocFocus} /> : <>
+        {tab === "soc" ? <SocDashboard privateStoryAccess={config.privateStoryAccess} liveLedger={config.mode === "live" && !STATIC_DEMO} readOnly={config.publicSocReadOnly} initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} focusTransfer={socFocus} onFocusConsumed={consumeSocFocus} /> : <>
           <div className="client-wrap">
           <div className="transfer-grid">
-            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} submissionPaused={!!submissionRetryAt} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} onCallCheck={setCallVerdict} />
+            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} submissionPaused={!!submissionRetryAt} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onReviewReturn={id => void review(id)} onNewTransfer={freshTransfer} onCallCheck={setCallVerdict} />
             <Telemetry result={result} amount={resultAmount} roundtrip={roundtrip} busy={busy} error={error} sensor={sensor} sender={form.sender} context={form.context} callCheck={callVerdict} onReview={() => result && void review(result.transaction_id)} />
           </div>
           </div>

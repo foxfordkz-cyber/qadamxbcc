@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
 from app.api.deps import EngineDep, SessionDep
 from app.models import TransactionStatus
+from app.schemas.funds_trace import FundsTrace
 from app.schemas.soc import (
     FeedResponse,
     GraphResponse,
@@ -14,9 +15,32 @@ from app.schemas.soc import (
     RecipientFlagState,
 )
 from app.services import recipient_flags, soc, submission_limits
+from app.services.funds_trace import funds_trace
+from app.services.trace_anchors import TraceAnchors, recent_anchors
 from app.services.transfers import NotFoundError
 
 router = APIRouter(prefix="/soc", tags=["soc"])
+
+
+@router.get("/accounts/{account_id}/trace-anchors", response_model=TraceAnchors)
+async def trace_anchors(
+    account_id: uuid.UUID, session: SessionDep, response: Response
+) -> TraceAnchors:
+    """Up to eight settled KZT receipts among the last 64 transfers to this account."""
+    response.headers["Cache-Control"] = "no-store"
+    return await recent_anchors(session, account_id)
+
+
+@router.get("/transfers/{transaction_id}/funds-trace", response_model=FundsTrace)
+async def trace_transfer(
+    transaction_id: uuid.UUID, session: SessionDep, response: Response
+) -> FundsTrace:
+    """One amount-conserving, time-ordered allocation through later approved payments."""
+    response.headers["Cache-Control"] = "no-store"
+    result = await funds_trace(session, transaction_id)
+    if result is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "transaction_not_found")
+    return result
 
 
 @router.get("/feed", response_model=FeedResponse)

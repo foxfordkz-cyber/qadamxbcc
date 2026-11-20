@@ -1056,6 +1056,31 @@
   },
   {
     "method": "GET",
+    "path": "/api/v1/integrations/soc/transactions/{transaction_id}/story",
+    "role": "soc",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-soc-capability>"
+    },
+    "path_parameters": {
+      "transaction_id": "00000000-0000-4000-8000-000000000002"
+    },
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": {
+      "transaction_id": "00000000-0000-4000-8000-000000000002",
+      "events": [
+        {
+          "role": "guardian",
+          "code": "NOTIFICATION_QUEUED",
+          "timestamp": "2026-11-14T09:00:00Z"
+        }
+      ],
+      "truncated": false
+    }
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/integrations/soc/transactions/{transaction_id}/timeline",
     "role": "soc",
     "headers": {

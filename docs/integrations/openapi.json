@@ -481,6 +481,250 @@
         }
       }
     },
+    "/api/v1/returns/incoming": {
+      "get": {
+        "tags": [
+          "linked returns"
+        ],
+        "summary": "Incoming",
+        "operationId": "incoming_api_v1_returns_incoming_get",
+        "parameters": [
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/returns/{original_id}": {
+      "get": {
+        "tags": [
+          "linked returns"
+        ],
+        "summary": "Detail",
+        "operationId": "detail_api_v1_returns__original_id__get",
+        "parameters": [
+          {
+            "name": "original_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Original Id"
+            }
+          },
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingPayment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "linked returns"
+        ],
+        "summary": "Customer Action",
+        "operationId": "customer_action_api_v1_returns__original_id__post",
+        "parameters": [
+          {
+            "name": "original_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Original Id"
+            }
+          },
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingPayment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/soc/returns/{original_id}/review": {
+      "post": {
+        "tags": [
+          "linked returns"
+        ],
+        "summary": "Review",
+        "operationId": "review_api_v1_soc_returns__original_id__review_post",
+        "parameters": [
+          {
+            "name": "original_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Original Id"
+            }
+          },
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingPayment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/call-check": {
       "post": {
         "tags": [
@@ -633,6 +877,126 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ScamGuide"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/soc/accounts/{account_id}/trace-anchors": {
+      "get": {
+        "tags": [
+          "soc"
+        ],
+        "summary": "Trace Anchors",
+        "description": "Up to eight settled KZT receipts among the last 64 transfers to this account.",
+        "operationId": "trace_anchors_api_v1_soc_accounts__account_id__trace_anchors_get",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceAnchors"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/soc/transfers/{transaction_id}/funds-trace": {
+      "get": {
+        "tags": [
+          "soc"
+        ],
+        "summary": "Trace Transfer",
+        "description": "One amount-conserving, time-ordered allocation through later approved payments.",
+        "operationId": "trace_transfer_api_v1_soc_transfers__transaction_id__funds_trace_get",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          },
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundsTrace"
                 }
               }
             }
@@ -1622,6 +1986,54 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExternalCheckOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/soc/transactions/{transaction_id}/story": {
+      "get": {
+        "tags": [
+          "advisory orchestration"
+        ],
+        "summary": "Transaction Story",
+        "operationId": "transaction_story_api_v1_integrations_soc_transactions__transaction_id__story_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateStory"
                 }
               }
             }
@@ -4889,6 +5301,115 @@
         "type": "object",
         "title": "FeedStats"
       },
+      "FundsTrace": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "recipient_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Recipient Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "settled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settled At"
+          },
+          "observed_until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed Until"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "not_settled",
+              "no_match",
+              "possible_flow",
+              "insufficient_evidence"
+            ],
+            "title": "Outcome"
+          },
+          "window_hours": {
+            "type": "integer",
+            "title": "Window Hours"
+          },
+          "max_hops": {
+            "type": "integer",
+            "title": "Max Hops"
+          },
+          "max_candidates": {
+            "type": "integer",
+            "title": "Max Candidates"
+          },
+          "candidates_examined": {
+            "type": "integer",
+            "title": "Candidates Examined",
+            "default": 0
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
+          },
+          "ambiguous_count": {
+            "type": "integer",
+            "title": "Ambiguous Count",
+            "default": 0
+          },
+          "first_hop_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "First Hop Amount",
+            "default": "0.00"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/TracedTransfer"
+            },
+            "type": "array",
+            "title": "Links"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "recipient_id",
+          "status",
+          "amount",
+          "currency",
+          "settled_at",
+          "observed_until",
+          "outcome",
+          "window_hours",
+          "max_hops",
+          "max_candidates",
+          "links"
+        ],
+        "title": "FundsTrace"
+      },
       "GatewayErrorCode": {
         "type": "string",
         "enum": [
@@ -5448,6 +5969,99 @@
         ],
         "title": "IncidentSummary"
       },
+      "IncomingPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IncomingPayment"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "IncomingPage"
+      },
+      "IncomingPayment": {
+        "properties": {
+          "original_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Original Id"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "const": "KZT",
+            "title": "Currency",
+            "default": "KZT"
+          },
+          "payer": {
+            "$ref": "#/components/schemas/OriginalPayer"
+          },
+          "review_state": {
+            "type": "string",
+            "enum": [
+              "none",
+              "reported",
+              "appealed",
+              "cleared",
+              "upheld"
+            ],
+            "title": "Review State"
+          },
+          "can_appeal": {
+            "type": "boolean",
+            "title": "Can Appeal"
+          },
+          "refund_transaction_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Transaction Id"
+          },
+          "refund_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransactionStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "original_id",
+          "received_at",
+          "amount",
+          "payer",
+          "review_state",
+          "can_appeal",
+          "refund_transaction_id",
+          "refund_status"
+        ],
+        "title": "IncomingPayment"
+      },
       "InformationOut": {
         "properties": {
           "id": {
@@ -5958,6 +6572,24 @@
         "type": "object",
         "title": "OrchestrationRequest"
       },
+      "OriginalPayer": {
+        "properties": {
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "iban_masked": {
+            "type": "string",
+            "title": "Iban Masked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "display_name",
+          "iban_masked"
+        ],
+        "title": "OriginalPayer"
+      },
       "PartyOut": {
         "properties": {
           "id": {
@@ -6226,6 +6858,34 @@
           "masked_spans"
         ],
         "title": "PrivacySummary"
+      },
+      "PrivateStory": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/StoryEvent"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Events"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "events",
+          "truncated"
+        ],
+        "title": "PrivateStory"
       },
       "QueueCounts": {
         "properties": {
@@ -6595,6 +7255,64 @@
         ],
         "title": "ResolveCoolingRequest"
       },
+      "ReturnAction": {
+        "properties": {
+          "confirmed": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirmed"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "return_to_sender",
+              "report_redirect",
+              "appeal"
+            ],
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "confirmed",
+          "action"
+        ],
+        "title": "ReturnAction"
+      },
+      "ReturnReview": {
+        "properties": {
+          "confirmed": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirmed"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "uphold"
+            ],
+            "title": "Decision"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "reported",
+              "appealed"
+            ],
+            "title": "Stage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "confirmed",
+          "decision",
+          "stage"
+        ],
+        "title": "ReturnReview"
+      },
       "RiskReasonOut": {
         "properties": {
           "code": {
@@ -6948,6 +7666,35 @@
         "title": "SimulatedUpdate",
         "description": "Test-only equivalent of authenticated private Telegram updates."
       },
+      "StoryEvent": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "guardian",
+              "soc"
+            ],
+            "title": "Role"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "code",
+          "timestamp"
+        ],
+        "title": "StoryEvent"
+      },
       "SubmissionLimits": {
         "properties": {
           "active": {
@@ -7102,6 +7849,108 @@
           "next_cursor"
         ],
         "title": "TimelinePage"
+      },
+      "TraceAnchor": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount"
+          },
+          "settled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Settled At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "amount",
+          "settled_at"
+        ],
+        "title": "TraceAnchor"
+      },
+      "TraceAnchors": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Account Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TraceAnchor"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "items"
+        ],
+        "title": "TraceAnchors"
+      },
+      "TracedTransfer": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "sender_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sender Id"
+          },
+          "recipient_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Recipient Id"
+          },
+          "settled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Settled At"
+          },
+          "transaction_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Transaction Amount"
+          },
+          "allocated_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Allocated Amount"
+          },
+          "first_hop": {
+            "type": "integer",
+            "title": "First Hop"
+          },
+          "last_hop": {
+            "type": "integer",
+            "title": "Last Hop"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "sender_id",
+          "recipient_id",
+          "settled_at",
+          "transaction_amount",
+          "allocated_amount",
+          "first_hop",
+          "last_hop"
+        ],
+        "title": "TracedTransfer"
       },
       "TransactionStatus": {
         "type": "string",

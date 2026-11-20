@@ -36,5 +36,7 @@ export function appConfig(): AppConfig {
     try { trafficAccounts = trafficAccountsSchema.parse(JSON.parse(process.env.BCC_TRAFFIC_ACCOUNTS)); }
     catch { trafficAccounts = []; }
   }
-  return { mode, presets, trafficAccounts, demoActionsEnabled, publicSocReadOnly: access.publicSocReadOnly, accountMode: pilot ? "pilot" : seeded ? "test" : undefined };
+  const privateStoryAccess = !pilot && !access.publicOrigin && process.env.BCC_MOBILE_LAN !== "true" &&
+    process.env.NEXT_PUBLIC_BCC_STATIC !== "1" && Boolean(process.env.BCC_SOC_CAPABILITY);
+  return { mode, presets, trafficAccounts, demoActionsEnabled, privateStoryAccess, publicSocReadOnly: access.publicSocReadOnly, accountMode: pilot ? "pilot" : seeded ? "test" : undefined };
 }

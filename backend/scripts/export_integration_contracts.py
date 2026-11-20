@@ -29,6 +29,11 @@ def export() -> None:
     timestamp = "2026-11-14T09:00:00Z"
     tx = "00000000-0000-4000-8000-000000000002"
     additions = {
+        "/api/v1/integrations/soc/transactions/{transaction_id}/story": {
+            "transaction_id": tx,
+            "events": [{"role": "guardian", "code": "NOTIFICATION_QUEUED", "timestamp": timestamp}],
+            "truncated": False,
+        },
         "/api/v1/integrations/soc/transactions/{transaction_id}/timeline": {
             "transaction_id": tx,
             "as_of": timestamp,

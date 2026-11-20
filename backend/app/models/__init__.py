@@ -13,12 +13,14 @@ from app.models.entities import (
     Transaction,
     TransactionStatus,
 )
+from app.models.payment_returns import PaymentReturn
 
 __all__ = [
     "AbandonedRequest",
     "Account",
     "EdgeType",
     "GraphEdge",
+    "PaymentReturn",
     "ProjectionEvent",
     "RecipientFlagAudit",
     "RiskEvent",

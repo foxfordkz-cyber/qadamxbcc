@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { returnActionInput, returnRoute, reviewInput } from "@/lib/payment-returns";
 import { z } from "zod";
+import { traceRoute } from "@/lib/funds-trace";
+import { anchorsRoute } from "@/lib/trace-anchors";
 import { answersSchema, cancelSchema, feedQuerySchema, postCallSchema, transferSchema, validateApiResponse } from "@/lib/contracts";
 import { recipientFlagInputSchema } from "@/lib/recipient-flag";
 import { appConfig, ids } from "@/lib/config";
@@ -18,6 +21,8 @@ async function handle(request: NextRequest, context: RouteContext) {
   if (access) return json({ error: access.error }, access.status);
   const { path } = await context.params;
   const route = path.join("/");
+  const linked = returnRoute(route);
+  if (linked && (request.nextUrl.search || (linked.kind === "list" && request.method !== "GET") || (linked.kind === "review" && request.method !== "POST"))) return json({error:"notFound"}, 404);
   const evaluate = request.method === "POST" && route === "transfers/evaluate";
   const resolve = request.method === "POST" && /^transfers\/[0-9a-f-]{36}\/resolve-cooling$/i.test(route);
   const postCall = request.method === "POST" && /^transfers\/[0-9a-f-]{36}\/post-call$/i.test(route);
@@ -26,12 +31,14 @@ async function handle(request: NextRequest, context: RouteContext) {
   const detail = request.method === "GET" && /^transfers\/[0-9a-f-]{36}$/i.test(route);
   const feed = request.method === "GET" && route === "soc/feed";
   const graph = request.method === "GET" && /^soc\/graph\/[0-9a-f-]{36}$/i.test(route);
+  const fundsTrace = request.method === "GET" && (traceRoute.test(route) || anchorsRoute.test(route));
+  if (fundsTrace && request.nextUrl.search) return json({ error: "invalid" }, 422);
   const recipientFlag = ["GET", "POST"].includes(request.method) && /^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route);
   const callCheck = request.method === "POST" && route === "call-check";
   const bankCall = request.method === "POST" && route === "call-check/demo/bank-call";
   const guide = request.method === "GET" && route === "scam-check/guide";
-  if (!evaluate && !resolve && !cancel && !postCall && !abandon && !detail && !feed && !graph && !recipientFlag && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
-  if ((abandon || graph || recipientFlag) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
+  if (!linked && !evaluate && !resolve && !cancel && !postCall && !abandon && !detail && !feed && !graph && !fundsTrace && !recipientFlag && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
+  if ((abandon || graph || fundsTrace || recipientFlag) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
   if ((resolve || cancel || postCall || detail) && !z.uuid().safeParse(path[1]).success) return json({ error: "invalid" }, 422);
   const admission = apiAdmission();
   if (admission.status !== 200) {
@@ -41,10 +48,21 @@ async function handle(request: NextRequest, context: RouteContext) {
   }
   try {
     const config = appConfig();
+    if (linked && (config.mode !== "live" || config.accountMode !== "test" || !config.demoActionsEnabled)) return json({error:"notFound"}, 404);
+    if (fundsTrace && config.mode === "demo") return json({ error: "traceBackendRequired" }, 501);
     if (config.publicSocReadOnly && route.startsWith("soc/") && request.method !== "GET") {
       return json({ error: "integrationForbidden" }, 403);
     }
     let body: unknown;
+    let returnTransfer = false;
+    if (linked && request.method === "POST") {
+      if (linked.kind === "review") body = reviewInput.parse(await readBoundedJson(request));
+      else {
+        const input = returnActionInput.parse(await readBoundedJson(request));
+        body = input;
+        returnTransfer = input.action === "return_to_sender";
+      }
+    }
     if (recipientFlag) {
       if (request.method === "POST") body = recipientFlagInputSchema.parse(await readBoundedJson(request));
       if (config.mode === "demo") return json(body ? setRecipientFlagDemo(path[2], recipientFlagInputSchema.parse(body)) : recipientFlagDemo(path[2]));
@@ -89,7 +107,7 @@ async function handle(request: NextRequest, context: RouteContext) {
     if (config.mode === "demo") return json(detail ? detailDemo(path[1]) : feed ? feedDemo(feedQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams))) : graphDemo(path[2], z.coerce.number().int().min(1).max(3).parse(request.nextUrl.searchParams.get("depth") ?? 2)));
     const base = (process.env.BCC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
     const headers = backendHeaders(route);
-    if (evaluate && process.env.BCC_EDGE_SUBMISSION_LIMITS === "true") {
+    if ((evaluate || returnTransfer) && process.env.BCC_EDGE_SUBMISSION_LIMITS === "true") {
       const source = request.headers.get("x-bcc-submission-source") ?? "";
       if (!/^[a-f0-9]{64}$/.test(source)) return json({ error: "apiError" }, 503);
       headers["X-BCC-Submission-Source"] = source;
@@ -122,7 +140,11 @@ async function handle(request: NextRequest, context: RouteContext) {
     let value: unknown;
     try { value = await response.json(); }
     catch { return json({ error: "invalidResponse" }, 502); }
-    return json(recipientFlag ? validateApiResponse(route, value, request.method) : value);
+    if (linked) {
+      try { return json(validateApiResponse(route, value, request.method)); }
+      catch { return json({error:"invalidResponse"}, 502); }
+    }
+    return json(recipientFlag || fundsTrace ? validateApiResponse(route, value, request.method) : value);
   } catch (error) {
     if (error instanceof RequestBodyError) return json({ error: error.code }, error.status);
     if (error instanceof DemoError) return json({ error: error.message }, error.status);

@@ -24,6 +24,7 @@ from app.models import (
     Account,
     EdgeType,
     GraphEdge,
+    PaymentReturn,
     ProjectionEvent,
     RiskEvent,
     Transaction,
@@ -194,7 +195,11 @@ def risk_reasons(tx: Transaction) -> list[RiskReasonOut]:
             score_delta=e.score_delta,
             reason_kk=e.reason_kk,
             reason_ru=e.reason_ru,
-            evidence=e.evidence or {},
+            evidence=(
+                {**(e.evidence or {}), "recorded_at": e.created_at.isoformat()}
+                if e.rule_code.startswith(("POST_CALL_", "RETURN_"))
+                else e.evidence or {}
+            ),
         )
         for e in sorted(
             tx.risk_events,
@@ -438,8 +443,20 @@ class TransferService:
             .with_for_update(read=True)
         )
 
+    async def evaluate_linked_return(self, original: Transaction, record: PaymentReturn) -> None:
+        """Score the reversal while the original payment and its sender are serialized."""
+        request = TransferEvaluateRequest(
+            sender_id=original.recipient_id, recipient_id=original.sender_id, amount=original.amount
+        )
+        await self._evaluate(request, uuid.uuid4(), None, refund=record)
+
     async def _evaluate(
-        self, req: TransferEvaluateRequest, tx_id: uuid.UUID, request_hash: str
+        self,
+        req: TransferEvaluateRequest,
+        tx_id: uuid.UUID,
+        request_hash: str | None,
+        *,
+        refund: PaymentReturn | None = None,
     ) -> TransferEvaluateResponse:
         sender = await self._get_account(req.sender_id)
         recipient = await self._resolve_recipient(req)
@@ -560,6 +577,10 @@ class TransferService:
                 self.session, sender.id, recipient.id, ctx.amount, received_at
             )
             self.session.add(ProjectionEvent(transaction_id=tx.id, created_at=received_at))
+        if refund is not None:
+            await self.session.flush()
+            refund.refund_transaction_id = tx.id
+            self.session.add(refund)
         await self.session.commit()
         if evaluation.decision is TransactionStatus.APPROVED:
             await self.engine.ensure_consistent()

@@ -13,6 +13,8 @@ import { MLInspector } from "./ml-inspector";
 import { countBlockedHubs } from "@/lib/feed-summary";
 import { useSocPoll } from "./use-soc-poll";
 import { CaseInspector } from "./case-inspector";
+import { TraceAnchorPicker } from "./trace-anchor-picker";
+import { TransferStory } from "./transfer-story";
 import { MobileQr } from "./mobile-qr";
 import { SocCasesWorkspace } from "./soc-cases-workspace";
 import { SocIntegrationInsights } from "./soc-integration-insights";
@@ -20,10 +22,11 @@ import { integrationText } from "@/lib/soc-integration-copy";
 import { readSocDashboardSession, writeSocDashboardSession, SOC_SESSION_KEY } from "@/lib/soc-dashboard-session";
 
 const NetworkGraph = dynamic(() => import("./network-graph"), { ssr: false });
-export function SocDashboard({ initialSelection, revision, traffic, onTrafficSync, stream, onReview, readOnly, busy, focusTransfer, onFocusConsumed }: { initialSelection: string | null; revision: number; evaluations: Record<string, Evaluation>; traffic: Record<string, TrafficRecord>; onTrafficSync: (items: FeedItem[]) => void; stream: TrafficStream; onReview?: (id: string) => void; readOnly?: boolean; busy: boolean; focusTransfer?: boolean; onFocusConsumed?: () => void }) {
+export function SocDashboard({ liveLedger, initialSelection, revision, traffic, onTrafficSync, stream, onReview, readOnly, privateStoryAccess, busy, focusTransfer, onFocusConsumed }: { liveLedger: boolean; initialSelection: string | null; revision: number; evaluations: Record<string, Evaluation>; traffic: Record<string, TrafficRecord>; onTrafficSync: (items: FeedItem[]) => void; stream: TrafficStream; onReview?: (id: string) => void; readOnly?: boolean; privateStoryAccess?: boolean; busy: boolean; focusTransfer?: boolean; onFocusConsumed?: () => void }) {
   const { lang, t } = useLocale();
   const [refresh, setRefresh] = useState(0);
   const [selection, setSelection] = useState(initialSelection);
+  const [traceFocus, setTraceFocus] = useState<{ id: string; revision: number } | null>(null);
   const [filter, setFilter] = useState<Status | "all">("all");
   const [alertsOnly, setAlertsOnly] = useState(false);
   const [search, setSearch] = useState("");
@@ -148,14 +151,20 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
     </>}
     {(mode === "transfers" || caseTransactionId) &&
     <div className="soc-bottom" id="soc-investigation" tabIndex={-1}>
+      <TransferStory detail={selected && selected.transaction_id === inspectedId ? selected : null} privateAccess={!readOnly && !!privateStoryAccess} revision={revision} />
       <section className="panel graph-panel"><div className="panel-heading"><div><h2><Network size={18} />{t("graph")}</h2><p className="panel-subtitle">{t("graphHint")}</p></div><div className="graph-depth-controls segmented" role="group" aria-label={t("graph")}><button type="button" aria-pressed={graphDepth === 1} onClick={() => setGraphDepth(1)}>{t("graphDirect")}</button><button type="button" aria-pressed={graphDepth === 2} onClick={() => setGraphDepth(2)}>{t("graphExpanded")}</button></div></div>
         <div className="graph-meta">{graph.data && <p className="graph-scope" role="status">{t("graphScope")}: <strong className="tabular-nums">{graph.data.nodes.length} / {graph.data.edges.length}</strong></p>}{graph.receivedAt !== null && <p role="status">{graph.error ? `${t("staleData")} · ` : ""}{t("lastUpdated")}: <span className="tabular-nums">{time(graph.receivedAt)}</span></p>}</div>
         {graph.error && <p role="alert" className="error panel-error">{t(graph.error)}</p>}
         {selected && <p className="soc-center-recipient">{integrationText(lang, "selectedRecipient")}: <strong>{selected.recipient.display_name}</strong> · {selected.recipient.iban_masked}</p>}
+        {liveLedger && mode === "transfers" && selected?.transaction_id === inspectedId && selected && <TraceAnchorPicker
+          key={selected.recipient.id} accountId={selected.recipient.id} onSelect={id => {
+            setSelection(id);
+            setTraceFocus(previous => ({ id, revision: (previous?.revision ?? 0) + 1 }));
+          }} />}
         {graph.data ? <NetworkGraph graph={graph.data} streaming={streaming} /> : <p className="empty">{t(selected ? "refreshing" : "select")}</p>}</section>
       <section className="panel analysis-panel" aria-labelledby="analysis-title"><div className="panel-heading"><div><h2 id="analysis-title"><BrainCircuit size={18} />{t("analysisPanel")}</h2><p className="panel-subtitle">{t("caseSnapshotHint")}</p></div></div>
         <div className="analysis-body">{selected && selected.transaction_id === inspectedId ? <><div className="analysis-score"><Gauge score={selected.risk_score} /><div><Badge status={selected.status} /><p className="result-headline">{lang === "kk" ? selected.headline_kk : selected.headline_ru}</p></div></div><MLInspector details={selected} reasons={selected.reasons} /><Explain kk={selected.reasons_kk} ru={selected.reasons_ru} /></> : <p className="empty">{t("analysisEmpty")}</p>}</div></section>
-      <CaseInspector detail={selected} loading={detail.loading} error={detail.error} receivedAt={detail.receivedAt} selectedId={inspectedId} onReview={onReview} readOnly={readOnly} busy={busy} onRetry={() => setRefresh(value => value + 1)} />
+      <CaseInspector traceRevision={traceFocus && traceFocus.id === inspectedId ? traceFocus.revision : 0} detail={selected} loading={detail.loading} error={detail.error} receivedAt={detail.receivedAt} selectedId={inspectedId} onReview={onReview} readOnly={readOnly} busy={busy} onRetry={() => setRefresh(value => value + 1)} />
     </div>}
   </div>;
 }

@@ -154,6 +154,15 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 | `POST` | `/api/v1/transfers/{transaction_id}/cancel` | `X-BCC-API-Key` | `CancelTransferRequest` | `TransferEvaluateResponse` | 200, 422 |
 | `POST` | `/api/v1/transfers/{transaction_id}/post-call` | `X-BCC-API-Key` | `PostCallRequest` | `TransferEvaluateResponse` | 200, 422 |
 
+### linked returns
+
+| Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
+|---|---|---|---|---|---|
+| `GET` | `/api/v1/returns/incoming` | `X-BCC-API-Key` | — | `IncomingPage` | 200, 422 |
+| `GET` | `/api/v1/returns/{original_id}` | `X-BCC-API-Key` | — | `IncomingPayment` | 200, 422 |
+| `POST` | `/api/v1/returns/{original_id}` | `X-BCC-API-Key` | `ReturnAction` | `IncomingPayment` | 200, 422 |
+| `POST` | `/api/v1/soc/returns/{original_id}/review` | `X-BCC-SOC-Key` | `ReturnReview` | `IncomingPayment` | 200, 422 |
+
 ### call-check
 
 | Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
@@ -171,6 +180,8 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 
 | Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
 |---|---|---|---|---|---|
+| `GET` | `/api/v1/soc/accounts/{account_id}/trace-anchors` | `X-BCC-SOC-Key` | — | `TraceAnchors` | 200, 422 |
+| `GET` | `/api/v1/soc/transfers/{transaction_id}/funds-trace` | `X-BCC-SOC-Key` | — | `FundsTrace` | 200, 422 |
 | `GET` | `/api/v1/soc/feed` | `X-BCC-SOC-Key` | — | `FeedResponse` | 200, 422 |
 | `GET` | `/api/v1/soc/recipients/{account_id}/flag` | `X-BCC-SOC-Key` | — | `RecipientFlagState` | 200, 422 |
 | `POST` | `/api/v1/soc/recipients/{account_id}/flag` | `X-BCC-SOC-Key` | `RecipientFlagRequest` | `RecipientFlagResponse` | 200, 422 |
@@ -203,6 +214,7 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 
 | Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
 |---|---|---|---|---|---|
+| `GET` | `/api/v1/integrations/soc/transactions/{transaction_id}/story` | Bearer | — | `PrivateStory` | 200, 422 |
 | `GET` | `/api/v1/integrations/soc/transactions/{transaction_id}/timeline` | Bearer | — | `TimelinePage` | 200, 422 |
 | `GET` | `/api/v1/integrations/health/details` | Bearer | — | `HealthDetails` | 200 |
 | `GET` | `/api/v1/integrations/soc/transactions/{transaction_id}/summary` | Bearer | — | `IncidentSummary` | 200, 422 |

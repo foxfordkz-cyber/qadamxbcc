@@ -7,6 +7,8 @@ import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
 import { groupAmount, rawAmount } from "@/lib/amount";
 import { Badge } from "./risk";
+import { IncomingReturns, returnsTitle } from "./incoming-returns";
+import { RotateCcw } from "lucide-react";
 import { CircleMembers } from "./circle-members";
 import { MessageCheck } from "./message-check";
 import { TrustedCircle } from "./trusted-circle";
@@ -35,6 +37,7 @@ interface Props {
   result: Evaluation | null;
   amount: string;
   onReview: () => void;
+  onReviewReturn?: (id: string) => void;
   onNewTransfer: () => void;
   /** The bank-log answer for the current call, for the decision panel next to the phone. */
   onCallCheck?: (value: CallCheck | null) => void;
@@ -57,13 +60,13 @@ function maskRecipient(value: string, type: RecipientType) {
   return value;
 }
 
-export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, submissionPaused = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onNewTransfer, onCallCheck, bare = false }: Props) {
+export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, submissionPaused = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onReviewReturn, onNewTransfer, onCallCheck, bare = false }: Props) {
   const { lang, t } = useLocale();
   const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const contextDetails = useRef<HTMLDetailsElement>(null);
   const confirmHeading = useRef<HTMLHeadingElement>(null);
   const [step, setStep] = useState<"details" | "confirm">("details");
-  const [screen, setScreen] = useState<"home" | "transfer" | "circle" | "scam">(bare ? "home" : "transfer");
+  const [screen, setScreen] = useState<"home" | "transfer" | "circle" | "scam" | "returns">(bare ? "home" : "transfer");
   const [offline, setOffline] = useState(false);
   const [largeText, setLargeText] = useState(false);
   useEffect(() => {
@@ -133,7 +136,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const chosenContact = recipientType === "phone" ? contacts.find(contact => config.presets[contact.key].recipient === form.recipient) : undefined;
   const activeContext = contextKeys.filter(key => form.context[key]).length;
   const numericAmount = Number(form.amount);
-  const title = screen === "home" ? m("tabHome") : screen === "circle" ? m("circle") : screen === "scam" ? m("scam")
+  const title = screen === "returns" ? returnsTitle(lang) : screen === "home" ? m("tabHome") : screen === "circle" ? m("circle") : screen === "scam" ? m("scam")
     : receipt ? m("receiptTitle") : step === "confirm" ? m("stepConfirm") : t("transfer");
   const showUnknown = blocked && !receipt;
 
@@ -153,8 +156,9 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           <div className="source-card"><small>{m("available")} · {m("demoValue")}</small><strong>{money(DEMO_BALANCE, lang)}</strong><span>•••• 4821</span></div>
           <button type="button" className="primary" onClick={() => { if (receipt && !blocked) onNewTransfer(); setScreen("transfer"); }}><ArrowLeftRight size={18}/>{m("homeTransfer")}</button>
           <button type="button" className="secondary" onClick={() => setScreen("circle")}><Users size={18}/>{m("circle")}</button>
+          {config.mode === "live" && config.accountMode === "test" && config.demoActionsEnabled && <button type="button" className="secondary" onClick={() => setScreen("returns")}><RotateCcw size={18}/>{returnsTitle(lang)}</button>}
           <button type="button" className="secondary" onClick={() => setScreen("scam")}><ScanText size={18}/>{m("scam")}</button>
-        </section> : screen === "circle" ? <CircleMembers /> : screen === "scam" ? <MessageCheck /> : receipt ? <section className={`phone-receipt receipt-${silent ? "processing" : receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
+        </section> : screen === "returns" ? <IncomingReturns onReview={onReviewReturn} transferDisabled={busy || blocked || submissionPaused} /> : screen === "circle" ? <CircleMembers /> : screen === "scam" ? <MessageCheck /> : receipt ? <section className={`phone-receipt receipt-${silent ? "processing" : receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
           <div className="receipt-symbol" aria-hidden="true"><ReceiptIcon size={32} strokeWidth={1.8} /></div>
           {silent ? <span className="badge processing">{m("processingBadge")}</span> : <Badge status={receipt.status} />}
           <strong className="receipt-amount">{money(receipt.amount ?? amount, lang)}</strong>

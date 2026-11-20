@@ -86,7 +86,7 @@ export function resolveSocProxyRoute(parts: string[], method: string, query: URL
       if (["history", "notes"].includes(parts[4])) parameters = { limit: "limit", after_version: "version" };
     } else return { status: 404, error: "notFound" };
   } else if (method === "GET" && parts[0] === "soc" && parts[1] === "transactions" && uuid.safeParse(parts[2]).success &&
-      (parts.length === 3 || (parts.length === 4 && ["timeline", "summary"].includes(parts[3])))) {
+      (parts.length === 3 || (parts.length === 4 && ["timeline", "summary", "story"].includes(parts[3])))) {
     if (parts[3] === "timeline") parameters = { limit: "limit", cursor: 1024 };
   } else return { status: 404, error: "notFound" };
   for (const [key, value] of query) {

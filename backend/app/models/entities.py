@@ -21,6 +21,7 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -158,6 +159,13 @@ class Transaction(Base):
         Index("ix_transactions_created_at", "created_at"),
         Index("ix_transactions_sender_created", "sender_id", "created_at"),
         Index("ix_transactions_recipient_created", "recipient_id", "created_at"),
+        Index(
+            "ix_tx_sender_status_settlement",
+            "sender_id",
+            "status",
+            func.coalesce(resolved_at, created_at),
+            "id",
+        ),
     )
 
 
