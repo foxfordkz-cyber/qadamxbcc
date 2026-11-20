@@ -1062,8 +1062,8 @@ input:focus-visible {
 .projector .soc-metrics,.projector .graph{font-size:1.15rem}
 @media(min-width:880px){
  #app[data-actor]:not([data-actor=guest]) .shell{max-width:82rem;padding-inline:14rem 2rem}
- #app[data-actor]:not([data-actor=guest]) .bottom-nav{left:max(12px,calc((100vw - 81rem)/2));top:5rem;bottom:auto;transform:none;width:12rem;display:flex;flex-direction:column;align-items:stretch;height:auto;border:1px solid var(--line);border-radius:20px;padding:10px;background:#fff}
- #app[data-actor]:not([data-actor=guest]) .bottom-nav button{display:flex;align-items:center;justify-content:flex-start;gap:12px;text-align:start;min-height:48px;padding:0 12px}
+ #app[data-actor]:not([data-actor=guest]) .bottom-nav{left:max(12px,calc((100vw - 81rem)/2));top:5rem;bottom:auto;transform:none;width:12rem;grid-template-columns:minmax(0,1fr);align-items:stretch;height:auto;border:1px solid var(--line);border-radius:20px;padding:10px;background:#fff}
+ #app[data-actor]:not([data-actor=guest]) .bottom-nav button{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;text-align:start;min-height:48px;padding:0 12px}
  .connected-nav button span{font-size:.95rem}
  #app .wallet-overview{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:start}
  #app .wallet-overview:not(:has(.wallet-checks)){grid-template-columns:minmax(0,1fr)}

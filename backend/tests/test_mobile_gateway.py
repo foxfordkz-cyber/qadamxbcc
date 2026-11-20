@@ -529,6 +529,7 @@ async def test_family_one_recipient_actual_callback(
 
     client, _ = mobile_world
     auth = await login(client)
+    before_balance = (await client.get("/mobile/v1/account", headers=auth)).json()["balance"]
     txid = await call_tx(client, auth)
     path = f"/mobile/v1/protection/{txid}"
     await client.post("/mobile/v1/protection/family", headers=auth, json={"action": "enable"})
@@ -569,6 +570,47 @@ async def test_family_one_recipient_actual_callback(
     check = (await client.get(path + "/check", headers=auth)).json()
     assert check["contact_state"] == "CONTACT_ACKNOWLEDGED"
     assert check["answer"] is None
+
+    async with session_factory() as db:
+        service = TrustedContactService(db, cfg)
+        for action in ("suspect", "suspect", "ack"):
+            await service.callback(
+                notice.id, int(contact.telegram_chat_id), notice.message_id, action
+            )
+    core_path = "/mobile/v1/api/transfers/" + txid
+    assert (await client.get(core_path, headers=auth)).json()["status"] == "cooling_off"
+    assert (await client.get("/mobile/v1/account", headers=auth)).json()[
+        "balance"
+    ] == before_balance
+    report_path = "/mobile/v1/api/integrations/guardian/reports"
+    report = await client.post(
+        report_path,
+        headers={**auth, "Idempotency-Key": str(uuid.uuid4())},
+        json={
+            "category": "safe_account",
+            "description": "Учебный звонящий требовал срочный перевод.",
+            "transaction_id": txid,
+            "confirmed_demo_submission": True,
+        },
+    )
+    assert report.is_success, report.text
+    staff = await login(client, ADMIN_CODE)
+    case_path = "/mobile/v1/api/integrations/guardian/soc/cases"
+    case = await client.post(
+        case_path,
+        headers={**staff, "Idempotency-Key": str(uuid.uuid4())},
+        json={"report_id": report.json()["id"]},
+    )
+    assert case.is_success, case.text
+    cancelled = await client.post(core_path + "/cancel", headers=auth, json={})
+    assert cancelled.json()["status"] == "cancelled"
+    assert (await client.get("/mobile/v1/account", headers=auth)).json()[
+        "balance"
+    ] == before_balance
+    case_url = case_path + "/" + case.json()["id"]
+    assert (await client.get(case_url, headers=staff)).json()["state"] == "NEW"
+    evidence = (await client.get(case_url + "/evidence", headers=staff)).json()
+    assert evidence["transaction_id"] == txid
 
 
 async def test_wallet_amounts_history_and_role_boundaries(

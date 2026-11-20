@@ -78,10 +78,7 @@ def check_web_origin(request: Request) -> None:
     trusted_origin = f"https://{request.url.netloc}"
     if request.url.hostname in ("127.0.0.1", "localhost") and request.url.scheme == "http":
         trusted_origin = f"http://{request.url.netloc}"
-    if (
-        request.headers.get("x-qadam-web") != "1"
-        or request.headers.get("origin") != trusted_origin
-    ):
+    if request.headers.get("x-qadam-web") != "1" or request.headers.get("origin") != trusted_origin:
         raise HTTPException(403, "web_origin_required")
 
 
