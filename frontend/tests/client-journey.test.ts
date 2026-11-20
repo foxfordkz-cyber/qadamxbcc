@@ -48,6 +48,8 @@ test("member routes use the configured demo owner and return whitelisted fields"
     { method, headers: { "Content-Type": "application/json", Origin: "http://localhost" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const listed = await GET(req("GET"));
   assert.equal(listed.status, 200);
+  const publicVisitor = new NextRequest("https://public.example/api/v1/trusted-circle/members");
+  assert.equal((await GET(publicVisitor)).status, 404);
   assert.doesNotMatch(await listed.text(), /private|telegram_chat_id|Bearer/);
   assert.equal((await POST(req("POST", { owner_consent: false, language: "kk" }))).status, 422);
   assert.equal((await POST(req("POST", { owner_consent: true, owner: id, language: "ru" }))).status, 422);

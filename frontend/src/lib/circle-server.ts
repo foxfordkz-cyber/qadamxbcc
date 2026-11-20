@@ -60,7 +60,14 @@ export function circleAccess(request: NextRequest): Access {
   }
   const key = signingKey();
   const owner = appConfig().presets.normal.sender;
-  if (accessConfiguration().publicOrigin || process.env.BCC_INTEGRATIONS_TELEGRAM_MODE !== "fake" ||
+  const config = accessConfiguration();
+  // Older loopback demos use the backend default, which is the fake adapter.
+  const loopback = (host: string) => ["localhost", "127.0.0.1", "[::1]"].includes(host);
+  const mode = process.env.BCC_INTEGRATIONS_TELEGRAM_MODE;
+  const backend = process.env.BCC_API_URL || "http://127.0.0.1:8000";
+  const loopbackDemo = mode === undefined && config.environment === "local" && loopback(request.nextUrl.hostname)
+    && URL.canParse(backend) && loopback(new URL(backend).hostname);
+  if (config.publicOrigin || (mode !== "fake" && !loopbackDemo) ||
       !key || !z.uuid().safeParse(owner).success) return { failure: unavailable() };
   return { headers: { "Content-Type": "application/json", Authorization: `Bearer ${ownerCapability(owner, key)}` } };
 }
