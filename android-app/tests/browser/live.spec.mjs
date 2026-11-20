@@ -26,7 +26,7 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
     await page.locator('[name="code"]').fill(access[role]);
     await page.locator("#login-form button").click();
     await expect(page.locator(".role-tag")).toHaveText(
-      role === "client" ? "Клиент" : "SOC",
+      role === "client" ? "Клиент" : "Сотрудник SOC",
     );
     await expect(page.locator(".busy-banner")).toHaveCount(0);
   }
