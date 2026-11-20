@@ -1,6 +1,6 @@
 {
   "name": "bcc-shield-android",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "description": "Qadam Shield Android: synthetic client and SOC accounts",
   "scripts": {

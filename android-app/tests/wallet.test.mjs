@@ -58,6 +58,7 @@ test("a selected chart day drills into the same day of the ledger", () => {
   assert.match(html, /data-drill-day="2026-11-18"/);
   assert.match(html, /data-chart-day="2026-11-18" aria-pressed="true"/);
   assert.match(html, /data-days="30"/);
+  assert.match(html, /data-chart-step="-1" disabled/);
 });
 
 test("the chart distinguishes an empty ledger from zero settled money", () => {

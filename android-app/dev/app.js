@@ -1,5 +1,5 @@
-import { openExternal, installBackHandler } from "./native.mjs";
-import { parseServer, rememberServer } from "./lib.mjs";
+import { openExternal, installBackHandler } from "../native.mjs";
+import { parseServer, rememberServer } from "../lib.mjs";
 
 const TEXT = {
   kk: {
@@ -93,4 +93,4 @@ $("force").addEventListener("click", () => { if (pending) open(pending); });
 document.addEventListener("visibilitychange", () => { if (document.hidden && stream) stopScan(); });
 render();
 
-installBackHandler(() => { if (stream) { stopScan(); } else { location.assign("connected.html"); } return true; }).catch(() => {});
+installBackHandler(() => { if (stream) { stopScan(); } else { location.assign("/dev/connected.html"); } return true; }).catch(() => {});

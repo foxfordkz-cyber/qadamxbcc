@@ -17,7 +17,7 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   async function login(role) {
-    await page.goto("/connected.html");
+    await page.goto("/dev/connected.html");
     // Switch language before putting any credential into the password field.
     if ((await page.locator("html").getAttribute("lang")) === "kk")
       await page.locator('[data-action="language"]').click();

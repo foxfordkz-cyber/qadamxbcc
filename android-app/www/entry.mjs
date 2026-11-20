@@ -1,5 +1,5 @@
 if (new URLSearchParams(location.search).get("offline") === "1") {
-  location.replace("demo.html?offline=1");
+  await import("./mobile.mjs");
 } else {
   await import("./connected.mjs");
 }

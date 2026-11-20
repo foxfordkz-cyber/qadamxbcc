@@ -15,11 +15,14 @@ http
       const pathname = decodeURIComponent(
         new URL(req.url, "http://localhost").pathname,
       );
+      const developer = pathname.startsWith("/dev/");
+      const directory = developer ? path.resolve("dev") : root;
+      const entry = developer ? pathname.slice(4) : pathname;
       const file = path.resolve(
-        root,
-        `.${pathname === "/" ? "/index.html" : pathname}`,
+        directory,
+        `.${entry === "/" ? "/index.html" : entry}`,
       );
-      if (!file.startsWith(root + path.sep)) {
+      if (!file.startsWith(directory + path.sep)) {
         res.writeHead(403).end();
         return;
       }

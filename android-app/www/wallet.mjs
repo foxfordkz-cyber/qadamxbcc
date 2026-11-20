@@ -100,15 +100,15 @@ export function walletUI({ T, E, amount, when, button, status }) {
       <div class="q-balance"><small>${T("Баланс учебной карты", "Оқу картасының балансы")}</small><div><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><button data-action="mask-balance" aria-pressed="${hidden}" aria-label="${T("Скрыть или показать баланс", "Балансты жасыру немесе көрсету")}">${icon("eye")}</button></div></div>
       <div class="card-foot"><div><span>•••• &nbsp;${hidden ? "••••" : E(a.card_last4)}</span><b>${E(a.display_name)}</b></div>${chip}</div></article>`;
   }
-  function home(a, ledger, stats, hidden, pending) {
-    if (!a || !ledger) return "";
+  function home(a, ledger, stats, hidden, pending, offline=false) {
+    if (!a) return button("retry-home", T("Счёт недоступен · Повторить","Шот қолжетімсіз · Қайталау"),"secondary") + (ledger ? rows(ledger.items) : "");
     const actions = [
       ["transfer", T("Перевести", "Аудару")],
       ["history", T("История", "Тарих")],
       ["safety", T("Защита", "Қорғаныс")],
-      ["open-guardian", "Telegram"],
+      offline ? ["check", T("Проверка","Тексеру")] : ["open-guardian", "Telegram"],
     ];
-    const greet = `<header class="wallet-greeting"><span class="avatar">${E(initials(a.display_name))}</span><div><small>${T("Добрый день", "Қайырлы күн")}</small><h1>${E(a.display_name)}</h1></div><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button><button data-action="inbox" aria-label="${T("Уведомления", "Хабарламалар")}">${icon("bell")}</button></header>`;
+    const greet = `<header class="wallet-greeting"><span class="avatar">${E(initials(a.display_name))}</span><div><small>${T("Добрый день", "Қайырлы күн")}</small><h1>${E(a.display_name)}</h1></div><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button><button data-action="${offline?"settings":"inbox"}" aria-label="${offline?T("Профиль","Профиль"):T("Уведомления", "Хабарламалар")}">${icon(offline?"settings":"bell")}</button></header>`;
     const links = actions
       .map(
         ([k, n]) =>
@@ -148,15 +148,15 @@ export function walletUI({ T, E, amount, when, button, status }) {
         T("Последние операции", "Соңғы операциялар"),
         little("history", T("Все", "Барлығы")),
       ) +
-      rows(ledger.items.slice(0, 3)) +
+      (ledger ? rows(ledger.items.slice(0, 3)) : button("retry-home",T("История недоступна · Повторить","Тарих қолжетімсіз · Қайталау"),"secondary")) +
       "</section>" +
-      heading(T("Получатели", "Алушылар")) +
+      (people ? heading(T("Получатели", "Алушылар")) : "") +
       '<div class="people">' +
       people +
       "</div>" +
       (stats
-        ? little("analytics", T("Аналитика за неделю", "Апта аналитикасы"))
-        : "")
+        ? little("analytics", T("Расходы за неделю","Апталық шығыс") + " · " + amount(stats.outgoing))
+        : button("retry-summary",T("Сводка недоступна · Повторить","Жиынтық қолжетімсіз · Қайталау"),"secondary"))
     );
   }
   const periods = (n) =>
@@ -286,6 +286,22 @@ export function walletUI({ T, E, amount, when, button, status }) {
       "</p>"
     );
   }
+  function decisionTrend(d) {
+    if (!d.series?.length) return '<p class="empty">'+T("Нет данных за период","Кезең бойынша дерек жоқ")+'</p>';
+    const groups=[], width=d.days<=7?1:d.days<=30?5:10;
+    for(let i=0;i<d.series.length;i+=width){
+      const rows=d.series.slice(i,i+width);
+      const total=rows.reduce((sum,r)=>sum+Object.values(r.states).reduce((a,b)=>a+b,0),0);
+      groups.push({from:shortDate(rows[0].day),to:shortDate(rows.at(-1).day),total});
+    }
+    const max=Math.max(...groups.map(g=>g.total),1);
+    return '<section class="paper"><h2>'+T("Динамика операций","Операциялар динамикасы")+'</h2><p class="fine">'+
+      T("Количество по дате создания","Жасалған күні бойынша саны")+'</p>'+
+      groups.map(g=>'<div class="trend-row"><span>'+g.from+(g.from===g.to?"":" – "+g.to)+'</span><meter max="'+max+'" value="'+g.total+'"></meter><b>'+g.total+'</b></div>').join("")+
+      '<p class="fine">'+ (d.p95_engine_ms==null?T("p95 движка · данных нет","Қозғалтқыш p95 · дерек жоқ"):
+      T("p95 движка","Қозғалтқыш p95")+" · "+Number(d.p95_engine_ms).toFixed(2)+" ms · "+d.latency_sample_size+" "+
+      T("замеров за период","өлшем")+' ('+T("до","шегі")+' '+d.latency_sample_limit+')')+'</p></section>';
+  }
   function soc(d, full = false) {
     if (!d) return "";
     const states = d.states,
@@ -303,7 +319,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
       <div class="soc-footer"><span>${T("Количество", "Саны")} <b>${states.blocked?.count || 0}</b></span><span>${T("Получатели", "Алушылар")} <b>${d.blocked_recipients}</b></span></div></section>
       <div class="soc-work"><div><small>${T("На проверке", "Тексерілуде")}</small><b>${states.cooling_off?.count || 0}</b><span>${T("переводов", "аударым")}</span></div>
       <button data-action="cases"><small>${T("Открытые дела", "Ашық істер")}</small><b>${open}</b><span>${T("К делам", "Істерге өту")} →</span></button></div>
-      ${full ? '<section class="paper"><h2>' + T("Решения по операциям", "Операциялар бойынша шешімдер") + "</h2>" + list + "<p>" + T("Завершённые дела", "Аяқталған істер") + " · " + closed + "</p><p>" + T("Среднее время оценки движком", "Қозғалтқыштың орташа бағалау уақыты") + " · " + (d.mean_engine_ms == null ? "—" : Number(d.mean_engine_ms).toFixed(1) + " ms") + "</p></section>" : ""}
+      ${full ? decisionTrend(d) + '<section class="paper"><h2>' + T("Решения по операциям", "Операциялар бойынша шешімдер") + "</h2>" + list + "<p>" + T("Завершённые дела", "Аяқталған істер") + " · " + closed + "</p><p>" + T("Среднее время оценки движком", "Қозғалтқыштың орташа бағалау уақыты") + " · " + (d.mean_engine_ms == null ? "—" : Number(d.mean_engine_ms).toFixed(1) + " ms") + "</p></section>" : ""}
       <p class="hint">${T("По дате создания с", "Жасалған күні бойынша")}&nbsp;${E(d.from)} · UTC+5</p>`;
   }
   function telegram(a, contacts) {

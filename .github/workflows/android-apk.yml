@@ -49,9 +49,10 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
           with ZipFile("android/app/build/outputs/apk/debug/app-debug.apk") as apk:
-              for asset in ("index.html", "connected.mjs", "wallet.mjs", "wallet.css", "spending-chart.mjs"):
+              for asset in ("index.html", "connected.mjs", "wallet.mjs", "wallet.css", "spending-chart.mjs", "offline-wallet.mjs", "network-graph.mjs"):
                   assert apk.read("assets/public/" + asset) == (Path("www") / asset).read_bytes(), asset
-              assert "assets/public/family.webp" not in apk.namelist()
+              for legacy in ("family.webp", "connect.html", "connected.html", "app.js"):
+                  assert "assets/public/" + legacy not in apk.namelist()
               for file in ("rus.traineddata", "kaz.traineddata", "worker.min.js", "tesseract-core-lstm.wasm.js"):
                   asset = "vendor/ocr/" + file
                   assert apk.read("assets/public/" + asset) == (Path("www") / asset).read_bytes(), asset
