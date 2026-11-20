@@ -62,7 +62,7 @@ export class Gateway {
   }
   async request(path, method = "GET", body, idempotencyKey) {
     if (
-      !/^\/(?:sessions?$|auth\/login$|account$|inbox$|requests$|protection\/|transfers(?:\?|$)|api\/)/.test(path) ||
+      !/^\/(?:sessions?$|auth\/login$|account$|inbox$|requests$|wallet\/|protection\/|transfers(?:\?|$)|api\/)/.test(path) ||
       path.includes("..")
     )
       throw new Error("invalid_path");
