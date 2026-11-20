@@ -32,6 +32,7 @@ export class GatewayError extends Error {
     this.retryAfter = retryAfter;
   }
 }
+export const isWalletRole = role => ["client", "admin", "platform_admin"].includes(role);
 async function gatewayFetch(url, options, timeoutMs) {
   if (!Capacitor.isNativePlatform()) return fetch(url, options);
   const result = await CapacitorHttp.request({
@@ -62,7 +63,7 @@ export class Gateway {
   }
   async request(path, method = "GET", body, idempotencyKey) {
     if (
-      !/^\/(?:sessions?$|auth\/login$|account$|inbox$|requests$|wallet\/|protection\/|transfers(?:\?|$)|api\/)/.test(path) ||
+      !/^\/(?:sessions?$|auth\/login$|account$|inbox$|requests$|wallet\/|protection\/|transfers(?:\?|$)|api\/|admin\/(?:metrics|staff(?:\/[\da-f-]{36})?)$|callbacks(?:\/[\da-f-]{36}\/answer)?$|(?:cases|reports)\/[\da-f-]{36}\/callback$)/i.test(path) ||
       path.includes("..")
     )
       throw new Error("invalid_path");
@@ -103,7 +104,7 @@ export class Gateway {
   async login(code) {
     const result = await this.request("/sessions", "POST", { code });
     if (
-      !["client", "admin"].includes(result.role) ||
+      !isWalletRole(result.role) ||
       typeof result.token !== "string"
     )
       throw new GatewayError(502);

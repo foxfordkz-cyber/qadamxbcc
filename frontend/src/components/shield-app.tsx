@@ -338,7 +338,9 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     <header className="topbar"><div className="topbar-inner"><div className="brand">
       <span className="brand-mark"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("officerWorkspace")}</small></div>
     </div>{languageSwitch}</div></header>
-    <main className="shell"><SocDashboard privateStoryAccess={config.privateStoryAccess} liveLedger={config.mode === "live" && !STATIC_DEMO} readOnly={config.publicSocReadOnly} initialSelection={null} revision={revision} evaluations={evaluations} traffic={traffic}
+    <main className="shell">
+      {showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("staffWalletLogin")}<ArrowRight size={15} aria-hidden="true" /></a>}
+      <SocDashboard privateStoryAccess={config.privateStoryAccess} liveLedger={config.mode === "live" && !STATIC_DEMO} readOnly={config.publicSocReadOnly} initialSelection={null} revision={revision} evaluations={evaluations} traffic={traffic}
       onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} busy={busy} />
       <footer className="page-footer"><Link href="/">{t("bothWorkspaces")}</Link><span>{t(config.accountMode === "test" ? "testDataScope" : "prototypeIdentity")}</span></footer>
     </main>

@@ -3,6 +3,7 @@ import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
 import { walletUI, icon } from "./wallet.mjs";
+import { serviceDesk } from "./service-desk.mjs";
 import { shortcuts, familyView, checkView, packetContent } from "./guardian.mjs";
 import { packetView } from "./packet.mjs";
 import { readScreenshot } from "./screenshot.mjs";
@@ -13,6 +14,8 @@ let initializingAccount = product;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
 const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""});
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
+let callbackView=null, queueSnapshot=null, callbackAttempt=null;
+let awaitingReplyCount=0, nextCallbackCheck=0;
 let walletDays=7,socDays=7,selectedDay=null,caseFilter="",caseOffset=0,backStack=[];
 let lastRead=null;
 let viewRevision=0, loginName="", projector=false;
@@ -82,7 +85,7 @@ async function loadOwner(g, subject) {
     history.replaceState({wallet:true,page:"home",scope:ownerScope,depth:0},"",location.pathname);
   }
   await open("home");
-  if(target)await open(...target);
+  if(target && g.role!=="platform_admin")await open(...target);
 }
 function clearVisible() {
   viewRevision++;nextPoll=0;projector=false;loginName="";
@@ -91,6 +94,8 @@ function clearVisible() {
   lastRead=null;
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
+  callbackView=queueSnapshot=callbackAttempt=null;
+  awaitingReplyCount=nextCallbackCheck=0;
   gateway = null; step = offset = 0; pending = ownerScope = query = filter = "";
   answers = {}; caseNetwork = caseTransaction = null; caseEvents = []; casePageCursor = null; reportTx = null; expiryChecked = null; page = "login"; presetMode = false;
 }
@@ -243,8 +248,11 @@ function accept(value) {
 async function open(next, id, remember=true) {
   if (loading) return;
   if (!gateway?.token && next !== "login") return;
+  if (gateway?.role==="platform_admin" && !["home","staff","settings","login"].includes(next)) next="home";
+  if (next==="staff" && gateway?.role!=="platform_admin") return;
+  if (next==="callbacks" && gateway?.role!=="client") return;
   if(product && remember && page!==next && page!=="login") {
-    if(["home","history","analytics","settings","cases","safety","socAnalytics"].includes(next))backStack=[];
+    if(["home","history","analytics","settings","cases","safety","socAnalytics","staff"].includes(next))backStack=[];
     else backStack.push({page,id:page==="case"||page==="reportDetail"?data?.id:selectedId});
   }
   if (webWallet && remember && page!=="login" && next!==page) {
@@ -256,6 +264,8 @@ async function open(next, id, remember=true) {
   lastRead={page:next,id};
   page = next;
   data = null;
+  callbackView=queueSnapshot=null;
+  if (next==="home") awaitingReplyCount=nextCallbackCheck=0;
   error = "";
   scanResult = null;
   if (id && !["graph","case","reportDetail","incoming"].includes(next)) selectedId = id;
@@ -264,7 +274,10 @@ async function open(next, id, remember=true) {
     step = 0;
   }
   await perform(async () => {
-    if (next === "home" || next === "history") {
+    if (next==="home" && gateway.role==="platform_admin") data=await gateway.request("/admin/metrics");
+    else if (next==="staff") data=await gateway.request("/admin/staff");
+    else if (next==="callbacks") data=await gateway.request("/callbacks");
+    else if (next === "home" || next === "history") {
       if(product && gateway.role==="client") {
         if(next==="home"){
           const results=await Promise.allSettled([gateway.request("/account"),gateway.request("/wallet/operations?limit=3"),gateway.request("/wallet/analytics?days=7")]);
@@ -309,11 +322,14 @@ async function open(next, id, remember=true) {
     else if (next === "contacts") data = await api("trusted-contacts");
     else if (next === "inbox") data = await gateway.request("/inbox");
     else if (next === "reportDetail") {
-      [data,reportHistory,requests]=await readReport(gateway,id);
+      [data,reportHistory,requests,callbackView]=await readReport(gateway,id);
     }
     else if (next === "reports")
       data = await api("integrations/guardian/reports");
-    else if(product && next==="cases") data=await gateway.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:""));
+    else if(product && next==="cases") {
+      data=await gateway.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:""));
+      queueSnapshot=await api("integrations/guardian/soc/cases/analytics");
+    }
     else if (next === "cases")
       data = await api(
         `integrations/guardian/soc/cases?limit=20${casePageCursor ? `&cursor=${encodeURIComponent(casePageCursor)}` : ""}`,
@@ -324,6 +340,7 @@ async function open(next, id, remember=true) {
       caseEvents = (await api(`integrations/guardian/soc/cases/${id}/history`)).items;
       if(product){
         caseEvidence=await api(`integrations/guardian/soc/cases/${id}/evidence`);
+        if (data.source==="owner_demo") callbackView=await readCallback(gateway,"/cases/"+id+"/callback");
         if(caseEvidence?.transaction_id){
           try{
             caseTransaction=await api("transfers/"+caseEvidence.transaction_id);
@@ -339,12 +356,24 @@ async function open(next, id, remember=true) {
   });
   window.scrollTo(0, 0);
 }
+async function readCallback(session,path) {
+  try {return await session.request(path);}
+  catch(e) {if (e.status===404) return null; throw e;}
+}
+async function submitCallback(path, body) {
+  const operation=JSON.stringify([path,body]);
+  if (callbackAttempt?.operation!==operation) callbackAttempt={operation,key:crypto.randomUUID()};
+  const result=await gateway.request(path,"POST",body,callbackAttempt.key);
+  callbackAttempt=null;
+  return result;
+}
 async function readReport(session,id) {
   const path="integrations/guardian/reports/"+id;
   const questions=product && session.role==="client"
     ? session.api(path+"/information-requests").catch(e=>{if(e.status!==404)throw e;return [];})
     : [];
-  return Promise.all([session.api(path),session.api(path+"/history"),questions]);
+  const callback=product && session.role==="client" ? readCallback(session,"/reports/"+id+"/callback") : null;
+  return Promise.all([session.api(path),session.api(path+"/history"),questions,callback]);
 }
 function loginView() {
   if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><h1>Saq Bol × BCC</h1><p>${T("Переводы под защитой","Қорғалған аударымдар")}</p></div><p class="sign-intro">${T("Войдите в свой учебный аккаунт.","Оқу аккаунтыңызға кіріңіз.")}</p>
@@ -354,7 +383,7 @@ function loginView() {
     <button type="button" data-action="show-password" aria-pressed="false">${T("Показать","Көрсету")}</button></span></label>
     <button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти","Кіру")}</button></form>
     ${webWallet && document.documentElement.hasAttribute("data-install")?'<a class="install-link" href="install/">'+T("Установить на Android","Android жүйесіне орнату")+'</a>':""}<div class="sign-footer">${button("web-client",T("Открыть веб-клиент","Веб-клиентті ашу"),"text-button")}${button("offline",T("Офлайн-обзор","Офлайн шолу"),"text-button")}</div></section>`;
-  return `${title(T("Всё начинается с тебя", "Бәрі сенен басталады"), T("Выбери свою роль и войди на тестовый стенд.", "Рөліңді таңдап, тест стендіне кір."))}<div class="role-choice"><button data-role="client" aria-pressed="${chosenRole === "client"}">${T("Клиент", "Клиент")}<small>${T("Свои переводы и защита", "Өз аударымдарың мен қорғаныс")}</small></button><button data-role="admin" aria-pressed="${chosenRole === "admin"}">SOC / ${T("Администратор", "Әкімші")}<small>${T("Мониторинг и расследования", "Мониторинг пен тексеру")}</small></button></div><section class="paper login-card"><form id="login-form" class="form-stack" autocomplete="off">${input("origin", T("Адрес тестового сервера", "Тест серверінің мекенжайы"), loginOrigin, "text", 'required inputmode="url" placeholder="127.0.0.1:18001"')}${input("code", T("Код доступа твоей роли", "Өз рөліңнің кіру коды"), "", "password", 'required minlength="24" maxlength="128" autocomplete="off" spellcheck="false"')}<button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти", "Кіру")} →</button></form><p class="fine">${T("Код выдаёт владелец тестового стенда. Роль проверяет сервер. Это отдельный тестовый код, не пароль банка.", "Кодты тест стендінің иесі береді. Рөлді сервер тексереді. Бұл банк құпиясөзі емес, бөлек тест коды.")}</p></section>${button("offline", T("Попробовать без сервера", "Серверсіз байқап көру"), "secondary")}`;
+  return `${title(T("Всё начинается с тебя", "Бәрі сенен басталады"), T("Выбери свою роль и войди на тестовый стенд.", "Рөліңді таңдап, тест стендіне кір."))}<div class="role-choice"><button data-role="client" aria-pressed="${chosenRole === "client"}">${T("Клиент", "Клиент")}<small>${T("Свои переводы и защита", "Өз аударымдарың мен қорғаныс")}</small></button><button data-role="admin" aria-pressed="${chosenRole === "admin"}">${T("Сотрудник SOC", "SOC қызметкері")}<small>${T("Мониторинг и расследования", "Мониторинг пен тексеру")}</small></button><button data-role="platform_admin" aria-pressed="${chosenRole === "platform_admin"}">${T("Администратор платформы","Платформа әкімшісі")}<small>${T("Доступ сотрудников и нагрузка","Қызметкерлер рұқсаты мен жүктеме")}</small></button></div><section class="paper login-card"><form id="login-form" class="form-stack" autocomplete="off">${input("origin", T("Адрес тестового сервера", "Тест серверінің мекенжайы"), loginOrigin, "text", 'required inputmode="url" placeholder="127.0.0.1:18001"')}${input("code", T("Код доступа твоей роли", "Өз рөліңнің кіру коды"), "", "password", 'required minlength="24" maxlength="128" autocomplete="off" spellcheck="false"')}<button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти", "Кіру")} →</button></form><p class="fine">${T("Код выдаёт владелец тестового стенда. Роль проверяет сервер. Это отдельный тестовый код, не пароль банка.", "Кодты тест стендінің иесі береді. Рөлді сервер тексереді. Бұл банк құпиясөзі емес, бөлек тест коды.")}</p></section>${button("offline", T("Попробовать без сервера", "Серверсіз байқап көру"), "secondary")}`;
 }
 function transactionRows(items, soc = false) {
   if (!items?.length)
@@ -538,6 +567,7 @@ function timerText() {
 }
 function safetyView() {
   const cards = [
+    ...(product ? [["callbacks", T("Связь с сотрудником","Қызметкермен байланыс"), T("Приглашения по вашим делам","Істеріңіз бойынша шақырулар")]] : []),
     [
       "scan",
       T("Проверить сообщение", "Хабарламаны тексеру"),
@@ -582,7 +612,7 @@ function safetyView() {
     ],
   ];
   if(product){
-    const symbols={scan:"safety",call:"call",report:"cases",reports:"history",gateway:"system"};
+    const symbols={scan:"safety",call:"call",callbacks:"call",report:"cases",reports:"history",gateway:"system"};
     const actions=cards.filter(([k])=>k!=="contacts").map(([k,n,sub])=>`<button data-action="${k}"><i>${icon(symbols[k])}</i><span><strong>${E(n)}</strong><small>${E(sub)}</small></span>${icon("arrow")}</button>`).join("");
     return title(T("Защита","Қорғаныс"))+'<section class="safety-list">'+actions+'</section>';
   }
@@ -652,7 +682,7 @@ function systemView() {
 const caseStates={NEW:["Новое","Жаңа"],IN_REVIEW:["В работе","Қарастырылуда"],NEEDS_INFORMATION:["Ждём уточнения","Жауап күтілуде"],ESCALATED:["Передано старшему","Аға маманға берілді"],RESOLVED:["Разбор завершён","Талдау аяқталды"],CLOSED:["Закрыто","Жабылды"]};
 const caseState=k=>caseStates[k]?T(...caseStates[k]):E(k);
 function casesView() {
-  if(product)return title(T("Дела SOC","SOC істері"))+button("reports",T("Обращения клиентов","Клиент өтініштері"),"secondary")+
+  if(product)return title(T("Дела SOC","SOC істері"))+desk.queue(queueSnapshot)+button("reports",T("Обращения клиентов","Клиент өтініштері"),"secondary")+
     '<form id="case-filter" class="ledger-filter"><label>'+T("Статус дела","Істің күйі")+'<select name="state"><option value="">'+T("Все дела","Барлық істер")+'</option>'+Object.keys(caseStates).map(k=>'<option value="'+k+'" '+(caseFilter===k?'selected':'')+'>'+caseState(k)+'</option>').join("")+'</select></label><button class="secondary">'+T("Применить","Қолдану")+'</button></form>'+
     ((data?.items||[]).map(c=>'<button class="live-row" data-case="'+E(c.id)+'"><div><strong>'+E(label(c.category))+'</strong><span class="status-pill">'+caseState(c.state)+'</span></div><small>'+when(c.created_at)+'</small></button>').join("")||'<p class="empty">'+T("По этому фильтру дел нет.","Бұл сүзгі бойынша іс жоқ.")+'</p>')+
     (caseOffset?button("case-prev",T("Назад","Артқа"),"secondary"):"")+(data?.has_more?button("case-next",T("Ещё","Тағы"),"secondary"):"");
@@ -669,11 +699,16 @@ function enrichmentView() {
 function gatewayView() {
   return `${title(T("Проверить получателя","Алушыны тексеру"), T("Проверка по учебному справочнику.", "Оқу анықтамалығы бойынша тексеру."))}<section class="paper"><form id="gateway-form" class="form-stack"><label>${T("Синтетический идентификатор", "Жасанды идентификатор")}<select name="identifier"><option value="SYN-CLEAR-001">${T("Без сигналов","Белгі жоқ")}</option><option value="SYN-REVIEW-001">${T("Требует проверки","Тексеруді қажет етеді")}</option><option value="SYN-NETWORK-001">${T("Связь с сетью дропов","Дроптар желісімен байланыс")}</option></select></label><button type="submit" class="primary">${T("Проверить", "Тексеру")} →</button></form>${data ? `<p>${E(data[lang === "ru" ? "description_ru" : "description_kk"])}</p><p class="fine">${E(label(data.result?.status))} · ${T("Учебный реестр","Оқу тізілімі")}</p>` : ""}</section>`;
 }
+function roleTitle() {
+  if (gateway.role==="platform_admin") return T("Администратор платформы","Платформа әкімшісі");
+  if (gateway.role==="admin") return T("Сотрудник SOC","SOC қызметкері");
+  return E(account?.display_name || T("Клиент","Клиент"));
+}
 function settingsView() {
-  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${gateway.role === "admin" ? T("Сотрудник безопасности","Қауіпсіздік қызметкері") : E(account?.display_name||T("Клиент","Клиент"))}</h2><p>${accountLabel()}</p><small>Saq Bol × BCC 2.5 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
+  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.6 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
     button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
     (gateway.role === "client" ? button("contacts",T("Мои согласия","Келісімдерім"),"secondary")+button("open-guardian",T("Открыть Telegram-бот","Telegram-ботты ашу"),"secondary") : "") + button("logout",T("Выйти","Шығу"));
-  return `${title(T("Профиль доступа", "Кіру профилі"))}<section class="paper"><h2>${gateway.role === "admin" ? "SOC / Admin" : T("Клиент", "Клиент")}</h2><p>${T("Роль назначена сервером. Сессия действует 30 минут, затем нужен повторный вход.", "Рөлді сервер тағайындады. Сессия 30 минутқа жарамды, содан кейін қайта кіру қажет.")}</p><p class="fine">${E(gateway.origin)}</p></section>${button("logout", T("Выйти из аккаунта", "Аккаунттан шығу"), "secondary")}`;
+  return `${title(T("Профиль доступа", "Кіру профилі"))}<section class="paper"><h2>${roleTitle()}</h2><p>${T("Роль назначена сервером. Сессия действует 30 минут, затем нужен повторный вход.", "Рөлді сервер тағайындады. Сессия 30 минутқа жарамды, содан кейін қайта кіру қажет.")}</p><p class="fine">${E(gateway.origin)}</p></section>${button("logout", T("Выйти из аккаунта", "Аккаунттан шығу"), "secondary")}`;
 }
 function sampleView() {
   const item = SAMPLE.items.find((row) => row.id === sampleId);
@@ -697,7 +732,10 @@ function sampleView() {
   );
 }
 const wallet=walletUI({T,E,amount,when,button,status});
+const desk=serviceDesk({T,E,when,title,button});
 const screens = {
+  staff:()=>desk.staff(data),
+  callbacks:()=>desk.callbacks(data),
   analytics:()=>wallet.analytics(data,selectedDay),
   socAnalytics:()=>wallet.soc(data,true),
   incoming:()=>data?'<h1>'+T("Входящий перевод","Кіріс аударым")+'</h1><section class="paper"><h2>+'+amount(data.amount)+'</h2><p>'+E(data.counterparty)+'</p>'+wallet.badge(data.status)+'<p>'+when(data.created_at)+'</p><small>'+E(data.transaction_id)+'</small></section>':"",
@@ -706,8 +744,9 @@ const screens = {
   packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Сохранить PDF","PDF сақтау")) : "",
   sample: sampleView,
   login: loginView,
-  home: historyView,
+  home: ()=>gateway?.role==="platform_admin" ? desk.metrics(data) : historyView(),
   inbox: () => title(T("Сообщения безопасности","Қауіпсіздік хабарламалары")) +
+    (gateway?.role==="client" ? button("callbacks",T("Запросы на связь","Хабарласу сұраулары"),"secondary") : "")+
     ((data?.items ?? []).map(e => `<button class="live-row" data-object="${E(e.kind)}" data-object-id="${E(e.object_id)}"><strong>${E(e.state === "cooling_off" ? status(e.state) : label(e.state))}</strong><small>${when(e.time)}</small></button>`).join("") || T("Пока нет сообщений","Әзірге хабарлама жоқ")),
   reportDetail: () => title(T("Квитанция обращения","Өтініш түбіртегі")) + (data ? `<section class="paper"><strong>${E(label(data.state))}</strong><p>${E(data.description)}</p><small>${E(data.id)} · ${when(data.created_at)}</small></section>` : ""),
   history: historyView,
@@ -758,11 +797,15 @@ function render() {
   if(product && gateway?.role==="admin")nav.splice(0,nav.length,["home","",T("Обзор","Шолу")],["cases","",T("Дела","Істер")],["socAnalytics","",T("Аналитика","Талдау")],["system","",T("Система","Жүйе")],["settings","",T("Профиль","Профиль")]);
   if (product && gateway?.role === "client") nav.splice(0, nav.length,
     ["home","",T("Главная","Басты")],["history","",T("Операции","Амалдар")],["safety","",T("Защита","Қорғаныс")],["analytics","",T("Аналитика","Талдау")],["settings","",T("Профиль","Профиль")]);
+  if (gateway?.role === "platform_admin") nav.splice(0, nav.length,["home","",T("Нагрузка","Жүктеме")],["staff","",T("Доступ","Рұқсат")],["settings","",T("Профиль","Профиль")]);
   const navPage=nav.some(([key])=>key===page)?page:
     (gateway?.role==="admin"?({case:"cases",reports:"cases",reportDetail:"cases",gateway:"system"}[page]||"home"):
-    ({detail:"history",incoming:"history",contacts:"safety",scan:"safety",call:"safety",family:"safety",guard:"safety",report:"safety",reports:"safety",reportDetail:"safety",invite:"safety",questionnaire:"history",confirmCancel:"history"}[page]||"home"));
-  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>saq bol</span></div><span class="role-tag">${gateway?.role === "admin" ? "SOC" : gateway?.role === "client" ? T("Клиент","Клиент") : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && ["home","settings"].includes(page) ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${page === "login" ? T("Подключаемся. Первый вход после перерыва может занять до двух минут.", "Қосылып жатырмыз. Үзілістен кейінгі алғашқы кіру екі минутқа дейін созылуы мүмкін.") : T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
+    ({detail:"history",incoming:"history",callbacks:"safety",contacts:"safety",scan:"safety",call:"safety",family:"safety",guard:"safety",report:"safety",reports:"safety",reportDetail:"safety",invite:"safety",questionnaire:"history",confirmCancel:"history"}[page]||"home"));
+  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>saq bol</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && ["home","settings"].includes(page) ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${page === "login" ? T("Подключаемся. Первый вход после перерыва может занять до двух минут.", "Қосылып жатырмыз. Үзілістен кейінгі алғашқы кіру екі минутқа дейін созылуы мүмкін.") : T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
   if (product) {
+    if (gateway?.role==="client" && page==="home" && awaitingReplyCount>0)
+      root.querySelector("main").insertAdjacentHTML("afterbegin",button("callbacks",
+        T("Отдел антифрода ждёт ответа","Антифрод бөлімі жауап күтуде")+" · "+awaitingReplyCount,"secondary"));
     if(error && lastRead?.page===page && gateway?.token && !loading)root.querySelector(".error-banner")?.insertAdjacentHTML("beforeend",button("reload-screen",T("Обновить экран","Экранды жаңарту"),"secondary"));
     if (gateway?.role==="admin" && page==="home") root.querySelector("main").insertAdjacentHTML("afterbegin",button("projector",projector?T("Обычный вид","Қалыпты көрініс"):T("Режим проектора","Проектор режимі"),"projector-switch",'aria-pressed="'+projector+'"'));
     root.querySelector(".demo-strip")?.remove();
@@ -813,6 +856,7 @@ function render() {
     }
     if(page==="reportDetail" && data) {
       const log=reportHistory.map(e=>'<p>'+E(label(e.event))+' · '+when(e.created_at)+'</p>').join("");
+      if (gateway.role==="client") root.querySelector("main").insertAdjacentHTML("beforeend",desk.reportCallback(callbackView));
       root.querySelector("main").insertAdjacentHTML("beforeend",'<section class="paper"><h2>'+T("История обращения","Өтініш тарихы")+'</h2>'+log+'</section>'+
         requests.map(r=>'<section class="paper"><h3>'+E(r[lang==="ru"?"description_ru":"description_kk"])+'</h3>'+(r.answered?T("Ответ получен","Жауап алынды"):'<form class="form-stack" id="request-answer" data-id="'+E(r.id)+'"><label>'+T("Ответ для демо-SOC","Демо-SOC үшін жауап")+'<textarea name="body" minlength="10" maxlength="500" required></textarea></label><button>'+T("Отправить ответ","Жауапты жіберу")+'</button></form>')+'</section>').join(""));
     }
@@ -879,7 +923,7 @@ function render() {
       <form id="case-note" class="form-stack paper"><label>${T("Заметка аналитика","Талдаушы жазбасы")}<textarea name="note" required minlength="10" maxlength="500"></textarea></label><button>${T("Сохранить","Сақтау")}</button></form>` +
       (caseEvidence?.transaction_id?'<button class="secondary" data-detail="'+E(caseEvidence.transaction_id)+'">'+T("Связанная операция","Байланысты операция")+'</button>':"") +
       (data.source==="owner_demo" && ["IN_REVIEW","ESCALATED"].includes(data.state)?button("case-information",T("Спросить, что требовал звонящий","Қоңырау шалушының талабын сұрау"),"secondary"):"") +
-      button("case-assign",T("Назначить демо-аналитика","Демо-талдаушыны тағайындау"),"secondary"));
+      (data.assignee!=="demo_analyst_a" ? button("case-assign",T("Назначить на себя","Өзіме тағайындау"),"secondary") : "")+desk.officerCallback(data,callbackView));
     if (page === "detail" && gateway?.role === "client" && evaluation) {
       root.querySelector(".paper")?.insertAdjacentHTML("afterbegin", `<small>${accountLabel()}</small>`);
       root.querySelector("main").insertAdjacentHTML("beforeend",
@@ -899,6 +943,11 @@ function render() {
 
 }
 root.addEventListener("click", async (event) => {
+  if (event.target.closest('a[href="tel:505"]') && identity.hasNativeDialer) {
+    event.preventDefault();
+    await perform(identity.openBankDialer);
+    return;
+  }
   const b = event.target.closest("button");
   if (!b || loading) return;
   if(b.dataset.days){const value=Number(b.dataset.days);if(gateway.role==="admin")socDays=value;else walletDays=value;selectedDay=null;await open(page);return;}
@@ -1016,6 +1065,39 @@ root.addEventListener("click", async (event) => {
     return;
   }
   const act = b.dataset.action;
+  if (act==="callbacks" && gateway?.role==="client") { await open("callbacks"); return; }
+  if (b.dataset.staff && page==="staff" && gateway?.role==="platform_admin") {
+    const staff=data?.items?.find(s=>s.subject===b.dataset.staff);
+    if(!staff || !confirm((staff.enabled ? T("Приостановить доступ? Текущие сеансы сотрудника завершатся.","Рұқсат тоқтатылсын ба? Қызметкердің ағымдағы сеанстары аяқталады.") :
+      T("Восстановить доступ сотрудника?","Қызметкердің рұқсаты қалпына келтірілсін бе?"))+" · "+staff.login)) return;
+    await perform(async()=>{
+      await gateway.request("/admin/staff/"+encodeURIComponent(staff.subject),"PATCH",{enabled:!staff.enabled,expected_version:staff.version});
+      data=await gateway.request("/admin/staff");
+    });
+    return;
+  }
+  if (act==="customer-callback" && page==="reportDetail" && gateway?.role==="client" && callbackView?.case_id) {
+    const reportId=data.id;
+    await perform(async()=>{callbackView={...callbackView,callback:await submitCallback("/reports/"+reportId+"/callback",{})};});
+    return;
+  }
+  if (act==="officer-callback" && page==="case" && gateway?.role==="admin" && data?.assignee==="demo_analyst_a") {
+    const c=data;
+    await perform(async()=>{callbackView={callback:await submitCallback("/cases/"+c.id+"/callback",{expected_version:c.version})};});
+    if (!error) await open("case",c.id,false);
+    return;
+  }
+  if (b.dataset.callbackId && gateway?.role==="client" && ["accepted","declined"].includes(b.dataset.answer)) {
+    const id=b.dataset.callbackId;
+    const rows=page==="callbacks" ? data?.items : page==="reportDetail" ? [callbackView?.callback] : [];
+    if (!rows?.some(r=>r?.id===id && r.status==="requested")) return;
+    await perform(async()=>{
+      const result=await submitCallback("/callbacks/"+id+"/answer",{answer:b.dataset.answer});
+      if (page==="callbacks") data={...data,items:data.items.map(r=>r.id===result.id?result:r)};
+      else callbackView={...callbackView,callback:result};
+    });
+    return;
+  }
   if (product && ["family","guard","packet"].includes(act)) { await open(act); return; }
   if (act === "call-transfer") { presetMode=false; draft={context:{active_call:true}}; await open("transfer"); return; }
   if (act === "family-on" || act === "family-off") {
@@ -1492,9 +1574,22 @@ async function refreshVisible() {
   let read;
   if(screen==="home" && g.role==="client")read=async()=>{
     const [a,l]=await Promise.all([g.request("/account"),g.request("/wallet/operations?limit=3")]);
-    if(!here() || same(a,account)&&same(l,data))return;
-    const weekly=await g.request("/wallet/analytics?days=7").catch(e=>{if(e.status===401)throw e;return null;});
-    if(here()){account=a;data=l;summary=weekly;render();}
+    if (!here()) return;
+    const ledgerChanged=!same(a,account)||!same(l,data);
+    let count=awaitingReplyCount;
+    if (Date.now()>=nextCallbackCheck) {
+      nextCallbackCheck=Date.now()+15000;
+      const callbacks=await g.request("/callbacks").catch(e=>{
+        if(e.status===401) throw e;
+        if(e.status===429) nextCallbackCheck=Date.now()+Math.max(15,Number(e.retryAfter)||60)*1000;
+        return null;
+      });
+      if (Array.isArray(callbacks?.items))
+        count=callbacks.items.filter(r=>r.status==="requested" && r.demonstration_only===true).length;
+    }
+    if(!here() || !ledgerChanged && count===awaitingReplyCount) return;
+    const weekly=ledgerChanged ? await g.request("/wallet/analytics?days=7").catch(e=>{if(e.status===401)throw e;return null;}) : summary;
+    if(here()){account=a;data=l;summary=weekly;awaitingReplyCount=count;render();}
   };
   if(screen==="history" && g.role==="client")read=async()=>{
     const rows=await g.request("/wallet/operations?"+params);
@@ -1515,6 +1610,8 @@ async function refreshVisible() {
     if(here() && (!same(summary,metrics)||!same(data,feed))){summary=metrics;data=feed;render();}
   };
   const reads={
+    callbacks:()=>g.request("/callbacks"),
+    staff:()=>g.request("/admin/staff"),
     inbox:()=>g.request("/inbox"),
     reports:()=>g.api("integrations/guardian/reports"),
     cases:()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),
@@ -1527,10 +1624,21 @@ async function refreshVisible() {
     const rows=await reads[screen]();
     if(here() && !same(data,rows)){data=rows;render();}
   };
+  if(screen==="home" && g.role==="platform_admin")read=async()=>{
+    const metrics=await g.request("/admin/metrics");
+    if(here() && !same(data,metrics)){data=metrics;render();}
+  };
+  if(screen==="case" && g.role==="admin" && data?.source==="owner_demo")read=async()=>{
+    const casePath="integrations/guardian/soc/cases/"+data.id;
+    const state=await readCallback(g,"/cases/"+data.id+"/callback");
+    if (!here() || same(callbackView,state)) return;
+    const [current,history]=await Promise.all([g.api(casePath),g.api(casePath+"/history")]);
+    if(here()){data=current;caseEvents=history.items;callbackView=state;render();}
+  };
   if(screen==="reportDetail" && data?.id)read=async()=>{
     const snapshot=await readReport(g,data.id);
-    if(here() && !same([data,reportHistory,requests],snapshot)){
-      [data,reportHistory,requests]=snapshot;render();
+    if(here() && !same([data,reportHistory,requests,callbackView],snapshot)){
+      [data,reportHistory,requests,callbackView]=snapshot;render();
     }
   };
   if(!read)return;

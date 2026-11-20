@@ -33,6 +33,7 @@ from app.integrations.config import IntegrationSettings
 from app.integrations.scam_check import EXPLANATIONS, GUIDANCE, LIMITATION, ScamCheckResult
 from app.main import create_app
 from app.mobile_gateway.config import MobileSettings
+from app.mobile_gateway.staff_models import staff_status
 from app.models import Account, Transaction
 
 UUID_PATTERN = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
@@ -89,8 +90,10 @@ class Login(BaseModel):
 
 
 class Identity(BaseModel):
-    role: Literal["client", "admin"]
+    # Legacy clients use "admin" for the SOC operator. It never grants platform rights.
+    role: Literal["client", "admin", "platform_admin"]
     subject: uuid.UUID
+    staff_version: int = Field(0, ge=0)
 
 
 def digest(value: str) -> str:
@@ -139,6 +142,19 @@ async def identity(
         raise HTTPException(401, "web_account_changed")
     request.state.session_token = token
     await quota(resources, f"session:{digest(token)}", 120)
+    cfg: MobileSettings = request.app.state.mobile_settings
+    if principal.role == "admin":
+        async with resources.session_factory() as session:
+            enabled, version = await staff_status(session, principal.subject)
+        if principal.subject != cfg.officer_id or not enabled or principal.staff_version != version:
+            raise HTTPException(401, "mobile_session_expired")
+    if principal.role == "platform_admin" and (
+        principal.subject != cfg.platform_id
+        or not (
+            cfg.platform_hash if cfg.auth_mode == "password" else cfg.platform_code
+        ).get_secret_value()
+    ):
+        raise HTTPException(401, "mobile_session_expired")
     return principal
 
 
@@ -176,6 +192,7 @@ def create_mobile_app(
                 yield
 
     app = FastAPI(title="Qadam Android synthetic gateway", lifespan=lifespan)
+    app.state.mobile_settings = cfg
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cfg.cors_origins,
@@ -216,12 +233,18 @@ def create_mobile_app(
     app.state.mobile_bot = (
         cfg.telegram_username if core.state.integration_settings.telegram_mode == "test" else ""
     )
+    from app.mobile_gateway.callbacks import install_callbacks
     from app.mobile_gateway.protection import install_protection
+    from app.mobile_gateway.staff import install_staff
+    from app.mobile_gateway.technical_metrics import install_technical_metrics
     from app.mobile_gateway.wallet import install_wallet
 
     install_wallet(app)
+    install_staff(app, cfg)
+    install_technical_metrics(app)
     install_accounts(app)
     install_protection(app, core.state.integration_settings)
+    install_callbacks(app, cfg, core.state.integration_settings.enabled)
 
     @app.post("/mobile/v1/auth/login")
     async def password_login(
@@ -237,20 +260,28 @@ def create_mobile_app(
         web = request.headers.get("x-qadam-web") == "1"
         if web:
             check_web_origin(request)
-        admin = body.login == "admin_demo"
-        encoded = cfg.admin_hash if admin else cfg.client_hash
-        matches = await asyncio.to_thread(
-            verify, body.password.get_secret_value(), encoded.get_secret_value()
-        )
-        if not matches or body.login not in ("client_demo", "admin_demo"):
+        accounts = {
+            "client_demo": (cfg.client_hash, Identity(role="client", subject=cfg.customer_id)),
+            "admin_demo": (cfg.admin_hash, Identity(role="admin", subject=cfg.officer_id)),
+        }
+        if cfg.platform_hash.get_secret_value():
+            accounts["platform_demo"] = (
+                cfg.platform_hash,
+                Identity(role="platform_admin", subject=cfg.platform_id),
+            )
+        encoded, principal = accounts.get(body.login, accounts["client_demo"])
+        password = body.password.get_secret_value()
+        matches = await asyncio.to_thread(verify, password, encoded.get_secret_value())
+        if not matches or body.login not in accounts:
             raise HTTPException(401, "invalid_credentials")
-        result = await issue_session(
-            res,
-            Identity(
-                role="admin" if admin else "client",
-                subject=cfg.officer_id if admin else cfg.customer_id,
-            ),
-        )
+        if principal.role == "platform_admin" and await asyncio.to_thread(
+            lambda: any(
+                verify(password, h.get_secret_value()) for h in (cfg.client_hash, cfg.admin_hash)
+            )
+        ):
+            # Two different salts can still encode the same password.
+            raise HTTPException(401, "invalid_credentials")
+        result = await issue_session(res, principal)
 
         if web:
             response.set_cookie(
@@ -273,13 +304,16 @@ def create_mobile_app(
         await quota(res, f"login:{digest(peer)}", 8)
         supplied = digest(body.code.get_secret_value())
         is_client = secrets.compare_digest(supplied, digest(cfg.client_code.get_secret_value()))
-        is_admin = secrets.compare_digest(supplied, digest(cfg.admin_code.get_secret_value()))
-        if not is_client and not is_admin:
+        is_officer = secrets.compare_digest(supplied, digest(cfg.admin_code.get_secret_value()))
+        is_platform = secrets.compare_digest(supplied, digest(cfg.platform_code.get_secret_value()))
+        if not is_client and not is_officer and not is_platform:
             raise HTTPException(401, "mobile_bad_code")
-        principal = Identity(
-            role="client" if is_client else "admin",
-            subject=cfg.customer_id if is_client else cfg.officer_id,
-        )
+        if is_client:
+            principal = Identity(role="client", subject=cfg.customer_id)
+        elif is_officer:
+            principal = Identity(role="admin", subject=cfg.officer_id)
+        else:
+            principal = Identity(role="platform_admin", subject=cfg.platform_id)
         return await issue_session(res, principal)
 
     async def issue_session(res: Resources, principal: Identity) -> dict[str, Any]:
@@ -287,6 +321,12 @@ def create_mobile_app(
             async with res.session_factory() as session:
                 if await session.get(Account, principal.subject) is None:
                     raise HTTPException(503, "mobile_fixtures_missing")
+        elif principal.role == "admin":
+            async with res.session_factory() as session:
+                enabled, version = await staff_status(session, principal.subject)
+            if not enabled:
+                raise HTTPException(403, "staff_access_disabled")
+            principal = principal.model_copy(update={"staff_version": version})
         token = secrets.token_urlsafe(32)
         try:
             await res.redis.set(
@@ -444,6 +484,8 @@ def create_mobile_app(
     async def proxy(
         path: str, request: Request, principal: IdentityDep, session: SessionDep
     ) -> Response:
+        if principal.role == "platform_admin":
+            raise HTTPException(403, "mobile_role_forbidden")
         allowlist = CLIENT_PATHS if principal.role == "client" else ADMIN_PATHS
         if not any(
             request.method == method and re.fullmatch(pattern, path)

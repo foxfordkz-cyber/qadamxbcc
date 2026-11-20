@@ -40,6 +40,15 @@ public class DeviceVault extends Plugin {
         if (!slot.matches("[a-zA-Z0-9._-]{1,180}")) throw new IllegalArgumentException();
         return slot;
     }
+    @PluginMethod public void openBankDialer(PluginCall call) {
+        try {
+            getActivity().startActivity(new android.content.Intent(android.content.Intent.ACTION_DIAL,
+                android.net.Uri.parse("tel:505")));
+            call.resolve();
+        } catch (android.content.ActivityNotFoundException noDialer) {
+            call.reject("no_dialer");
+        }
+    }
     @PluginMethod public void openGuardian(PluginCall call) {
         String username = call.getString("username", "");
         if (!username.matches("(?i)[a-z][a-z0-9_]{3,28}bot")) { call.reject("invalid_bot"); return; }

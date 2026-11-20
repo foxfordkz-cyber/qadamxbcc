@@ -1080,3 +1080,18 @@ input:focus-visible {
 .graph-record{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:center;width:100%;background:transparent;color:var(--ink);border-bottom:1px solid var(--line);min-height:48px}
 #graph-records:empty{display:none}
 @media(min-width:880px){.case-investigation{grid-template-columns:1fr 1.2fr;align-items:center}}
+/* Technical monitoring and verified contact in the connected wallet. */
+.desk-queue strong { display: block; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.desk-queue small,.desk-callback small { display: block; color: var(--muted); }
+.desk-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .85rem; }
+.desk-stats dt { color: var(--muted); font-size: .86rem; }
+.desk-stats dd { margin: .25rem 0 0; font-size: 1.4rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.desk-bars { display: block; width: 100%; height: 4.5rem; margin: 1rem 0 .3rem; fill: var(--pine); border-bottom: 1px solid var(--line); background: var(--mint); }
+.desk-axis { display: flex; justify-content: space-between; color: var(--muted); margin-bottom: .8rem; }
+.desk-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.desk-table :is(th,td) { padding: .4rem .15rem; text-align: end; border-bottom: 1px solid var(--line); }
+.desk-table th:first-child { text-align: start; }
+.desk-callback .inline-actions { flex-wrap: wrap; margin-top: 1rem; }
+@media(max-width:879px) {
+  [data-actor="platform_admin"] .connected-nav { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}

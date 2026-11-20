@@ -48,7 +48,7 @@ def main() -> None:
         )
     ).resolve()
     protect(directory)
-    access = {"client": secrets.token_urlsafe(24), "admin": secrets.token_urlsafe(24)}
+    access = {role: secrets.token_urlsafe(24) for role in ("client", "admin", "platform_admin")}
     path = directory / "access.json"
     fd = os.open(path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -59,8 +59,10 @@ def main() -> None:
             "BCC_MOBILE_AUTH_MODE": os.environ.get("BCC_MOBILE_AUTH_MODE", "password"),
             "BCC_MOBILE_CLIENT_HASH": encode(access["client"]),
             "BCC_MOBILE_ADMIN_HASH": encode(access["admin"]),
+            "BCC_MOBILE_PLATFORM_HASH": encode(access["platform_admin"]),
             "BCC_MOBILE_CLIENT_CODE": access["client"],
             "BCC_MOBILE_ADMIN_CODE": access["admin"],
+            "BCC_MOBILE_PLATFORM_CODE": access["platform_admin"],
             "BCC_INTEGRATIONS_ENABLED": "true",
             "BCC_INTEGRATIONS_ENVIRONMENT": "test",
             "BCC_INTEGRATIONS_TELEGRAM_MODE": "fake",

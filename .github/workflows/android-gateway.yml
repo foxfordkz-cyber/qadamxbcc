@@ -47,5 +47,20 @@ jobs:
           name: qadam-gateway-synthetic-evidence
           path: android-app/test-results/
           retention-days: 7
+      - name: Restart gateway with personal accounts on the same synthetic database
+        env:
+          QADAM_MOBILE_AUTH_MODE: password
+        run: |
+          docker compose -f docker-compose.android.yml up -d --no-deps --force-recreate --wait --wait-timeout 240 gateway
+          sudo chown -R "$(id -u):$(id -g)" .local-checks/mobile-access
+          chmod 700 .local-checks/mobile-access
+          chmod 600 .local-checks/mobile-access/access.json
+      - name: Personal accounts, case callback and platform metrics
+        working-directory: android-app
+        env:
+          QADAM_PASSWORD_E2E: '1'
+          QADAM_ACCESS_FILE: ../.local-checks/mobile-access/access.json
+          QADAM_GATEWAY: http://127.0.0.1:18001
+        run: npm run test:ui -- tests/browser/roles-live.spec.mjs
       - if: always()
         run: docker compose -f docker-compose.android.yml down

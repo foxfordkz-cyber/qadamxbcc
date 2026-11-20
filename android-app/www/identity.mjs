@@ -1,7 +1,9 @@
 import { Capacitor, registerPlugin } from "./vendor/capacitor.js";
-import { Gateway, GatewayError } from "./gateway.mjs";
+import { Gateway, GatewayError, isWalletRole } from "./gateway.mjs";
 const vault = registerPlugin("DeviceVault");
 const native = Capacitor.isNativePlatform();
+export const hasNativeDialer = native;
+export const openBankDialer = () => vault.openBankDialer();
 const utf8 = new TextEncoder();
 const web = !native && typeof document !== "undefined" && document.documentElement.hasAttribute("data-web-wallet");
 const fallback = new Map(); // Browser preview has no durable secret storage.
@@ -42,7 +44,7 @@ async function getGateway() {
 export async function signIn(login, password) {
   const gateway = await getGateway();
   const result = await gateway.request("/auth/login","POST",{login,password});
-  if (!["client","admin"].includes(result.role) || (!web && typeof result.token !== "string") ||
+  if (!isWalletRole(result.role) || (!web && typeof result.token !== "string") ||
       typeof result.subject !== "string") throw new GatewayError(502);
   gateway.role = result.role; gateway.token = web ? "cookie" : result.token; gateway.subject=result.subject;
   await write("session",web ? {origin,subject:result.subject} : {origin,token:result.token});
@@ -57,6 +59,7 @@ export async function initialize(onLogin,onFailure) {
     if (saved.origin !== origin) { await write("session",null); return; }
     gateway.token = web ? "cookie" : saved.token; gateway.subject=saved.subject;
     const user = await gateway.request("/session");
+    if (!isWalletRole(user.role) || typeof user.subject !== "string") throw new GatewayError(502);
     gateway.role = user.role;
     gateway.ephemeralStore = user.ephemeral_store === true;
     await onLogin(gateway,user.subject);

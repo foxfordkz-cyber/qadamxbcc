@@ -2,7 +2,8 @@ import app.integrations.cases.models
 import app.integrations.models
 import app.integrations.nbk_mock.models
 import app.integrations.run_model
-import app.mobile_gateway.protection_models  # noqa: F401 (register application tables)
+import app.mobile_gateway.protection_models
+import app.mobile_gateway.staff_models  # noqa: F401
 from app.models.entities import (
     AbandonedRequest,
     Account,

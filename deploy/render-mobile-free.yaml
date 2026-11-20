@@ -15,3 +15,5 @@ services:
         sync: false
       - key: BCC_MOBILE_ADMIN_HASH
         sync: false
+      - key: BCC_MOBILE_PLATFORM_HASH
+        sync: false

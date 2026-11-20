@@ -1,4 +1,4 @@
-"""Provision both synthetic demo logins once; write individual ACL-protected handoff files."""
+"""Provision synthetic wallet logins once; write individual ACL-protected handoff files."""
 
 import json
 import os
@@ -10,7 +10,7 @@ from scripts.mobile_demo import protect
 
 def provision(directory: Path) -> None:
     protect(directory)
-    for name in ("client_demo", "admin_demo"):
+    for name in ("client_demo", "admin_demo", "platform_demo"):
         path = directory / (name + ".json")
         if not path.exists():
             password = secrets.token_urlsafe(12)

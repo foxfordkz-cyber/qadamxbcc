@@ -23,6 +23,7 @@ from app.models import Account, Transaction, TransactionStatus
 
 CLIENT_CODE = "synthetic-client-code-1234567890ABC"
 ADMIN_CODE = "synthetic-admin-code-0987654321XYZ"
+PLATFORM_CODE = "synthetic-platform-code-1092837465ABC"
 OWNER = uuid.UUID("00000000-0000-4000-8000-000000000001")
 OTHER = uuid.UUID("00000000-0000-4000-8000-000000000002")
 
@@ -49,7 +50,10 @@ async def mobile_world(
     settings = Settings(database_url="sqlite+aiosqlite:///:memory:")
     res = Resources.build(settings, session_factory=session_factory, redis=redis)
     config = MobileSettings(
-        enabled=True, client_code=SecretStr(CLIENT_CODE), admin_code=SecretStr(ADMIN_CODE)
+        enabled=True,
+        client_code=SecretStr(CLIENT_CODE),
+        admin_code=SecretStr(ADMIN_CODE),
+        platform_code=SecretStr(PLATFORM_CODE),
     )
     integrations = IntegrationSettings(enabled=True, signing_key=SecretStr("x" * 40))
     app = create_mobile_app(config, settings, res, integrations)
