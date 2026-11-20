@@ -65,6 +65,8 @@ W_SE_PATTERN: Final = 10
 W_ATO_PATTERN: Final = 10
 # The client asked «is the bank calling me?» and the bank's own log said no.
 W_BANK_CALL_DENIED: Final = 20
+# Silent alarm from the client («тихий код»): the client's own word outranks every model.
+W_DURESS: Final = 100
 NIGHT_HOURS: Final = range(0, 6)
 
 # Velocity weights / thresholds
@@ -129,6 +131,7 @@ class TransferContext:
     recipient_input_length: int | None = None
     hesitation_ms: int | None = None
     bank_call_denied: bool = False
+    duress: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -328,7 +331,7 @@ class AntifraudEngine:
         # Bounded residual blend: preserve rule floors; weak synthetic probabilities
         # add no friction. ML can add at most 15 points and cannot itself justify a block.
         ml_delta = round(0.25 * max(0.0, prediction.score - 40.0))
-        block_evidence = any(r.code in HARD_BLOCK_EVIDENCE for r in network)
+        block_evidence = ctx.duress or any(r.code in HARD_BLOCK_EVIDENCE for r in network)
         rule_score = max(0, min(100 if block_evidence else BEHAVIORAL_ONLY_CAP, raw))
         # Preserve all rule floors, but ML may cross into BLOCKED only with
         # corroborated recipient-side mule evidence. A sender pass-through signal
@@ -387,6 +390,8 @@ class AntifraudEngine:
     # --------------------------------------------------------------- layer 1
     def _behavioral(self, ctx: TransferContext, is_new_recipient: bool) -> list[RiskReason]:
         out: list[RiskReason] = []
+        if ctx.duress:
+            out.append(_reason("DURESS_SIGNAL", LAYER_BEHAVIORAL, W_DURESS))
         if ctx.active_call:
             out.append(_reason("ACTIVE_CALL", LAYER_BEHAVIORAL, W_ACTIVE_CALL))
         if ctx.active_call and ctx.pasted_recipient:

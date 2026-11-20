@@ -588,3 +588,12 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
 .recovery-summary .secondary { min-height: 36px; padding: 6px 14px; font-size: 13px; }
 .demo-reset { min-height: 36px; padding: 6px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--muted); background: transparent; }
 .demo-reset:hover:not(:disabled) { color: var(--ink); background: var(--surface-2, var(--bg)); }
+
+/* Case story: one line per step, colour marks risk, safe outcomes and planned times. */
+.investigation-timeline li.risk::before { background: var(--red, #DC2626); }
+.investigation-timeline li.safe::before { background: var(--emerald); }
+.investigation-timeline li.info::before { background: var(--subtle, #9A9CA5); }
+.investigation-timeline li span { flex: 1 1 220px; }
+.investigation-export-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.cooling-legal { margin: 4px 0 12px; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.badge.processing { color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); }

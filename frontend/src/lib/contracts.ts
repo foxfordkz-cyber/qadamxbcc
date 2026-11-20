@@ -14,6 +14,8 @@ export const contextSchema = z.object({
   recipient_input_length: z.number().int().min(0).max(128).nullable().optional(),
   hesitation_ms: z.number().int().min(0).max(300_000).nullable().optional(),
   bank_call_check_id: z.uuid().optional(),
+  /** Silent alarm («тихий код»): the client held the confirm button. */
+  duress: z.boolean().optional(),
 }).strict();
 /** «Банк мне звонит?» — answered from the bank's outbound call log (simulated in the prototype). */
 export const callCheckSchema = z.object({
