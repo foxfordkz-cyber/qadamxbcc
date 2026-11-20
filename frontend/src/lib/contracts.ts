@@ -45,6 +45,8 @@ export const answersSchema = z.object({
   knows_recipient_personally: z.boolean(),
 }).strict();
 export type Answers = z.infer<typeof answersSchema>;
+export const postCallSchema = z.object({ action: z.enum(["ended", "recognized"]) }).strict();
+export const cancelSchema = z.object({ reason: z.literal("post_call_scam").optional() }).strict();
 export type TransferInput = z.infer<typeof transferSchema>;
 export type Context = z.infer<typeof contextSchema>;
 export interface Reason { code: string; layer: string; score_delta: number; reason_kk: string; reason_ru: string; evidence?: Record<string, unknown> }
@@ -86,7 +88,7 @@ export interface FeedItem extends MLDetails {
 export interface Feed {
   server_time: string; items: FeedItem[];
   pagination: { total_filtered: number; offset: number; limit: number; has_more: boolean };
-  stats: { total: number; approved: number; cooling_off: number; blocked: number; blocked_hubs?: number; cancelled?: number; blocked_amount?: string; held_amount?: string; cancelled_amount?: string; avg_latency_ms: number; max_latency_ms: number; p95_latency_ms?: number | null; latency_sample_size?: number; latency_sample_limit?: number };
+  stats: { submission_limits?: { active: number; rejected: number; limit: number; window_seconds: number; cooldown_seconds: number } | null; total: number; approved: number; cooling_off: number; blocked: number; blocked_hubs?: number; cancelled?: number; blocked_amount?: string; held_amount?: string; cancelled_amount?: string; avg_latency_ms: number; max_latency_ms: number; p95_latency_ms?: number | null; latency_sample_size?: number; latency_sample_limit?: number };
 }
 export interface GraphData extends Record<string, unknown> {
   label: string; role: "center" | "hub" | "mule" | "normal"; depth: number; device_id: string;
@@ -102,7 +104,7 @@ export interface Graph {
 export interface PresetForm { sender: string; recipient: string; amount: string; context: Context }
 export type City = "astana" | "almaty" | "shymkent" | "atyrau";
 export interface TrafficAccount { id: string; city: City; role: "normal" | "scam" | "hub" }
-export interface AppConfig { mode: "demo" | "live"; presets: Record<Preset, PresetForm>; trafficAccounts?: TrafficAccount[]; demoActionsEnabled?: boolean }
+export interface AppConfig { accountMode?: "test" | "pilot"; publicSocReadOnly?: boolean; mode: "demo" | "live"; presets: Record<Preset, PresetForm>; trafficAccounts?: TrafficAccount[]; demoActionsEnabled?: boolean }
 
 export class ApiError extends Error {
   constructor(public code: string, public status = 0, public retryAfter = 0) { super(code); }
@@ -151,7 +153,7 @@ const feedResponseSchema = z.object({
     verification_answers: answersSchema.nullable().optional(), resolved_at: z.iso.datetime({ offset: true }).nullable().optional(),
   }).passthrough()),
   pagination: z.object({ total_filtered: z.number().int().nonnegative(), offset: z.number().int().min(0).max(100_000), limit: z.number().int().min(1).max(200), has_more: z.boolean() }),
-  stats: z.object({ total: z.number().nonnegative(), approved: z.number().nonnegative(), cooling_off: z.number().nonnegative(), blocked: z.number().nonnegative(), blocked_hubs: z.number().int().nonnegative().optional(), avg_latency_ms: z.number().nonnegative(), max_latency_ms: z.number().nonnegative(), p95_latency_ms: z.number().nonnegative().nullable().optional(), latency_sample_size: z.number().int().min(0).max(500).optional(), latency_sample_limit: z.literal(500).optional() }).passthrough(),
+  stats: z.object({ submission_limits: z.object({ active: z.number().int().nonnegative(), rejected: z.number().int().nonnegative(), limit: z.number().int().positive(), window_seconds: z.number().int().positive(), cooldown_seconds: z.number().int().positive() }).nullish(), total: z.number().nonnegative(), approved: z.number().nonnegative(), cooling_off: z.number().nonnegative(), blocked: z.number().nonnegative(), blocked_hubs: z.number().int().nonnegative().optional(), avg_latency_ms: z.number().nonnegative(), max_latency_ms: z.number().nonnegative(), p95_latency_ms: z.number().nonnegative().nullable().optional(), latency_sample_size: z.number().int().min(0).max(500).optional(), latency_sample_limit: z.literal(500).optional() }).passthrough(),
 }).passthrough();
 const graphResponseSchema = z.object({ center: z.string(), depth: z.number(), nodes: z.array(z.object({ id: z.string(), type: z.string(), position: z.object({ x: z.number(), y: z.number() }), data: z.object({ label: z.string(), role: z.enum(["center", "hub", "mule", "normal"]), depth: z.number(), device_id: z.string(), flagged: z.boolean(), suspected_mule: z.boolean(), in_degree: z.number(), out_degree: z.number(), in_weight: z.number(), out_weight: z.number(), transit_ratio: z.number(), shared_device_accounts: z.number() }).passthrough() })), edges: z.array(z.object({ id: z.string(), source: z.string(), target: z.string(), type: z.string(), animated: z.boolean(), label: z.string().nullable(), data: z.object({ edge_type: z.enum(["transfer", "shared_device"]), weight: z.number(), tx_count: z.number(), highlight: z.boolean() }) })) });
 export function validateApiResponse(path: string, value: unknown, method = "GET") {
@@ -161,7 +163,7 @@ export function validateApiResponse(path: string, value: unknown, method = "GET"
     catch { throw new ApiError("invalidResponse", 502); }
   }
   const schema = /^transfers\/requests\/[0-9a-f-]+\/abandon$/i.test(route) ? abandonResponseSchema
-    : route === "transfers/evaluate" || /^transfers\/[0-9a-f-]+(?:\/(?:resolve-cooling|cancel))?$/i.test(route) ? evaluationResponseSchema
+    : route === "transfers/evaluate" || /^transfers\/[0-9a-f-]+(?:\/(?:resolve-cooling|cancel|post-call))?$/i.test(route) ? evaluationResponseSchema
     : route === "call-check" ? callCheckSchema : route === "call-check/demo/bank-call" ? bankCallSchema
     : route === "soc/feed" ? feedResponseSchema : route.startsWith("soc/graph/") ? graphResponseSchema
     : /^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route) ? method.toUpperCase() === "POST" ? recipientFlagReceiptSchema : recipientFlagSchema : undefined;
@@ -169,7 +171,7 @@ export function validateApiResponse(path: string, value: unknown, method = "GET"
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw new ApiError("invalidResponse", 502);
   if (/^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route) && (!("account_id" in parsed.data) || typeof parsed.data.account_id !== "string" || parsed.data.account_id.toLowerCase() !== route.split("/")[2].toLowerCase())) throw new ApiError("invalidResponse", 502);
-  if (/^transfers\/[0-9a-f-]+$/i.test(route) && (!("transaction_id" in parsed.data) || typeof parsed.data.transaction_id !== "string"
+  if (/^transfers\/[0-9a-f-]+(?:\/(?:cancel|post-call|resolve-cooling))?$/i.test(route) && (!("transaction_id" in parsed.data) || typeof parsed.data.transaction_id !== "string"
     || parsed.data.transaction_id.toLowerCase() !== route.split("/")[1].toLowerCase())) throw new ApiError("invalidResponse", 502);
   if (route.startsWith("soc/graph/") && (!("center" in parsed.data) || typeof parsed.data.center !== "string"
     || parsed.data.center.toLowerCase() !== route.split("/")[2].toLowerCase())) throw new ApiError("invalidResponse", 502);

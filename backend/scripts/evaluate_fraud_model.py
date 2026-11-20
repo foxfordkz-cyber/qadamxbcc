@@ -25,7 +25,14 @@ from unittest.mock import patch
 import fakeredis
 
 from app.ml.features import FEATURE_NAMES, Features
-from app.ml.model import MODEL_PATH, MODEL_VERSION, FraudModel, Prediction, load_model
+from app.ml.model import (
+    GENERATOR_VERSION,
+    MODEL_PATH,
+    MODEL_VERSION,
+    FraudModel,
+    Prediction,
+    load_model,
+)
 from app.ml.training import SEED, synthetic_data
 from app.services.antifraud import AntifraudEngine, TransferContext, decide
 from app.services.graph import GraphStore
@@ -550,7 +557,7 @@ async def evaluate_artifact(
         "feature_names": list(FEATURE_NAMES),
         "training_seed": SEED,
         "evaluation_seed": seed,
-        "generator_version": "v2-cumulative-transit-overlap",
+        "generator_version": GENERATOR_VERSION,
         "frozen_v1_comparison": baseline_report,
         "population": {
             "source": "Independent-seed synthetic draws from the same generator; no customer data",

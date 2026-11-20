@@ -5,8 +5,8 @@
  * The live FastAPI backend, PostgreSQL and the ML model are not part of this build.
  */
 import { z } from "zod";
-import { ApiError, answersSchema, feedQuerySchema, transferSchema } from "./contracts";
-import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "./demo";
+import { ApiError, answersSchema, cancelSchema, feedQuerySchema, postCallSchema, transferSchema } from "./contracts";
+import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, postCallDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "./demo";
 import { recipientFlagInputSchema } from "./recipient-flag";
 import { ids } from "./demo-ids";
 import { staticCircle, staticGuide } from "./static-circle";
@@ -56,7 +56,8 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
     return evaluateDemo(rest);
   }
   if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/resolve-cooling$/i.test(route)) return resolveDemo(uuid(path[1]), z.object({ answers: answersSchema }).strict().parse(body).answers);
-  if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/cancel$/i.test(route)) return cancelDemo(uuid(path[1]));
+  if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/post-call$/i.test(route)) return postCallDemo(uuid(path[1]), postCallSchema.parse(body).action);
+  if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/cancel$/i.test(route)) return cancelDemo(uuid(path[1]), Date.now(), cancelSchema.parse(body ?? {}).reason === "post_call_scam");
   if (method === "POST" && /^transfers\/requests\/[0-9a-f-]{36}\/abandon$/i.test(route)) return abandonDemo(uuid(path[2]));
   if (method === "GET" && /^transfers\/[0-9a-f-]{36}$/i.test(route)) return detailDemo(uuid(path[1]));
   if (method === "GET" && route === "soc/feed") return feedDemo(feedQuerySchema.parse(Object.fromEntries(search)));

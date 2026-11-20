@@ -5,7 +5,7 @@ import { isPrivateLanHost, lanDemoEnabled } from "./mobile-link";
 type AccessRequest = { method: string; headers: Headers; origin: string; pathname?: string };
 type AccessFailure = { status: number; error: string; authenticate?: boolean };
 type Environment = Record<string, string | undefined>;
-type AccessConfiguration = { environment: "local" | "demo" | "pilot"; publicOrigin?: string };
+type AccessConfiguration = { environment: "local" | "demo" | "pilot"; publicOrigin?: string; publicSocReadOnly?: boolean };
 
 const keyIsValid = (value: string | undefined) => !!value && value.length >= 32 && value.trim() === value && new Set(value).size >= 12;
 
@@ -36,7 +36,7 @@ export function accessConfiguration(env: Environment = process.env): AccessConfi
     // the HTTPS origin browsers use; Next only sees the proxy's internal URL.
     if (env.BCC_DEMO_PUBLIC_ORIGIN !== undefined) {
       if (environment !== "demo") throw new Error("A public origin requires the demo environment");
-      return { environment: "demo", publicOrigin: httpsOrigin(env.BCC_DEMO_PUBLIC_ORIGIN) };
+      return { environment: "demo", publicOrigin: httpsOrigin(env.BCC_DEMO_PUBLIC_ORIGIN), publicSocReadOnly: !!demoSocKey };
     }
     return { environment: environment as "local" | "demo" };
   }

@@ -20,7 +20,7 @@ import { integrationText } from "@/lib/soc-integration-copy";
 import { readSocDashboardSession, writeSocDashboardSession, SOC_SESSION_KEY } from "@/lib/soc-dashboard-session";
 
 const NetworkGraph = dynamic(() => import("./network-graph"), { ssr: false });
-export function SocDashboard({ initialSelection, revision, traffic, onTrafficSync, stream, onReview, busy, focusTransfer, onFocusConsumed }: { initialSelection: string | null; revision: number; evaluations: Record<string, Evaluation>; traffic: Record<string, TrafficRecord>; onTrafficSync: (items: FeedItem[]) => void; stream: TrafficStream; onReview: (id: string) => void; busy: boolean; focusTransfer?: boolean; onFocusConsumed?: () => void }) {
+export function SocDashboard({ initialSelection, revision, traffic, onTrafficSync, stream, onReview, readOnly, busy, focusTransfer, onFocusConsumed }: { initialSelection: string | null; revision: number; evaluations: Record<string, Evaluation>; traffic: Record<string, TrafficRecord>; onTrafficSync: (items: FeedItem[]) => void; stream: TrafficStream; onReview?: (id: string) => void; readOnly?: boolean; busy: boolean; focusTransfer?: boolean; onFocusConsumed?: () => void }) {
   const { lang, t } = useLocale();
   const [refresh, setRefresh] = useState(0);
   const [selection, setSelection] = useState(initialSelection);
@@ -38,7 +38,7 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
   useEffect(() => {
     try {
       const saved = readSocDashboardSession(sessionStorage.getItem(SOC_SESSION_KEY));
-      setMode(saved.mode); setGraphDepth(saved.graphDepth);
+      setMode(readOnly ? "transfers" : saved.mode); setGraphDepth(saved.graphDepth);
       setAlertsOnly(saved.alertsOnly ?? false);
       if (!initialSelection) { setSelection(saved.selectedId); setFilter(saved.filter); }
     } catch { /* Unavailable storage keeps a functional in-memory workspace. */ }
@@ -108,14 +108,14 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
   const locale = lang === "kk" ? "kk-KZ" : "ru-KZ";
   const hubCount = stats?.blocked_hubs ?? (feed.data ? countBlockedHubs(items) : undefined);
   return <div ref={dashboard} className={`soc-dashboard${stage ? " is-stage" : ""}${mode === "cases" ? " soc-cases-mode" : ""}`}>
-    <div className="section-heading soc-heading"><div><h1>{t("socTitle")}</h1><p className="muted">{t(stage ? "stageHint" : "socIntro")}</p></div><div className="soc-actions">
+    <div className="section-heading soc-heading"><div><h1>{t("socTitle")}</h1><p className="muted">{t(readOnly ? "socPublicView" : stage ? "stageHint" : "socIntro")}</p></div><div className="soc-actions">
       {mode === "transfers" && <button className={streaming ? "traffic-button active" : "traffic-button"} aria-pressed={streaming} disabled={!streaming && (!canStream || stream.inFlight)} onClick={stream.toggle}>{streaming ? <Square size={15} /> : <Play size={15} />}{t(streaming ? "trafficStop" : "liveTraffic")}</button>}
       <button ref={stageToggle} className="secondary soc-stage-toggle" aria-pressed={stage} aria-keyshortcuts={stage ? "Escape" : undefined} onClick={toggleStage}>{stage ? <Minimize2 size={16} /> : <Presentation size={16} />}{t(stage ? "stageExit" : "stageMode")}</button>
       <MobileQr />
       {mode === "transfers" && <button className="secondary icon-button" onClick={() => setRefresh(n => n + 1)} disabled={feed.loading} aria-label={t("refresh")} title={t("refresh")}><RefreshCw size={16} className={feed.loading ? "animate-spin" : ""} /></button>}
     </div></div>
-    <nav className="soc-investigation-nav" aria-label={t("socTitle")}>{(["transfers", "cases"] as const).map(value => <button type="button" data-testid={`soc-mode-${value}`} key={value} aria-pressed={mode === value} onClick={() => { setMode(value); if (value === "cases" && streaming) stream.toggle(); }}>{integrationText(lang, value)}</button>)}</nav>
-    {restored && mode === "cases" && <><SocCasesWorkspace revision={revision} onSelectTransaction={setCaseTransactionId} /><SocIntegrationInsights key={caseTransactionId ?? "unlinked"} transactionId={caseTransactionId} revision={revision} /></>}
+    {!readOnly && <nav className="soc-investigation-nav" aria-label={t("socTitle")}>{(["transfers", "cases"] as const).map(value => <button type="button" data-testid={`soc-mode-${value}`} key={value} aria-pressed={mode === value} onClick={() => { setMode(value); if (value === "cases" && streaming) stream.toggle(); }}>{integrationText(lang, value)}</button>)}</nav>}
+    {!readOnly && restored && mode === "cases" && <><SocCasesWorkspace revision={revision} onSelectTransaction={setCaseTransactionId} /><SocIntegrationInsights key={caseTransactionId ?? "unlinked"} transactionId={caseTransactionId} revision={revision} /></>}
     {mode === "transfers" && <>
     <div className="traffic-strip"><span className={`live-dot ${streaming ? "" : "offline"}`} /><p>{t(stream.inFlight && !streaming ? "trafficDraining" : canStream ? "trafficHint" : "trafficMissing")}</p><span className="tabular-nums">{t("trafficSession")}: {Object.keys(traffic).length}</span></div>
     {stream.error && <p className="error" role="alert">{t(stream.error)}</p>}
@@ -125,6 +125,11 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
       {metrics.map(({ key, label, hint, value, icon: Icon }) => <div className={`stat ${key}`} key={key}><div className="stat-title"><span>{t(label)}</span><i><Icon size={18} /></i></div><strong className="tabular-nums">{key === "blocked" ? hubCount ?? "—" : value ?? "—"}</strong><small>{t(hint)}</small></div>)}
       <div className="stat scorer-latency" aria-describedby="soc-latency-scope"><div className="stat-title"><span>{t("p95Latency")}</span><i><Timer size={18} /></i></div><strong className="tabular-nums">{p95 == null ? "—" : p95.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<span className="stat-unit">{p95 == null ? "" : t("ms")}</span></strong><small className="tabular-nums">{p95 == null ? t("latencyEmpty") : `${t("latencySample")}: ${stats?.latency_sample_size ?? "—"} / ${stats?.latency_sample_limit ?? 500}`}</small><p id="soc-latency-scope" className="soc-latency-scope">{t("latencyScope")}</p></div>
     </div>
+    {stats?.submission_limits && <section className="submission-metrics" aria-label={t("submissionTitle")}>
+      <ShieldCheck size={20} /><div><strong>{t("submissionTitle")}</strong>
+      <p>{t("submissionRule").replace("{limit}", String(stats.submission_limits.limit)).replace("{window}", String(stats.submission_limits.window_seconds)).replace("{cooldown}", String(stats.submission_limits.cooldown_seconds))}</p></div>
+      <dl><div><dt>{t("activePauses")}</dt><dd>{stats.submission_limits.active}</dd></div><div><dt>{t("rejectedRequests")}</dt><dd>{stats.submission_limits.rejected}</dd></div></dl>
+    </section>}
     {stage && <button type="button" className="secondary soc-stage-feed-toggle" aria-controls="soc-feed-panel" aria-expanded={showStageFeed} onClick={() => setShowStageFeed(value => !value)}><Activity size={17} />{t(showStageFeed ? "stageHideFeed" : "stageShowFeed")}</button>}
     <section id="soc-feed-panel" hidden={stage && !showStageFeed} className="panel feed-panel" aria-busy={feed.loading || searchPending}>
       <div className="panel-heading"><div><h2><Activity size={18} />{t("feed")}</h2><p className="panel-subtitle">{t("liveFeed")}{feed.receivedAt !== null && <span role="status"> · {feed.error ? `${t("staleData")} · ` : ""}{t("lastUpdated")}: <span className="tabular-nums">{time(feed.receivedAt)}</span></span>}</p></div><span className="feed-connection"><span className={`live-dot ${feed.error ? "offline" : ""}`} />{t(feed.loading || searchPending ? "refreshing" : "connected")}</span></div>
@@ -150,7 +155,7 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
         {graph.data ? <NetworkGraph graph={graph.data} streaming={streaming} /> : <p className="empty">{t(selected ? "refreshing" : "select")}</p>}</section>
       <section className="panel analysis-panel" aria-labelledby="analysis-title"><div className="panel-heading"><div><h2 id="analysis-title"><BrainCircuit size={18} />{t("analysisPanel")}</h2><p className="panel-subtitle">{t("caseSnapshotHint")}</p></div></div>
         <div className="analysis-body">{selected && selected.transaction_id === inspectedId ? <><div className="analysis-score"><Gauge score={selected.risk_score} /><div><Badge status={selected.status} /><p className="result-headline">{lang === "kk" ? selected.headline_kk : selected.headline_ru}</p></div></div><MLInspector details={selected} reasons={selected.reasons} /><Explain kk={selected.reasons_kk} ru={selected.reasons_ru} /></> : <p className="empty">{t("analysisEmpty")}</p>}</div></section>
-      <CaseInspector detail={selected} loading={detail.loading} error={detail.error} receivedAt={detail.receivedAt} selectedId={inspectedId} onReview={onReview} busy={busy} onRetry={() => setRefresh(value => value + 1)} />
+      <CaseInspector detail={selected} loading={detail.loading} error={detail.error} receivedAt={detail.receivedAt} selectedId={inspectedId} onReview={onReview} readOnly={readOnly} busy={busy} onRetry={() => setRefresh(value => value + 1)} />
     </div>}
   </div>;
 }

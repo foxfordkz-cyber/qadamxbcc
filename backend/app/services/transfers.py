@@ -34,6 +34,7 @@ from app.schemas.transfers import (
     CoolingQuestionnaire,
     MLContributorOut,
     PartyOut,
+    PostCallRequest,
     RiskReasonOut,
     TransferContextIn,
     TransferEvaluateRequest,
@@ -46,6 +47,38 @@ from app.services.graph import MAX_GRAPH_NEIGHBOURS, GraphCapacityError, GraphSt
 
 QUESTIONNAIRE_LAYER = "questionnaire"
 BLOCKED_AFTER_RED_FLAG_SCORE = 90
+
+POST_CALL_MESSAGES = {
+    "POST_CALL_ENDED": (
+        "Клиент қоңыраудың аяқталғанын хабарлады. Аударым кідіртілген.",
+        "Клиент сообщил о завершении звонка. Перевод удерживается.",
+    ),
+    "POST_CALL_RECOGNIZED": (
+        "Қоңыраудан кейін клиент аударымды өзі бастағанын растады.",
+        "После звонка клиент подтвердил, что сам начал перевод.",
+    ),
+    "POST_CALL_SCAM_REPORTED": (
+        "Қоңыраудан кейін клиент алаяқтық туралы хабарлады. Аударым тоқтатылды.",
+        "После звонка клиент сообщил об обмане. Перевод отменён.",
+    ),
+}
+
+
+def _post_call_event(tx: Transaction, code: str, now: datetime) -> None:
+    kk, ru = POST_CALL_MESSAGES[code]
+    tx.risk_events.append(
+        RiskEvent(
+            layer=QUESTIONNAIRE_LAYER,
+            rule_code=code,
+            score_delta=0,
+            reason_kk=kk,
+            reason_ru=ru,
+            evidence={"source": "customer_report"},
+            created_at=now,
+        )
+    )
+    tx.updated_at = now
+
 
 RED_FLAG_LABELS: dict[str, tuple[str, str]] = {
     "caller_claims_bank_or_police": (
@@ -610,6 +643,9 @@ class TransferService:
                     return transfer_detail(tx, tx.recipient)
                 raise ConflictError(f"transaction is {tx.status.value}, not cooling_off")
 
+            codes = {event.rule_code for event in tx.risk_events}
+            if "POST_CALL_ENDED" in codes and "POST_CALL_RECOGNIZED" not in codes:
+                raise ConflictError("post_call_answer_required")
             now = datetime.now(UTC)
             flags = red_flags(answers, active_call=tx.active_call, from_deposit=tx.from_deposit)
             blocking_score = BLOCKED_AFTER_RED_FLAG_SCORE
@@ -766,12 +802,36 @@ class TransferService:
         )
         return evaluation
 
-    async def cancel(self, tx_id: uuid.UUID) -> TransferEvaluateResponse:
+    async def record_post_call(
+        self, tx_id: uuid.UUID, body: PostCallRequest
+    ) -> TransferEvaluateResponse:
+        code = "POST_CALL_ENDED" if body.action == "ended" else "POST_CALL_RECOGNIZED"
+        async with self._serialized(tx_id):
+            tx = await self._load(tx_id, locked=True)
+            codes = {event.rule_code for event in tx.risk_events}
+            if code in codes:
+                return transfer_detail(tx, tx.recipient)
+            if tx.status is not TransactionStatus.COOLING_OFF or not tx.active_call:
+                raise ConflictError("post_call_unavailable")
+            if body.action == "recognized" and "POST_CALL_ENDED" not in codes:
+                raise ConflictError("call_end_required")
+            _post_call_event(tx, code, datetime.now(UTC))
+            await self.session.commit()
+            return transfer_detail(tx, tx.recipient)
+
+    async def cancel(
+        self, tx_id: uuid.UUID, *, post_call_scam: bool = False
+    ) -> TransferEvaluateResponse:
         # Cancellation only removes permission to execute. It needs the SQL lifecycle
         # lock, not Redis or delivery of unrelated approved-transfer projections.
         async with self._serialized(tx_id):
             tx = await self._load(tx_id, locked=True)
+            codes = {event.rule_code for event in tx.risk_events}
+            if post_call_scam and "POST_CALL_ENDED" not in codes:
+                raise ConflictError("call_end_required")
             if tx.status is TransactionStatus.CANCELLED and tx.resolution_action == "cancel":
+                if post_call_scam and "POST_CALL_SCAM_REPORTED" not in codes:
+                    raise ConflictError("transaction_already_cancelled")
                 return transfer_detail(tx, tx.recipient)
             if tx.status is not TransactionStatus.COOLING_OFF:
                 raise ConflictError(f"transaction is {tx.status.value}, not cooling_off")
@@ -792,6 +852,8 @@ class TransferService:
                     created_at=now,
                 )
             )
+            if post_call_scam:
+                _post_call_event(tx, "POST_CALL_SCAM_REPORTED", now)
             await self.session.commit()
             return transfer_detail(tx, tx.recipient)
 

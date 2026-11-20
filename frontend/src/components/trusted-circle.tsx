@@ -5,11 +5,12 @@ import { AlertTriangle, Check, Clock3, LoaderCircle, Send, UserRound, XCircle } 
 import { api, ApiError } from "@/lib/contracts";
 import { mobileText } from "@/lib/mobile-copy";
 import { useLocale } from "@/lib/i18n";
+import { CircleLogin, isCircleGuest } from "./circle-login";
 
 // Mirrors the BFF response of /api/v1/trusted-circle/{id}; no tokens or chat addresses reach the browser.
 type NotificationState = "NOTIFICATION_QUEUED" | "NOTIFICATION_SENT" | "CONTACT_ACKNOWLEDGED" | "SUSPICION_REPORTED" | "DELIVERY_FAILED" | "CONTACT_REVOKED" | "NOTIFICATION_EXPIRED";
 type ContactState = "CONTACT_NOT_CONFIGURED" | "CONTACT_PENDING_CONSENT" | "CONTACT_VERIFIED" | "CONTACT_REVOKED";
-interface Circle { channel?: string | null; contact_state?: ContactState | null; contacts?: { id: string; alias: string }[]; notifications: { id: string; contact_id: string; state: NotificationState; expires_at: string }[] }
+interface Circle { private_session?: boolean; channel?: string | null; contact_state?: ContactState | null; contacts?: { id: string; alias: string }[]; notifications: { id: string; contact_id: string; state: NotificationState; expires_at: string }[] }
 
 /** Polling interval: above the contract's 2.1 s floor and within the 30/min per-owner budget. */
 export const TRUSTED_POLL_MS = 4000;
@@ -29,6 +30,7 @@ export function TrustedCircle({ transactionId, active, historyOnly = false }: { 
   const [circle, setCircle] = useState<Circle | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<ErrorKey | null>(null);
+  const [guest, setGuest] = useState(false);
   const pauseUntil = useRef(0);
   const version = useRef(0);
   const writing = useRef(false);
@@ -39,23 +41,27 @@ export function TrustedCircle({ transactionId, active, historyOnly = false }: { 
     read.current = true;
     try {
       const value = await api<Circle>(`trusted-circle/${transactionId}${scope === "notifications" ? "?scope=notifications" : ""}`);
-      if (ticket === version.current) { setCircle(previous => ({ ...previous, ...value })); setError(null); }
+      if (ticket === version.current) { setGuest(false); setCircle(previous => ({ ...previous, ...value })); setError(null); }
     } catch (failure) {
       if (ticket !== version.current) return;
+      if (isCircleGuest(failure)) { setCircle(null); setError(null); setGuest(true); return; }
       setError(errorFor(failure));
       if (failure instanceof ApiError && failure.status === 429) pauseUntil.current = Date.now() + (failure.retryAfter || 60) * 1000;
     } finally { if (ticket === version.current) read.current = false; }
   }, [transactionId]);
   useEffect(() => {
+    setCircle(null); setGuest(false);
     void load("all");
-    return () => { ++version.current; read.current = false; };
+    const refresh = () => { if (document.visibilityState === "visible") void load("all"); };
+    window.addEventListener("focus", refresh);
+    return () => { ++version.current; read.current = false; window.removeEventListener("focus", refresh); };
   }, [load]);
   const waiting = !!circle?.notifications.some(item => !terminal(item.state));
   useEffect(() => {
-    if (!waiting) return;
-    const timer = setInterval(() => { if (document.visibilityState === "visible") void load("notifications"); }, TRUSTED_POLL_MS);
+    if (!waiting && !circle?.private_session) return;
+    const timer = setInterval(() => { if (document.visibilityState === "visible") void load(waiting ? "notifications" : "all"); }, waiting ? TRUSTED_POLL_MS : 60000);
     return () => clearInterval(timer);
-  }, [waiting, load]);
+  }, [waiting, circle?.private_session, load]);
 
   async function notify(contactId: string) {
     if (writing.current || Date.now() < pauseUntil.current) return;
@@ -65,11 +71,13 @@ export function TrustedCircle({ transactionId, active, historyOnly = false }: { 
       const value = await api<Circle>(`trusted-circle/${transactionId}`, { method: "POST", body: JSON.stringify({ contact_id: contactId }) });
       setCircle(value);
     } catch (failure) {
+      if (isCircleGuest(failure)) { setCircle(null); setError(null); setGuest(true); return; }
       setError(errorFor(failure));
       if (failure instanceof ApiError && failure.status === 429) pauseUntil.current = Date.now() + (failure.retryAfter || 60) * 1000;
     } finally { writing.current = false; setSending(false); }
   }
 
+  if (guest) return historyOnly ? null : <CircleLogin onUnlocked={() => { setGuest(false); void load("all"); }} />;
   if (!circle) return <section className="trusted-circle"><strong>{m("trustedTitle")}</strong><p role="status">{m(error ?? "loading")}</p>
     {error && <button type="button" className="secondary" onClick={() => void load("all")}>{m("refresh")}</button>}</section>;
   if (historyOnly && circle.notifications.length === 0) return null;

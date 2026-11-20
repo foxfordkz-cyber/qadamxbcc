@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { appConfig } from "./config";
-import { accessConfiguration, checkAccess } from "./server-access";
+import { accessConfiguration, backendHeaders, checkAccess } from "./server-access";
 import { RequestBodyError } from "./request-body";
 import { apiAdmission } from "./request-quota";
 import { knownConflicts, ownerCapability, signingKey } from "./trusted-circle";
 
 export const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store", ...headers } });
 const unavailable = () => json({ error: "unavailable" }, 404);
+export const sessionCookie = "__Host-saqbol-circle";
+export const sessionToken = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
+export const circleWebEnabled = () => process.env.BCC_CIRCLE_WEB_LOGIN === "true";
 class Upstream extends Error { constructor(public status: number, public detail: string, public retryAfter: string | null) { super(detail); } }
 
 export async function upstream(path: string, init: { method?: string; headers: Record<string, string>; body?: string }) {
@@ -19,7 +22,7 @@ export async function upstream(path: string, init: { method?: string; headers: R
     try { const value = await response.json() as { detail?: unknown }; if (typeof value.detail === "string") detail = value.detail; } catch { /* Non-JSON upstream errors stay generic. */ }
     throw new Upstream(response.status, detail, response.headers.get("retry-after"));
   }
-  return response.json() as Promise<unknown>;
+  return response.status === 204 ? null : response.json() as Promise<unknown>;
 }
 
 export function deliveryChannel() {
@@ -31,17 +34,34 @@ export function deliveryChannel() {
   }
 }
 
-export function circleAccess(request: NextRequest) {
+export function circleGate(request: NextRequest) {
   const denied = checkAccess({ method: request.method, headers: request.headers, origin: request.nextUrl.origin, pathname: request.nextUrl.pathname });
-  if (denied) return { failure: json({ error: denied.error }, denied.status) };
-  const config = appConfig();
-  const key = signingKey();
-  const owner = config.presets.normal.sender;
-  if (!key || config.mode !== "live" || accessConfiguration().environment === "pilot" || !z.uuid().safeParse(owner).success) {
-    return { failure: unavailable() };
+  if (denied) return json({ error: denied.error }, denied.status);
+  if (accessConfiguration().environment === "pilot" || appConfig().mode !== "live") return unavailable();
+  if (circleWebEnabled() && !["GET", "HEAD"].includes(request.method) &&
+      request.headers.get("origin") !== accessConfiguration().publicOrigin) {
+    return json({ error: "untrustedOrigin" }, 403);
   }
   const admission = apiAdmission();
-  if (admission.status !== 200) return { failure: json({ error: admission.status === 429 ? "rateLimited" : "apiError" }, admission.status, admission.retryAfter ? { "Retry-After": String(admission.retryAfter) } : {}) };
+  if (admission.status !== 200) return json({ error: admission.status === 429 ? "rateLimited" : "apiError" }, admission.status, admission.retryAfter ? { "Retry-After": String(admission.retryAfter) } : {});
+  return null;
+}
+
+type Access = { failure: NextResponse; headers?: never; privateSession?: never } |
+  { failure?: never; headers: Record<string, string>; privateSession?: boolean };
+
+export function circleAccess(request: NextRequest): Access {
+  const failure = circleGate(request);
+  if (failure) return { failure };
+  if (circleWebEnabled()) {
+    const token = sessionToken.safeParse(request.cookies.get(sessionCookie)?.value);
+    if (!token.success) return { failure: json({ error: "circle_login_required" }, 401) };
+    return { privateSession: true, headers: { ...backendHeaders("trusted-contacts"), "X-BCC-Circle-Session": token.data } };
+  }
+  const key = signingKey();
+  const owner = appConfig().presets.normal.sender;
+  if (accessConfiguration().publicOrigin || process.env.BCC_INTEGRATIONS_TELEGRAM_MODE !== "fake" ||
+      !key || !z.uuid().safeParse(owner).success) return { failure: unavailable() };
   return { headers: { "Content-Type": "application/json", Authorization: `Bearer ${ownerCapability(owner, key)}` } };
 }
 
@@ -49,6 +69,8 @@ export function circleFailure(error: unknown) {
   if (error instanceof RequestBodyError) return json({ error: error.code }, error.status);
   if (error instanceof z.ZodError || error instanceof SyntaxError) return json({ error: "invalid" }, 422);
   if (error instanceof Upstream) {
+    if (error.status === 401 && ["circle_login_required", "invalid_or_expired_code"].includes(error.detail)) return json({ error: error.detail }, 401);
+    if (circleWebEnabled() && [401, 403, 503].includes(error.status)) return json({ error: "unavailable" }, 503);
     if (error.status === 503 || error.status === 401 || error.status === 403) return unavailable();
     if (error.status === 404) return json({ error: "notFound" }, 404);
     if (error.status === 409) return json({ error: (knownConflicts as readonly string[]).includes(error.detail) ? error.detail : "conflict" }, 409);

@@ -50,6 +50,18 @@ class TransferContextIn(BaseModel):
     )
 
 
+class PostCallRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["ended", "recognized"]
+
+
+class CancelTransferRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: Literal["post_call_scam"] | None = None
+
+
 class TransferEvaluateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

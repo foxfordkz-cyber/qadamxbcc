@@ -1,14 +1,18 @@
+import re
 import uuid
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.api.deps import EngineDep, SessionDep
 from app.schemas.transfers import (
     AbandonRequestResponse,
+    CancelTransferRequest,
+    PostCallRequest,
     ResolveCoolingRequest,
     TransferEvaluateRequest,
     TransferEvaluateResponse,
 )
+from app.services import submission_limits
 from app.services.transfers import (
     ConflictError,
     DomainError,
@@ -42,9 +46,20 @@ async def abandon_request(
 
 @router.post("/evaluate", response_model=TransferEvaluateResponse)
 async def evaluate_transfer(
-    body: TransferEvaluateRequest, session: SessionDep, engine: EngineDep
+    body: TransferEvaluateRequest, session: SessionDep, engine: EngineDep, request: Request
 ) -> TransferEvaluateResponse:
     """Score once per request_id; retries replay the original persisted evaluation."""
+    source = request.headers.get("x-bcc-submission-source")
+    if source is not None and request.app.state.settings.api_key:
+        if not re.fullmatch(r"[a-f0-9]{64}", source):
+            raise HTTPException(422, detail="invalid_submission_source")
+        retry = await submission_limits.admit(
+            request.app.state.resources.redis, source, body.request_id
+        )
+        if retry:
+            raise HTTPException(
+                429, detail="submission_cooldown", headers={"Retry-After": str(retry)}
+            )
     try:
         return await TransferService(session, engine).evaluate(body)
     except DomainError as exc:
@@ -75,10 +90,26 @@ async def resolve_cooling(
 
 @router.post("/{transaction_id}/cancel", response_model=TransferEvaluateResponse)
 async def cancel_transfer(
-    transaction_id: uuid.UUID, session: SessionDep, engine: EngineDep
+    transaction_id: uuid.UUID,
+    session: SessionDep,
+    engine: EngineDep,
+    body: CancelTransferRequest | None = None,
 ) -> TransferEvaluateResponse:
     """Cancel a held transfer permanently, without execution; repeat cancellation is safe."""
     try:
-        return await TransferService(session, engine).cancel(transaction_id)
+        return await TransferService(session, engine).cancel(
+            transaction_id, post_call_scam=bool(body and body.reason == "post_call_scam")
+        )
+    except DomainError as exc:
+        raise _http(exc) from exc
+
+
+@router.post("/{transaction_id}/post-call", response_model=TransferEvaluateResponse)
+async def record_post_call(
+    transaction_id: uuid.UUID, body: PostCallRequest, session: SessionDep, engine: EngineDep
+) -> TransferEvaluateResponse:
+    """Record the customer's call-ended signal or recognition of this held transfer."""
+    try:
+        return await TransferService(session, engine).record_post_call(transaction_id, body)
     except DomainError as exc:
         raise _http(exc) from exc

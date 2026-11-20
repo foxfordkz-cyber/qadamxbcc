@@ -17,6 +17,9 @@ const upstream = "https://api.example";
 const apiKey = randomBytes(32).toString("hex");
 const socKey = randomBytes(32).toString("hex");
 const paths = [];
+const circleToken = randomBytes(32).toString("base64url");
+let circleCode = "ABCDEF0123456789";
+let signedIn = false;
 const mf = new Miniflare(await convertV4MiniflareOptions({
   name: config.name, modules, modulesRoot: directory,
   compatibilityDate: config.compatibility_date, compatibilityFlags: config.compatibility_flags,
@@ -26,10 +29,28 @@ const mf = new Miniflare(await convertV4MiniflareOptions({
   outboundService: async request => {
     const url = new URL(request.url);
     assert.equal(url.origin, upstream);
+    if (url.pathname.startsWith("/api/v1/trusted-contacts")) {
+      assert.equal(request.headers.get("Authorization"), null);
+      assert.equal(request.headers.get("X-BCC-API-Key"), apiKey);
+      if (url.pathname.endsWith("/web-session") && request.method === "GET") return Response.json({ available: true });
+      if (url.pathname.endsWith("/web-session") && request.method === "POST") {
+        if ((await request.json()).code !== circleCode || signedIn) return Response.json({ detail: "invalid_or_expired_code" }, { status: 401 });
+        signedIn = true; circleCode = "";
+        return Response.json({ session: circleToken, expires_in: 900 });
+      }
+      if (!signedIn || request.headers.get("X-BCC-Circle-Session") !== circleToken) return Response.json({ detail: "circle_login_required" }, { status: 401 });
+      if (request.method === "DELETE") { signedIn = false; return new Response(null, { status: 204 }); }
+      return Response.json({ contacts: [] });
+    }
     const soc = url.pathname === "/api/v1/soc/feed";
     assert.ok(soc || url.pathname === "/api/v1/transfers/evaluate");
     assert.equal(request.headers.get("X-BCC-SOC-Key"), soc ? socKey : null);
     assert.equal(request.headers.get("X-BCC-API-Key"), soc ? null : apiKey);
+    if (!soc) {
+      const source = request.headers.get("x-bcc-submission-source");
+      assert.match(source ?? "", /^[a-f0-9]{64}$/);
+      assert.notEqual(source, "1".repeat(64));
+    }
     paths.push(url.pathname);
     if (soc && url.searchParams.has("since")) return Response.redirect("https://elsewhere.example/");
     return Response.json(soc ? { items: [], total: 0 } : { status: "approved" });
@@ -37,11 +58,16 @@ const mf = new Miniflare(await convertV4MiniflareOptions({
 }));
 const fetch = (pathname, options) => mf.dispatchFetch(origin + pathname, options);
 try {
-  for (const pathname of ["/", "/mobile", "/pitch"]) {
+  await checkPrivateCircle();
+  for (const pathname of ["/", "/mobile", "/soc", "/pitch"]) {
     const response = await fetch(pathname);
     assert.equal(response.status, 200, pathname);
     const html = await response.text();
     assert.ok(html.includes("Saq Bol"), pathname);
+    if (pathname === "/soc") {
+      assert.ok(html.includes("сынақ аударымдарын"), "Public SOC must describe the synthetic data");
+      assert.ok(!html.includes("soc-mode-cases"), "Private case workspace must stay hidden");
+    }
     assert.ok(!html.includes(apiKey) && !html.includes(socKey), pathname);
     assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
   }
@@ -49,9 +75,12 @@ try {
   assert.deepEqual(await (await fetch("/mobile/link")).json(), { origins: [origin] });
   assert.equal((await fetch("/icons/icon-192.png")).status, 200);
   assert.deepEqual(await (await fetch("/api/v1/soc/feed")).json(), { items: [], total: 0 });
+  const publicWrite = { method: "POST", headers: { origin, "content-type": "application/json" }, body: "{}" };
+  assert.equal((await fetch(`/api/v1/soc/recipients/${config.vars.BCC_NORMAL_SENDER_ID}/flag`, publicWrite)).status, 403);
+  assert.equal((await fetch("/api/v1/integrations/guardian/soc/cases", publicWrite)).status, 403);
   const transfer = { sender_id: config.vars.BCC_NORMAL_SENDER_ID, recipient_phone: config.vars.BCC_NORMAL_RECIPIENT_PHONE, amount: "25000", context: {} };
   const post = source => fetch("/api/v1/transfers/evaluate", {
-    method: "POST", headers: { origin: source, "content-type": "application/json" }, body: JSON.stringify(transfer),
+    method: "POST", headers: { origin: source, "content-type": "application/json", "x-bcc-submission-source": "1".repeat(64) }, body: JSON.stringify(transfer),
   });
   assert.equal((await post("https://untrusted.example")).status, 403);
   assert.deepEqual(await (await post(origin)).json(), { status: "approved" });
@@ -62,4 +91,25 @@ try {
   console.log("Cloudflare Worker smoke passed (SSR, middleware, assets, Render BFF and same-origin requests).");
 } finally {
   await mf.dispose();
+}
+
+async function checkPrivateCircle() {
+  const members = "/api/v1/trusted-circle/members";
+  const login = "/api/v1/trusted-circle/session";
+  const body = JSON.stringify({ code: circleCode });
+  const headers = { origin, "content-type": "application/json" };
+  assert.deepEqual(await (await fetch(login)).json(), { available: true });
+  assert.equal((await fetch(members, { headers: { "X-BCC-Circle-Session": circleToken } })).status, 401);
+  assert.equal((await fetch(login, { method: "POST", headers: { ...headers, origin: "https://untrusted.example" }, body })).status, 403);
+  const entered = await fetch(login, { method: "POST", headers, body });
+  assert.equal(entered.status, 200);
+  assert.deepEqual(await entered.json(), { signed_in: true });
+  const cookie = entered.headers.get("set-cookie") || "";
+  for (const attr of ["__Host-saqbol-circle=", "Path=/", "HttpOnly", "Secure", "SameSite=strict"]) assert.ok(cookie.toLowerCase().includes(attr.toLowerCase()), attr);
+  const authenticated = { ...headers, cookie: cookie.split(";")[0] };
+  assert.equal((await fetch(login, { method: "POST", headers, body })).status, 401);
+  assert.deepEqual(await (await fetch(members, { headers: authenticated })).json(), { contacts: [], private_session: true });
+  assert.equal((await fetch(members)).status, 401);
+  assert.equal((await fetch(login, { method: "DELETE", headers: authenticated })).status, 200);
+  assert.equal((await fetch(members, { headers: authenticated })).status, 401);
 }

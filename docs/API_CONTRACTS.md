@@ -151,7 +151,8 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 | `POST` | `/api/v1/transfers/evaluate` | `X-BCC-API-Key` | `TransferEvaluateRequest` | `TransferEvaluateResponse` | 200, 422 |
 | `GET` | `/api/v1/transfers/{transaction_id}` | `X-BCC-API-Key` | — | `TransferEvaluateResponse` | 200, 422 |
 | `POST` | `/api/v1/transfers/{transaction_id}/resolve-cooling` | `X-BCC-API-Key` | `ResolveCoolingRequest` | `TransferEvaluateResponse` | 200, 422 |
-| `POST` | `/api/v1/transfers/{transaction_id}/cancel` | `X-BCC-API-Key` | — | `TransferEvaluateResponse` | 200, 422 |
+| `POST` | `/api/v1/transfers/{transaction_id}/cancel` | `X-BCC-API-Key` | `CancelTransferRequest` | `TransferEvaluateResponse` | 200, 422 |
+| `POST` | `/api/v1/transfers/{transaction_id}/post-call` | `X-BCC-API-Key` | `PostCallRequest` | `TransferEvaluateResponse` | 200, 422 |
 
 ### call-check
 
@@ -179,6 +180,9 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 
 | Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
 |---|---|---|---|---|---|
+| `GET` | `/api/v1/trusted-contacts/web-session` | `X-BCC-API-Key` | — | `object` | 200, 422 |
+| `POST` | `/api/v1/trusted-contacts/web-session` | `X-BCC-API-Key` | `CircleLogin` | `CircleSession` | 200, 422 |
+| `DELETE` | `/api/v1/trusted-contacts/web-session` | `X-BCC-API-Key` | — | — | 204, 422 |
 | `GET` | `/api/v1/trusted-contacts` | Bearer | — | `ContactsOut` | 200 |
 | `POST` | `/api/v1/trusted-contacts` | Bearer | `InviteRequest` | `InvitationOut` | 201, 422 |
 | `DELETE` | `/api/v1/trusted-contacts/{contact_id}` | Bearer | — | `ContactOut` | 200, 422 |

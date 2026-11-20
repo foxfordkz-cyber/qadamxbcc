@@ -1,21 +1,19 @@
 # Hybrid scoring model
 
-The backend combines existing behavioral rules, Redis velocity, the resident graph,
-and a seeded scikit-learn random forest (24 trees, depth at most 8). The forest is
-trained on 16,000 synthetic KZT transfers with a separate 25% holdout. Scenarios
-include ordinary P2P, benign collections, phone scams, mule transit, and account
-takeover, with overlapping features and missing browser measurements. No customer
-records are used. Holdout performance measures the simulator, not real fraud
-detection accuracy; scores need calibration and validation on representative bank
-data before production deployment.
+The backend combines behavioral rules, Redis velocity, the transaction graph and
+local scikit-learn random forests. Version `bcc-synthetic-rf-v3` evaluates one forest
+per transfer. During a phone call it uses 32 trees with a maximum depth of 9, fitted
+on 18,000 synthetic transfers including dictated payments, legitimate phone
+assistance, large payments and missing browser observations. Five pauses during a
+payment can occur in both classes. Amount, elapsed entry time and call context all
+contribute to the estimate. The rest of the traffic uses the original 24-tree
+forest reproduced from the v2 generator and its 12,000 training rows.
 
-Version `bcc-synthetic-rf-v2` adds benign cumulative-transit overlap: ordinary
-reciprocal spending and legitimate collection payouts can have high outgoing /
-incoming ratios. This fixes an observed normal-preset raw-model false positive;
-the serving feature is cumulative and is not itself proof of rapid cash-out.
-The mixture proportions are simulation assumptions. Policy thresholds and forest
-architecture remain unchanged. See [evaluation evidence](../../../docs/MODEL_EVALUATION.md)
-for the preserved baseline, same-sample comparisons, retained miss and tradeoffs.
+The combined release is evaluated on 6,000 new synthetic draws with a separate
+seed. A second, independently implemented challenge measures full-engine decisions
+and the resulting friction for legitimate callers. Both datasets use invented
+accounts and scenario labels. The paired results include the missed payments and
+false holds. [Evaluation evidence](../../../docs/MODEL_EVALUATION.md)
 
 From `backend/`:
 
@@ -84,7 +82,8 @@ the feature, observed value, signed probability-point contribution, and kk/ru
 labels. Positive contributions increase model risk; negative ones decrease it.
 Only the top five by absolute magnitude are returned, so these five alone need
 not sum to the prediction. Internally, all contributions plus the forest's mean
-root probability sum to its output. Contributions precede blending/policy caps.
+root probability sum to its output. Base scores and contributions refer to the
+forest selected for this transfer. Contributions precede blending/policy caps.
 
 Latency tests cover warm inference with explanation generation (<2 ms p95) and
 the complete scoring engine with Redis/graph work (<15 ms p95), excluding HTTP,

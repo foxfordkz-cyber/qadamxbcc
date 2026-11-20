@@ -65,12 +65,17 @@ async function main() {
     report.requests.push({ method, path: url.pathname, search: url.search });
     if (method === 'POST') report.mutations.push({ path: url.pathname, intercepted: true });
     if (url.pathname.endsWith('/transfers/evaluate') && method === 'POST') return route.fulfill({ json: evaluation(create(request.postDataJSON())) });
-    const action = url.pathname.match(/\/transfers\/([0-9a-f-]+)\/(resolve-cooling|cancel)$/i);
+    const action = url.pathname.match(/\/transfers\/([0-9a-f-]+)\/(resolve-cooling|cancel|post-call)$/i);
     if (action && method === 'POST') {
       if (resolveFailure) return route.fulfill({ status: 503, json: { error: 'apiError' } });
       const item = records.get(action[1]); if (!item) return route.fulfill({ status: 404, json: { error: 'notFound' } });
       if (item.status === 'cooling_off') {
-        if (action[2] === 'cancel') item.status = 'cancelled';
+        const record = code => item.reasons.unshift({ code, layer: 'questionnaire', score_delta: 0, reason_ru: code, reason_kk: code });
+        if (action[2] === 'post-call') record(request.postDataJSON().action === 'ended' ? 'POST_CALL_ENDED' : 'POST_CALL_RECOGNIZED');
+        else if (action[2] === 'cancel') {
+          item.status = 'cancelled';
+          if (request.postDataJSON().reason === 'post_call_scam') record('POST_CALL_SCAM_REPORTED');
+        }
         else {
           const answers = request.postDataJSON().answers; item.verification_answers = answers;
           if (questions.some((key, i) => answers[key] !== clean[i])) item.status = 'blocked';
@@ -155,7 +160,9 @@ async function main() {
     return { width: canvas.width, height: canvas.height, scale: new DOMMatrix(getComputedStyle(viewport).transform).a, fitted: nodes.length === expected && nodes.every(box => box.left >= -1 && box.left + box.width <= canvas.width + 1 && box.top >= -1 && box.top + box.height <= canvas.height + 1), nodes };
   }, expectedCount);
   try {
-    await page.goto(target, { waitUntil: 'domcontentloaded' }); await language('ru');
+    await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    // SSR starts in Kazakh; the locale effect confirms hydration before clicking presets.
+    await page.waitForFunction(() => document.documentElement.lang === 'ru');
     await preset('normal'); await page.locator('.phone-receipt .badge.approved').waitFor();
     const normalId = await page.locator('.phone-receipt').getAttribute('data-transaction-id');
     check('normal_preset_approved_receipt_inside_phone', await page.locator('.phone-frame .phone-receipt').isVisible() && records.get(normalId)?.status === 'approved');
@@ -187,7 +194,11 @@ async function main() {
     check('safe_account_warning_matches_context_ru', (await dialog.locator('.ai-warning').innerText()).includes('безопасный счёт'));
     await language('kk', true);
     check('safe_account_warning_matches_context_kk', (await dialog.locator('.ai-warning').innerText()).includes('Қауіпсіз') || (await dialog.locator('.ai-warning').innerText()).includes('қауіпсіз'));
-    await dialog.locator('.cooling-start').click();
+    await dialog.locator('.post-call-end').click(); await dialog.locator('.post-call-prompt').waitFor();
+    check('post_call_names_held_recipient', (await dialog.locator('#cooling-description').innerText()).includes(records.get(heldId).recipient.full_name));
+    await dialog.locator('.post-call-prompt .primary').click();
+    await dialog.locator('.cooling-next').waitFor();
+    check('recognized_call_opens_questionnaire_and_retains_hold', records.get(heldId).status === 'cooling_off');
     check('missing_answer_disables_next', await dialog.locator('.cooling-next').isDisabled());
     check('question_heading_receives_keyboard_focus', await page.evaluate(() => document.activeElement?.id) === 'cooling-title');
     await dialog.locator(`input[name="${questions[0]}"]`).nth(1).check(); await language('ru', true);
@@ -232,7 +243,10 @@ async function main() {
     await dialog.locator('.cooling-submit').click(); await dialog.waitFor({ state: 'hidden' });
     check('red_flag_blocks_after_retry', records.get(riskyId).status === 'blocked');
     await preset('scam'); await dialog.waitFor(); const cancelId = [...records.keys()].at(-1);
-    await dialog.locator('.danger-button').click(); await dialog.waitFor({ state: 'hidden' });
+    await dialog.locator('.post-call-end').click(); await dialog.locator('.post-call-prompt').waitFor();
+    await page.reload({ waitUntil: 'domcontentloaded' }); await dialog.locator('.post-call-prompt').waitFor();
+    await dialog.locator('.post-call-report').click(); await dialog.waitFor({ state: 'hidden' });
+    check('reported_scam_offers_official_bank_contact', await page.locator('.phone-receipt a[href="tel:505"]').isVisible());
     check('explicit_cancel_terminal_receipt', records.get(cancelId).status === 'cancelled' && await page.locator('.phone-receipt .badge.cancelled').isVisible());
     await preset('scam'); await dialog.waitFor(); const holdA = [...records.keys()].at(-1);
     await dialog.locator('.cooling-start').click();
@@ -535,6 +549,7 @@ async function main() {
     lan.on('pageerror', error => report.errors.push(`lan: ${error.message}`));
     await lan.setViewportSize({ width: 390, height: 844 });
     await lan.goto(`${lanOrigin}/mobile`, { waitUntil: 'domcontentloaded' });
+    await lan.waitForFunction(() => document.documentElement.lang === 'ru');
     await lan.locator('.phone-stage.is-bare').waitFor();
     if (await lan.locator('.home-tools').isVisible()) await lan.locator('.home-tools .primary').click();
     await lan.locator('.phone-form, .phone-receipt').first().waitFor();

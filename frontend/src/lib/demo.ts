@@ -186,6 +186,7 @@ export function resolveDemo(id: string, answers: Answers, now = Date.now()): Eva
     if (row.status !== "cancelled" && JSON.stringify(detail.verification_answers) === JSON.stringify(answers)) return detail;
     throw new DemoError(409, "conflict");
   }
+  if (detail.reasons.some(r => r.code === "POST_CALL_ENDED") && !detail.reasons.some(r => r.code === "POST_CALL_RECOGNIZED")) throw new DemoError(409, "conflict");
   const unknownUnderPressure = !answers.knows_recipient_personally && (row.active_call || row.from_deposit);
   const flagged = answers.caller_claims_bank_or_police || answers.asked_to_move_to_safe_account || answers.asked_to_keep_secret_or_install_app || !answers.initiated_by_customer || unknownUnderPressure;
   const recipientFlagged = flags().get(row.recipient.id)?.flagged === true;
@@ -206,17 +207,35 @@ export function resolveDemo(id: string, answers: Answers, now = Date.now()): Eva
   row.reasons = recipientFlagged && !flagged ? [...row.reasons, reason("RECIPIENT_FLAGGED_AT_RELEASE", "questionnaire", Math.max(0, 90 - previousRisk),
     "Алушы SOC тарапынан күдікті дроп ретінде белгіленген.", "Получатель отмечен SOC как подозреваемый дроп.")] : [reason("QUESTIONNAIRE", "questionnaire", flagged ? 90 : 0,
     flagged ? "Жауаптарда алаяқтық белгілері бар. Аударым бұғатталды." : "Қауіпсіздік тексеруі аяқталды. Аударым мақұлданды.",
-    flagged ? "В ответах обнаружены признаки обмана. Перевод заблокирован." : "Проверка безопасности пройдена. Перевод одобрен.")];
+    flagged ? "В ответах обнаружены признаки обмана. Перевод заблокирован." : "Проверка безопасности пройдена. Перевод одобрен."), ...row.reasons];
   const result = { ...detail, ...decision(row.status, row.risk_score, id, row.reasons), reasons: row.reasons, cooling_off_until: null, resolved_at: row.resolved_at };
   details().set(id, result);
   return structuredClone(result);
 }
-export function cancelDemo(id: string, now = Date.now()): Evaluation {
+export function postCallDemo(id: string, action: "ended" | "recognized", now = Date.now()): Evaluation {
   const detail = detailDemo(id, now);
+  const code = action === "ended" ? "POST_CALL_ENDED" : "POST_CALL_RECOGNIZED";
+  if (detail.reasons.some(r => r.code === code)) return detail;
+  if (detail.status !== "cooling_off" || !detail.context?.active_call
+    || (action === "recognized" && !detail.reasons.some(r => r.code === "POST_CALL_ENDED"))) throw new DemoError(409, "conflict");
+  const kk = action === "ended" ? "Клиент қоңыраудың аяқталғанын хабарлады. Аударым кідіртілген." : "Қоңыраудан кейін клиент аударымды өзі бастағанын растады.";
+  const ru = action === "ended" ? "Клиент сообщил о завершении звонка. Перевод удерживается." : "После звонка клиент подтвердил, что сам начал перевод.";
+  const row = rows().find(r => r.transaction_id === id)!;
+  row.reasons = [{ ...reason(code, "questionnaire", 0, kk, ru), evidence: { source: "customer_report" } }, ...detail.reasons];
+  row.updated_at = new Date(now).toISOString();
+  const result = { ...detail, ...decision(row.status, row.risk_score, id, row.reasons), reasons: row.reasons, updated_at: row.updated_at };
+  details().set(id, result);
+  return structuredClone(result);
+}
+export function cancelDemo(id: string, now = Date.now(), postCallScam = false): Evaluation {
+  const detail = detailDemo(id, now);
+  if (postCallScam && (!detail.reasons.some(r => r.code === "POST_CALL_ENDED")
+    || (detail.status === "cancelled" && !detail.reasons.some(r => r.code === "POST_CALL_SCAM_REPORTED")))) throw new DemoError(409, "conflict");
   if (detail.status === "cancelled") return detail;
   if (detail.status !== "cooling_off") throw new DemoError(409, "conflict");
   const row = rows().find(r => r.transaction_id === id)!;
-  const reasons = [reason("CUSTOMER_CANCELLED", "decision", 0, "Клиент аударымнан бас тартты. Қаражат жіберілген жоқ.", "Клиент отменил перевод. Средства не отправлены.")];
+  const reasons = [reason("CUSTOMER_CANCELLED", "decision", 0, "Клиент аударымнан бас тартты. Қаражат жіберілген жоқ.", "Клиент отменил перевод. Средства не отправлены."), ...detail.reasons];
+  if (postCallScam) reasons.unshift({ ...reason("POST_CALL_SCAM_REPORTED", "questionnaire", 0, "Қоңыраудан кейін клиент алаяқтық туралы хабарлады. Аударым тоқтатылды.", "После звонка клиент сообщил об обмане. Перевод отменён."), evidence: { source: "customer_report" } });
   row.status = "cancelled"; row.cooling_until = null; row.resolved_at = new Date(now).toISOString(); row.updated_at = row.resolved_at; row.reasons = reasons;
   const result = { ...detail, ...decision("cancelled", detail.risk_score, id, reasons), reasons, cooling_off_until: null, resolved_at: row.resolved_at, updated_at: row.updated_at };
   details().set(id, result);
@@ -229,7 +248,7 @@ export function feedDemo(query: Partial<FeedQuery> = {}): Feed {
   const compactId = search.replace(/-/g, "");
   const uuidSearch = /^[0-9a-f]{32}$/.test(compactId) ? compactId : null;
   const filtered = items.filter(row => (!status || row.status === status) && row.risk_score >= min_score
-    && (!alerts_only || row.status === "cooling_off" || row.status === "blocked")
+    && (!alerts_only || row.status === "cooling_off" || row.status === "blocked" || row.reasons.some(r => r.code === "POST_CALL_SCAM_REPORTED"))
     && (!since || Date.parse(row.updated_at ?? row.created_at) > Date.parse(since))
     && (!search || row.sender.full_name.toLowerCase().includes(search) || row.recipient.full_name.toLowerCase().includes(search)
       || (uuidSearch !== null && row.transaction_id.replace(/-/g, "") === uuidSearch)))

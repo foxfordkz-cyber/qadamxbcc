@@ -209,6 +209,60 @@ async def test_social_engineering_cooling_off_then_red_flag_blocks(world: World)
     assert again.status_code == 409
 
 
+@pytest.mark.parametrize("recognizes", [False, True])
+async def test_post_call_confirmation_and_customer_fraud_report(
+    world: World, recognizes: bool
+) -> None:
+    hold = await world.evaluate(
+        "victim", "scammer", 900_000, context={"active_call": True, "from_deposit": True}
+    )
+    path = f"{API}/transfers/{hold['transaction_id']}"
+    post_call = path + "/post-call"
+    assert (await world.client.post(post_call, json={"action": "recognized"})).status_code == 409
+    assert (
+        await world.client.post(path + "/cancel", json={"reason": "post_call_scam"})
+    ).status_code == 409
+    for _ in range(2):
+        ended = await world.client.post(post_call, json={"action": "ended"})
+        assert ended.status_code == 200
+        assert ended.json()["status"] == "cooling_off"
+        assert [r["code"] for r in ended.json()["reasons"]].count("POST_CALL_ENDED") == 1
+        assert ended.json()["context"]["active_call"] is True  # Original decision evidence
+    assert (
+        await world.client.post(path + "/resolve-cooling", json={"answers": CLEAN})
+    ).status_code == 409
+    if recognizes:
+        for _ in range(2):
+            recognized = await world.client.post(post_call, json={"action": "recognized"})
+            assert recognized.status_code == 200
+            assert recognized.json()["status"] == "cooling_off"
+            assert [r["code"] for r in recognized.json()["reasons"]].count(
+                "POST_CALL_RECOGNIZED"
+            ) == 1
+        saved = await world.client.post(path + "/resolve-cooling", json={"answers": CLEAN})
+        assert saved.json()["status"] == "cooling_off"
+        assert saved.json()["cooling_off_until"] == hold["cooling_off_until"]
+    else:
+        for _ in range(2):
+            cancelled = await world.client.post(path + "/cancel", json={"reason": "post_call_scam"})
+            assert cancelled.status_code == 200
+            assert cancelled.json()["status"] == "cancelled"
+            reports = [
+                r for r in cancelled.json()["reasons"] if r["code"] == "POST_CALL_SCAM_REPORTED"
+            ]
+            assert len(reports) == 1
+            assert reports[0]["evidence"]["source"] == "customer_report"
+        feed = (await world.client.get(f"{API}/soc/feed", params={"alerts_only": True})).json()
+        assert any(row["transaction_id"] == hold["transaction_id"] for row in feed["items"])
+        assert (
+            await world.client.post(post_call, json={"action": "recognized"})
+        ).status_code == 409
+        assert (await world.client.get(path)).json()["status"] == "cancelled"
+    ordinary = await world.evaluate("alice", "bob", 5000)
+    other_path = f"{API}/transfers/{ordinary['transaction_id']}/post-call"
+    assert (await world.client.post(other_path, json={"action": "ended"})).status_code == 409
+
+
 async def test_cooling_off_clean_questionnaire_releases_funds(world: World) -> None:
     data = await world.evaluate(
         "victim", "scammer", 900_000, context={"active_call": True, "from_deposit": True}

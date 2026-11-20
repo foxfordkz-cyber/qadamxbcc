@@ -29,15 +29,18 @@ export function useTrafficStream(config: AppConfig, onRecord: (record: TrafficRe
         if (!await onPending(attempt.input.request_id!, () => stopped)) { if (!stopped) { setError("recoveryRequired"); setActive(false); } return; }
         if (stopped) { await onUnused(attempt.input.request_id!); return; }
         const evaluation = await attempt.execute().catch(async failure => {
+          if (failure instanceof Error && failure.message === "submissionCooldown") throw failure;
           if (!isUnknownOutcome(failure)) throw failure;
           return attempt.execute();
         });
         onRecord({ evaluation, amount: scenario.input.amount, from: scenario.from, to: scenario.to });
       } catch (failure) {
-        setError(failure instanceof Error && failure.message === "recoveryUnavailable" ? "recoveryUnavailable" : isUnknownOutcome(failure) ? "outcomeUnknown" : errorKey(failure)); setActive(false);
+        const code = errorKey(failure);
+        if (code === "submissionCooldown") await onUnused(attempt.input.request_id!);
+        setError(code === "submissionCooldown" || code === "recoveryUnavailable" ? code : isUnknownOutcome(failure) ? "outcomeUnknown" : code); setActive(false);
       } finally {
         occupied.current = false; setInFlight(false);
-        if (!stopped) timer = setTimeout(() => void tick(), 2500);
+        if (!stopped) timer = setTimeout(() => void tick(), 5000);
       }
     }
     void tick();

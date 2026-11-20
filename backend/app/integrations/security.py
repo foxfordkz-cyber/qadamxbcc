@@ -11,11 +11,13 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.exceptions import RedisError
 
 from app.api.deps import get_resources
+from app.api.security import require_transfer_access
 from app.core.resources import Resources
 from app.integrations.capabilities import Principal as Principal
 from app.integrations.capabilities import Role as Role
 from app.integrations.capabilities import issue_token as issue_token
 from app.integrations.config import IntegrationSettings
+from app.integrations.telegram.web_session import session_owner
 
 
 def verify_token(token: str, key: str) -> Principal:
@@ -43,18 +45,24 @@ def config(request: Request) -> IntegrationSettings:
 
 
 ConfigDep = Annotated[IntegrationSettings, Depends(config)]
+ResourcesDep = Annotated[Resources, Depends(get_resources)]
+BearerDep = Annotated[HTTPAuthorizationCredentials | None, Depends(HTTPBearer(auto_error=False))]
 
 
 async def authenticate(
     cfg: ConfigDep,
-    resources: Annotated[Resources, Depends(get_resources)],
-    credentials: Annotated[
-        HTTPAuthorizationCredentials | None, Depends(HTTPBearer(auto_error=False))
-    ],
+    resources: ResourcesDep,
+    credentials: BearerDep,
 ) -> Principal:
     if credentials is None:
         raise HTTPException(401, "integration capability required")
     principal = verify_token(credentials.credentials, cfg.signing_key.get_secret_value())
+    return await admitted_principal(principal, resources, cfg)
+
+
+async def admitted_principal(
+    principal: Principal, resources: Resources, cfg: IntegrationSettings
+) -> Principal:
     # Atomic counter + first-use expiry; Redis failure fails closed, never bypasses a limit.
     key = f"bcc:integrations:rate:{principal.role}:{principal.subject}"
     try:
@@ -70,6 +78,25 @@ async def authenticate(
 
 
 PrincipalDep = Annotated[Principal, Depends(authenticate)]
+
+
+async def authenticate_circle(
+    request: Request, cfg: ConfigDep, resources: ResourcesDep, credentials: BearerDep
+) -> Principal:
+    token = request.headers.get("X-BCC-Circle-Session")
+    if token is None:
+        return await authenticate(cfg, resources, credentials)
+    await require_transfer_access(request, request.headers.get("X-BCC-API-Key"))
+    try:
+        owner = await session_owner(resources.redis, cfg, token)
+    except RedisError as exc:
+        raise HTTPException(503, "circle session store unavailable") from exc
+    if not owner:
+        raise HTTPException(401, "circle_login_required")
+    return await admitted_principal(Principal(subject=owner, role="owner"), resources, cfg)
+
+
+CirclePrincipalDep = Annotated[Principal, Depends(authenticate_circle)]
 
 
 def require_role(principal: Principal, role: Role) -> None:

@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import fakeredis
+import joblib
 import numpy as np
 import pytest
 from pydantic import ValidationError
@@ -14,6 +15,7 @@ from app.schemas.transfers import TransferContextIn
 from app.services.antifraud import AntifraudEngine, TransferContext
 from app.services.graph import GraphStore
 from scripts.benchmark_antifraud import benchmark
+from scripts.evaluate_fraud_model import serving_features
 
 
 def test_forest_matches_sklearn_and_local_contributions_sum() -> None:
@@ -54,6 +56,24 @@ def test_missing_artifact_trains_and_reload_is_identical(tmp_path: Path) -> None
     assert path.stat().st_size < 1_000_000
     features = Features(active_call=True, paste_detected=True, amount_ratio=9)
     assert model.score(features) == load_model(path).score(features)
+    # Exercise the deployed routing path and check explanations against the
+    # correct sklearn expert, including cases where both experts disagree.
+    artifact = joblib.load(path)
+    rows, _ = synthetic_data(128, seed=38925)
+    for row in rows:
+        for during_call in (False, True):
+            sample = replace(serving_features(row), active_call=during_call)
+            prediction = model.score(sample)
+            expert = artifact["call_estimator" if during_call else "estimator"]
+            expected = expert.predict_proba([sample.vector()])[0, 1] * 100
+            assert prediction.score == pytest.approx(expected)
+            assert prediction.base_score + sum(c.contribution for c in prediction.contributors) == (
+                pytest.approx(prediction.score, abs=1e-6)
+            )
+    del artifact["call_estimator"]
+    joblib.dump(artifact, path)
+    with pytest.raises(ValueError, match="Missing phone-call"):
+        load_model(path, allow_training=False)
 
 
 def test_synthetic_model_separates_scam_and_collection() -> None:

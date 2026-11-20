@@ -12,7 +12,10 @@ async function handle(request: NextRequest) {
   if (access.failure) return access.failure;
   const { headers } = access;
   try {
-    if (request.method === "GET") return json(membershipSchema.parse(await upstream("trusted-contacts", { headers })));
+    if (request.method === "GET") return json({
+      ...membershipSchema.parse(await upstream("trusted-contacts", { headers })),
+      ...(access.privateSession ? { private_session: true } : {}),
+    });
     const data = await readBoundedJson(request);
     if (request.method === "DELETE") {
       const { contact_id } = z.object({ contact_id: z.uuid() }).strict().parse(data);

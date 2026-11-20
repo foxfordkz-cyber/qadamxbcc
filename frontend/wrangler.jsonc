@@ -10,9 +10,12 @@
   "vars": {
     "BCC_ENVIRONMENT": "demo",
     "BCC_API_MODE": "live",
+    "BCC_EDGE_SUBMISSION_LIMITS": "true",
     "BCC_API_URL": "https://saq-bol-api.onrender.com",
     "BCC_DEMO_PUBLIC_ORIGIN": "https://saq-bol-bcc.zerdeliportald.workers.dev",
     "BCC_REQUIRE_DEMO_UPSTREAM": "true",
+    "BCC_CIRCLE_WEB_LOGIN": "true",
+    "BCC_INTEGRATIONS_TELEGRAM_MODE": "test",
     "BCC_DEMO_ACTIONS_ENABLED": "true",
     "BCC_NORMAL_SENDER_ID": "00000000-0000-4000-8000-000000000001",
     "BCC_NORMAL_RECIPIENT_PHONE": "+77010000002",

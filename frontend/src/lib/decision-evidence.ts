@@ -1,7 +1,7 @@
 import type { Evaluation, Reason } from "./contracts";
 
 export type EvidenceGroup = "context" | "network" | "checks" | "ml" | "unknown";
-export type EvidenceFocus = "snapshot" | "behavioralHold" | "activeHold" | "flagged" | "duress" | "questionnaire" | "releaseNetwork" | "collection";
+export type EvidenceFocus = "snapshot" | "behavioralHold" | "activeHold" | "flagged" | "duress" | "questionnaire" | "releaseNetwork" | "collection" | "postCallReport";
 
 const contextCodes = new Set([
   "ACTIVE_CALL", "PASTED_DURING_CALL", "BANK_CALL_DENIED", "DEPOSIT_WITHDRAWAL", "NEW_RECIPIENT",
@@ -16,6 +16,7 @@ const networkCodes = new Set([
 const checkCodes = new Set([
   "ACTIVE_HOLD_RETRY", "QUESTIONNAIRE", "QUESTIONNAIRE_RED_FLAG", "QUESTIONNAIRE_PASSED",
   "QUESTIONNAIRE_VERIFIED", "RELEASE_REVALIDATED", "RELEASE_NETWORK_BLOCKED", "CUSTOMER_CANCELLED",
+  "POST_CALL_ENDED", "POST_CALL_RECOGNIZED", "POST_CALL_SCAM_REPORTED",
 ]);
 const recheckCodes = new Set([...networkCodes, "SENDER_BURST"]);
 
@@ -38,7 +39,8 @@ export function decisionEvidence(detail: Pick<Evaluation, "status" | "reasons" |
   const incomplete = groups.unknown.length > 0 || (detail.status !== "approved" && detail.reasons.length === 0);
   const mlAvailable = typeof detail.ml_score === "number" && Number.isFinite(detail.ml_score);
   let focus: EvidenceFocus = "snapshot";
-  if (detail.status === "blocked" && codes.has("DURESS_SIGNAL")) focus = "duress";
+  if (detail.status === "cancelled" && codes.has("POST_CALL_SCAM_REPORTED")) focus = "postCallReport";
+  else if (detail.status === "blocked" && codes.has("DURESS_SIGNAL")) focus = "duress";
   else if (detail.status === "blocked" && (codes.has("RECIPIENT_FLAGGED") || codes.has("RECIPIENT_FLAGGED_AT_RELEASE"))) focus = "flagged";
   else if (detail.status === "blocked" && (codes.has("QUESTIONNAIRE_RED_FLAG") || codes.has("QUESTIONNAIRE"))) focus = "questionnaire";
   else if (detail.status === "blocked" && codes.has("RELEASE_NETWORK_BLOCKED")) focus = "releaseNetwork";

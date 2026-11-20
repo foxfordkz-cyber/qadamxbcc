@@ -26,7 +26,8 @@ async function handle(request: NextRequest, context: RouteContext) {
       upstream(path, { headers }),
       notificationsOnly ? null : upstream("trusted-contacts", { headers }),
     ]);
-    return json({ channel: deliveryChannel(), notifications: sanitizeNotifications(notifications), ...(contacts ? sanitizeContacts(contacts) : {}) });
+    return json({ channel: deliveryChannel(), notifications: sanitizeNotifications(notifications),
+      ...(access.privateSession ? { private_session: true } : {}), ...(contacts ? sanitizeContacts(contacts) : {}) });
   } catch (error) { return circleFailure(error); }
 }
 export const GET = handle;

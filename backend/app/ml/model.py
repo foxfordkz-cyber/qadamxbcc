@@ -23,7 +23,8 @@ from sklearn.tree import DecisionTreeClassifier
 
 from app.ml.features import FEATURE_LABELS, FEATURE_NAMES, Features
 
-MODEL_VERSION: Final = "bcc-synthetic-rf-v2"
+MODEL_VERSION: Final = "bcc-synthetic-rf-v3"
+GENERATOR_VERSION: Final = "v3-assisted-transfers"
 MODEL_PATH: Final = Path(__file__).with_name("fraud_model.joblib")
 MAX_TREES: Final = 128
 MAX_TREE_NODES: Final = 4095
@@ -152,6 +153,21 @@ class FraudModel:
         )
 
 
+class CallAwareFraudModel(FraudModel):
+    """Select one validated forest per request; preserve the no-call model exactly."""
+
+    def __init__(
+        self, estimator: RandomForestClassifier, call_estimator: RandomForestClassifier
+    ) -> None:
+        super().__init__(estimator)
+        self.call_model = FraudModel(call_estimator)
+
+    def score(self, features: Features) -> Prediction:
+        if features.active_call:
+            return self.call_model.score(features)
+        return super().score(features)
+
+
 def train_artifact(path: Path = MODEL_PATH) -> dict[str, Any]:
     # Import the data generator only during training, never during inference.
     from app.ml.training import train
@@ -186,6 +202,10 @@ def load_model(path: Path = MODEL_PATH, *, allow_training: bool = True) -> Fraud
             if not allow_training:
                 raise RuntimeError("ML artifact metadata mismatch; pilot startup refused")
             artifact = train_artifact(path)
+    if artifact.get("generator_version") == GENERATOR_VERSION:
+        if "call_estimator" not in artifact:
+            raise ValueError("Missing phone-call fraud estimator")
+        return CallAwareFraudModel(artifact["estimator"], artifact["call_estimator"])
     return FraudModel(artifact["estimator"])
 
 

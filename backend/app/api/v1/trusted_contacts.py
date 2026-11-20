@@ -1,12 +1,21 @@
 import uuid
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, Field, SecretStr
+from redis.exceptions import RedisError
 from sqlalchemy import select
 
 from app.api.deps import SessionDep
+from app.api.security import require_transfer_access
 from app.integrations.errors import IntegrationError
 from app.integrations.models import ContactNotification, IntegrationAudit
-from app.integrations.security import ConfigDep, PrincipalDep, require_role
+from app.integrations.security import (
+    CirclePrincipalDep,
+    ConfigDep,
+    PrincipalDep,
+    ResourcesDep,
+    require_role,
+)
 from app.integrations.telegram.handlers import process_update
 from app.integrations.telegram.schemas import (
     AuditOut,
@@ -21,8 +30,57 @@ from app.integrations.telegram.schemas import (
     UpdateOut,
 )
 from app.integrations.telegram.service import TrustedContactService
+from app.integrations.telegram.web_session import SESSION_TTL, end_session, exchange
 
 router = APIRouter(prefix="/trusted-contacts", tags=["trusted contacts (advisory)"])
+
+
+class CircleLogin(BaseModel):
+    code: SecretStr = Field(min_length=16, max_length=16)
+
+
+class CircleSession(BaseModel):
+    session: str
+    expires_in: int
+
+
+@router.get("/web-session", dependencies=[Depends(require_transfer_access)])
+async def session_available(
+    response: Response, cfg: ConfigDep, resources: ResourcesDep
+) -> dict[str, bool]:
+    if not cfg.circle_web_owners:
+        raise HTTPException(503, "circle_web_unavailable")
+    try:
+        await resources.redis.ping()
+    except RedisError as exc:
+        raise HTTPException(503, "circle session store unavailable") from exc
+    response.headers["Cache-Control"] = "no-store"
+    return {"available": True}
+
+
+@router.post("/web-session", dependencies=[Depends(require_transfer_access)])
+async def login(
+    body: CircleLogin, response: Response, cfg: ConfigDep, resources: ResourcesDep
+) -> CircleSession:
+    if not cfg.circle_web_owners:
+        raise HTTPException(503, "circle_web_unavailable")
+    try:
+        token = await exchange(resources.redis, cfg, body.code.get_secret_value())
+    except RedisError as exc:
+        raise HTTPException(503, "circle session store unavailable") from exc
+    if token is None:
+        raise HTTPException(401, "invalid_or_expired_code")
+    response.headers["Cache-Control"] = "no-store"
+    return CircleSession(session=token, expires_in=SESSION_TTL)
+
+
+@router.delete("/web-session", dependencies=[Depends(require_transfer_access)], status_code=204)
+async def logout(request: Request, cfg: ConfigDep, resources: ResourcesDep) -> Response:
+    try:
+        await end_session(resources.redis, request.headers.get("X-BCC-Circle-Session", ""))
+    except RedisError as exc:
+        raise HTTPException(503, "circle session store unavailable") from exc
+    return Response(status_code=204, headers={"Cache-Control": "no-store"})
 
 
 @router.post("", response_model=InvitationOut, status_code=201)
@@ -30,7 +88,7 @@ async def invite(
     body: InviteRequest,
     session: SessionDep,
     cfg: ConfigDep,
-    principal: PrincipalDep,
+    principal: CirclePrincipalDep,
     response: Response,
 ) -> InvitationOut:
     require_role(principal, "owner")
@@ -39,7 +97,9 @@ async def invite(
 
 
 @router.get("", response_model=ContactsOut)
-async def contacts(session: SessionDep, cfg: ConfigDep, principal: PrincipalDep) -> ContactsOut:
+async def contacts(
+    session: SessionDep, cfg: ConfigDep, principal: CirclePrincipalDep
+) -> ContactsOut:
     require_role(principal, "owner")
     return await TrustedContactService(session, cfg).contacts(principal.subject)
 
@@ -49,7 +109,7 @@ async def revoke(
     contact_id: uuid.UUID,
     session: SessionDep,
     cfg: ConfigDep,
-    principal: PrincipalDep,
+    principal: CirclePrincipalDep,
 ) -> ContactOut:
     require_role(principal, "owner")
     row = await TrustedContactService(session, cfg).revoke(contact_id, owner=principal.subject)
@@ -62,7 +122,7 @@ async def enqueue(
     body: NotificationRequest,
     session: SessionDep,
     cfg: ConfigDep,
-    principal: PrincipalDep,
+    principal: CirclePrincipalDep,
 ) -> NotificationOut:
     require_role(principal, "owner")
     row = await TrustedContactService(session, cfg).enqueue(
@@ -78,7 +138,7 @@ async def notifications(
     transaction_id: uuid.UUID,
     session: SessionDep,
     cfg: ConfigDep,
-    principal: PrincipalDep,
+    principal: CirclePrincipalDep,
 ) -> list[NotificationOut]:
     require_role(principal, "owner")
     rows = await session.scalars(
@@ -97,7 +157,7 @@ async def history(
     notification_id: uuid.UUID,
     session: SessionDep,
     cfg: ConfigDep,
-    principal: PrincipalDep,
+    principal: CirclePrincipalDep,
 ) -> list[AuditOut]:
     require_role(principal, "owner")
     rows = await session.scalars(
@@ -130,7 +190,7 @@ async def preferences(
     body: ContactPreferences,
     session: SessionDep,
     cfg: ConfigDep,
-    principal: PrincipalDep,
+    principal: CirclePrincipalDep,
     response: Response,
 ) -> ContactOut:
     require_role(principal, "owner")

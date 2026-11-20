@@ -26,6 +26,7 @@ interface Props {
   setRecipientType: (type: RecipientType) => void;
   busy: boolean;
   blocked?: boolean;
+  submissionPaused?: boolean;
   completed?: boolean;
   error: MessageKey | null;
   /** duress: the client held the confirm button — the silent alarm («тихий код»). */
@@ -56,7 +57,7 @@ function maskRecipient(value: string, type: RecipientType) {
   return value;
 }
 
-export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onNewTransfer, onCallCheck, bare = false }: Props) {
+export function TransferPhone({ config, form, setForm, recipientType, setRecipientType, busy, blocked = false, submissionPaused = false, completed = false, error, onSubmit, sensor, result, amount, onReview, onNewTransfer, onCallCheck, bare = false }: Props) {
   const { lang, t } = useLocale();
   const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const contextDetails = useRef<HTMLDetailsElement>(null);
@@ -64,6 +65,15 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const [step, setStep] = useState<"details" | "confirm">("details");
   const [screen, setScreen] = useState<"home" | "transfer" | "circle" | "scam">(bare ? "home" : "transfer");
   const [offline, setOffline] = useState(false);
+  const [largeText, setLargeText] = useState(false);
+  useEffect(() => {
+    try { setLargeText(localStorage.getItem("saqbol.a11y.large") === "true"); } catch { /* Storage is optional. */ }
+  }, []);
+  function toggleText() {
+    const value = !largeText;
+    setLargeText(value);
+    try { localStorage.setItem("saqbol.a11y.large", String(value)); } catch { /* Keep the preference for this visit. */ }
+  }
   useEffect(() => {
     const update = () => setOffline(!navigator.onLine);
     update(); window.addEventListener("online", update); window.addEventListener("offline", update);
@@ -135,7 +145,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           ? <button type="button" className="appbar-back" disabled={busy} onClick={() => setStep("details")} aria-label={m("editCta")}><ArrowLeft size={20} /></button>
           : screen !== "home" ? <button className="appbar-back" type="button" aria-label={m("tabHome")} disabled={busy} onClick={() => setScreen("home")}><ArrowLeft size={20} /></button> : <span />}
         <div className="appbar-title"><h2>{title}</h2>{screen === "transfer" && !receipt && <small>{step === "confirm" ? 2 : 1} / 2 · {m("stepOf")}</small>}</div>
-        <span className="demo-tag">{m("demoBadge")}</span>
+        <div className="phone-toolbar-actions"><button type="button" className="phone-text-size" aria-label={m("largeText")} title={m("largeText")} aria-pressed={largeText} onClick={toggleText}>Аа</button><span className="demo-tag">{config.accountMode === "test" ? t("testAccounts") : config.mode === "demo" ? m("demoBadge") : t("pilotMode")}</span></div>
       </header>
       <div className="phone-body">
         {offline && <p className="phone-alert warning" role="status">{m("offline")}</p>}
@@ -155,6 +165,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             <div><dt>{m("operationShort")}</dt><dd className="tabular-nums" title={receipt.transaction_id}>…{receipt.transaction_id.slice(-8)}</dd></div>
           </dl>
           <p className="receipt-explanation" role="status">{m(receiptCopy)}</p>
+          {receipt.status === "cancelled" && receipt.reasons.some(r => r.code === "POST_CALL_SCAM_REPORTED") && <a className="secondary post-call-bank" href="tel:505"><PhoneCall size={17} />{m("postCallBank")} · 505</a>}
           {error && <p className="error" role="alert">{t(error)}</p>}
           <div className="receipt-actions">
             {receipt.status === "cooling_off" && <button type="button" className="primary receipt-review" disabled={busy} onClick={onReview}>{busy ? <LoaderCircle className="animate-spin" size={18} /> : <ShieldCheck size={18} />}{t("review")}</button>}
@@ -177,7 +188,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           {showUnknown && <div className="phone-alert warning" role="status"><AlertTriangle size={18} aria-hidden="true" /><div><strong>{m("unknownTitle")}</strong><p>{m("unknownText")}</p></div></div>}
           {error && !showUnknown && <p className="error" role="alert">{t(error)}</p>}
           <div className="confirm-actions">
-            <button type="button" className="primary transfer-confirm" disabled={busy || blocked || completed || offline} onPointerDown={pressStart} onPointerUp={pressEnd} onPointerCancel={pressEnd} onPointerLeave={pressEnd} onContextMenu={event => event.preventDefault()}
+            <button type="button" className="primary transfer-confirm" disabled={busy || submissionPaused || blocked || completed || offline} onPointerDown={pressStart} onPointerUp={pressEnd} onPointerCancel={pressEnd} onPointerLeave={pressEnd} onContextMenu={event => event.preventDefault()}
               onClick={() => { const duress = hold.current.fired; hold.current.fired = false; onSubmit(duress); }}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
             <button type="button" className="secondary transfer-edit" disabled={busy} onClick={() => setStep("details")}>{m("editCta")}</button>
           </div>

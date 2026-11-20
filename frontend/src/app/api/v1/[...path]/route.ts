@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { answersSchema, feedQuerySchema, transferSchema, validateApiResponse } from "@/lib/contracts";
+import { answersSchema, cancelSchema, feedQuerySchema, postCallSchema, transferSchema, validateApiResponse } from "@/lib/contracts";
 import { recipientFlagInputSchema } from "@/lib/recipient-flag";
 import { appConfig, ids } from "@/lib/config";
 import { backendHeaders, checkAccess } from "@/lib/server-access";
 import { readBoundedJson, RequestBodyError } from "@/lib/request-body";
 import { apiAdmission } from "@/lib/request-quota";
-import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "@/lib/demo";
+import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, postCallDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "@/lib/demo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +20,7 @@ async function handle(request: NextRequest, context: RouteContext) {
   const route = path.join("/");
   const evaluate = request.method === "POST" && route === "transfers/evaluate";
   const resolve = request.method === "POST" && /^transfers\/[0-9a-f-]{36}\/resolve-cooling$/i.test(route);
+  const postCall = request.method === "POST" && /^transfers\/[0-9a-f-]{36}\/post-call$/i.test(route);
   const cancel = request.method === "POST" && /^transfers\/[0-9a-f-]{36}\/cancel$/i.test(route);
   const abandon = request.method === "POST" && /^transfers\/requests\/[0-9a-f-]{36}\/abandon$/i.test(route);
   const detail = request.method === "GET" && /^transfers\/[0-9a-f-]{36}$/i.test(route);
@@ -29,9 +30,9 @@ async function handle(request: NextRequest, context: RouteContext) {
   const callCheck = request.method === "POST" && route === "call-check";
   const bankCall = request.method === "POST" && route === "call-check/demo/bank-call";
   const guide = request.method === "GET" && route === "scam-check/guide";
-  if (!evaluate && !resolve && !cancel && !abandon && !detail && !feed && !graph && !recipientFlag && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
+  if (!evaluate && !resolve && !cancel && !postCall && !abandon && !detail && !feed && !graph && !recipientFlag && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
   if ((abandon || graph || recipientFlag) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
-  if ((resolve || cancel || detail) && !z.uuid().safeParse(path[1]).success) return json({ error: "invalid" }, 422);
+  if ((resolve || cancel || postCall || detail) && !z.uuid().safeParse(path[1]).success) return json({ error: "invalid" }, 422);
   const admission = apiAdmission();
   if (admission.status !== 200) {
     const response = json({ error: admission.status === 429 ? "rateLimited" : "apiError" }, admission.status);
@@ -40,6 +41,9 @@ async function handle(request: NextRequest, context: RouteContext) {
   }
   try {
     const config = appConfig();
+    if (config.publicSocReadOnly && route.startsWith("soc/") && request.method !== "GET") {
+      return json({ error: "integrationForbidden" }, 403);
+    }
     let body: unknown;
     if (recipientFlag) {
       if (request.method === "POST") body = recipientFlagInputSchema.parse(await readBoundedJson(request));
@@ -69,13 +73,29 @@ async function handle(request: NextRequest, context: RouteContext) {
       if (config.mode === "demo") return json(callCheck ? callCheckDemo(parsed.customer_id) : bankCallDemo(parsed.customer_id));
       body = parsed;
     }
-    if (cancel || abandon) body = z.object({}).strict().parse(await readBoundedJson(request));
+    if (postCall) {
+      const parsed = postCallSchema.parse(await readBoundedJson(request));
+      if (config.mode === "demo") return json(postCallDemo(path[1], parsed.action));
+      body = parsed;
+    }
+    if (cancel) {
+      const parsed = cancelSchema.parse(await readBoundedJson(request));
+      if (config.mode === "demo") return json(cancelDemo(path[1], Date.now(), parsed.reason === "post_call_scam"));
+      body = parsed;
+    }
+    if (abandon) body = z.object({}).strict().parse(await readBoundedJson(request));
     if (guide && config.mode === "demo") return json({ error: "unavailable" }, 503);
     if (abandon && config.mode === "demo") return json(abandonDemo(path[2]));
-    if (config.mode === "demo") return json(cancel ? cancelDemo(path[1]) : detail ? detailDemo(path[1]) : feed ? feedDemo(feedQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams))) : graphDemo(path[2], z.coerce.number().int().min(1).max(3).parse(request.nextUrl.searchParams.get("depth") ?? 2)));
+    if (config.mode === "demo") return json(detail ? detailDemo(path[1]) : feed ? feedDemo(feedQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams))) : graphDemo(path[2], z.coerce.number().int().min(1).max(3).parse(request.nextUrl.searchParams.get("depth") ?? 2)));
     const base = (process.env.BCC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+    const headers = backendHeaders(route);
+    if (evaluate && process.env.BCC_EDGE_SUBMISSION_LIMITS === "true") {
+      const source = request.headers.get("x-bcc-submission-source") ?? "";
+      if (!/^[a-f0-9]{64}$/.test(source)) return json({ error: "apiError" }, 503);
+      headers["X-BCC-Submission-Source"] = source;
+    }
     const response = await fetch(`${base}/api/v1/${route}${request.nextUrl.search}`, {
-      method: request.method, headers: backendHeaders(route),
+      method: request.method, headers,
       body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(10_000), redirect: "manual",
     });
     if (response.status >= 300 && response.status < 400) return json({ error: "apiError" }, 502);
@@ -84,6 +104,15 @@ async function handle(request: NextRequest, context: RouteContext) {
         const value: unknown = await response.json().catch(() => null);
         const code = value && typeof value === "object" && "detail" in value ? value.detail : null;
         if ((response.status === 404 && code === "account_not_found") || (response.status === 409 && ["flag_version_conflict", "flag_idempotency_conflict"].includes(String(code)))) return json({ error: code }, response.status);
+      }
+      if (evaluate && response.status === 429) {
+        const payload = await response.json().catch(() => null);
+        if (payload?.detail === "submission_cooldown") {
+          const paused = json({ error: "submissionCooldown" }, 429);
+          const retry = response.headers.get("retry-after");
+          if (retry && /^\d{1,4}$/.test(retry)) paused.headers.set("Retry-After", retry);
+          return paused;
+        }
       }
       const rejected = json({ error: response.status === 404 ? "notFound" : response.status === 409 ? "conflict" : response.status === 422 ? "invalid" : response.status === 413 ? "requestTooLarge" : response.status === 429 ? "rateLimited" : "apiError" }, response.status);
       const retry = response.headers.get("retry-after");

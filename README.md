@@ -30,7 +30,11 @@ Redis, NetworkX и локальная ML-модель. Интерфейс сти
 
 **[Открыть Saq Bol × BCC с серверным скорингом](https://saq-bol-bcc.zerdeliportald.workers.dev/)** · [Мобильный перевод](https://saq-bol-bcc.zerdeliportald.workers.dev/mobile) · [Состояние API](https://saq-bol-api.onrender.com/health). Cloudflare Workers обслуживает сайт и проксирует запросы в FastAPI на Render. Переводы, счета и деньги в этом стенде синтетические. Модель, PostgreSQL, Redis и граф работают на сервере. После простоя бесплатному API может потребоваться время для пробуждения.
 
-**Демо в браузере (GitHub Pages):** <https://foxfordkz-cyber.github.io/qadamxbcc/> — сайт, `/mobile`, `/pitch`.
+Клиент открывает перевод и сообщает, если звонящий принуждает его отправить деньги. Сотрудник видит ту же операцию, историю её проверки и граф получателя в [кабинете SOC](https://saq-bol-bcc.zerdeliportald.workers.dev/soc). Обе стороны используют одну базу синтетических операций. Для личного доверенного круга предусмотрен вход по одноразовому коду через команду `/connect` в [Telegram-боте](https://t.me/bekzat_bcc_shield_test_bot).
+
+Роль машинного обучения, сравнение двух моделей и результаты по ложным паузам описаны в [оценке модели](docs/MODEL_EVALUATION.md). Для проверки на банковских данных подготовлен [план закрытого пилота](docs/PILOT.md).
+
+**Демо в браузере (GitHub Pages):** <https://foxfordkz-cyber.github.io/qadamxbcc/> — сайт, `/mobile`, `/soc`, `/pitch`.
 Это статическая версия: синтетический демо-движок работает прямо в браузере, без FastAPI,
 PostgreSQL и ML-модели. Обновляется автоматически при каждом пуше в `main`.
 Полная версия с сервером — кнопкой ниже.

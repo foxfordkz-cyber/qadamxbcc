@@ -1,7 +1,39 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { NextRequest } from "next/server";
-import { POST } from "../src/app/api/v1/[...path]/route";
+import { GET, POST } from "../src/app/api/v1/[...path]/route";
+import { proxySocIntegration } from "../src/lib/soc-integration-proxy";
+
+test("anonymous hosted SOC reads synthetic feed and graph while private operations stay server-side", async t => {
+  const origin = "https://shield.example.kz";
+  const settings = {
+    BCC_ENVIRONMENT: "demo", BCC_API_MODE: "live", BCC_REQUIRE_DEMO_UPSTREAM: "true",
+    BCC_API_URL: "https://demo-api.example.kz", BCC_DEMO_PUBLIC_ORIGIN: origin,
+    BCC_DEMO_UPSTREAM_API_KEY: "transfer-test-0123456789-ABCDEFGHIJKLM",
+    BCC_DEMO_UPSTREAM_SOC_KEY: "soc-test-9876543210-NOPQRSTUVWXYZabcd",
+  };
+  const previous = new Map(Object.keys(settings).map(key => [key, process.env[key]]));
+  const originalFetch = globalThis.fetch;
+  Object.assign(process.env, settings);
+  t.after(() => { globalThis.fetch = originalFetch; for (const [key, value] of previous) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
+  const account = "00000000-0000-4000-8000-000000000001";
+  const upstream: string[] = [];
+  globalThis.fetch = async url => { upstream.push(String(url)); return Response.json({}); };
+  for (const route of ["soc/feed", `soc/graph/${account}`]) {
+    const get = new NextRequest(`${origin}/api/v1/${route}`);
+    assert.equal((await GET(get, { params: Promise.resolve({ path: route.split("/") }) })).status, 200);
+  }
+  const post = (route: string) => new NextRequest(`${origin}/api/v1/${route}`, {
+    method: "POST", headers: { origin, "content-type": "application/json", "x-bcc-soc-key": settings.BCC_DEMO_UPSTREAM_SOC_KEY }, body: "{}",
+  });
+  const flag = `soc/recipients/${account}/flag`;
+  assert.equal((await POST(post(flag), { params: Promise.resolve({ path: flag.split("/") }) })).status, 403);
+  for (const route of ["guardian/soc/cases", `guardian/soc/cases/${account}/actions`]) {
+    const request = post(`integrations/${route}`);
+    assert.equal((await proxySocIntegration(request, route.split("/"))).status, 403);
+  }
+  assert.deepEqual(upstream, ["soc/feed", `soc/graph/${account}`].map(route => `${settings.BCC_API_URL}/api/v1/${route}`));
+});
 
 test("flag BFF preserves uncertain success, validates input, and forwards only its own SOC credential", async t => {
   const settings = {

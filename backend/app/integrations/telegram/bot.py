@@ -34,6 +34,7 @@ from app.integrations.telegram.polling_lock import PollingLock
 from app.integrations.telegram.schemas import SimulatedUpdate
 from app.integrations.telegram.service import TrustedContactService
 from app.integrations.telegram.templates import CONSENT, STATE_LABELS
+from app.integrations.telegram.web_session import issue_code
 
 
 def build_ingress_router(
@@ -61,6 +62,31 @@ def build_ingress_router(
         return int(count) <= cfg.rate_limit_per_minute
 
     router.include_router(build_router(factory, admitted))
+
+    @router.message(Command("connect"))
+    async def connect(message: Message) -> None:
+        if (
+            message.chat.type != "private"
+            or message.from_user is None
+            or message.from_user.id != message.chat.id
+            or not await admitted(message.chat.id)
+        ):
+            return
+        code = await issue_code(redis, cfg, message.chat.id)
+        if code is None:
+            await message.answer(
+                "Для этого чата веб-доступ не подключён. / Бұл чатқа веб-кіру қосылмаған."
+            )
+            return
+        await message.answer(
+            f"<code>{code}</code>\n\nВведите код в разделе «Доверенные люди» Saq Bol × BCC. "
+            "Он действует 3 минуты и открывает управление вашим кругом. Храните его в тайне."
+            "\n\nКодты Saq Bol × BCC қолданбасындағы «Сенімді адамдар» бөліміне енгізіңіз. "
+            "Код 3 минут жарамды және өз тобыңызды басқаруға мүмкіндік береді. "
+            "Кодты құпия сақтаңыз.",
+            parse_mode="HTML",
+            protect_content=True,
+        )
 
     @router.message(Command("start", "revoke"), F.text.regexp(r"^/\S+\s+\S"))
     async def command(message: Message) -> None:

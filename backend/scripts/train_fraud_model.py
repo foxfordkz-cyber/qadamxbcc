@@ -12,7 +12,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=MODEL_PATH)
     args = parser.parse_args()
     artifact = train_artifact(args.output)
-    print(json.dumps({k: v for k, v in artifact.items() if k != "estimator"}, indent=2))
+    metadata = {key: value for key, value in artifact.items() if not key.endswith("estimator")}
+    print(json.dumps(metadata, indent=2))
 
 
 if __name__ == "__main__":

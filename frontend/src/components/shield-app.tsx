@@ -30,7 +30,7 @@ const STATIC_DEMO = process.env.NEXT_PUBLIC_BCC_STATIC === "1";
 
 
 const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
-export type AppLayout = "full" | "phone";
+export type AppLayout = "full" | "phone" | "officer";
 function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayout }) {
   const { lang, setLang, t } = useLocale();
   const [tab, setTabState] = useState<AppTab>("mobile");
@@ -39,11 +39,11 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     const next = layout === "phone" ? "mobile" : value;
     activeTab.current = next;
     setTabState(next);
-    if (layout !== "phone") { try { saveAppTab(next, window.sessionStorage); } catch { /* Storage may be blocked. */ } }
+    if (layout === "full") { try { saveAppTab(next, window.sessionStorage); } catch { /* Storage may be blocked. */ } }
   }, [layout]);
   useEffect(() => {
     // Read after hydration. The standalone client never restores an operator tab.
-    if (layout === "phone") return;
+    if (layout !== "full") return;
     try { const saved = readAppTab(window.sessionStorage); activeTab.current = saved; setTabState(saved); } catch { /* Keep the mobile default. */ }
   }, [layout]);
   const [form, setForm] = useState<PresetForm>(config.presets.normal);
@@ -58,15 +58,25 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const restoreDialog = useRef<string | null>(null);
   const [draftFailed, setDraftFailed] = useState(false);
   useEffect(() => {
+    if (layout === "officer") return;
     const id = storage.selection();
     if (id) { selection.current.select(id); restoreDialog.current = id; }
-  }, [storage]);
+  }, [storage, layout]);
   function selectTransfer(id: string | null) {
     selection.current.select(id);
     storage.select(id);
     restoreDialog.current = null;
   }
   const [error, setError] = useState<MessageKey | null>(null);
+  const [submissionRetryAt, setSubmissionRetryAt] = useState(0);
+  useEffect(() => {
+    if (!submissionRetryAt) return;
+    const timer = setTimeout(() => {
+      setSubmissionRetryAt(0);
+      setError(previous => previous === "submissionCooldown" ? null : previous);
+    }, Math.max(0, submissionRetryAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [submissionRetryAt]);
   const [callVerdict, setCallVerdict] = useState<CallCheck | null>(null);
   const [modal, setModal] = useState(false);
   const [coolingDrafts, setCoolingDrafts] = useState<Record<string, Partial<Answers>>>({});
@@ -214,12 +224,20 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       if (chosen) { setSocFocus(true); if (chosen !== "hub") stream.stop(); setTab(chosen === "hub" ? "soc" : "mobile"); }
     } catch (failure) {
       const ambiguous = isUnknownOutcome(failure);
-      setUnknown(true); setError(ambiguous ? "outcomeUnknown" : errorKey(failure)); setTab("mobile");
+      if (failure instanceof ApiError && failure.code === "submissionCooldown") {
+        setSubmissionRetryAt(Date.now() + (failure.retryAfter || 60) * 1000);
+        await retireUnused(current.input.request_id!);
+        setUnknown(recovery.get().some(record => record.id === current.input.request_id && record.state === "unknown"));
+        setError("submissionCooldown");
+      } else {
+        setUnknown(true); setError(ambiguous ? "outcomeUnknown" : errorKey(failure));
+      }
+      setTab("mobile");
     } finally { lock.current = false; setBusy(false); }
   }
 
   async function evaluate(value: PresetForm, type = recipientType, chosen?: Preset, duress = false) {
-    if (lock.current || hasUnknown) return;
+    if (lock.current || hasUnknown || submissionRetryAt > Date.now()) return;
     const draft = draftIdentity(value, type);
     if (!chosen && !forceNext.current && completedIdentity === draft) return;
     const recipient = value.recipient.replace(/[\s()-]/g, "").toUpperCase();
@@ -302,6 +320,15 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers));
     }} onClose={() => setModal(false)} onResolved={resolved} />;
   const languageSwitch = <div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>;
+  if (layout === "officer") return <>
+    <header className="topbar"><div className="topbar-inner"><div className="brand">
+      <span className="brand-mark"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("officerWorkspace")}</small></div>
+    </div>{languageSwitch}</div></header>
+    <main className="shell"><SocDashboard readOnly={config.publicSocReadOnly} initialSelection={null} revision={revision} evaluations={evaluations} traffic={traffic}
+      onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} busy={busy} />
+      <footer className="page-footer"><Link href="/">{t("bothWorkspaces")}</Link><span>{t(config.accountMode === "test" ? "testDataScope" : "prototypeIdentity")}</span></footer>
+    </main>
+  </>;
   // /mobile: the same client logic on a real smartphone — no bezel, decision panel or SOC tab.
   if (layout === "phone") return <>
     <header className="topbar mobile-topbar"><div className="topbar-inner">
@@ -311,7 +338,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     <main className="mobile-shell">
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
-      <TransferPhone bare config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} />
+      <TransferPhone bare config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} submissionPaused={!!submissionRetryAt} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} />
     </main>
     {cooling}
   </>;
@@ -323,7 +350,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     <main className="shell">
       <section className="demo-bar" aria-label={t("presets")}>
         <div className="demo-bar-label"><CircleHelp size={16} aria-hidden="true" /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "demoScenarios")}</span></div>
-        <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map(key => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
+        <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map(key => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || !!submissionRetryAt || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
         {STATIC_DEMO && <button type="button" className="demo-reset" disabled={busy} onClick={() => { if (window.confirm(t("resetDemoConfirm"))) { resetStaticDemo(); window.location.reload(); } }}>{t("resetDemo")}</button>}
         {config.demoActionsEnabled !== false && <Link href="/pitch" className="pitch-link">{t("pitchLink")}<ArrowRight size={15} aria-hidden="true" /></Link>}
       </section>
@@ -331,11 +358,13 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
       {error && tab === "soc" && <p className="error" role="alert">{t(error)}</p>}
       <div className="tabs" role="tablist" aria-label="Saq Bol">{(["mobile", "soc"] as const).map(key => { const Icon = key === "mobile" ? Smartphone : Activity; return <button key={key} type="button" role="tab" id={`tab-${key}`} aria-selected={tab === key} aria-controls={`panel-${key}`} tabIndex={tab === key ? 0 : -1} onKeyDown={e => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); const next = e.key === "Home" ? "mobile" : e.key === "End" ? "soc" : key === "mobile" ? "soc" : "mobile"; changeTab(next); document.getElementById(`tab-${next}`)?.focus(); } }} onClick={() => changeTab(key)}><Icon size={17} />{t(key === "mobile" ? "tabMobile" : "tabSoc")}</button>; })}</div>
+      <div className="role-summary"><p>{t(tab === "mobile" ? "customerPurpose" : "officerPurpose")} {config.accountMode === "test" && t("testDataScope")}</p>
+        <Link href={tab === "mobile" ? "/mobile" : "/soc"}>{t(tab === "mobile" ? "openCustomer" : "openOfficer")} <ArrowRight size={15} /></Link></div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} focusTransfer={socFocus} onFocusConsumed={consumeSocFocus} /> : <>
+        {tab === "soc" ? <SocDashboard readOnly={config.publicSocReadOnly} initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} focusTransfer={socFocus} onFocusConsumed={consumeSocFocus} /> : <>
           <div className="client-wrap">
           <div className="transfer-grid">
-            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} onCallCheck={setCallVerdict} />
+            <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} submissionPaused={!!submissionRetryAt} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} onCallCheck={setCallVerdict} />
             <Telemetry result={result} amount={resultAmount} roundtrip={roundtrip} busy={busy} error={error} sensor={sensor} sender={form.sender} context={form.context} callCheck={callVerdict} onReview={() => result && void review(result.transaction_id)} />
           </div>
           </div>

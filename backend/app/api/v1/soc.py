@@ -13,7 +13,7 @@ from app.schemas.soc import (
     RecipientFlagResponse,
     RecipientFlagState,
 )
-from app.services import recipient_flags, soc
+from app.services import recipient_flags, soc, submission_limits
 from app.services.transfers import NotFoundError
 
 router = APIRouter(prefix="/soc", tags=["soc"])
@@ -22,6 +22,7 @@ router = APIRouter(prefix="/soc", tags=["soc"])
 @router.get("/feed", response_model=FeedResponse)
 async def soc_feed(
     session: SessionDep,
+    request: Request,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
     q: Annotated[
@@ -40,7 +41,7 @@ async def soc_feed(
     alerts_only: bool = False,
 ) -> FeedResponse:
     """Searchable SOC window; offset pages are not a snapshot or lossless event cursor."""
-    return await soc.feed(
+    result = await soc.feed(
         session,
         limit=limit,
         offset=offset,
@@ -50,6 +51,11 @@ async def soc_feed(
         min_score=min_score,
         alerts_only=alerts_only,
     )
+    if request.app.state.settings.api_key:
+        result.stats.submission_limits = await submission_limits.summary(
+            request.app.state.resources.redis
+        )
+    return result
 
 
 @router.get("/recipients/{account_id}/flag", response_model=RecipientFlagState)

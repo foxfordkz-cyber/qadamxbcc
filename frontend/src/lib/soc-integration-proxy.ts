@@ -29,6 +29,7 @@ export function socProxyAccess(request: Request, env: Environment = process.env)
   let configuration;
   try { configuration = accessConfiguration(env); }
   catch { return { status: 503, error: "integrationsUnavailable" }; }
+  if (configuration.publicSocReadOnly) return { status: 403, error: "integrationForbidden" };
   if (configuration.environment === "pilot" || configuration.publicOrigin || env.BCC_MOBILE_LAN === "true" ||
       env.BCC_API_MODE !== "live" || env.NEXT_PUBLIC_BCC_STATIC === "1") {
     return { status: 503, error: "integrationsUnavailable" };

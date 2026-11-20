@@ -17,6 +17,12 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .appbar-title small { display: block; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .demo-tag { padding: 3px 8px; border-radius: 999px; background: var(--surface-3); color: var(--ink-3); font-size: 11px; font-weight: 650; }
 .phone-body { flex: 1; padding: 16px 16px 20px; }
+.phone-toolbar-actions { display: flex; align-items: center; gap: 5px; }
+.phone-text-size { min-height: 40px; min-width: 40px; border-radius: 12px; color: var(--ink); font-weight: 650; }
+.phone-text-size[aria-pressed="true"] { background: var(--emerald-soft); color: var(--emerald); }
+:root:has(.phone-text-size[aria-pressed="true"]) :is(.phone-body, .appbar-title, .phone-tabbar, .cooling-transfer, .cooling-step-content, .cooling-later) { zoom: 1.25; }
+.post-call-bank { margin: 12px 0; text-align: center; }
+.post-call-prompt button { min-height: 48px; white-space: normal; }
 .phone-tabbar { display: flex; justify-content: space-around; padding: 8px 6px 4px; background: var(--surface); border-top: 1px solid var(--line); }
 .phone-tabbar span { display: flex; flex: 1 1 0; flex-direction: column; align-items: center; gap: 3px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; font-weight: 550; color: var(--subtle); }
 .phone-tabbar span.active { color: var(--emerald-dark); font-weight: 650; }

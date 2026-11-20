@@ -1,0 +1,246 @@
+{
+  "seed": 20261217,
+  "sklearn": "1.9.1",
+  "scope": "Synthetic labels. Raw model cutoff 50. Actual engine intervention cutoff 40.",
+  "limitations": "Stress cohorts deliberately enrich for assisted calls and matched ambiguous pairs. Their frequencies are not customer prevalence. No inference about bank accuracy.",
+  "models": {
+    "bcc-synthetic-rf-v2": {
+      "sha256": "07db53ef14d5c10ed33ee6a9cc1705ac98f330fc92a58f349046fe1c53dd8c71",
+      "previous_generator_model_only": {
+        "threshold": 50,
+        "sample_count": 10000,
+        "positives": 2372,
+        "negatives": 7628,
+        "tp": 2305,
+        "fp": 109,
+        "fn": 67,
+        "tn": 7519,
+        "precision": 0.9548467274233637,
+        "recall": 0.9717537942664418,
+        "false_positive_rate": 0.014289459884635553,
+        "false_negative_rate": 0.02824620573355818,
+        "alert_rate": 0.2414,
+        "false_positive_rate_interval_95": [
+          0.01186007822574716,
+          0.01720780270674984
+        ]
+      },
+      "assisted_workflows_full_engine": {
+        "all": {
+          "threshold": 40,
+          "sample_count": 640,
+          "positives": 256,
+          "negatives": 384,
+          "tp": 130,
+          "fp": 116,
+          "fn": 126,
+          "tn": 268,
+          "precision": 0.5284552845528455,
+          "recall": 0.5078125,
+          "false_positive_rate": 0.3020833333333333,
+          "false_negative_rate": 0.4921875,
+          "alert_rate": 0.384375,
+          "false_positive_rate_interval_95": [
+            0.2583047767303861,
+            0.3497825059902776
+          ]
+        },
+        "ambiguous_pair": {
+          "threshold": 40,
+          "sample_count": 256,
+          "positives": 128,
+          "negatives": 128,
+          "tp": 64,
+          "fp": 64,
+          "fn": 64,
+          "tn": 64,
+          "precision": 0.5,
+          "recall": 0.5,
+          "false_positive_rate": 0.5,
+          "false_negative_rate": 0.5,
+          "alert_rate": 0.5,
+          "false_positive_rate_interval_95": [
+            0.41465224626050723,
+            0.5853477537394928
+          ]
+        },
+        "careful_legitimate": {
+          "threshold": 40,
+          "sample_count": 128,
+          "positives": 0,
+          "negatives": 128,
+          "tp": 0,
+          "fp": 52,
+          "fn": 0,
+          "tn": 76,
+          "precision": 0.0,
+          "recall": null,
+          "false_positive_rate": 0.40625,
+          "false_negative_rate": null,
+          "alert_rate": 0.40625,
+          "false_positive_rate_interval_95": [
+            0.3251030219432171,
+            0.4928601573580657
+          ]
+        },
+        "dictated": {
+          "threshold": 40,
+          "sample_count": 128,
+          "positives": 128,
+          "negatives": 0,
+          "tp": 66,
+          "fp": 0,
+          "fn": 62,
+          "tn": 0,
+          "precision": 1.0,
+          "recall": 0.515625,
+          "false_positive_rate": null,
+          "false_negative_rate": 0.484375,
+          "alert_rate": 0.515625,
+          "false_positive_rate_interval_95": null
+        },
+        "everyday_call": {
+          "threshold": 40,
+          "sample_count": 128,
+          "positives": 0,
+          "negatives": 128,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 128,
+          "precision": null,
+          "recall": null,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": null,
+          "alert_rate": 0.0,
+          "false_positive_rate_interval_95": [
+            0.0,
+            0.029136956273508416
+          ]
+        }
+      },
+      "hard_blocks_in_assisted_workflows": 0
+    },
+    "bcc-synthetic-rf-v3": {
+      "sha256": "27484bf2d98edead12f477813469b026ef8d87f6356a47d831bd03849b29a47d",
+      "previous_generator_model_only": {
+        "threshold": 50,
+        "sample_count": 10000,
+        "positives": 2372,
+        "negatives": 7628,
+        "tp": 2291,
+        "fp": 105,
+        "fn": 81,
+        "tn": 7523,
+        "precision": 0.9561769616026711,
+        "recall": 0.9658516020236088,
+        "false_positive_rate": 0.013765076035658103,
+        "false_negative_rate": 0.03414839797639123,
+        "alert_rate": 0.2396,
+        "false_positive_rate_interval_95": [
+          0.011384344099659487,
+          0.016635297028176243
+        ]
+      },
+      "assisted_workflows_full_engine": {
+        "all": {
+          "threshold": 40,
+          "sample_count": 640,
+          "positives": 256,
+          "negatives": 384,
+          "tp": 168,
+          "fp": 123,
+          "fn": 88,
+          "tn": 261,
+          "precision": 0.5773195876288659,
+          "recall": 0.65625,
+          "false_positive_rate": 0.3203125,
+          "false_negative_rate": 0.34375,
+          "alert_rate": 0.4546875,
+          "false_positive_rate_interval_95": [
+            0.2756213306677722,
+            0.36856317601283034
+          ]
+        },
+        "ambiguous_pair": {
+          "threshold": 40,
+          "sample_count": 256,
+          "positives": 128,
+          "negatives": 128,
+          "tp": 81,
+          "fp": 81,
+          "fn": 47,
+          "tn": 47,
+          "precision": 0.5,
+          "recall": 0.6328125,
+          "false_positive_rate": 0.6328125,
+          "false_negative_rate": 0.3671875,
+          "alert_rate": 0.6328125,
+          "false_positive_rate_interval_95": [
+            0.5465700424986025,
+            0.7113154534912468
+          ]
+        },
+        "careful_legitimate": {
+          "threshold": 40,
+          "sample_count": 128,
+          "positives": 0,
+          "negatives": 128,
+          "tp": 0,
+          "fp": 42,
+          "fn": 0,
+          "tn": 86,
+          "precision": 0.0,
+          "recall": null,
+          "false_positive_rate": 0.328125,
+          "false_negative_rate": null,
+          "alert_rate": 0.328125,
+          "false_positive_rate_interval_95": [
+            0.25282984471663306,
+            0.41343598400238546
+          ]
+        },
+        "dictated": {
+          "threshold": 40,
+          "sample_count": 128,
+          "positives": 128,
+          "negatives": 0,
+          "tp": 87,
+          "fp": 0,
+          "fn": 41,
+          "tn": 0,
+          "precision": 1.0,
+          "recall": 0.6796875,
+          "false_positive_rate": null,
+          "false_negative_rate": 0.3203125,
+          "alert_rate": 0.6796875,
+          "false_positive_rate_interval_95": null
+        },
+        "everyday_call": {
+          "threshold": 40,
+          "sample_count": 128,
+          "positives": 0,
+          "negatives": 128,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "tn": 128,
+          "precision": null,
+          "recall": null,
+          "false_positive_rate": 0.0,
+          "false_negative_rate": null,
+          "alert_rate": 0.0,
+          "false_positive_rate_interval_95": [
+            0.0,
+            0.029136956273508416
+          ]
+        }
+      },
+      "hard_blocks_in_assisted_workflows": 0
+    }
+  },
+  "no_call_regression": {
+    "sample_count": 8296,
+    "changed_scores": 0
+  }
+}

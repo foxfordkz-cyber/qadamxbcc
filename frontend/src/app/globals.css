@@ -145,6 +145,16 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .tabs button[aria-selected=true] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(16, 24, 40, .1); }
 .tabs button[aria-selected=true] svg { color: var(--emerald-dark); }
 .tabs svg { flex-shrink: 0; }
+.role-summary, .submission-metrics { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
+.role-summary { margin: -8px 0 20px; font-size: 14px; color: var(--ink-3); }
+.role-summary p { max-width: 75ch; }
+.role-summary a { display: inline-flex; align-items: center; gap: 6px; color: var(--emerald-dark); font-weight: 650; }
+.submission-metrics { padding: 16px 20px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); margin: 14px 0; }
+.submission-metrics > svg { color: var(--emerald-dark); }
+.submission-metrics > div { flex: 1 1 230px; }
+.submission-metrics p, .submission-metrics dt { color: var(--ink-3); font-size: 13px; }
+.submission-metrics dl { display: flex; flex-wrap: wrap; gap: 16px; }
+.submission-metrics dd { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-bottom: 24px; }
 .section-heading .muted { margin-top: 8px; max-width: 760px; font-size: 15px; }
 .page-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; margin-top: 48px; padding: 20px 0 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6; }

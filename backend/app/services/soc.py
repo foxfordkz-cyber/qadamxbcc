@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -54,7 +54,10 @@ async def feed(
         stmt = stmt.where(Transaction.status == status)
     if alerts_only:
         stmt = stmt.where(
-            Transaction.status.in_((TransactionStatus.COOLING_OFF, TransactionStatus.BLOCKED))
+            or_(
+                Transaction.status.in_((TransactionStatus.COOLING_OFF, TransactionStatus.BLOCKED)),
+                Transaction.risk_events.any(RiskEvent.rule_code == "POST_CALL_SCAM_REPORTED"),
+            )
         )
     if min_score:
         stmt = stmt.where(Transaction.risk_score >= min_score)

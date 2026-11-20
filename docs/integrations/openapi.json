@@ -370,6 +370,93 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CancelTransferRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transfers/{transaction_id}/post-call": {
+      "post": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "Record Post Call",
+        "description": "Record the customer's call-ended signal or recognition of this held transfer.",
+        "operationId": "record_post_call_api_v1_transfers__transaction_id__post_call_post",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          },
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCallRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -899,6 +986,156 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trusted-contacts/web-session": {
+      "get": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Session Available",
+        "operationId": "session_available_api_v1_trusted_contacts_web_session_get",
+        "parameters": [
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Session Available Api V1 Trusted Contacts Web Session Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_trusted_contacts_web_session_post",
+        "parameters": [
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CircleLogin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircleSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "trusted contacts (advisory)"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_v1_trusted_contacts_web_session_delete",
+        "parameters": [
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -3269,6 +3506,25 @@
         ],
         "title": "CallCheckResponse"
       },
+      "CancelTransferRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "post_call_scam"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CancelTransferRequest"
+      },
       "CaseAnalytics": {
         "properties": {
           "as_of": {
@@ -3561,6 +3817,41 @@
           "category"
         ],
         "title": "Categorize"
+      },
+      "CircleLogin": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 16,
+            "format": "password",
+            "title": "Code",
+            "writeOnly": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "CircleLogin"
+      },
+      "CircleSession": {
+        "properties": {
+          "session": {
+            "type": "string",
+            "title": "Session"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session",
+          "expires_in"
+        ],
+        "title": "CircleSession"
       },
       "ConsentFact": {
         "properties": {
@@ -4502,6 +4793,16 @@
       },
       "FeedStats": {
         "properties": {
+          "submission_limits": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubmissionLimits"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "total": {
             "type": "integer",
             "title": "Total",
@@ -5863,6 +6164,24 @@
         ],
         "title": "Position"
       },
+      "PostCallRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "ended",
+              "recognized"
+            ],
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "PostCallRequest"
+      },
       "PrivacySummary": {
         "properties": {
           "version": {
@@ -6628,6 +6947,39 @@
         ],
         "title": "SimulatedUpdate",
         "description": "Test-only equivalent of authenticated private Telegram updates."
+      },
+      "SubmissionLimits": {
+        "properties": {
+          "active": {
+            "type": "integer",
+            "title": "Active"
+          },
+          "rejected": {
+            "type": "integer",
+            "title": "Rejected"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "window_seconds": {
+            "type": "integer",
+            "title": "Window Seconds"
+          },
+          "cooldown_seconds": {
+            "type": "integer",
+            "title": "Cooldown Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active",
+          "rejected",
+          "limit",
+          "window_seconds",
+          "cooldown_seconds"
+        ],
+        "title": "SubmissionLimits"
       },
       "TimelineEvent": {
         "properties": {

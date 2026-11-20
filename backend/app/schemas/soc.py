@@ -82,7 +82,16 @@ class FeedItem(BaseModel):
     recipient_graph: dict[str, float | int | bool] = Field(default_factory=dict)
 
 
+class SubmissionLimits(BaseModel):
+    active: int
+    rejected: int
+    limit: int
+    window_seconds: int
+    cooldown_seconds: int
+
+
 class FeedStats(BaseModel):
+    submission_limits: SubmissionLimits | None = None
     total: int = 0
     approved: int = 0
     cooling_off: int = 0

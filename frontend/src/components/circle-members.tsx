@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/contracts";
 import { useLocale } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
 import type { ContactState } from "@/lib/trusted-circle";
+import { CircleLogin, circleLogoutLabel, isCircleGuest } from "./circle-login";
 
 interface Member { id: string; alias: string; state: ContactState }
 interface Invitation { contact: Member; invitation_token: string; expires_at: string; telegram_invitation_url?: string }
@@ -20,11 +21,16 @@ export function CircleMembers() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<CopyKey | null>(null);
+  const [guest, setGuest] = useState(false);
+  const [privateSession, setPrivateSession] = useState(false);
   const pending = useRef(false);
   const readVersion = useRef(0);
   const retryAt = useRef(0);
   const report = (failure: unknown) => {
-    if (failure instanceof ApiError && failure.status === 429) {
+    if (isCircleGuest(failure)) {
+      setGuest(true); setPrivateSession(false); setMembers(null); setInvitation(null);
+      setConfirm(null); setConsent(false); setError(null);
+    } else if (failure instanceof ApiError && failure.status === 429) {
       retryAt.current = Date.now() + 1000 * (failure.retryAfter || 60);
       setError("trustedErrorBusy");
     } else if (failure instanceof ApiError && failure.code === "contact_limit_reached") setError("quota");
@@ -34,8 +40,9 @@ export function CircleMembers() {
     if (pending.current || Date.now() < retryAt.current) return;
     const version = ++readVersion.current;
     try {
-      const value = await api<{ contacts: Member[] }>(path);
+      const value = await api<{ contacts: Member[]; private_session?: boolean }>(path);
       if (version !== readVersion.current) return;
+      setGuest(false); setPrivateSession(value.private_session === true);
       setMembers(value.contacts);
       setError(null);
       setInvitation(old => old && Date.parse(old.expires_at) > Date.now() && value.contacts.some(member =>
@@ -56,10 +63,20 @@ export function CircleMembers() {
     return () => { ++readVersion.current; window.removeEventListener("online", refresh); window.removeEventListener("focus", refresh); };
   }, [load]);
   useEffect(() => {
-    if (!awaitingConsent) return;
-    const timer = setInterval(() => { if (document.visibilityState === "visible") void load(); }, 10000);
+    if (!awaitingConsent && !privateSession) return;
+    const timer = setInterval(() => { if (document.visibilityState === "visible") void load(); }, awaitingConsent ? 10000 : 60000);
     return () => clearInterval(timer);
-  }, [awaitingConsent, load]);
+  }, [awaitingConsent, privateSession, load]);
+  async function logout() {
+    if (pending.current) return;
+    pending.current = true; setBusy(true); ++readVersion.current;
+    try {
+      await api("trusted-circle/session", { method: "DELETE" });
+      setGuest(true); setMembers(null); setPrivateSession(false); setInvitation(null);
+      setConfirm(null); setConsent(false); setError(null);
+    } catch (failure) { report(failure); }
+    finally { pending.current = false; setBusy(false); }
+  }
   async function change(contactId?: string) {
     if (pending.current || Date.now() < retryAt.current || (!contactId && !consent)) return;
     pending.current = true;
@@ -82,11 +99,13 @@ export function CircleMembers() {
     } finally { pending.current = false; setBusy(false); }
   }
   const active = members?.filter(member => member.state !== "CONTACT_REVOKED").length ?? 0;
+  if (guest) return <CircleLogin onUnlocked={() => { setGuest(false); void load(); }} />;
   return <section className="mobile-tool">
     <div className="tool-heading"><strong>{members && `${active} / 3`}</strong><button className="secondary" disabled={busy} onClick={() => void load()}>{m("refresh")}</button></div>
     <p className="muted">{m("guardianTestChat")} <a href="https://t.me/bekzat_bcc_shield_test_bot" target="_blank" rel="noopener noreferrer">@bekzat_bcc_shield_test_bot</a></p>
     {!members && !error && <p role="status">{m("loading")}</p>}
     {error && <p className="error" role="alert">{m(error)}</p>}
+    {privateSession && <button className="secondary" disabled={busy} onClick={() => void logout()}>{circleLogoutLabel(lang)}</button>}
     {members && <>
       {!members.length && <p className="muted">{m("emptyCircle")}</p>}
       <ul className="circle-list">{members.map(member => <li key={member.id}>

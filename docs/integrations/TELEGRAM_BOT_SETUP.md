@@ -8,6 +8,12 @@ The API on Render can run the Telegram poller and notification worker in the sam
 
 On the free Render plan, the web service can sleep. Open [the API health endpoint](https://saq-bol-api.onrender.com/health) before a live demonstration and wait for a response. Telegram updates alone do not wake a sleeping long poller. For continuous polling, the optional `deploy/render-telegram.yaml` defines a separately billed worker. To switch to that configuration, first turn off the embedded runner on the API. Real contact notifications require the recipient's explicit consent in Telegram.
 
+### Private browser access
+
+On Render, set `BCC_INTEGRATIONS_CIRCLE_WEB_OWNERS` to a JSON object mapping each verified private test chat ID to its assigned synthetic owner UUID. Each account must be assigned to exactly one allowlisted chat. The public Worker uses `BCC_CIRCLE_WEB_LOGIN=true`, the configured HTTPS origin, and its existing transfer API credential. Never copy the integration signing key to the public Worker.
+
+In the private bot chat, send `/connect`. Enter the single-use code on the website under **Доверенные люди / Сенімді адамдар** within three minutes. A secure HttpOnly cookie grants access to that owner's contact list for 15 minutes. Signing out revokes the browser session. Removing the chat's assignment on Render revokes all its codes and sessions after the configuration takes effect. Adding a contact and enabling Telegram notifications require a separate invitation and consent.
+
 Default: integrations disabled, Telegram fake, no token needed to start the core.
 aiogram 3.31.0 was resolved against Python 3.12 and Pydantic 2.13.5 in `uv.lock`.
 Compatibility sources: [PyPI](https://pypi.org/project/aiogram/3.31.0/) and

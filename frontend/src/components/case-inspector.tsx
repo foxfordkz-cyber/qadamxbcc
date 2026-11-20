@@ -11,11 +11,11 @@ import { Badge, Gauge } from "./risk";
 import { RecipientFlagControls } from "./recipient-flag-controls";
 import { DecisionEvidence } from "./decision-evidence";
 
-type Props = { detail: Evaluation | null; loading: boolean; error: MessageKey | null; receivedAt: number | null; selectedId: string | null; onReview: (id: string) => void; busy: boolean; onRetry: () => void };
+type Props = { detail: Evaluation | null; loading: boolean; error: MessageKey | null; receivedAt: number | null; selectedId: string | null; onReview?: (id: string) => void; readOnly?: boolean; busy: boolean; onRetry: () => void };
 const nextSteps = { approved: "caseNextApproved", cooling_off: "caseNextHeld", blocked: "caseNextBlocked", cancelled: "caseNextCancelled" } as const;
 const signals = { active_call: "active_call", from_deposit: "from_deposit", is_new_device: "is_new_device", is_new_recipient: "is_new_recipient", pasted_recipient: "pasteDetected" } as const;
 
-export function CaseInspector({ detail, loading, error, receivedAt, selectedId, onReview, busy, onRetry }: Props) {
+export function CaseInspector({ detail, loading, error, receivedAt, selectedId, onReview, readOnly, busy, onRetry }: Props) {
   const { t, lang } = useLocale();
   const [notice, setNotice] = useState<MessageKey | null>(null);
   useEffect(() => { setNotice(null); }, [selectedId]);
@@ -56,7 +56,7 @@ export function CaseInspector({ detail, loading, error, receivedAt, selectedId, 
     {!current ? <p className="empty">{t(selectedId ? error ? "caseUnavailable" : "refreshing" : "select")}</p> : <>
       <div className="investigation-summary"><strong>{current.amount === undefined ? "— ₸" : money(current.amount, lang)}</strong><Gauge compact score={current.risk_score} /></div>
       <p className="case-recipient">{current.recipient.display_name} · {current.recipient.iban_masked}</p>
-      <RecipientFlagControls key={current.recipient.id} accountId={current.recipient.id} disabled={loading || !!error || busy} onChanged={onRetry} />
+      {!readOnly && <RecipientFlagControls key={current.recipient.id} accountId={current.recipient.id} disabled={loading || !!error || busy} onChanged={onRetry} />}
       {typeof current.ml_score === "number" && <div className="investigation-model"><span className="ml-badge ready" title={t("mlScoreHint")}>{t("mlScore")}: {current.ml_score.toFixed(1)}%</span><small>{current.ml_model_version}</small></div>}
       <div className="investigation-id"><span>{t("caseId")}</span><code className="tabular-nums">{current.transaction_id}</code><button onClick={() => void copyId()} aria-label={t("copyCaseId")} title={t("copyCaseId")}><Copy size={15} /></button></div>
       {receivedAt !== null && <p className="investigation-updated">{error ? `${t("staleData")} · ` : ""}{t("lastUpdated")}: {date(receivedAt)} · UTC+5</p>}
@@ -67,7 +67,7 @@ export function CaseInspector({ detail, loading, error, receivedAt, selectedId, 
         <div className="investigation-timeline"><h3><Clock3 size={17} />{t("caseStory")} <small>UTC+5</small></h3><ol>{story.map((item, index) => <li key={`${item.key}-${index}`} className={item.tone}><span>{t(item.key)}{item.signals ? `: ${item.signals.map(key => t(signals[key])).join(", ")}` : ""}{item.score !== undefined ? ` · ${item.score}/100` : ""}</span>{item.time ? <time dateTime={item.time}>{date(item.time)}</time> : <time>—</time>}</li>)}</ol></div>
         {current.verification_answers && <p className="investigation-answers"><Check size={16} />{t("caseAnswersSaved")}</p>}
       </>
-      {current.status === "cooling_off" && <button className="primary review-button" disabled={busy || loading || !!error} onClick={() => onReview(current.transaction_id)}><Clock3 size={17} />{t("review")}</button>}
+      {!readOnly && onReview && current.status === "cooling_off" && <button className="primary review-button" disabled={busy || loading || !!error} onClick={() => onReview(current.transaction_id)}><Clock3 size={17} />{t("review")}</button>}
       <div className="investigation-export"><div className="investigation-export-buttons"><button className="secondary police-report" disabled={loading || !!error} onClick={policeReport}><FileText size={16} />{t("policeReport")}</button><button className="secondary case-export" disabled={loading || !!error} onClick={download}><Download size={16} />{t("caseExport")}</button></div><p>{t("policeReportHint")}</p></div>
       {notice && <p className="investigation-notice" role="status">{t(notice)}</p>}
     </>}
