@@ -376,6 +376,35 @@ async def test_two_password_accounts_restore_and_revoke(
                 }
             assert (await client.delete("/mobile/v1/session", headers=headers)).status_code == 204
             assert (await client.get("/mobile/v1/session", headers=headers)).status_code == 401
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="https://web.test"
+        ) as web:
+            same = {"Origin": "https://web.test", "X-Qadam-Web": "1"}
+            creds = {"login": "client_demo", "password": client_pw}
+            route = "/mobile/v1/auth/login"
+            other = {**same, "Origin": "https://other.test"}
+            assert (await web.post(route, json=creds, headers=other)).status_code == 403
+            reply = await web.post(route, json=creds, headers=same)
+            assert reply.status_code == 200
+            assert "token" not in reply.json()
+            assert "HttpOnly" in reply.headers["set-cookie"]
+            assert "SameSite=strict" in reply.headers["set-cookie"]
+            headers = {**same, "X-Qadam-Subject": reply.json()["subject"]}
+            assert (await web.get("/mobile/v1/account", headers=headers)).status_code == 200
+            graph_url = f"/mobile/v1/wallet/graph-operations?node={OWNER}"
+            assert (await web.get(graph_url, headers=headers)).status_code == 403
+            assert (
+                await web.delete("/mobile/v1/session", headers={**headers, **other})
+            ).status_code == 403
+            staff = await web.post(
+                route, json={"login": "admin_demo", "password": staff_pw}, headers=same
+            )
+            assert staff.status_code == 200
+            assert (await web.get("/mobile/v1/session", headers=headers)).status_code == 401
+            headers["X-Qadam-Subject"] = staff.json()["subject"]
+            assert (await web.get(graph_url, headers=headers)).json()["items"] == []
+            assert (await web.delete("/mobile/v1/session", headers=headers)).status_code == 204
+            assert (await web.get("/mobile/v1/session", headers=headers)).status_code == 401
     await fake.aclose()
 
 

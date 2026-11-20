@@ -310,6 +310,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
         <div className="demo-bar-label"><CircleHelp size={16} aria-hidden="true" /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "demoScenarios")}</span></div>
         <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map(key => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
         {STATIC_DEMO && <button type="button" className="demo-reset" disabled={busy} onClick={() => { if (window.confirm(t("resetDemoConfirm"))) { resetStaticDemo(); window.location.reload(); } }}>{t("resetDemo")}</button>}
+        {process.env.NEXT_PUBLIC_CONNECTED_WALLET && <a className="pitch-link" href={process.env.NEXT_PUBLIC_CONNECTED_WALLET}>{lang === "ru" ? "Войти в Qadam Shield" : "Qadam Shield жүйесіне кіру"}<ArrowRight size={15} aria-hidden="true" /></a>}
         {config.demoActionsEnabled !== false && <Link href="/pitch" className="pitch-link">{t("pitchLink")}<ArrowRight size={15} aria-hidden="true" /></Link>}
       </section>
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />

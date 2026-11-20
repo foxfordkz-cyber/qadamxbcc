@@ -39,7 +39,9 @@ try {
     .replace('scope: "/"', `scope: "${base}/"`).replaceAll('src: "/', `src: "${base}/`);
   manifestText = `export const dynamic = "force-static";\n${manifestText}`;
   await writeFile(manifest, manifestText);
-  const env = { ...process.env, BCC_PAGES: "1", NEXT_PUBLIC_BCC_STATIC: "1", NEXT_PUBLIC_BASE_PATH: base, BCC_ENVIRONMENT: "local", NEXT_TELEMETRY_DISABLED: "1" };
+  const walletOrigin = new URL((await readFile(path.join(root, "../android-app/demo-origin.txt"), "utf8")).trim());
+  if (walletOrigin.protocol !== "https:" || walletOrigin.username || walletOrigin.password) throw new Error("Invalid demo HTTPS origin");
+  const env = { ...process.env, NEXT_PUBLIC_CONNECTED_WALLET: new URL("/wallet/", walletOrigin).href, BCC_PAGES: "1", NEXT_PUBLIC_BCC_STATIC: "1", NEXT_PUBLIC_BASE_PATH: base, BCC_ENVIRONMENT: "local", NEXT_TELEMETRY_DISABLED: "1" };
   for (const name of ["BCC_API_MODE", "BCC_API_KEY", "BCC_SOC_API_KEY", "BCC_DEMO_ACTIONS_ENABLED"]) delete env[name];
   const build = spawnSync(process.execPath, [path.join(work, "node_modules/next/dist/bin/next"), "build", "--webpack"], { cwd: work, env, stdio: "inherit" });
   if (build.status !== 0) throw new Error("next build failed");
