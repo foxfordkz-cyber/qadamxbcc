@@ -75,7 +75,8 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
 export function resetStaticDemo() {
   for (const store of [localStorage, sessionStorage]) {
     try {
-      for (const key of Object.keys(store)) if ((key.startsWith("bcc-shield.") && key !== "bcc-shield.locale") || key.startsWith("saqbol")) store.removeItem(key);
+      for (const key of Object.keys(store)) if ((key.startsWith("bcc-shield.") && key !== "bcc-shield.locale") || key.startsWith("saqbol")
+        || ["saq-bol.active-tab.v1", "saq-bol.soc-workspace.v1", "saq-bol-soc-cases-v1"].includes(key)) store.removeItem(key);
     } catch { /* Blocked storage holds nothing to clear. */ }
   }
   unsaved = false;

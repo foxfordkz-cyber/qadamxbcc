@@ -116,6 +116,7 @@ export type FeedQuery = z.infer<typeof feedQuerySchema>;
 // Null means an unknown browser override, not false. UI consumers already use
 // undefined for unknown optional context; normalize only that representation.
 const responseContextSchema = contextSchema.partial().extend({
+  bank_call_check_id: z.uuid().nullable().optional().transform(value => value ?? undefined),
   is_new_device: z.boolean().nullable().optional().transform(value => value ?? undefined),
   is_new_recipient: z.boolean().nullable().optional().transform(value => value ?? undefined),
 });
@@ -194,7 +195,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const retryAfter = Number.isFinite(wait) && wait > 0 ? Math.min(3600, Math.ceil(wait)) : response.status === 429 ? 60 : 0;
     // All SOC widgets use one backend capability bucket. A case change or remount
     // must not bypass its deadline; never retry a mutation in the transport.
-    if (socIntegration && response.status === 429) socRetryUntil = Math.max(socRetryUntil, Date.now() + (retryAfter ?? 60) * 1000);
+    if (socIntegration && response.status === 429) socRetryUntil = Math.max(socRetryUntil, Date.now() + retryAfter * 1000);
     throw new ApiError(code, response.status, retryAfter);
   }
   try { return validateApiResponse(path, await response.json(), init?.method) as T; }

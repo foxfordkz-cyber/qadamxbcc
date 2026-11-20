@@ -31,8 +31,27 @@ localStorage. The launch record stores PIDs, paths and the expiry time only. The
 frontend reports `integrationSessionExpired` after expiry; restart a fresh
 rehearsal to obtain a new session. It never auto-mints or retries a capability.
 
-Stop only the PIDs in the specific `.local-checks/local-demo-*.json` record when
-finished. The ordinary launcher without `-SocDemo` keeps integrations disabled.
+To stop a rehearsal, use its exact printed `.local-checks/local-demo-*.json`
+record. `backend.process_ids` contains the started parent and any verified direct
+child which listens on the backend port. Windows virtual-environment `python.exe`
+can launch a second interpreter; stopping the parent alone may leave that listener
+running. `frontend.pid` identifies this rehearsal's Next process.
+
+Before calling `Stop-Process -Id`, re-read each current process with
+`Get-CimInstance Win32_Process -Filter "ProcessId=<recorded PID>"` to exclude PID
+reuse. A backend command must contain `-m scripts.run_local_demo`, the record's
+backend port and its **exact quoted database path**; a recorded backend child
+must still have `ParentProcessId` equal to `backend.pid`. The frontend command
+must point to this repository's `frontend/node_modules/next/dist/bin/next`, with
+`start --hostname 127.0.0.1` and the recorded frontend port. Stop only verified
+`backend.process_ids` (children first, parent last) and `frontend.pid`; skip exited
+processes and stop on an identity mismatch. Preserve the database and logs.
+
+If CIM/socket inspection is unavailable, startup succeeds with a warning and
+records only the known parent. Inspect `Get-NetTCPConnection -State Listen` for
+the exact backend port and verify the listener's command and parent as above
+before stopping that child. Never stop unrelated Python/Node processes by name.
+The ordinary launcher without `-SocDemo` keeps integrations disabled.
 
 ## Existing local backend, manual operator setup
 

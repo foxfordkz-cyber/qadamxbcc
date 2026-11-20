@@ -173,9 +173,29 @@ try {
     Write-Host 'Starting local demo backend (SQLite, in-process Redis, real rules/graph/ML)...'
     $backendProcess = Start-Process -FilePath $pythonPath -ArgumentList $backendArguments -WorkingDirectory $backendPath -WindowStyle Hidden -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -PassThru
     $startedProcesses.Add($backendProcess)
-    $launchRecord.backend = @{ pid = $backendProcess.Id; url = "http://127.0.0.1:$BackendPort"; stdout = $backendOut; stderr = $backendErr }
+    $launchRecord.backend = @{ pid = $backendProcess.Id; process_ids = @($backendProcess.Id); url = "http://127.0.0.1:$BackendPort"; stdout = $backendOut; stderr = $backendErr }
     $launchRecord | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $recordPath -Encoding UTF8
     Wait-Healthy $backendProcess "http://127.0.0.1:$BackendPort/ready" -ExpectedStatus 'ready'
+
+    # Windows venv python.exe can launch a second interpreter which owns the
+    # socket. Record only direct children whose listener, command and DB match.
+    try {
+        $backendListenerIds = @(Get-NetTCPConnection -LocalPort $BackendPort -State Listen -ErrorAction Stop |
+            Where-Object { $_.LocalAddress -eq '127.0.0.1' } |
+            Select-Object -ExpandProperty OwningProcess -Unique)
+        foreach ($listenerProcessId in $backendListenerIds) {
+            if ($listenerProcessId -eq $backendProcess.Id) { continue }
+            $listenerProcess = Get-CimInstance Win32_Process -Filter "ProcessId=$listenerProcessId" -ErrorAction Stop
+            if ($listenerProcess -and $listenerProcess.ParentProcessId -eq $backendProcess.Id -and
+                $listenerProcess.CommandLine.Contains("-m scripts.run_local_demo --port $BackendPort ") -and
+                $listenerProcess.CommandLine.Contains(' --database "' + $databasePath + '"')) {
+                $launchRecord.backend.process_ids += [int]$listenerProcessId
+            }
+        }
+    } catch {
+        Write-Warning 'Could not inspect the backend listener. Before stopping, inspect the Windows venv child and its exact database command; see docs/TANIRBERDI_SOC_LOCAL_SETUP.md.'
+    }
+    $launchRecord | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $recordPath -Encoding UTF8
 
     if ($SocDemo) {
         $capabilityExpiry = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 3600

@@ -34,15 +34,17 @@ export type AppLayout = "full" | "phone";
 function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayout }) {
   const { lang, setLang, t } = useLocale();
   const [tab, setTabState] = useState<AppTab>("mobile");
+  const activeTab = useRef<AppTab>("mobile");
   const setTab = useCallback((value: AppTab) => {
     const next = layout === "phone" ? "mobile" : value;
+    activeTab.current = next;
     setTabState(next);
     if (layout !== "phone") { try { saveAppTab(next, window.sessionStorage); } catch { /* Storage may be blocked. */ } }
   }, [layout]);
   useEffect(() => {
     // Read after hydration. The standalone client never restores an operator tab.
     if (layout === "phone") return;
-    try { setTabState(readAppTab(window.sessionStorage)); } catch { /* Keep the mobile default. */ }
+    try { const saved = readAppTab(window.sessionStorage); activeTab.current = saved; setTabState(saved); } catch { /* Keep the mobile default. */ }
   }, [layout]);
   const [form, setForm] = useState<PresetForm>(config.presets.normal);
   const [recipientType, setRecipientType] = useState<"phone" | "card" | "iban">("phone");
@@ -163,7 +165,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
         setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {});
         if (restoreDialog.current === value.transaction_id) {
           restoreDialog.current = null;
-          setModal(value.status === "cooling_off");
+          setModal(value.status === "cooling_off" && activeTab.current === "mobile");
         } else if (value.status !== "cooling_off") setModal(false);
       }));
     } finally { reconciling.current = false; setCheckingRecovery(false); }

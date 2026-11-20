@@ -44,6 +44,10 @@ const check = (name, value) => { assert.ok(value, name); report.checks.push(name
     check('fake_callback_present_in_persisted_timeline', (await timeline.innerText()).includes('SUSPICION'));
     check('notification_and_gateway_are_explicitly_advisory', (await page.locator('.integration-notifications').innerText()).includes('подозрении') && (await page.locator('.integration-gateway').innerText()).includes('MOCK'));
     check('local_health_has_no_real_provider_probe', (await page.getByTestId('integration-health').innerText()).includes('не опрашивался'));
+    await page.locator('.analysis-panel .badge.cooling_off').waitFor();
+    await page.locator('.graph-panel .account-node.is-center').waitFor();
+    check('linked_transfer_risk_and_recipient_graph_are_visible', (await page.locator('.soc-center-recipient').innerText()).includes('Выбранный получатель') && await page.locator('.analysis-panel .analysis-score').count() === 1);
+    check('linked_transfer_has_no_contract_error', await page.locator('.investigation-error').count() === 0 && (await page.locator('.investigation-id code').innerText()).trim() === txId);
     const pathPrefix = `/api/v1/integrations/guardian/soc/cases/${caseId}`;
     // Simulate another operator writing after the UI read its snapshot.
     const external = await page.request.post(new URL(`${pathPrefix}/actions`, target).href, {
@@ -58,6 +62,7 @@ const check = (name, value) => { assert.ok(value, name); report.checks.push(name
     await page.locator('.case-action-submit').click();
     await page.locator('.case-action-confirm').click();
     await page.locator('.case-conflict-confirm').waitFor();
+    await page.waitForFunction(expected => [...document.querySelectorAll('.soc-case-meta > div')].some(element => element.querySelector('dt')?.textContent === 'Версия' && Number(element.querySelector('dd')?.textContent) === expected), version + 1);
     check('real_409_requires_explicit_reconfirmation', Number(await metaVersion.innerText()) === version + 1);
     await page.locator('.case-conflict-confirm').click();
     await page.locator('.soc-case-success').waitFor();
@@ -76,6 +81,13 @@ const check = (name, value) => { assert.ok(value, name); report.checks.push(name
     const storage = await page.evaluate(() => JSON.stringify({ session: { ...sessionStorage }, local: { ...localStorage } }));
     check('browser_storage_contains_no_operator_capability', !/soc:[\da-f-]{36}:\d{10}:[\da-f]{64}/i.test(storage));
     check('real_timeline_endpoint_was_used', requests.some(item => item.url.includes(`/soc/transactions/${txId}/timeline`)));
+    await page.getByTestId('soc-mode-transfers').click();
+    await page.locator('.filter-row button').nth(3).click();
+    await page.locator('.row-select').first().waitFor();
+    await page.locator('.row-select').first().click();
+    await page.locator('.graph-panel .account-node.danger.is-center').waitFor();
+    check('real_blocked_hub_graph_highlights_recipient_and_connections', await page.locator('.graph-panel .react-flow__edge').count() >= 2);
+    await screenshot('real-hub-graph-kk');
     check('no_browser_runtime_errors', report.errors.length === 0);
     report.status = 'PASS';
     console.log(JSON.stringify({ status: report.status, checks: report.checks.length, output }));

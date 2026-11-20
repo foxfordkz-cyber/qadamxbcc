@@ -226,8 +226,24 @@ async function main() {
     await page.locator('.preset').nth(2).click();
     await page.locator('.analysis-panel .badge.blocked').waitFor();
     check('hub_preset_explicitly_exits_cases_into_transfer_investigation', await page.getByTestId('soc-mode-transfers').getAttribute('aria-pressed') === 'true' && await workspace.count() === 0 && presetTransfers.size === 1);
+    await page.getByTestId('soc-mode-cases').click(); await page.locator('#case-action-kind').waitFor();
+    // Seed only this isolated browser's synthetic receipt. A mobile hold must not steal
+    // focus from the operator's restored case; /mobile should still reopen that hold.
+    await page.evaluate(id => {
+      const selectedKey = Object.keys(localStorage).find(key => key.startsWith('saqbol.client.v1.') && key.endsWith('.selected'));
+      if (!selectedKey) throw new Error('Expected the mobile client recovery scope after the hub preset');
+      localStorage.setItem(selectedKey, id);
+      const values = JSON.parse(localStorage.getItem('bcc-shield.recovery.v2') || '[]').filter(item => item.id !== id);
+      localStorage.setItem('bcc-shield.recovery.v2', JSON.stringify([...values, { id, state: 'held', status: 'cooling_off', updatedAt: Date.now() }]));
+    }, transactionId);
+    const recoveredHold = page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/transfers/${transactionId}`);
+    await page.reload({ waitUntil: 'domcontentloaded' }); await recoveredHold; await page.locator('#case-action-kind').waitFor(); await settle();
+    check('soc_reload_does_not_open_unrelated_mobile_hold_sheet', await workspace.isVisible() && await page.locator('dialog[open]').count() === 0);
     await page.goto(new URL('/mobile', target).href, { waitUntil: 'domcontentloaded' }); await page.locator('.phone-stage.is-bare').waitFor();
-    check('standalone_mobile_ignores_persisted_operator_tab', await page.locator('.soc-cases-workspace').count() === 0 && await page.locator('.phone-form, .phone-receipt').first().isVisible());
+    await page.locator('.home-tools, .phone-form, .phone-receipt').first().waitFor();
+    check('standalone_mobile_ignores_persisted_operator_tab', await page.locator('.soc-cases-workspace').count() === 0 && await page.locator('.phone-tabbar').isVisible());
+    await page.locator('dialog[open]').waitFor();
+    check('standalone_mobile_still_restores_held_questionnaire', await page.locator('.receipt-cooling_off').getAttribute('data-transaction-id') === transactionId);
     check('all_mutations_mocked_with_only_explicit_hub_evaluation', report.mutations.filter(item => item.path === '/api/v1/transfers/evaluate').length === 1 && report.mutations.every(item => item.intercepted && (item.path.startsWith(base) || item.path === '/api/v1/transfers/evaluate')));
     check('no_browser_runtime_errors', report.errors.length === 0, report.errors);
     report.success = true;
