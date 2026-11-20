@@ -24,6 +24,7 @@ import { randomId } from "@/lib/secure-fallback";
 import { mobileRecovery } from "@/lib/mobile-recovery";
 import { resetStaticDemo } from "@/lib/static-api";
 import type { RecoveryRecord } from "@/lib/recovery";
+import { readAppTab, saveAppTab, type AppTab } from "@/lib/app-tab-session";
 
 const STATIC_DEMO = process.env.NEXT_PUBLIC_BCC_STATIC === "1";
 
@@ -32,7 +33,19 @@ const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
 export type AppLayout = "full" | "phone";
 function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayout }) {
   const { lang, setLang, t } = useLocale();
-  const [tab, setTab] = useState<"mobile" | "soc">("mobile");
+  const [tab, setTabState] = useState<AppTab>("mobile");
+  const activeTab = useRef<AppTab>("mobile");
+  const setTab = useCallback((value: AppTab) => {
+    const next = layout === "phone" ? "mobile" : value;
+    activeTab.current = next;
+    setTabState(next);
+    if (layout !== "phone") { try { saveAppTab(next, window.sessionStorage); } catch { /* Storage may be blocked. */ } }
+  }, [layout]);
+  useEffect(() => {
+    // Read after hydration. The standalone client never restores an operator tab.
+    if (layout === "phone") return;
+    try { const saved = readAppTab(window.sessionStorage); activeTab.current = saved; setTabState(saved); } catch { /* Keep the mobile default. */ }
+  }, [layout]);
   const [form, setForm] = useState<PresetForm>(config.presets.normal);
   const [recipientType, setRecipientType] = useState<"phone" | "card" | "iban">("phone");
   const [result, setResult] = useState<Evaluation | null>(null);
@@ -58,6 +71,8 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const [modal, setModal] = useState(false);
   const [coolingDrafts, setCoolingDrafts] = useState<Record<string, Partial<Answers>>>({});
   const [revision, setRevision] = useState(0);
+  const [socFocus, setSocFocus] = useState(false);
+  const consumeSocFocus = useCallback(() => setSocFocus(false), []);
   const [preset, setPreset] = useState<Preset | null>(null);
   const sensor = useBiometrics();
   const [resultContext, setResultContext] = useState<Partial<Context>>({});
@@ -150,7 +165,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
         setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {});
         if (restoreDialog.current === value.transaction_id) {
           restoreDialog.current = null;
-          setModal(value.status === "cooling_off");
+          setModal(value.status === "cooling_off" && activeTab.current === "mobile");
         } else if (value.status !== "cooling_off") setModal(false);
       }));
     } finally { reconciling.current = false; setCheckingRecovery(false); }
@@ -196,7 +211,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       setRoundtrip(performance.now() - started); setResult(evaluated); setResultAmount(evaluated.amount ?? current.input.amount); setRevision(n => n + 1);
       setResultContext(evaluated.context ?? current.input.context); sensor.complete(); setCompletedIdentity(attemptIdentity.current);
       setModal(evaluated.status === "cooling_off");
-      if (chosen) { if (chosen !== "hub") stream.stop(); setTab(chosen === "hub" ? "soc" : "mobile"); }
+      if (chosen) { setSocFocus(true); if (chosen !== "hub") stream.stop(); setTab(chosen === "hub" ? "soc" : "mobile"); }
     } catch (failure) {
       const ambiguous = isUnknownOutcome(failure);
       setUnknown(true); setError(ambiguous ? "outcomeUnknown" : errorKey(failure)); setTab("mobile");
@@ -290,7 +305,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   // /mobile: the same client logic on a real smartphone — no bezel, decision panel or SOC tab.
   if (layout === "phone") return <>
     <header className="topbar mobile-topbar"><div className="topbar-inner">
-      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span><div><strong>saq<span> bol</span></strong></div></div>
+      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span><div><strong>saq<span> bol × BCC</span></strong></div></div>
       {languageSwitch}
     </div></header>
     <main className="mobile-shell">
@@ -302,7 +317,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   </>;
   return <>
     <header className="topbar"><div className="topbar-inner">
-      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>saq<span> bol</span></strong><small>{t("tagline")}</small></div></div>
+      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("prototypeIdentity")}</small></div></div>
       <div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span>{languageSwitch}</div>
     </div></header>
     <main className="shell">
@@ -317,7 +332,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       {error && tab === "soc" && <p className="error" role="alert">{t(error)}</p>}
       <div className="tabs" role="tablist" aria-label="Saq Bol">{(["mobile", "soc"] as const).map(key => { const Icon = key === "mobile" ? Smartphone : Activity; return <button key={key} type="button" role="tab" id={`tab-${key}`} aria-selected={tab === key} aria-controls={`panel-${key}`} tabIndex={tab === key ? 0 : -1} onKeyDown={e => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); const next = e.key === "Home" ? "mobile" : e.key === "End" ? "soc" : key === "mobile" ? "soc" : "mobile"; changeTab(next); document.getElementById(`tab-${next}`)?.focus(); } }} onClick={() => changeTab(key)}><Icon size={17} />{t(key === "mobile" ? "tabMobile" : "tabSoc")}</button>; })}</div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} /> : <>
+        {tab === "soc" ? <SocDashboard initialSelection={result?.transaction_id ?? null} revision={revision} evaluations={evaluations} traffic={traffic} onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} onReview={id => void review(id)} busy={busy} focusTransfer={socFocus} onFocusConsumed={consumeSocFocus} /> : <>
           <div className="client-wrap">
           <div className="transfer-grid">
             <TransferPhone config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onNewTransfer={freshTransfer} onCallCheck={setCallVerdict} />
@@ -326,7 +341,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
           </div>
         </>}
       </div>
-      <footer className="page-footer"><span>Saq Bol · ITU Hackathon 2026</span><span>{config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
+      <footer className="page-footer"><a href="https://github.com/foxfordkz-cyber/qadamxbcc" target="_blank" rel="noopener noreferrer">Saq Bol × BCC · foxfordkz-cyber/qadamxbcc</a><span>{t("prototypeIdentity")} · {config.mode === "demo" ? t("demoExplain") : t("protected")}</span></footer>
     </main>
     {cooling}
   </>;

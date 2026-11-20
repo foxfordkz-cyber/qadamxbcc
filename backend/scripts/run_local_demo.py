@@ -5,9 +5,10 @@ This executes the real rules/graph/ML pipeline, but is never a pilot deployment.
 """
 
 import argparse
+import asyncio
 import os
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from alembic import command
@@ -58,13 +59,14 @@ def prepare_database(path: Path) -> str:
     return url
 
 
-def create_demo_app(database_url: str) -> FastAPI:
+def create_demo_app(database_url: str, *, soc_demo: bool = False) -> FastAPI:
     require_demo_environment()
     if not database_url.startswith("sqlite+aiosqlite:///"):
         raise ValueError("The local demo runner accepts only its dedicated SQLite database")
     # Development-only dependency; Docker/pilot does not require fakeredis.
     from fakeredis import FakeAsyncRedis
 
+    from app.integrations.config import IntegrationSettings
     from app.main import create_app
     from scripts.seed_bcc import seed
 
@@ -78,14 +80,27 @@ def create_demo_app(database_url: str) -> FastAPI:
         soc_api_key=None,
     )
     app = create_app(settings)
+    if soc_demo:
+        from scripts.local_soc_demo import require_offline_soc
+
+        integration_config = IntegrationSettings(_env_file=None)
+        require_offline_soc(integration_config)
+        app.state.integration_settings = integration_config
+    else:
+        # A credential or .env left by a separate integration rehearsal must not
+        # silently enable integrations in the ordinary local demo.
+        app.state.integration_settings = IntegrationSettings(_env_file=None, enabled=False)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         db_engine = build_engine(database_url)
         factory = build_session_factory(db_engine)
         redis = FakeAsyncRedis()
+        worker: asyncio.Task[None] | None = None
         try:
             empty = await is_empty(factory)
+            if soc_demo and not empty:
+                raise RuntimeError("SOC rehearsal requires a fresh isolated database")
             if empty:
                 report = await seed(
                     factory, redis, n_background_accounts=40, n_background_transactions=120
@@ -100,9 +115,24 @@ def create_demo_app(database_url: str) -> FastAPI:
             resources = Resources.build(settings, session_factory=factory, redis=redis)
             await resources.start()
             application.state.resources = resources
+            if soc_demo:
+                from scripts.local_soc_demo import local_soc_worker, seed_soc_rehearsal
+
+                worker = asyncio.create_task(local_soc_worker(resources, integration_config))
+                application.state.soc_rehearsal = await seed_soc_rehearsal(
+                    application, integration_config
+                )
+                print(
+                    "Local SOC demo: two linked cases, fake contact and MOCK evidence ready.",
+                    flush=True,
+                )
             print("Local demo ready: one worker, real ML/graph, synthetic data only.", flush=True)
             yield
         finally:
+            if worker is not None:
+                worker.cancel()
+                with suppress(asyncio.CancelledError):
+                    await worker
             await redis.aclose()
             await db_engine.dispose()
 
@@ -116,15 +146,22 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--database", type=Path, default=DEFAULT_DATABASE)
     parser.add_argument("--fresh", action="store_true", help="Refuse an existing database file")
+    parser.add_argument(
+        "--soc-demo",
+        action="store_true",
+        help="Fake SOC integrations on a fresh isolated database only",
+    )
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error("port must be between 1 and 65535")
+    if args.soc_demo and not args.fresh:
+        parser.error("--soc-demo requires --fresh")
     try:
         selected = select_demo_database(args.database, fresh=args.fresh)
     except (ValueError, FileExistsError) as exc:
         parser.error(str(exc))
     url = prepare_database(selected)
-    application = create_demo_app(url)
+    application = create_demo_app(url, soc_demo=args.soc_demo)
     import uvicorn
 
     uvicorn.run(application, host="127.0.0.1", port=args.port, workers=1)

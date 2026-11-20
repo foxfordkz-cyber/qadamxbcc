@@ -87,6 +87,7 @@ class GraphStore:
         self._registered_devices: dict[str, str] = {}
         self._linked_devices: dict[str, set[str]] = {}
         self._applied_pending: set[str] = set()
+        self._flag_versions: dict[str, int] = {}
 
     def mark_projected(self, transaction_ids: Iterable[str]) -> None:
         self._applied_pending.update(transaction_ids)
@@ -96,7 +97,13 @@ class GraphStore:
 
     # ---------------------------------------------------------------- mutation
     def add_account(
-        self, account_id: str, *, label: str = "", device_id: str = "", flagged: bool = False
+        self,
+        account_id: str,
+        *,
+        label: str = "",
+        device_id: str = "",
+        flagged: bool = False,
+        flag_version: int | None = None,
     ) -> None:
         previous = self._registered_devices.pop(account_id, None)
         # Replacement removes only current-registration evidence. An observed
@@ -115,13 +122,19 @@ class GraphStore:
             if not devices:
                 del self._account_devices[account_id]
         self._g.add_node(account_id, label=label or account_id[:8], device_id=device_id)
-        self._g.nodes[account_id]["flagged"] = flagged
+        self.set_flagged(account_id, flagged, version=flag_version)
         if device_id:
             self._registered_devices[account_id] = device_id
             self._associate_device(account_id, device_id)
 
-    def set_flagged(self, account_id: str, flagged: bool = True) -> None:
+    def set_flagged(
+        self, account_id: str, flagged: bool = True, *, version: int | None = None
+    ) -> None:
         self._ensure(account_id)
+        if version is not None:
+            if version < self._flag_versions.get(account_id, -1):
+                return
+            self._flag_versions[account_id] = version
         self._g.nodes[account_id]["flagged"] = flagged
 
     def link_device(self, account_id: str, device_id: str) -> None:

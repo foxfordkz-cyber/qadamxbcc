@@ -21,6 +21,8 @@ from app.services.graph import GraphStore
 
 
 async def benchmark(samples: int = 500, redis_url: str | None = None) -> dict[str, float | str]:
+    if samples < 2:
+        raise ValueError("At least two measured samples are required")
     if redis_url:
         redis = Redis.from_url(redis_url, socket_connect_timeout=3, socket_timeout=3)
     else:
@@ -60,11 +62,14 @@ async def benchmark(samples: int = 500, redis_url: str | None = None) -> dict[st
                 ml_times.append(ml_ms)
                 engine_times.append(engine_ms)
         return {
+            "scope": "single-request warmed scoring; HTTP and SQL persistence excluded",
+            "workload": "40 senders, 25 recipients; 300 initial transfer updates; short histories",
             "redis": "real" if redis_url else "fakeredis",
             "samples": float(samples),
-            "ml_p95_ms": statistics.quantiles(ml_times, n=20)[-1],
+            "quantiles": "inclusive linear interpolation",
+            "ml_p95_ms": statistics.quantiles(ml_times, n=100, method="inclusive")[94],
             "engine_p50_ms": statistics.median(engine_times),
-            "engine_p95_ms": statistics.quantiles(engine_times, n=20)[-1],
+            "engine_p95_ms": statistics.quantiles(engine_times, n=100, method="inclusive")[94],
             "engine_p99_ms": statistics.quantiles(engine_times, n=100, method="inclusive")[98],
         }
     finally:
@@ -74,8 +79,9 @@ async def benchmark(samples: int = 500, redis_url: str | None = None) -> dict[st
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--redis-url")
+    parser.add_argument("--samples", type=int, default=500)
     args = parser.parse_args()
-    result = asyncio.run(benchmark(redis_url=args.redis_url))
+    result = asyncio.run(benchmark(samples=args.samples, redis_url=args.redis_url))
     print(json.dumps(result, indent=2))
     if float(result["ml_p95_ms"]) >= 2 or float(result["engine_p95_ms"]) >= 15:
         raise SystemExit("Latency budget exceeded")

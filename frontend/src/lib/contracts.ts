@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { validateSocIntegrationResponse } from "./soc-integrations";
+import { recipientFlagReceiptSchema, recipientFlagSchema } from "./recipient-flag";
 
 export type Lang = "kk" | "ru";
 export type Status = "approved" | "cooling_off" | "blocked" | "cancelled";
@@ -45,7 +47,7 @@ export const answersSchema = z.object({
 export type Answers = z.infer<typeof answersSchema>;
 export type TransferInput = z.infer<typeof transferSchema>;
 export type Context = z.infer<typeof contextSchema>;
-export interface Reason { code: string; layer: string; score_delta: number; reason_kk: string; reason_ru: string }
+export interface Reason { code: string; layer: string; score_delta: number; reason_kk: string; reason_ru: string; evidence?: Record<string, unknown> }
 export interface Decision {
   transaction_id: string; status: Status; risk_score: number;
   headline_kk: string; headline_ru: string; reasons_kk: string[]; reasons_ru: string[];
@@ -107,6 +109,7 @@ export class ApiError extends Error {
 }
 const statusSchema = z.enum(["approved", "cooling_off", "blocked", "cancelled"]);
 export const feedQuerySchema = z.object({
+  alerts_only: z.union([z.boolean(), z.enum(["true", "false"]).transform(value => value === "true")]).default(false),
   status: statusSchema.optional(), q: z.string().max(128).refine(value => !value.includes("\u0000")).transform(value => value.trim()).default(""),
   min_score: z.coerce.number().int().min(0).max(100).default(0),
   offset: z.coerce.number().int().min(0).max(100_000).default(0),
@@ -117,6 +120,7 @@ export type FeedQuery = z.infer<typeof feedQuerySchema>;
 // Null means an unknown browser override, not false. UI consumers already use
 // undefined for unknown optional context; normalize only that representation.
 const responseContextSchema = contextSchema.partial().extend({
+  bank_call_check_id: z.uuid().nullable().optional().transform(value => value ?? undefined),
   is_new_device: z.boolean().nullable().optional().transform(value => value ?? undefined),
   is_new_recipient: z.boolean().nullable().optional().transform(value => value ?? undefined),
 });
@@ -150,15 +154,21 @@ const feedResponseSchema = z.object({
   stats: z.object({ total: z.number().nonnegative(), approved: z.number().nonnegative(), cooling_off: z.number().nonnegative(), blocked: z.number().nonnegative(), blocked_hubs: z.number().int().nonnegative().optional(), avg_latency_ms: z.number().nonnegative(), max_latency_ms: z.number().nonnegative(), p95_latency_ms: z.number().nonnegative().nullable().optional(), latency_sample_size: z.number().int().min(0).max(500).optional(), latency_sample_limit: z.literal(500).optional() }).passthrough(),
 }).passthrough();
 const graphResponseSchema = z.object({ center: z.string(), depth: z.number(), nodes: z.array(z.object({ id: z.string(), type: z.string(), position: z.object({ x: z.number(), y: z.number() }), data: z.object({ label: z.string(), role: z.enum(["center", "hub", "mule", "normal"]), depth: z.number(), device_id: z.string(), flagged: z.boolean(), suspected_mule: z.boolean(), in_degree: z.number(), out_degree: z.number(), in_weight: z.number(), out_weight: z.number(), transit_ratio: z.number(), shared_device_accounts: z.number() }).passthrough() })), edges: z.array(z.object({ id: z.string(), source: z.string(), target: z.string(), type: z.string(), animated: z.boolean(), label: z.string().nullable(), data: z.object({ edge_type: z.enum(["transfer", "shared_device"]), weight: z.number(), tx_count: z.number(), highlight: z.boolean() }) })) });
-export function validateApiResponse(path: string, value: unknown) {
+export function validateApiResponse(path: string, value: unknown, method = "GET") {
   const route = path.split("?")[0];
+  if (route.startsWith("integrations/")) {
+    try { return validateSocIntegrationResponse(path, value, method.toUpperCase()); }
+    catch { throw new ApiError("invalidResponse", 502); }
+  }
   const schema = /^transfers\/requests\/[0-9a-f-]+\/abandon$/i.test(route) ? abandonResponseSchema
     : route === "transfers/evaluate" || /^transfers\/[0-9a-f-]+(?:\/(?:resolve-cooling|cancel))?$/i.test(route) ? evaluationResponseSchema
     : route === "call-check" ? callCheckSchema : route === "call-check/demo/bank-call" ? bankCallSchema
-    : route === "soc/feed" ? feedResponseSchema : route.startsWith("soc/graph/") ? graphResponseSchema : undefined;
+    : route === "soc/feed" ? feedResponseSchema : route.startsWith("soc/graph/") ? graphResponseSchema
+    : /^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route) ? method.toUpperCase() === "POST" ? recipientFlagReceiptSchema : recipientFlagSchema : undefined;
   if (!schema) return value;
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw new ApiError("invalidResponse", 502);
+  if (/^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route) && (!("account_id" in parsed.data) || typeof parsed.data.account_id !== "string" || parsed.data.account_id.toLowerCase() !== route.split("/")[2].toLowerCase())) throw new ApiError("invalidResponse", 502);
   if (/^transfers\/[0-9a-f-]+$/i.test(route) && (!("transaction_id" in parsed.data) || typeof parsed.data.transaction_id !== "string"
     || parsed.data.transaction_id.toLowerCase() !== route.split("/")[1].toLowerCase())) throw new ApiError("invalidResponse", 502);
   if (route.startsWith("soc/graph/") && (!("center" in parsed.data) || typeof parsed.data.center !== "string"
@@ -169,10 +179,14 @@ export function validateApiResponse(path: string, value: unknown) {
   return parsed.data;
 }
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const socIntegration = path.startsWith("integrations/");
+  if (socIntegration && socRetryUntil > Date.now()) {
+    throw new ApiError("rateLimited", 429, Math.ceil((socRetryUntil - Date.now()) / 1000));
+  }
   // Static GitHub Pages build: no server, the demo engine runs in this browser.
   if (process.env.NEXT_PUBLIC_BCC_STATIC === "1") {
     const { staticApi } = await import("./static-api");
-    try { return validateApiResponse(path, await staticApi(path, init)) as T; }
+    try { return validateApiResponse(path, await staticApi(path, init), init?.method) as T; }
     catch (error) { if (error instanceof ApiError) throw error; throw new ApiError("invalidResponse", 502); }
   }
   const response = await fetch(`/api/v1/${path}`, {
@@ -183,9 +197,14 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const body: unknown = await response.json().catch(() => null);
     const code = body && typeof body === "object" && "error" in body && typeof body.error === "string"
       ? body.error : response.status === 404 ? "notFound" : response.status === 409 ? "conflict" : "apiError";
-    const retry = Number(response.headers.get("retry-after"));
-    throw new ApiError(code, response.status, Number.isFinite(retry) && retry > 0 ? retry : 0);
+    const wait = Number(response.headers.get("Retry-After"));
+    const retryAfter = Number.isFinite(wait) && wait > 0 ? Math.min(3600, Math.ceil(wait)) : response.status === 429 ? 60 : 0;
+    // All SOC widgets use one backend capability bucket. A case change or remount
+    // must not bypass its deadline; never retry a mutation in the transport.
+    if (socIntegration && response.status === 429) socRetryUntil = Math.max(socRetryUntil, Date.now() + retryAfter * 1000);
+    throw new ApiError(code, response.status, retryAfter);
   }
-  try { return validateApiResponse(path, await response.json()) as T; }
+  try { return validateApiResponse(path, await response.json(), init?.method) as T; }
   catch (error) { if (error instanceof ApiError) throw error; throw new ApiError("invalidResponse", 502); }
 }
+let socRetryUntil = 0;

@@ -91,6 +91,15 @@ test("malformed successful API responses fail safely, and nullable legacy ML sta
   assert.doesNotThrow(() => validateApiResponse(`transfers/${result.transaction_id}`, { ...result, ml_score: null, ml_model_version: null, ml_contributors: [] }));
   assert.throws(() => validateApiResponse(`transfers/requests/${result.transaction_id}/abandon`, { request_id: result.transaction_id, status: "processed", server_time: new Date().toISOString() }), ApiError);
 });
+test("real backend nullable call-check context does not hide a saved transfer or the SOC feed", () => {
+  const result = run("scam");
+  const context = { ...result.context, bank_call_check_id: null };
+  assert.doesNotThrow(() => validateApiResponse(`transfers/${result.transaction_id}`, { ...result, context }));
+  const feed = feedDemo({ q: result.transaction_id });
+  assert.doesNotThrow(() => validateApiResponse("soc/feed", { ...feed, items: feed.items.map(item => ({ ...item, context: { ...item.context, bank_call_check_id: null } })) }));
+  assert.throws(() => validateApiResponse(`transfers/${result.transaction_id}`, { ...result, context: { ...context, bank_call_check_id: "invalid" } }), ApiError);
+  assert.equal(transferSchema.safeParse({ sender_id: ids.sender, recipient_phone: "+77010000003", amount: "1", context: { bank_call_check_id: null } }).success, false);
+});
 test("hub graph has 12 incoming senders and a shared-device edge", () => {
   const graph = graphDemo(ids.hub);
   assert.equal(graph.edges.filter(e => e.target === ids.hub).length, 12);

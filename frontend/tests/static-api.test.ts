@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ApiError } from "../src/lib/contracts";
 import { ids } from "../src/lib/demo-ids";
-import { staticApi } from "../src/lib/static-api";
+import { resetStaticDemo, staticApi } from "../src/lib/static-api";
 import { staticCircle, staticGuide } from "../src/lib/static-circle";
 import { readFileSync } from "node:fs";
 
@@ -22,6 +22,7 @@ test("the static Pages build answers the demo routes in the browser", async () =
 });
 
 test("the static build refuses what needs a server", async () => {
+  await assert.rejects(staticApi("integrations/guardian/soc/cases"), (error: unknown) => error instanceof ApiError && error.status === 503 && error.code === "integrationsUnavailable");
   await assert.rejects(staticApi("trusted-circle/" + ids.sender), (error: unknown) => error instanceof ApiError && error.status === 404);
   await assert.rejects(staticApi("trusted-circle/other"), (error: unknown) => error instanceof ApiError && error.status === 404);
   await assert.rejects(staticApi("transfers/evaluate", post({ sender_id: "not-a-uuid" })), (error: unknown) => error instanceof ApiError && error.status === 422);
@@ -47,4 +48,20 @@ test("the static message-check guide matches the backend text", () => {
   const source = readFileSync(new URL("../../backend/app/integrations/guardian_education.py", import.meta.url), "utf8").replace(/"\s*\n\s*"/g, "");
   assert.equal(staticGuide.questions.length, 5);
   for (const question of staticGuide.questions) for (const text of [question.field, question.ru, question.kk]) assert.ok(source.includes(text), text);
+});
+
+test("explicit static demo reset clears restored SOC navigation but preserves language and unrelated storage", t => {
+  const createStore = () => {
+    const store: Record<string, unknown> = { "saq-bol.active-tab.v1": "soc", "saq-bol.soc-workspace.v1": "{}", "saq-bol-soc-cases-v1": "{}", "bcc-shield.locale": "kk", unrelated: "keep" };
+    Object.defineProperty(store, "removeItem", { value: (key: string) => { delete store[key]; } });
+    return store;
+  };
+  const local = createStore(), session = createStore();
+  for (const [key, value] of [["localStorage", local], ["sessionStorage", session]] as const) {
+    const previous = Object.getOwnPropertyDescriptor(globalThis, key);
+    Object.defineProperty(globalThis, key, { configurable: true, value });
+    t.after(() => { if (previous) Object.defineProperty(globalThis, key, previous); else Reflect.deleteProperty(globalThis, key); });
+  }
+  resetStaticDemo();
+  for (const store of [local, session]) assert.deepEqual(Object.keys(store).sort(), ["bcc-shield.locale", "unrelated"]);
 });

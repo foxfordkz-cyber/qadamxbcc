@@ -3,6 +3,7 @@ import { ids } from "./demo-ids";
 import { feedQuerySchema, type FeedQuery } from "./contracts";
 import { countBlockedHubs } from "./feed-summary";
 import type { AbandonResult, Answers, Decision, Evaluation, Feed, FeedItem, Graph, GraphData, Party, Reason, Status, TransferInput } from "./contracts";
+import { recipientFlagInputSchema, type RecipientFlag, type RecipientFlagInput, type RecipientFlagReceipt } from "./recipient-flag";
 
 const accounts = [
   { id: ids.sender, full_name: "Аружан С.", phone: "+77010000001", iban: "KZ000000000000000001" },
@@ -15,6 +16,29 @@ const rows = () => root.bccDemoTransfers ??= [];
 const details = () => root.bccDemoDetails ??= new Map();
 const requests = () => root.bccDemoRequests ??= new Map();
 const abandoned = () => root.bccDemoAbandoned ??= new Set();
+const flagRoot = root as typeof root & { bccDemoRecipientFlags?: Map<string, RecipientFlag>; bccDemoFlagReceipts?: Map<string, { body: string; result: RecipientFlagReceipt }> };
+const flags = () => flagRoot.bccDemoRecipientFlags ??= new Map();
+const flagReceipts = () => flagRoot.bccDemoFlagReceipts ??= new Map();
+export function recipientFlagDemo(accountId: string): RecipientFlag {
+  if (!accounts.some(account => account.id === accountId)) throw new DemoError(404, "account_not_found");
+  return structuredClone(flags().get(accountId) ?? { account_id: accountId, flagged: false, version: 0, updated_at: null });
+}
+export function setRecipientFlagDemo(accountId: string, input: RecipientFlagInput): RecipientFlagReceipt {
+  const body = recipientFlagInputSchema.parse(input);
+  const identity = JSON.stringify({ accountId, ...body });
+  const replay = flagReceipts().get(body.request_id);
+  if (replay) {
+    if (replay.body !== identity) throw new DemoError(409, "flag_idempotency_conflict");
+    return structuredClone(replay.result);
+  }
+  const current = recipientFlagDemo(accountId);
+  if (body.expected_version !== current.version) throw new DemoError(409, "flag_version_conflict");
+  if (flagReceipts().size >= 5000) throw new DemoError(503, "demoCapacity");
+  const value: RecipientFlagReceipt = { account_id: accountId, flagged: body.flagged, version: current.version + 1, updated_at: new Date().toISOString(), audit_id: globalThis.crypto.randomUUID(), actor: "demo_soc_operator", note: body.note, previous_flagged: current.flagged };
+  flags().set(accountId, { account_id: accountId, flagged: value.flagged, version: value.version, updated_at: value.updated_at });
+  flagReceipts().set(body.request_id, { body: identity, result: value });
+  return structuredClone(value);
+}
 // «Банк мне звонит?» — a simulated bank outbound call log and the checks made against it.
 const demoCalls = root as typeof root & { bccDemoBankCalls?: Map<string, number>; bccDemoCallChecks?: Map<string, { customer: string; verified: boolean; at: number }> };
 const bankCalls = () => demoCalls.bccDemoBankCalls ??= new Map();
@@ -59,6 +83,17 @@ function decision(status: Status, risk_score: number, transaction_id: string, re
   };
   return { transaction_id, status, risk_score, headline_kk: headlines[status][0], headline_ru: headlines[status][1], reasons_kk: reasons.map(r => r.reason_kk), reasons_ru: reasons.map(r => r.reason_ru) };
 }
+function activeOriginalHold(senderId: string, recipientId: string, now: number): FeedItem | undefined {
+  // Seeded friendship or settled history, never the caller's is_new_recipient override.
+  const known = (senderId === ids.sender && recipientId === ids.friend)
+    || rows().some(row => row.sender.id === senderId && row.recipient.id === recipientId && row.status === "approved");
+  return rows().filter(row => row.sender.id === senderId && row.status === "cooling_off"
+    && (row.recipient.id === recipientId || !known)
+    && !row.reasons.some(item => item.code === "ACTIVE_HOLD_RETRY")
+    && Date.parse(row.created_at) <= now && Date.parse(row.created_at) + 900000 > now
+    && row.cooling_until && Date.parse(row.cooling_until) > now)
+    .sort((a, b) => Date.parse(a.cooling_until!) - Date.parse(b.cooling_until!))[0];
+}
 export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 5000): Evaluation {
   if (input.request_id && abandoned().has(input.request_id)) throw new DemoError(409, "conflict");
   const replay = input.request_id ? requests().get(input.request_id) : undefined;
@@ -93,9 +128,29 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
     reason("RECIPIENT_SHARED_DEVICE", "graph", 15, "Екі шот бір құрылғыны пайдаланады.", "Два счёта используют общее устройство."),
     reason("RECIPIENT_TRANSIT_RATIO", "graph", 15, "Кіріс қаражаттың 85%-ы әрі қарай шығарылған.", "85% входящих средств переведены дальше."),
   );
-  const score = Math.min(100, behavioral + reasons.filter(r => r.layer !== "behavioral").reduce((n, r) => n + r.score_delta, 0));
+  const flagged = flags().get(recipient.id)?.flagged === true;
+  if (flagged) reasons.push(reason("RECIPIENT_FLAGGED", "graph", 40, "Алушы SOC тарапынан күдікті дроп ретінде белгіленген.", "Получатель отмечен SOC как подозреваемый дроп."));
+  let score = Math.min(100, behavioral + reasons.filter(r => r.layer !== "behavioral").reduce((n, r) => n + r.score_delta, 0));
+  if (flagged && score < 75) {
+    const flagReason = reasons.find(item => item.code === "RECIPIENT_FLAGGED")!;
+    flagReason.score_delta += 75 - score;
+    flagReason.evidence = { ...flagReason.evidence, confirmed_flag_minimum: 75 };
+    reasons.sort((a, b) => b.score_delta - a.score_delta || a.code.localeCompare(b.code));
+    score = 75;
+  }
+  // Only bridge an otherwise approved retry. Independent risk retains its own full hold.
+  const originalHold = score < 40 ? activeOriginalHold(sender.id, recipient.id, now) : undefined;
+  if (originalHold) {
+    const guard = reason("ACTIVE_HOLD_RETRY", "behavioral", 40 - score,
+      "Алдыңғы аударымды тексеру әлі аяқталған жоқ. Алушыны немесе реквизиттерді өзгерту қолданыстағы кідірісті жоймайды.",
+      "Проверка предыдущего перевода ещё не завершена. Повторная отправка или смена реквизитов не отменяет действующую паузу.");
+    guard.evidence = { source: "local_demo", original_transaction_id: originalHold.transaction_id, cooling_off_until: originalHold.cooling_until, recipient_changed: originalHold.recipient.id !== recipient.id, minimum_score: 40 };
+    reasons.push(guard); score = 40;
+  }
   const status: Status = score >= 75 ? "blocked" : score >= 40 ? "cooling_off" : "approved";
-  const until = status === "cooling_off" ? new Date(now + 900000).toISOString() : null;
+  const until = status === "cooling_off" ? new Date(originalHold
+    ? Math.min(Date.parse(originalHold.cooling_until!), Date.parse(originalHold.created_at) + 900000)
+    : now + 900000).toISOString() : null;
   const id = input.request_id ?? globalThis.crypto.randomUUID();
   const latency = Math.round((performance.now() - start) * 1000) / 1000;
   rows().unshift({ transaction_id: id, created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(), status, risk_score: score, amount: input.amount, currency: "KZT", latency_ms: latency, sender, recipient, ...ctx, context: ctx, is_new_recipient: isNew, cooling_until: until, resolved_at: null, reasons });
@@ -104,6 +159,10 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
     cooling_off_until: until, is_new_recipient: isNew, is_new_device: ctx.is_new_device,
     recipient: { id: recipient.id, display_name: recipient.full_name, iban_masked: `KZ** •••• ${recipient.iban.slice(-4)}` },
     amount: input.amount, context: ctx, server_time: new Date(now).toISOString(), created_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString(), verification_answers: null, resolved_at: null, red_flags: [] };
+  if (originalHold) {
+    result.headline_kk = "Бұрын басталған тексеру жалғасуда. Бастапқы кідіріс мерзімі сақталды.";
+    result.headline_ru = "Продолжается ранее начатая проверка. Срок исходной паузы сохранён.";
+  }
   details().set(id, structuredClone(result));
   if (input.request_id) requests().set(input.request_id, { body: JSON.stringify(input), result: structuredClone(result) });
   return result;
@@ -129,19 +188,23 @@ export function resolveDemo(id: string, answers: Answers, now = Date.now()): Eva
   }
   const unknownUnderPressure = !answers.knows_recipient_personally && (row.active_call || row.from_deposit);
   const flagged = answers.caller_claims_bank_or_police || answers.asked_to_move_to_safe_account || answers.asked_to_keep_secret_or_install_app || !answers.initiated_by_customer || unknownUnderPressure;
+  const recipientFlagged = flags().get(row.recipient.id)?.flagged === true;
+  const blocked = flagged || recipientFlagged;
+  const previousRisk = row.risk_score;
   row.verification_answers = answers;
   detail.verification_answers = answers;
   row.updated_at = new Date(now).toISOString();
   detail.updated_at = row.updated_at;
-  if (!flagged && row.cooling_until && now < Date.parse(row.cooling_until)) {
+  if (!blocked && row.cooling_until && now < Date.parse(row.cooling_until)) {
     details().set(id, detail);
     return detail;
   }
-  row.status = flagged ? "blocked" : "approved";
-  row.risk_score = flagged ? 90 : 0;
+  row.status = blocked ? "blocked" : "approved";
+  row.risk_score = blocked ? Math.max(90, previousRisk) : 0;
   row.resolved_at = new Date(now).toISOString();
   row.cooling_until = null;
-  row.reasons = [reason("QUESTIONNAIRE", "questionnaire", flagged ? 90 : 0,
+  row.reasons = recipientFlagged && !flagged ? [...row.reasons, reason("RECIPIENT_FLAGGED_AT_RELEASE", "questionnaire", Math.max(0, 90 - previousRisk),
+    "Алушы SOC тарапынан күдікті дроп ретінде белгіленген.", "Получатель отмечен SOC как подозреваемый дроп.")] : [reason("QUESTIONNAIRE", "questionnaire", flagged ? 90 : 0,
     flagged ? "Жауаптарда алаяқтық белгілері бар. Аударым бұғатталды." : "Қауіпсіздік тексеруі аяқталды. Аударым мақұлданды.",
     flagged ? "В ответах обнаружены признаки обмана. Перевод заблокирован." : "Проверка безопасности пройдена. Перевод одобрен.")];
   const result = { ...detail, ...decision(row.status, row.risk_score, id, row.reasons), reasons: row.reasons, cooling_off_until: null, resolved_at: row.resolved_at };
@@ -160,12 +223,13 @@ export function cancelDemo(id: string, now = Date.now()): Evaluation {
   return structuredClone(result);
 }
 export function feedDemo(query: Partial<FeedQuery> = {}): Feed {
-  const { limit, offset, q, status, since, min_score } = feedQuerySchema.parse(query);
+  const { limit, offset, q, status, since, min_score, alerts_only } = feedQuerySchema.parse(query);
   const items = rows();
   const search = q.toLowerCase();
   const compactId = search.replace(/-/g, "");
   const uuidSearch = /^[0-9a-f]{32}$/.test(compactId) ? compactId : null;
   const filtered = items.filter(row => (!status || row.status === status) && row.risk_score >= min_score
+    && (!alerts_only || row.status === "cooling_off" || row.status === "blocked")
     && (!since || Date.parse(row.updated_at ?? row.created_at) > Date.parse(since))
     && (!search || row.sender.full_name.toLowerCase().includes(search) || row.recipient.full_name.toLowerCase().includes(search)
       || (uuidSearch !== null && row.transaction_id.replace(/-/g, "") === uuidSearch)))
@@ -187,7 +251,7 @@ export function graphDemo(center: string, depth = 2): Graph {
   const account = accounts.find(a => a.id === center);
   if (!account) throw new DemoError(404, "notFound");
   const isHub = center === ids.hub;
-  const data = (party: Party, patch: Partial<GraphData> = {}): GraphData => ({ label: party.full_name, role: "normal", depth: 1, device_id: `device-${party.id.slice(-4)}`, flagged: false, suspected_mule: false, in_degree: 0, out_degree: 1, in_weight: 0, out_weight: 90000, transit_ratio: 0, shared_device_accounts: 0, ...patch });
+  const data = (party: Party, patch: Partial<GraphData> = {}): GraphData => ({ label: party.full_name, role: "normal", depth: 1, device_id: `device-${party.id.slice(-4)}`, flagged: flags().get(party.id)?.flagged === true, suspected_mule: false, in_degree: 0, out_degree: 1, in_weight: 0, out_weight: 90000, transit_ratio: 0, shared_device_accounts: 0, ...patch });
   const nodes: Graph["nodes"] = [{ id: center, type: "account", position: { x: 0, y: 0 }, data: data(account, { role: "center", depth: 0, suspected_mule: isHub, in_degree: isHub ? 12 : 1, shared_device_accounts: isHub ? 2 : 0, transit_ratio: isHub ? 0.85 : 0 }) }];
   const edges: Graph["edges"] = [];
   const count = isHub ? 12 : 1;

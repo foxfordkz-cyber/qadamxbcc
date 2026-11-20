@@ -664,6 +664,16 @@
             }
           },
           {
+            "name": "alerts_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Alerts Only"
+            }
+          },
+          {
             "name": "X-BCC-SOC-Key",
             "in": "header",
             "required": false,
@@ -687,6 +697,133 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FeedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/soc/recipients/{account_id}/flag": {
+      "get": {
+        "tags": [
+          "soc"
+        ],
+        "summary": "Recipient Flag State",
+        "operationId": "recipient_flag_state_api_v1_soc_recipients__account_id__flag_get",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipientFlagState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "soc"
+        ],
+        "summary": "Flag Recipient",
+        "description": "Confirm/unmark a reviewed recipient with a durable service-actor audit.",
+        "operationId": "flag_recipient_api_v1_soc_recipients__account_id__flag_post",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipientFlagRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipientFlagResponse"
                 }
               }
             }
@@ -5859,6 +5996,148 @@
           "ambiguous_delivery"
         ],
         "title": "QueueSummary"
+      },
+      "RecipientFlagRequest": {
+        "properties": {
+          "flagged": {
+            "type": "boolean",
+            "title": "Flagged"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Note"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "flagged",
+          "note"
+        ],
+        "title": "RecipientFlagRequest"
+      },
+      "RecipientFlagResponse": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Account Id"
+          },
+          "flagged": {
+            "type": "boolean",
+            "title": "Flagged"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "audit_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Audit Id"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "previous_flagged": {
+            "type": "boolean",
+            "title": "Previous Flagged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "flagged",
+          "version",
+          "updated_at",
+          "audit_id",
+          "actor",
+          "note",
+          "previous_flagged"
+        ],
+        "title": "RecipientFlagResponse"
+      },
+      "RecipientFlagState": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Account Id"
+          },
+          "flagged": {
+            "type": "boolean",
+            "title": "Flagged"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "flagged",
+          "version",
+          "updated_at"
+        ],
+        "title": "RecipientFlagState"
       },
       "ReportOut": {
         "properties": {

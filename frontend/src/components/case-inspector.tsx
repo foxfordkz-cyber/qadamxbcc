@@ -8,6 +8,8 @@ import { caseTimeline } from "@/lib/case-timeline";
 import { policeReportHtml } from "@/lib/police-report";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { Badge, Gauge } from "./risk";
+import { RecipientFlagControls } from "./recipient-flag-controls";
+import { DecisionEvidence } from "./decision-evidence";
 
 type Props = { detail: Evaluation | null; loading: boolean; error: MessageKey | null; receivedAt: number | null; selectedId: string | null; onReview: (id: string) => void; busy: boolean; onRetry: () => void };
 const nextSteps = { approved: "caseNextApproved", cooling_off: "caseNextHeld", blocked: "caseNextBlocked", cancelled: "caseNextCancelled" } as const;
@@ -54,12 +56,13 @@ export function CaseInspector({ detail, loading, error, receivedAt, selectedId, 
     {!current ? <p className="empty">{t(selectedId ? error ? "caseUnavailable" : "refreshing" : "select")}</p> : <>
       <div className="investigation-summary"><strong>{current.amount === undefined ? "— ₸" : money(current.amount, lang)}</strong><Gauge compact score={current.risk_score} /></div>
       <p className="case-recipient">{current.recipient.display_name} · {current.recipient.iban_masked}</p>
+      <RecipientFlagControls key={current.recipient.id} accountId={current.recipient.id} disabled={loading || !!error || busy} onChanged={onRetry} />
       {typeof current.ml_score === "number" && <div className="investigation-model"><span className="ml-badge ready" title={t("mlScoreHint")}>{t("mlScore")}: {current.ml_score.toFixed(1)}%</span><small>{current.ml_model_version}</small></div>}
       <div className="investigation-id"><span>{t("caseId")}</span><code className="tabular-nums">{current.transaction_id}</code><button onClick={() => void copyId()} aria-label={t("copyCaseId")} title={t("copyCaseId")}><Copy size={15} /></button></div>
       {receivedAt !== null && <p className="investigation-updated">{error ? `${t("staleData")} · ` : ""}{t("lastUpdated")}: {date(receivedAt)} · UTC+5</p>}
 <>
         <div className={`investigation-next ${current.status}`}><ShieldCheck size={19} /><div><h3>{t("caseNextStep")}</h3><p>{t(nextSteps[current.status])}</p></div></div>
-        {(lang === "kk" ? current.reasons_kk : current.reasons_ru).length > 0 && <ul className="investigation-reason-preview">{(lang === "kk" ? current.reasons_kk : current.reasons_ru).slice(0, 2).map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
+        <DecisionEvidence key={current.transaction_id} detail={current} stale={!!error || loading} />
         <div className="investigation-signals"><h3><Fingerprint size={17} />{t("caseSignalSnapshot")}</h3>{active.length ? <div>{active.map(key => <span key={key}>{t(signals[key])}</span>)}</div> : <p className="muted">{t("caseNoSignals")}</p>}</div>
         <div className="investigation-timeline"><h3><Clock3 size={17} />{t("caseStory")} <small>UTC+5</small></h3><ol>{story.map((item, index) => <li key={`${item.key}-${index}`} className={item.tone}><span>{t(item.key)}{item.signals ? `: ${item.signals.map(key => t(signals[key])).join(", ")}` : ""}{item.score !== undefined ? ` · ${item.score}/100` : ""}</span>{item.time ? <time dateTime={item.time}>{date(item.time)}</time> : <time>—</time>}</li>)}</ol></div>
         {current.verification_answers && <p className="investigation-answers"><Check size={16} />{t("caseAnswersSaved")}</p>}

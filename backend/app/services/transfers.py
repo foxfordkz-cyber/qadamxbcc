@@ -1,6 +1,5 @@
 """Transfer orchestration: resolve parties → score → persist → update graph."""
 
-import asyncio
 import hashlib
 import json
 import uuid
@@ -10,14 +9,15 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from weakref import WeakKeyDictionary
 
-from sqlalchemy import Connection, Engine, case, func, or_, select
+from redis.exceptions import RedisError
+from sqlalchemy import case, exists, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.db.locks import serialize_sender, serialized_identity
 from app.ml.model import MODEL_VERSION
 from app.models import (
     AbandonedRequest,
@@ -40,13 +40,12 @@ from app.schemas.transfers import (
     TransferEvaluateResponse,
 )
 from app.services import explain
-from app.services.antifraud import AntifraudEngine, Evaluation, TransferContext
+from app.services.antifraud import ACTIVE_HOLD_RULE, AntifraudEngine, Evaluation, TransferContext
 from app.services.call_check import CallCheckService
 from app.services.graph import MAX_GRAPH_NEIGHBOURS, GraphCapacityError, GraphStore
 
 QUESTIONNAIRE_LAYER = "questionnaire"
 BLOCKED_AFTER_RED_FLAG_SCORE = 90
-_SQLITE_LOCKS: WeakKeyDictionary[Engine, asyncio.Lock] = WeakKeyDictionary()
 
 RED_FLAG_LABELS: dict[str, tuple[str, str]] = {
     "caller_claims_bank_or_police": (
@@ -123,6 +122,7 @@ def register_account(graph: GraphStore, account: Account) -> None:
         label=account.full_name,
         device_id=account.device_id,
         flagged=account.is_flagged,
+        flag_version=account.flag_version,
     )
 
 
@@ -182,7 +182,11 @@ def transfer_detail(
     headline = (
         ("Аударым тоқтатылды.", "Перевод отменён.")
         if tx.status is TransactionStatus.CANCELLED
-        else explain.headline(tx.status, minutes=minutes)
+        else explain.headline(
+            tx.status,
+            minutes=minutes,
+            continuing_hold=any(r.code == ACTIVE_HOLD_RULE for r in reasons),
+        )
     )
     snapshot.update(
         transaction_id=tx.id,
@@ -238,17 +242,8 @@ class TransferService:
 
     @asynccontextmanager
     async def _serialized(self, identity: uuid.UUID) -> AsyncIterator[None]:
-        bind = self.session.get_bind()
-        if bind.dialect.name == "postgresql":
-            key = int.from_bytes(hashlib.sha256(identity.bytes).digest()[:8], "big", signed=True)
-            await self.session.execute(select(func.pg_advisory_xact_lock(key)))
+        async with serialized_identity(self.session, identity):
             yield
-        else:
-            # SQLite tests share one connection: serialize the transaction, including commit.
-            engine = bind.engine if isinstance(bind, Connection) else bind
-            lock = _SQLITE_LOCKS.setdefault(engine, asyncio.Lock())
-            async with lock:
-                yield
 
     async def _load(self, tx_id: uuid.UUID, *, locked: bool = False) -> Transaction:
         stmt = (
@@ -275,14 +270,16 @@ class TransferService:
         return account
 
     async def _resolve_recipient(self, req: TransferEvaluateRequest) -> Account:
-        if req.recipient_id is not None:
-            return await self._get_account(req.recipient_id)
         stmt = select(Account)
-        if req.recipient_phone is not None:
+        if req.recipient_id is not None:
+            stmt = stmt.where(Account.id == req.recipient_id)
+        elif req.recipient_phone is not None:
             stmt = stmt.where(Account.phone == req.recipient_phone)
         else:
             stmt = stmt.where(Account.iban == req.recipient_iban)
-        account = (await self.session.execute(stmt)).scalar_one_or_none()
+        # A confirmed flag cannot commit between our authoritative recipient read
+        # and the persisted decision. SOC writes take the conflicting row lock.
+        account = (await self.session.execute(stmt.with_for_update(read=True))).scalar_one_or_none()
         if account is None:
             raise NotFoundError("recipient not found")
         return account
@@ -327,7 +324,15 @@ class TransferService:
             register_account(graph, peer)
 
     async def evaluate(self, req: TransferEvaluateRequest) -> TransferEvaluateResponse:
-        await self.engine.ensure_consistent()
+        # A committed response is safe to replay while Redis/projection delivery is
+        # unavailable. New decisions still fail closed; healthy retries continue
+        # draining the outbox before returning. Keep synchronization outside the
+        # SQL transaction because it needs its own pooled session.
+        scoring_error: RedisError | None = None
+        try:
+            await self.engine.ensure_consistent()
+        except RedisError as exc:
+            scoring_error = exc
         identity = req.request_id or uuid.uuid4()
         async with self._serialized(identity):
             payload = req.model_dump(mode="json", exclude={"request_id"})
@@ -359,7 +364,46 @@ class TransferService:
                     snapshot.setdefault("created_at", existing.created_at)
                     snapshot.setdefault("updated_at", existing.created_at)
                     return TransferEvaluateResponse.model_validate(snapshot)
+            if scoring_error is not None:
+                raise scoring_error
+            await serialize_sender(self.session, req.sender_id)
             return await self._evaluate(req, identity, request_hash)
+
+    async def _active_hold(
+        self, sender_id: uuid.UUID, recipient_id: uuid.UUID, now: datetime
+    ) -> Transaction | None:
+        """Find one original pause without trusting browser flags or graph cache.
+
+        A different established recipient remains usable. A retry to the held
+        recipient stays subject to that pause even if it was already familiar.
+        Descendants never become anchors, and cancelled/expired anchors no longer
+        apply. The row share lock orders this decision against cancel/resolve.
+        """
+        familiar = exists().where(
+            GraphEdge.source_id == sender_id,
+            GraphEdge.target_id == recipient_id,
+            GraphEdge.edge_type == EdgeType.TRANSFER,
+            GraphEdge.tx_count > 0,
+        )
+        descendant = exists().where(
+            RiskEvent.transaction_id == Transaction.id,
+            RiskEvent.rule_code == ACTIVE_HOLD_RULE,
+        )
+        return await self.session.scalar(
+            select(Transaction)
+            .where(
+                Transaction.sender_id == sender_id,
+                Transaction.status == TransactionStatus.COOLING_OFF,
+                Transaction.created_at <= now,
+                Transaction.cooling_until > now,
+                Transaction.created_at > now - timedelta(minutes=self.engine.cooling_off_minutes),
+                or_(Transaction.recipient_id == recipient_id, ~familiar),
+                ~descendant,
+            )
+            .order_by(Transaction.cooling_until, Transaction.id)
+            .limit(1)
+            .with_for_update(read=True)
+        )
 
     async def _evaluate(
         self, req: TransferEvaluateRequest, tx_id: uuid.UUID, request_hash: str
@@ -368,6 +412,15 @@ class TransferService:
         recipient = await self._resolve_recipient(req)
         if sender.id == recipient.id:
             raise InvalidTransferError("sender and recipient must differ")
+        active_hold = await self._active_hold(sender.id, recipient.id, datetime.now(UTC))
+        active_until = (
+            min(
+                active_hold.cooling_until,
+                active_hold.created_at + timedelta(minutes=self.engine.cooling_off_minutes),
+            )
+            if active_hold is not None and active_hold.cooling_until is not None
+            else None
+        )
 
         device_id = req.device_id or sender.device_id
         await self._refresh_device_peers(sender, recipient, device_id)
@@ -390,6 +443,12 @@ class TransferService:
             from_deposit=req.context.from_deposit,
             is_new_device=is_new_device,
             is_new_recipient=req.context.is_new_recipient,
+            recipient_flagged=recipient.is_flagged,
+            active_hold_id=str(active_hold.id) if active_hold is not None else None,
+            active_hold_until=active_until,
+            active_hold_recipient_changed=(
+                active_hold is not None and active_hold.recipient_id != recipient.id
+            ),
             pasted_recipient=req.context.pasted_recipient,
             duress=req.context.duress,
             typing_duration_ms=req.context.typing_duration_ms,
@@ -405,8 +464,11 @@ class TransferService:
         evaluation = await self.engine.evaluate(ctx)
 
         received_at = datetime.now(UTC)
+        inherited_until = (
+            active_until if any(r.code == ACTIVE_HOLD_RULE for r in evaluation.reasons) else None
+        )
         cooling_until = (
-            received_at + timedelta(minutes=evaluation.cooling_off_minutes)
+            inherited_until or received_at + timedelta(minutes=evaluation.cooling_off_minutes)
             if evaluation.decision is TransactionStatus.COOLING_OFF
             else None
         )
@@ -529,6 +591,18 @@ class TransferService:
     ) -> TransferEvaluateResponse:
         await self.engine.ensure_consistent()
         async with self._serialized(tx_id):
+            # Match evaluate's sender-before-row ordering. In particular, never
+            # hold the source transaction while waiting behind a queued SOC
+            # account writer: an in-flight retry may already share-lock that
+            # account and be about to read this transaction as its hold anchor.
+            sender_id = await self.session.scalar(
+                select(Transaction.sender_id).where(Transaction.id == tx_id)
+            )
+            if sender_id is None:
+                raise NotFoundError(f"transaction {tx_id} not found")
+            await serialize_sender(self.session, sender_id)
+            # The scalar lookup deliberately does not populate the identity map;
+            # load the current lifecycle only after obtaining the sender lock.
             tx = await self._load(tx_id, locked=True)
             saved = answers.model_dump()
             if tx.status is not TransactionStatus.COOLING_OFF:
@@ -540,7 +614,7 @@ class TransferService:
             flags = red_flags(answers, active_call=tx.active_call, from_deposit=tx.from_deposit)
             blocking_score = BLOCKED_AFTER_RED_FLAG_SCORE
             # Refresh DB-held SOC flag at the final authorization boundary.
-            await self.session.refresh(tx.recipient)
+            await self.session.refresh(tx.recipient, with_for_update={"read": True})
             register_account(self.engine.graph, tx.recipient)
             if flags:
                 kk = explain.REASONS["QUESTIONNAIRE_RED_FLAG"][0].format(
@@ -655,6 +729,7 @@ class TransferService:
             active_call=tx.active_call,
             from_deposit=tx.from_deposit,
             is_new_device=tx.is_new_device,
+            recipient_flagged=tx.recipient.is_flagged,
             pasted_recipient=original.pasted_recipient,
             duress=original.duress,
             typing_duration_ms=original.typing_duration_ms,
@@ -752,10 +827,18 @@ async def hydrate_graph(
     session: AsyncSession, graph: GraphStore, *, include_observed_devices: bool = True
 ) -> None:
     """Rebuild the resident money-flow graph from Postgres at startup."""
-    for acc_id, name, device, flagged in await session.execute(
-        select(Account.id, Account.full_name, Account.device_id, Account.is_flagged)
+    for acc_id, name, device, flagged, flag_version in await session.execute(
+        select(
+            Account.id,
+            Account.full_name,
+            Account.device_id,
+            Account.is_flagged,
+            Account.flag_version,
+        )
     ):
-        graph.add_account(str(acc_id), label=name, device_id=device, flagged=flagged)
+        graph.add_account(
+            str(acc_id), label=name, device_id=device, flagged=flagged, flag_version=flag_version
+        )
     edges = await session.execute(
         select(
             GraphEdge.source_id,

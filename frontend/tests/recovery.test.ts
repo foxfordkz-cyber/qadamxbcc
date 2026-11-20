@@ -78,3 +78,19 @@ test("a delayed hold response cannot resurrect a cancelled receipt or overwrite 
   assert.equal(acceptsEvaluation(held, undefined, { ...held, server_time: cancelled.server_time }), false);
   assert.equal(acceptsEvaluation(cancelled, stored, held), true);
 });
+
+test("a concurrent old transaction snapshot cannot erase saved answers despite a later response timestamp", () => {
+  const form = demoPresets.scam;
+  const held = evaluateDemo(transferSchema.parse({ sender_id: form.sender, recipient_phone: form.recipient, amount: form.amount, context: form.context }));
+  const start = Date.parse(held.server_time!);
+  const at = (offset: number) => new Date(start + offset).toISOString();
+  const saved = { ...held, updated_at: at(1000), server_time: at(1100), verification_answers: {
+    caller_claims_bank_or_police: false, asked_to_move_to_safe_account: false, asked_to_keep_secret_or_install_app: false,
+    initiated_by_customer: true, knows_recipient_personally: true,
+  } };
+  // The GET loaded its row before POST committed, then finished relationship reads later.
+  const delayedRead = { ...held, updated_at: at(0), server_time: at(1200), verification_answers: null };
+  assert.equal(acceptsEvaluation(delayedRead, undefined, saved), false);
+  assert.equal(acceptsEvaluation(saved, undefined, delayedRead), true);
+  assert.equal(acceptsEvaluation({ ...saved, server_time: at(1300) }, undefined, saved), true);
+});

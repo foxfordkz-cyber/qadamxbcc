@@ -19,12 +19,17 @@ const base = baseIndex >= 0 ? args[baseIndex + 1] : "/qadamxbcc";
 const outArg = args.find((value, index) => !value.startsWith("--") && (baseIndex < 0 || index !== baseIndex + 1));
 const out = path.resolve(outArg ?? path.join(root, "pages-out"));
 if (base && !/^\/[A-Za-z0-9._-]+$/.test(base)) throw new Error(`Invalid base path: ${base}`);
+if (out === root || root.startsWith(`${out}${path.sep}`)) throw new Error("Output cannot replace the source directory or its ancestors");
 
 const work = await mkdtemp(path.join(os.tmpdir(), "saqbol-pages-"));
 try {
   const skip = new Set(["node_modules", ".next", "pages-out", "tests", "scripts"]);
-  await cp(root, work, { recursive: true, filter: source => !skip.has(path.relative(root, source).split(path.sep)[0]) || source === root });
-  await symlink(path.join(root, "node_modules"), path.join(work, "node_modules"), "dir");
+  await cp(root, work, { recursive: true, filter: source => {
+    const first = path.relative(root, source).split(path.sep)[0];
+    return source === root || (!skip.has(first) && !first.startsWith(".env"));
+  } });
+  // Junctions do not require Windows Developer Mode or the symlink privilege.
+  await symlink(path.join(root, "node_modules"), path.join(work, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   for (const server of ["src/app/api", "src/app/health", "src/app/mobile/link", "src/proxy.ts"]) await rm(path.join(work, server), { recursive: true, force: true });
   for (const page of ["src/app/page.tsx", "src/app/mobile/page.tsx", "src/app/pitch/page.tsx"]) {
     const file = path.join(work, page);
@@ -39,8 +44,11 @@ try {
     .replace('scope: "/"', `scope: "${base}/"`).replaceAll('src: "/', `src: "${base}/`);
   manifestText = `export const dynamic = "force-static";\n${manifestText}`;
   await writeFile(manifest, manifestText);
-  const env = { ...process.env, BCC_PAGES: "1", NEXT_PUBLIC_BCC_STATIC: "1", NEXT_PUBLIC_BASE_PATH: base, BCC_ENVIRONMENT: "local", NEXT_TELEMETRY_DISABLED: "1" };
-  for (const name of ["BCC_API_MODE", "BCC_API_KEY", "BCC_SOC_API_KEY", "BCC_DEMO_ACTIONS_ENABLED"]) delete env[name];
+  // A static export has only the browser's fixed synthetic accounts. Neither a
+  // developer's dotenv files nor inherited live presets/credentials belong here.
+  const env = { ...process.env };
+  for (const name of Object.keys(env)) if (name.startsWith("BCC_")) delete env[name];
+  Object.assign(env, { BCC_PAGES: "1", BCC_API_MODE: "demo", BCC_DEMO_ACTIONS_ENABLED: "true", NEXT_PUBLIC_BCC_STATIC: "1", NEXT_PUBLIC_BASE_PATH: base, BCC_ENVIRONMENT: "local", NEXT_TELEMETRY_DISABLED: "1" });
   const build = spawnSync(process.execPath, [path.join(work, "node_modules/next/dist/bin/next"), "build", "--webpack"], { cwd: work, env, stdio: "inherit" });
   if (build.status !== 0) throw new Error("next build failed");
   if (!existsSync(path.join(work, "out/index.html"))) throw new Error("static export produced no index.html");

@@ -76,12 +76,37 @@ class Account(Base):
     device_id: Mapped[str] = mapped_column(String(64), index=True)
     avg_tx_amount: Mapped[Decimal] = mapped_column(MONEY, default=Decimal("0"))
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False)
+    flag_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    flag_updated_at: Mapped[datetime | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     __table_args__ = (
         CheckConstraint("length(iin) = 12", name="iin_len"),
         CheckConstraint("iban LIKE 'KZ%'", name="iban_kz"),
     )
+
+
+class RecipientFlagAudit(Base):
+    """Append-only SOC service actions; a service credential is not a human identity."""
+
+    __tablename__ = "recipient_flag_audit"
+    __table_args__ = (
+        UniqueConstraint("account_id", "request_id", name="uq_recipient_flag_request"),
+        UniqueConstraint("account_id", "version", name="uq_recipient_flag_version"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    account_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("accounts.id", ondelete="RESTRICT"), index=True
+    )
+    request_id: Mapped[uuid.UUID | None] = mapped_column()
+    request_hash: Mapped[str] = mapped_column(String(64))
+    previous_flagged: Mapped[bool] = mapped_column(Boolean)
+    flagged: Mapped[bool] = mapped_column(Boolean)
+    version: Mapped[int] = mapped_column(Integer)
+    actor: Mapped[str] = mapped_column(String(64))
+    note: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
 class Transaction(Base):

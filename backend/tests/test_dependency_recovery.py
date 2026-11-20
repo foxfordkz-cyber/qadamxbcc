@@ -226,3 +226,61 @@ async def test_dependency_failure_does_not_bypass_service_authorization(
                 f"{API}/transfers/requests/{unknown_id}/abandon", json={}, headers=allowed
             )
         ).status_code == 200
+
+
+@pytest.mark.parametrize("failure", ["redis", "projection"])
+async def test_idempotent_evaluation_recovers_durable_response_during_outage(
+    world: World, monkeypatch: pytest.MonkeyPatch, failure: Failure
+) -> None:
+    approved_request = _normal_request(world, str(uuid.uuid4()))
+    approved = await world.client.post(f"{API}/transfers/evaluate", json=approved_request)
+    assert approved.status_code == 200
+    held_request = {
+        "request_id": str(uuid.uuid4()),
+        "sender_id": world.id("victim"),
+        "recipient_id": world.id("scammer"),
+        "amount": "900000",
+        "context": {"active_call": True, "from_deposit": True},
+    }
+    held = await world.client.post(f"{API}/transfers/evaluate", json=held_request)
+    assert held.json()["status"] == "cooling_off"
+    cancelled = await world.client.post(
+        f"{API}/transfers/{held.json()['transaction_id']}/cancel", json={}
+    )
+    assert cancelled.json()["status"] == "cancelled"
+    abandoned_request = _normal_request(world, str(uuid.uuid4()))
+    assert (
+        await world.client.post(
+            f"{API}/transfers/requests/{abandoned_request['request_id']}/abandon", json={}
+        )
+    ).status_code == 200
+
+    async with failed_dependency(world, monkeypatch, failure):
+        async with world.sessions() as session:
+            decisions_before = await session.scalar(select(func.count()).select_from(Transaction))
+            projections_before = await session.scalar(
+                select(func.count()).select_from(ProjectionEvent)
+            )
+            edge_before = await session.scalar(select(func.sum(GraphEdge.weight)))
+        for body, original in ((approved_request, approved), (held_request, held)):
+            replay = await world.client.post(f"{API}/transfers/evaluate", json=body)
+            assert replay.status_code == 200
+            assert replay.json() == original.json(), "Replay remains the original decision"
+            changed = await world.client.post(
+                f"{API}/transfers/evaluate", json={**body, "amount": "1500"}
+            )
+            assert changed.status_code == 409
+        assert (
+            await world.client.post(f"{API}/transfers/evaluate", json=abandoned_request)
+        ).status_code == 409
+        async with world.sessions() as session:
+            assert await session.scalar(select(func.count()).select_from(Transaction)) == (
+                decisions_before
+            )
+            assert await session.scalar(select(func.count()).select_from(ProjectionEvent)) == (
+                projections_before
+            )
+            assert await session.scalar(select(func.sum(GraphEdge.weight))) == edge_before
+            row = await session.get(Transaction, uuid.UUID(held.json()["transaction_id"]))
+            assert row is not None
+            assert row.status is TransactionStatus.CANCELLED

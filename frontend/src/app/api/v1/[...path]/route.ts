@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { answersSchema, feedQuerySchema, transferSchema } from "@/lib/contracts";
+import { answersSchema, feedQuerySchema, transferSchema, validateApiResponse } from "@/lib/contracts";
+import { recipientFlagInputSchema } from "@/lib/recipient-flag";
 import { appConfig, ids } from "@/lib/config";
 import { backendHeaders, checkAccess } from "@/lib/server-access";
 import { readBoundedJson, RequestBodyError } from "@/lib/request-body";
 import { apiAdmission } from "@/lib/request-quota";
-import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "@/lib/demo";
+import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "@/lib/demo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,11 +25,12 @@ async function handle(request: NextRequest, context: RouteContext) {
   const detail = request.method === "GET" && /^transfers\/[0-9a-f-]{36}$/i.test(route);
   const feed = request.method === "GET" && route === "soc/feed";
   const graph = request.method === "GET" && /^soc\/graph\/[0-9a-f-]{36}$/i.test(route);
+  const recipientFlag = ["GET", "POST"].includes(request.method) && /^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route);
   const callCheck = request.method === "POST" && route === "call-check";
   const bankCall = request.method === "POST" && route === "call-check/demo/bank-call";
   const guide = request.method === "GET" && route === "scam-check/guide";
-  if (!evaluate && !resolve && !cancel && !abandon && !detail && !feed && !graph && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
-  if ((abandon || graph) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
+  if (!evaluate && !resolve && !cancel && !abandon && !detail && !feed && !graph && !recipientFlag && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
+  if ((abandon || graph || recipientFlag) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
   if ((resolve || cancel || detail) && !z.uuid().safeParse(path[1]).success) return json({ error: "invalid" }, 422);
   const admission = apiAdmission();
   if (admission.status !== 200) {
@@ -39,6 +41,10 @@ async function handle(request: NextRequest, context: RouteContext) {
   try {
     const config = appConfig();
     let body: unknown;
+    if (recipientFlag) {
+      if (request.method === "POST") body = recipientFlagInputSchema.parse(await readBoundedJson(request));
+      if (config.mode === "demo") return json(body ? setRecipientFlagDemo(path[2], recipientFlagInputSchema.parse(body)) : recipientFlagDemo(path[2]));
+    }
     if (evaluate) {
       const input = transferSchema.parse(await readBoundedJson(request));
       const { recipient_card, ...rest } = input;
@@ -70,15 +76,23 @@ async function handle(request: NextRequest, context: RouteContext) {
     const base = (process.env.BCC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
     const response = await fetch(`${base}/api/v1/${route}${request.nextUrl.search}`, {
       method: request.method, headers: backendHeaders(route),
-      body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(10_000),
+      body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", signal: AbortSignal.timeout(10_000), redirect: "error",
     });
     if (!response.ok) {
+      if (recipientFlag && [404, 409].includes(response.status)) {
+        const value: unknown = await response.json().catch(() => null);
+        const code = value && typeof value === "object" && "detail" in value ? value.detail : null;
+        if ((response.status === 404 && code === "account_not_found") || (response.status === 409 && ["flag_version_conflict", "flag_idempotency_conflict"].includes(String(code)))) return json({ error: code }, response.status);
+      }
       const rejected = json({ error: response.status === 404 ? "notFound" : response.status === 409 ? "conflict" : response.status === 422 ? "invalid" : response.status === 413 ? "requestTooLarge" : response.status === 429 ? "rateLimited" : "apiError" }, response.status);
       const retry = response.headers.get("retry-after");
       if (retry && /^\d{1,5}$/.test(retry)) rejected.headers.set("Retry-After", retry);
       return rejected;
     }
-    return json(await response.json());
+    let value: unknown;
+    try { value = await response.json(); }
+    catch { return json({ error: "invalidResponse" }, 502); }
+    return json(recipientFlag ? validateApiResponse(route, value, request.method) : value);
   } catch (error) {
     if (error instanceof RequestBodyError) return json({ error: error.code }, error.status);
     if (error instanceof DemoError) return json({ error: error.message }, error.status);

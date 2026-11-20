@@ -1,0 +1,99 @@
+{
+  "measured_at": "2026-11-20",
+  "source_main": "eb7a8382ee5dbf37d1bb2250c8912a03f9a01c34",
+  "source_branch": "codex/tanirberdi-soc-recovery-20261120",
+  "dataset": "Synthetic; 299 accounts, 2514 seeded transfers; HTTP sender pool 200",
+  "environment": {
+    "os": "Windows 11 10.0.26200",
+    "cpu": "AMD Ryzen 5 7535HS, 6 cores / 12 logical",
+    "memory_gib": 15.25,
+    "python": "3.12.14",
+    "postgresql": "16.15, Docker Desktop",
+    "redis": "7.4.12, Docker Desktop",
+    "docker": "29.1.5",
+    "postgres_synchronous_commit": "on",
+    "redis_persistence": "disabled; isolated synthetic benchmark",
+    "api_workers": 1,
+    "request_rate_limit_per_minute": 10000,
+    "migration": "0009_recipient_flags"
+  },
+  "engine": {
+    "scope": "single-request warmed scoring; HTTP and SQL persistence excluded",
+    "workload": "40 senders, 25 recipients; 300 initial transfer updates; short histories",
+    "redis": "real",
+    "samples": 500.0,
+    "quantiles": "inclusive linear interpolation",
+    "ml_p95_ms": 0.12022500000000001,
+    "engine_p50_ms": 2.7074,
+    "engine_p95_ms": 4.89621,
+    "engine_p99_ms": 9.711165000000001
+  },
+  "http": [
+    {
+      "scope": "HTTP response including persistence (client-observed; see target setup)",
+      "base_url": "http://127.0.0.1:8765",
+      "requests": 500,
+      "warmup": 30,
+      "concurrency": 1,
+      "load_model": "closed_loop; at most concurrency in flight; queue wait excluded",
+      "traffic": "mixed accounts",
+      "quantiles": "inclusive linear interpolation; all measured requests",
+      "samples": 500,
+      "p50_ms": 45.08,
+      "p95_ms": 55.24,
+      "p99_ms": 93.49,
+      "max_ms": 213.68,
+      "successful_requests": {
+        "samples": 500,
+        "p50_ms": 45.08,
+        "p95_ms": 55.24,
+        "p99_ms": 93.49,
+        "max_ms": 213.68
+      },
+      "error_rate": 0.0,
+      "errors": {},
+      "warmup_errors": {},
+      "measured_seconds": 22.323,
+      "throughput_rps": 22.4,
+      "status_mix": {
+        "hub:blocked": 50,
+        "ordinary:approved": 389,
+        "ordinary:cooling_off": 11,
+        "scam:cooling_off": 50
+      }
+    },
+    {
+      "scope": "HTTP response including persistence (client-observed; see target setup)",
+      "base_url": "http://127.0.0.1:8765",
+      "requests": 500,
+      "warmup": 30,
+      "concurrency": 8,
+      "load_model": "closed_loop; at most concurrency in flight; queue wait excluded",
+      "traffic": "mixed accounts",
+      "quantiles": "inclusive linear interpolation; all measured requests",
+      "samples": 500,
+      "p50_ms": 194.38,
+      "p95_ms": 274.38,
+      "p99_ms": 397.51,
+      "max_ms": 451.98,
+      "successful_requests": {
+        "samples": 500,
+        "p50_ms": 194.38,
+        "p95_ms": 274.38,
+        "p99_ms": 397.51,
+        "max_ms": 451.98
+      },
+      "error_rate": 0.0,
+      "errors": {},
+      "warmup_errors": {},
+      "measured_seconds": 11.556,
+      "throughput_rps": 43.3,
+      "status_mix": {
+        "hub:blocked": 50,
+        "ordinary:approved": 320,
+        "ordinary:cooling_off": 80,
+        "scam:cooling_off": 50
+      }
+    }
+  ]
+}

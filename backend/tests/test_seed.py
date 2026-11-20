@@ -4,15 +4,28 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import fakeredis
+import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.core.kz import is_valid_iin, is_valid_kz_iban
 from app.core.resources import Resources
 from app.main import create_app
-from app.models import AbandonedRequest, Account, EdgeType, GraphEdge, ProjectionEvent, Transaction
+from app.models import (
+    AbandonedRequest,
+    Account,
+    EdgeType,
+    GraphEdge,
+    ProjectionEvent,
+    RecipientFlagAudit,
+    Transaction,
+)
+from app.schemas.soc import RecipientFlagRequest
+from app.services.graph import GraphStore
+from app.services.recipient_flags import set_flag
+from scripts import seed_bcc
 from scripts.seed_bcc import (
     DEMO_ACCOUNTS,
     DEMO_PRESETS,
@@ -23,6 +36,7 @@ from scripts.seed_bcc import (
     render_summary,
     seed,
 )
+from tests.test_service_boundaries import pilot
 
 N_ACCOUNTS, N_TX = 120, 700
 
@@ -47,6 +61,9 @@ async def test_seed_is_idempotent_with_exact_demo_accounts(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     redis = fakeredis.FakeAsyncRedis()
+    async with session_factory() as session:
+        if session.get_bind().dialect.name == "sqlite":
+            await session.execute(text("PRAGMA foreign_keys=ON"))
     first = await seed(
         session_factory, redis, n_background_accounts=N_ACCOUNTS, n_background_transactions=N_TX
     )
@@ -57,6 +74,19 @@ async def test_seed_is_idempotent_with_exact_demo_accounts(
         session.add(ProjectionEvent(transaction_id=transaction_id))
         session.add(AbandonedRequest(request_id=abandoned_id))
         await session.commit()
+        await set_flag(
+            session,
+            GraphStore(),
+            FRIEND_ID,
+            RecipientFlagRequest(
+                flagged=True,
+                note="Synthetic reset regression",
+                request_id=uuid.uuid4(),
+                expected_version=0,
+            ),
+            "local_demo_soc",
+        )
+        assert await session.scalar(select(func.count()).select_from(RecipientFlagAudit)) == 1
     second = await seed(
         session_factory, redis, n_background_accounts=N_ACCOUNTS, n_background_transactions=N_TX
     )
@@ -71,11 +101,14 @@ async def test_seed_is_idempotent_with_exact_demo_accounts(
     now = datetime.now(UTC)
     async with session_factory() as session:
         assert await session.scalar(select(func.count()).select_from(ProjectionEvent)) == 0
+        assert await session.scalar(select(func.count()).select_from(RecipientFlagAudit)) == 0
         assert await session.get(AbandonedRequest, abandoned_id) is not None
         accounts = {a.id: a for a in (await session.execute(select(Account))).scalars()}
         for spec in DEMO_ACCOUNTS:
             acc = accounts[spec.id]
             assert (acc.full_name, acc.phone) == (spec.full_name, spec.phone)
+            assert not acc.is_flagged
+            assert acc.flag_version == 0
         assert all(is_valid_iin(a.iin) for a in accounts.values())
         assert all(is_valid_kz_iban(a.iban) and a.iban[4:7] == "856" for a in accounts.values())
         assert len({a.phone for a in accounts.values()}) == len(accounts)
@@ -122,6 +155,22 @@ async def test_seed_is_idempotent_with_exact_demo_accounts(
 
     async for expected, data in _presets(session_factory, redis):
         assert data["status"] == expected, data["reasons"]
+    await redis.aclose()
+
+
+async def test_demo_seed_refuses_pilot_before_touching_dependencies(
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    redis = fakeredis.FakeAsyncRedis()
+    monkeypatch.setattr(seed_bcc, "get_settings", pilot)
+
+    async def forbidden() -> None:
+        pytest.fail("A pilot reset must stop before connecting to Redis or clearing SQL")
+
+    monkeypatch.setattr(redis, "ping", forbidden)
+    with pytest.raises(RuntimeError, match="disabled in pilot"):
+        await seed(session_factory, redis)
     await redis.aclose()
 
 

@@ -10,21 +10,28 @@ const uuid = n => `20000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
 const questions = ['caller_claims_bank_or_police', 'asked_to_move_to_safe_account', 'asked_to_keep_secret_or_install_app', 'initiated_by_customer', 'knows_recipient_personally'];
 const clean = [false, false, false, true, true];
 const records = new Map();
+const recipients = new Map();
+const recipientFlags = new Map();
+const flagReceipts = new Map();
 const trustedMock = { enabled: false, notifications: [], posts: 0, polls: [] };
 let expectedPreset = 'normal'; let nextId = 1; let resolveFailure = false; let detailFailure = false;
+let flagConflictOnce = false; let flagLoseResponseOnce = false;
 const report = { target, started_at: new Date().toISOString(), mocked_api: true, checks: [], errors: [], requests: [], mutations: [], screenshots: [] };
 const check = (name, value, detail) => { report.checks.push({ name, passed: Boolean(value), ...(detail === undefined ? {} : { detail }) }); assert.ok(value, name); };
 const timestamp = () => new Date().toISOString();
 const party = (id, full_name) => ({ id, full_name, iban: `KZ11${'0'.repeat(12)}${id.slice(-4)}` });
 function create(input) {
-  const status = expectedPreset === 'hub' ? 'blocked' : input.context.active_call ? 'cooling_off' : 'approved';
   const id = input.request_id || uuid(nextId++);
   if (records.has(id)) return records.get(id);
-  const recipient = party(uuid(100 + nextId++), status === 'blocked' ? 'QA Drop Hub' : 'QA Получатель');
-  const reason = { code: status === 'blocked' ? 'DROP_HUB_FAN_IN' : 'ACTIVE_CALL', layer: status === 'blocked' ? 'graph' : 'behavioral', score_delta: 20, reason_kk: 'QA: тәуекел белгісі', reason_ru: 'QA: сигнал риска' };
+  const recipientKey = input.recipient_id || input.recipient_phone || input.recipient_iban;
+  if (!recipients.has(recipientKey)) recipients.set(recipientKey, party(input.recipient_id || uuid(100 + nextId++), expectedPreset === 'hub' ? 'QA Drop Hub' : 'QA Получатель'));
+  const recipient = recipients.get(recipientKey);
+  const flagged = recipientFlags.get(recipient.id)?.flagged === true;
+  const status = flagged || expectedPreset === 'hub' ? 'blocked' : input.context.active_call ? 'cooling_off' : 'approved';
+  const reason = { code: flagged ? 'RECIPIENT_FLAGGED' : status === 'blocked' ? 'DROP_HUB_FAN_IN' : 'ACTIVE_CALL', layer: status === 'blocked' ? 'graph' : 'behavioral', score_delta: flagged ? 100 : 20, reason_kk: flagged ? 'QA: алушы белгіленген' : 'QA: тәуекел белгісі', reason_ru: flagged ? 'QA: получатель помечен' : 'QA: сигнал риска' };
   const item = {
     transaction_id: id, created_at: timestamp(), updated_at: timestamp(), status,
-    risk_score: status === 'blocked' ? 90 : status === 'cooling_off' ? 65 : 10,
+    risk_score: flagged ? 100 : status === 'blocked' ? 90 : status === 'cooling_off' ? 65 : 10,
     amount: input.amount, currency: 'KZT', latency_ms: 2.1,
     sender: party(input.sender_id, 'QA Жіберуші'), recipient,
     active_call: input.context.active_call, from_deposit: input.context.from_deposit,
@@ -76,10 +83,37 @@ async function main() {
     }
     if (url.pathname.endsWith('/soc/feed') && method === 'GET') {
       const items = [...records.values()].reverse(); const filter = url.searchParams.get('status'); const query = (url.searchParams.get('q') || '').toLowerCase();
-      const filtered = items.filter(item => (!filter || item.status === filter) && (!query || `${item.sender.full_name} ${item.recipient.full_name} ${item.transaction_id}`.toLowerCase().includes(query)));
+      const alertsOnly = url.searchParams.get('alerts_only') === 'true';
+      const filtered = items.filter(item => (!filter || item.status === filter) && (!alertsOnly || ['cooling_off', 'blocked'].includes(item.status)) && (!query || `${item.sender.full_name} ${item.recipient.full_name} ${item.transaction_id}`.toLowerCase().includes(query)));
       const offset = Number(url.searchParams.get('offset') || 0); const limit = Number(url.searchParams.get('limit') || 25);
       const count = status => items.filter(item => item.status === status).length;
       return route.fulfill({ json: { server_time: timestamp(), items: filtered.slice(offset, offset + limit), pagination: { total_filtered: filtered.length, offset, limit, has_more: offset + limit < filtered.length }, stats: { total: items.length, approved: count('approved'), cooling_off: count('cooling_off'), blocked: count('blocked'), cancelled: count('cancelled'), blocked_hubs: count('blocked'), avg_latency_ms: 2.1, max_latency_ms: 2.1, p95_latency_ms: items.length ? 2.1 : null, latency_sample_size: items.length, latency_sample_limit: 500 } } });
+    }
+    const recipientFlag = url.pathname.match(/\/soc\/recipients\/([0-9a-f-]{36})\/flag$/i);
+    if (recipientFlag) {
+      const accountId = recipientFlag[1];
+      const current = recipientFlags.get(accountId) || { account_id: accountId, flagged: false, version: 0, updated_at: null };
+      if (method === 'GET') return route.fulfill({ json: current });
+      if (method === 'POST') {
+        const input = request.postDataJSON();
+        if (typeof input.flagged !== 'boolean' || typeof input.note !== 'string' || !input.note.trim() || input.note.length > 200 || !/^[0-9a-f-]{36}$/i.test(input.request_id || '') || !Number.isInteger(input.expected_version)) return route.fulfill({ status: 422, json: { error: 'invalid' } });
+        const identity = JSON.stringify({ accountId, ...input });
+        const requestKey = `${accountId}:${input.request_id}`;
+        const replay = flagReceipts.get(requestKey);
+        if (replay) return route.fulfill(replay.identity === identity ? { json: replay.receipt } : { status: 409, json: { error: 'conflict' } });
+        if (flagConflictOnce) {
+          flagConflictOnce = false;
+          recipientFlags.set(accountId, { ...current, version: current.version + 1, updated_at: timestamp() });
+          return route.fulfill({ status: 409, json: { error: 'conflict' } });
+        }
+        if (input.expected_version !== current.version) return route.fulfill({ status: 409, json: { error: 'conflict' } });
+        const state = { account_id: accountId, flagged: input.flagged, version: current.version + 1, updated_at: timestamp() };
+        const receipt = { ...state, audit_id: uuid(2000 + nextId++), actor: 'qa-soc-service', note: input.note, previous_flagged: current.flagged };
+        recipientFlags.set(accountId, state); flagReceipts.set(requestKey, { identity, receipt });
+        if (flagLoseResponseOnce) { flagLoseResponseOnce = false; return route.abort('failed'); }
+        return route.fulfill({ json: receipt });
+      }
+      return route.fulfill({ status: 405, json: { error: 'invalid' } });
     }
     if (url.pathname.includes('/soc/graph/') && method === 'GET') return route.fulfill({ json: graphFor(url.pathname.split('/').at(-1), Number(url.searchParams.get('depth') || 2)) });
     const detail = url.pathname.match(/\/transfers\/([0-9a-f-]+)$/i);
@@ -113,6 +147,7 @@ async function main() {
   };
   const reopen = async () => { await page.locator('.telemetry-panel .review-button').click(); await dialog.waitFor(); };
   const settle = () => page.waitForTimeout(250);
+  const enabled = selector => page.waitForFunction(value => { const button = document.querySelector(value); return button && !button.disabled; }, selector);
   const overflow = () => page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
   const graphGeometry = (expectedCount = 4) => page.locator('.graph-canvas').evaluate((element, expected) => {
     const canvas = element.getBoundingClientRect(); const viewport = element.querySelector('.react-flow__viewport');
@@ -219,10 +254,115 @@ async function main() {
     await close(); await reopen();
     check('actual_unsent_edits_survive_server_refresh', await dialog.locator('.cooling-review-list li strong').nth(1).innerText() === 'Да');
     await dialog.locator('.danger-button').click(); await dialog.waitFor({ state: 'hidden' });
-    await preset('hub'); await page.locator('#tab-soc[aria-selected="true"]').waitFor();
-    const hubId = [...records.keys()].at(-1);
+
+    // This verifies browser contract/state transitions; backend policy and SQL durability
+    // are covered by the real-service tests, not by these deliberately intercepted calls.
+    await preset('normal'); await page.locator('.phone-receipt .badge.approved').waitFor();
+    const safeId = await page.locator('.phone-receipt').getAttribute('data-transaction-id');
+    const safeRecipientId = records.get(safeId).recipient.id;
+    await page.locator('#tab-soc').click();
+    await page.locator(`.case-panel[data-transaction-id="${safeId}"]`).waitFor();
+    const flagPath = `/soc/recipients/${safeRecipientId}/flag`;
+    const beforeFlag = report.mutations.filter(item => item.path.endsWith(flagPath)).length;
+    await page.locator('.recipient-flag-open').click();
+    check('recipient_flag_requires_reason_and_explicit_confirmation', await page.locator('.recipient-flag-confirm').isDisabled() && report.mutations.filter(item => item.path.endsWith(flagPath)).length === beforeFlag);
+    await page.locator('#recipient-flag-note').fill('QA synthetic network confirmed by SOC');
+    const flagResponse = page.waitForResponse(response => response.url().endsWith(flagPath) && response.request().method() === 'POST');
+    await page.locator('.recipient-flag-confirm').click();
+    const flaggedResponse = await flagResponse;
+    const flagBody = flaggedResponse.request().postDataJSON();
+    await enabled('.recipient-unflag-open');
+    check('recipient_flag_sends_versioned_idempotent_write', flaggedResponse.ok() && flagBody.flagged === true && flagBody.expected_version === 0 && /^[0-9a-f-]{36}$/i.test(flagBody.request_id) && recipientFlags.get(safeRecipientId)?.version === 1);
+    await preset('normal'); await page.locator('.phone-receipt .badge.blocked').waitFor();
+    const flaggedId = await page.locator('.phone-receipt').getAttribute('data-transaction-id');
+    check('flagged_recipient_blocks_new_transfer_with_explicit_reason', flaggedId !== safeId && records.get(flaggedId).recipient.id === safeRecipientId && records.get(flaggedId).reasons.some(reason => reason.code === 'RECIPIENT_FLAGGED'));
+    check('flag_does_not_rewrite_previous_decision', records.get(safeId).status === 'approved');
+    await page.locator('#tab-soc').click();
+    await page.locator(`.case-panel[data-transaction-id="${flaggedId}"]`).waitFor();
+    await page.locator('.recipient-unflag-open').click();
+    await page.locator('#recipient-flag-note').fill('QA investigation cleared this synthetic account');
+    const unflagResponse = page.waitForResponse(response => response.url().endsWith(flagPath) && response.request().method() === 'POST');
+    await page.locator('.recipient-flag-confirm').click();
+    const unflaggedResponse = await unflagResponse;
+    const unflagBody = unflaggedResponse.request().postDataJSON();
+    await enabled('.recipient-flag-open');
+    check('unflag_is_a_new_audited_versioned_action', unflaggedResponse.ok() && unflagBody.flagged === false && unflagBody.expected_version === 1 && unflagBody.request_id !== flagBody.request_id && recipientFlags.get(safeRecipientId)?.version === 2);
+    await preset('normal'); await page.locator('.phone-receipt .badge.approved').waitFor();
+    const clearedId = await page.locator('.phone-receipt').getAttribute('data-transaction-id');
+    check('unflag_removes_only_future_recipient_flag_signal', records.get(clearedId).recipient.id === safeRecipientId && !records.get(clearedId).reasons.some(reason => reason.code === 'RECIPIENT_FLAGGED') && records.get(flaggedId).status === 'blocked');
+    await page.locator('#tab-soc').click();
+
+    // Another writer invalidates the version: no automatic overwrite or new ID.
+    await enabled('.recipient-flag-open');
+    await page.locator('.recipient-flag-open').click();
+    await page.locator('#recipient-flag-note').fill('QA concurrent analyst review');
+    const beforeConflict = report.mutations.filter(item => item.path.endsWith(flagPath)).length;
+    flagConflictOnce = true;
+    const conflictResponse = page.waitForResponse(response => response.url().endsWith(flagPath) && response.request().method() === 'POST');
+    await page.locator('.recipient-flag-confirm').click();
+    const conflictedResponse = await conflictResponse;
+    const conflictedBody = conflictedResponse.request().postDataJSON();
+    await enabled('.recipient-flag-confirm');
+    check('flag_conflict_reads_new_version_without_auto_write', conflictedResponse.status() === 409 && recipientFlags.get(safeRecipientId).flagged === false && recipientFlags.get(safeRecipientId).version === conflictedBody.expected_version + 1 && report.mutations.filter(item => item.path.endsWith(flagPath)).length === beforeConflict + 1);
+    const reconfirmResponse = page.waitForResponse(response => response.url().endsWith(flagPath) && response.request().method() === 'POST');
+    await page.locator('.recipient-flag-confirm').click();
+    const reconfirmed = await reconfirmResponse;
+    const reconfirmedBody = reconfirmed.request().postDataJSON();
+    await enabled('.recipient-unflag-open');
+    check('flag_conflict_requires_new_explicit_confirmation_and_request_id', reconfirmed.ok() && reconfirmedBody.request_id !== conflictedBody.request_id && reconfirmedBody.expected_version === conflictedBody.expected_version + 1 && reconfirmedBody.note === conflictedBody.note && recipientFlags.get(safeRecipientId).flagged);
+
+    // Commit succeeds but its response disappears: only an exact idempotent retry is safe.
+    await page.locator('.recipient-unflag-open').click();
+    await page.locator('#recipient-flag-note').fill('QA retry after lost committed response');
+    const beforeLost = report.mutations.filter(item => item.path.endsWith(flagPath)).length;
+    flagLoseResponseOnce = true;
+    const lostRequest = page.waitForRequest(request => request.url().endsWith(flagPath) && request.method() === 'POST');
+    await page.locator('.recipient-flag-confirm').click();
+    const lostBody = (await lostRequest).postDataJSON();
+    await enabled('.recipient-flag-retry');
+    check('lost_flag_response_blocks_fresh_actions', await page.locator('.recipient-flag-open').isDisabled() && await page.locator('.recipient-unflag-open').isDisabled() && recipientFlags.get(safeRecipientId).flagged === false && report.mutations.filter(item => item.path.endsWith(flagPath)).length === beforeLost + 1);
+    const retryResponse = page.waitForResponse(response => response.url().endsWith(flagPath) && response.request().method() === 'POST');
+    await page.locator('.recipient-flag-retry').click();
+    const retriedResponse = await retryResponse;
+    await enabled('.recipient-flag-open');
+    check('lost_flag_response_retry_preserves_entire_request_and_single_audit_version', retriedResponse.ok() && JSON.stringify(retriedResponse.request().postDataJSON()) === JSON.stringify(lostBody) && recipientFlags.get(safeRecipientId).version === lostBody.expected_version + 1 && report.mutations.filter(item => item.path.endsWith(flagPath)).length === beforeLost + 2);
+
+    // A write without a recoverable pending marker must never leave the browser.
+    await page.locator('.recipient-flag-open').click();
+    await page.locator('#recipient-flag-note').fill('QA storage unavailable: do not send');
+    const beforeStorage = report.mutations.filter(item => item.path.endsWith(flagPath)).length;
+    await page.evaluate(() => {
+      window.__qaFlagSetItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key, value) {
+        if (String(key).startsWith('saqbol.recipient-flag.pending.')) throw new DOMException('QA storage disabled', 'QuotaExceededError');
+        return window.__qaFlagSetItem.call(this, key, value);
+      };
+    });
+    await page.locator('.recipient-flag-confirm').click();
+    await page.locator('.recipient-flag-error[role="alert"]').waitFor();
+    check('flag_storage_failure_prevents_first_mutation', report.mutations.filter(item => item.path.endsWith(flagPath)).length === beforeStorage && recipientFlags.get(safeRecipientId).flagged === false);
+    await page.evaluate(() => { Storage.prototype.setItem = window.__qaFlagSetItem; delete window.__qaFlagSetItem; });
+    await page.locator('.recipient-flag-confirmation button[type="button"]').click();
+
+    const alertsResponse = page.waitForResponse(response => response.url().includes('/soc/feed?') && new URL(response.url()).searchParams.get('alerts_only') === 'true');
+    await page.getByTestId('soc-alerts-only').click();
+    const alertsFeed = await (await alertsResponse).json();
+    await page.waitForFunction(() => document.querySelectorAll('.feed-panel tbody .badge.approved, .feed-panel tbody .badge.cancelled').length === 0);
+    check('alerts_only_requests_server_filter_and_excludes_safe_rows', await page.getByTestId('soc-alerts-only').getAttribute('aria-pressed') === 'true' && alertsFeed.items.length > 0 && alertsFeed.items.every(item => ['cooling_off', 'blocked'].includes(item.status)));
+    const allFeedResponse = page.waitForResponse(response => response.url().includes('/soc/feed?') && new URL(response.url()).searchParams.get('alerts_only') !== 'true');
+    await page.getByTestId('soc-alerts-only').click(); await allFeedResponse;
+
+    const hubResponse = page.waitForResponse(response => response.request().method() === 'POST'
+      && new URL(response.url()).pathname.endsWith('/transfers/evaluate'));
+    await preset('hub');
+    const hubId = (await (await hubResponse).json()).transaction_id;
+    await page.locator('#tab-soc[aria-selected="true"]').waitFor();
     await page.locator(`.case-panel[data-transaction-id="${hubId}"] .investigation-id code`).waitFor();
-    await page.locator('.react-flow__node').first().waitFor();
+    // The detail and graph requests settle independently. An old graph's first
+    // node can still be visible when the new case detail has already arrived.
+    const hubRecipientId = records.get(hubId).recipient.id;
+    await page.locator(`.react-flow__node[data-id="${hubRecipientId}"] .account-node.is-center`).waitFor();
+    await page.waitForFunction(() => document.querySelectorAll('.react-flow__node').length === 4);
     check('hub_preset_shows_blocked_case_and_graph', records.get(hubId).status === 'blocked' && await page.locator('.react-flow__node').count() === 4);
     check('graph_defaults_to_explicit_direct_neighbor_depth', report.requests.some(request => request.path.endsWith(`/soc/graph/${records.get(hubId).recipient.id}`) && new URLSearchParams(request.search).get('depth') === '1'));
     check('direct_graph_control_and_counts_visible', await page.locator('.graph-depth-controls button').first().getAttribute('aria-pressed') === 'true' && /4\s*\/\s*3/.test(await page.getByText('Показано счетов / связей', { exact: false }).innerText()));

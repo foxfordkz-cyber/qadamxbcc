@@ -68,6 +68,13 @@ export function acceptsEvaluation(incoming: Evaluation, stored?: RecoveryRecord,
   if (stored?.state === "abandoned") return false;
   if (stored?.state === "resolved" && incoming.status !== stored.status) return false;
   if (previous && previous.status !== "cooling_off" && incoming.status !== previous.status) return false;
+  // Response generation time can be newer even when a concurrent GET read an
+  // older transaction before a questionnaire save. Prefer the persisted revision.
+  if (previous?.updated_at && incoming.updated_at) {
+    const previousRevision = Date.parse(previous.updated_at);
+    const incomingRevision = Date.parse(incoming.updated_at);
+    if (Number.isFinite(previousRevision) && Number.isFinite(incomingRevision) && incomingRevision !== previousRevision) return incomingRevision > previousRevision;
+  }
   if (previous?.server_time && incoming.server_time && Date.parse(incoming.server_time) < Date.parse(previous.server_time)) return false;
   return true;
 }

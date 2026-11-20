@@ -39,7 +39,9 @@ def ctx(
     at: datetime = DAY,
     device: str | None = None,
     avg: float = 25_000,
-    **flags: bool,
+    active_call: bool = False,
+    from_deposit: bool = False,
+    is_new_device: bool = False,
 ) -> TransferContext:
     return TransferContext(
         tx_id=str(uuid.uuid4()),
@@ -49,7 +51,9 @@ def ctx(
         device_id=device or f"dev-{sender}",
         occurred_at=at,
         sender_avg_amount=avg,
-        **flags,
+        active_call=active_call,
+        from_deposit=from_deposit,
+        is_new_device=is_new_device,
     )
 
 

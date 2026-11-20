@@ -119,6 +119,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .topbar { background: var(--surface); border-bottom: 1px solid var(--line); }
 .topbar-inner { max-width: 1880px; margin: 0 auto; padding: 12px 32px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand > div { min-width: 0; }
 .brand-mark { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; background: var(--emerald); color: #FFFFFF; }
 .brand strong { display: block; font-size: 22px; font-weight: 750; letter-spacing: -.03em; line-height: 1.1; }
 .brand strong span { font-weight: 400; color: var(--ink-3); }
@@ -147,6 +148,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-bottom: 24px; }
 .section-heading .muted { margin-top: 8px; max-width: 760px; font-size: 15px; }
 .page-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; margin-top: 48px; padding: 20px 0 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6; }
+.page-footer a { overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---------- Recovery ---------- */
 .pending-panel { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 12px 16px; margin-top: 16px; padding: 16px 20px; background: var(--amber-soft); border: 1px solid var(--amber-line); border-radius: var(--r-lg); color: var(--amber-deep); }
