@@ -16,6 +16,10 @@ android-app/www/vendor/
 !android-app/scripts/
 !android-app/scripts/build-wallet.mjs
 !android-app/scripts/vendor.mjs
+!deliverables/
+!deliverables/android/
+!deliverables/android/Saq-Bol-Android-2.5.apk
+!deliverables/android/Saq-Bol-Android-2.5.apk.sha256
 **/__pycache__/
 **/*.pyc
 **/.env*

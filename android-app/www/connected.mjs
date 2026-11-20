@@ -92,7 +92,7 @@ function clearVisible() {
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
   gateway = null; step = offset = 0; pending = ownerScope = query = filter = "";
-  answers = {}; caseEvents = []; casePageCursor = null; reportTx = null; expiryChecked = null; page = "login"; presetMode = false;
+  answers = {}; caseNetwork = caseTransaction = null; caseEvents = []; casePageCursor = null; reportTx = null; expiryChecked = null; page = "login"; presetMode = false;
 }
 import { SAMPLE } from "./soc-sample.mjs";
 import { Gateway, gatewayOrigin, remainingSeconds } from "./gateway.mjs";
@@ -225,7 +225,7 @@ async function perform(task) {
     }
     failureState = {status:failure.status,login:page==="login",report:page==="report",offline:!navigator.onLine,mutation:mutationOutcome};
     error = failureText(failureState);
-    if (failure.status === 401) {
+    if (failure.status === 401 && page !== "login") {
       if (product) await identity.write("session", null);
       clearVisible();
     }
@@ -309,12 +309,7 @@ async function open(next, id, remember=true) {
     else if (next === "contacts") data = await api("trusted-contacts");
     else if (next === "inbox") data = await gateway.request("/inbox");
     else if (next === "reportDetail") {
-      reportHistory=[];requests=[];
-      [data,reportHistory]=await Promise.all([api("integrations/guardian/reports/"+id),api("integrations/guardian/reports/"+id+"/history")]);
-      if(product && gateway.role==="client") {
-        try { requests=await api("integrations/guardian/reports/"+id+"/information-requests"); }
-        catch (e) { if(e.status!==404) throw e; }
-      }
+      [data,reportHistory,requests]=await readReport(gateway,id);
     }
     else if (next === "reports")
       data = await api("integrations/guardian/reports");
@@ -343,6 +338,13 @@ async function open(next, id, remember=true) {
       );
   });
   window.scrollTo(0, 0);
+}
+async function readReport(session,id) {
+  const path="integrations/guardian/reports/"+id;
+  const questions=product && session.role==="client"
+    ? session.api(path+"/information-requests").catch(e=>{if(e.status!==404)throw e;return [];})
+    : [];
+  return Promise.all([session.api(path),session.api(path+"/history"),questions]);
 }
 function loginView() {
   if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><h1>Saq Bol × BCC</h1><p>${T("Переводы под защитой","Қорғалған аударымдар")}</p></div><p class="sign-intro">${T("Войдите в свой учебный аккаунт.","Оқу аккаунтыңызға кіріңіз.")}</p>
@@ -1468,11 +1470,15 @@ root.addEventListener("input", event => {
 // Reconcile visible read models only. A form or an in-flight mutation always wins.
 async function refreshVisible() {
   if (!product || !gateway?.token || loading || polling || document.hidden || Date.now()<nextPoll) return;
-  const active=document.activeElement;
-  if (root.querySelector("#search-form input")?.value && root.querySelector("#search-form input").value!==query)return;
-  if (active?.matches("input,textarea,select") || page==="case" && root.querySelector("#case-note textarea")?.value) return;
+  const editing=()=>{
+    const search=root.querySelector("#search-form input");
+    return document.activeElement?.matches("input,textarea,select") ||
+      Array.from(root.querySelectorAll("#case-note textarea,#request-answer textarea")).some(field=>field.value) ||
+      (search && search.value!==query);
+  };
+  if (editing()) return;
   const g=gateway, rev=viewRevision, screen=page, id=selectedId;
-  const here=()=>g===gateway && rev===viewRevision && page===screen && id===selectedId && !loading && !document.hidden;
+  const here=()=>g===gateway && rev===viewRevision && page===screen && id===selectedId && !loading && !document.hidden && !editing();
   const same=(a,b)=>JSON.stringify(a,(k,v)=>["server_time","as_of"].includes(k)?undefined:v)===JSON.stringify(b,(k,v)=>["server_time","as_of"].includes(k)?undefined:v);
   const params=new URLSearchParams({offset:String(offset),limit:"20"});
   for(const [key,value] of Object.entries(ledgerFilter))if(value)params.set(key,value);
@@ -1500,6 +1506,25 @@ async function refreshVisible() {
   if(screen==="home" && g.role==="admin")read=async()=>{
     const [metrics,feed]=await Promise.all([g.request("/wallet/soc?days="+socDays),g.api("soc/feed?limit=20&offset="+offset+(filter?"&status="+encodeURIComponent(filter):"")+(query?"&q="+encodeURIComponent(query):""))]);
     if(here() && (!same(summary,metrics)||!same(data,feed))){summary=metrics;data=feed;render();}
+  };
+  const reads={
+    inbox:()=>g.request("/inbox"),
+    reports:()=>g.api("integrations/guardian/reports"),
+    cases:()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),
+    notifications:()=>g.api("trusted-contacts/transactions/"+id+"/notifications"),
+    timeline:()=>g.api("integrations/soc/transactions/"+id+"/timeline?limit=50"),
+    analytics:()=>g.request("/wallet/analytics?days="+walletDays),
+    socAnalytics:()=>g.request("/wallet/soc?days="+socDays)
+  };
+  if(Object.hasOwn(reads,screen))read=async()=>{
+    const rows=await reads[screen]();
+    if(here() && !same(data,rows)){data=rows;render();}
+  };
+  if(screen==="reportDetail" && data?.id)read=async()=>{
+    const snapshot=await readReport(g,data.id);
+    if(here() && !same([data,reportHistory,requests],snapshot)){
+      [data,reportHistory,requests]=snapshot;render();
+    }
   };
   if(!read)return;
   polling=true;

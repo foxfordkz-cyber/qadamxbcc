@@ -4,7 +4,11 @@ COPY android-app/package*.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY android-app/www ./www
 COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs ./scripts/
-RUN npm run web
+WORKDIR /src/backend/.qadam-web/install
+COPY deliverables/android/Saq-Bol-Android-2.5.apk deliverables/android/Saq-Bol-Android-2.5.apk.sha256 ./
+RUN sha256sum Saq-Bol-Android-2.5.apk | cmp - Saq-Bol-Android-2.5.apk.sha256
+WORKDIR /src/android-app
+RUN npm run web && test -s ../backend/.qadam-web/install/index.html
 
 FROM python:3.12-slim
 

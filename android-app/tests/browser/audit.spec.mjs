@@ -10,6 +10,7 @@ async function enter(page,baseURL,fixture={}) {
     const path=u.pathname.slice(11);
     let status=200, json={};
     if(path==="auth/login")json={role:"client",subject:"audit-fixture",token:"fixture-session"};
+    else if(path==="inbox")json={items:fixture.messages || []};
     else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",recipients:[{name:"Арман",phone:"+77010000002"}]};
     else if(path==="wallet/operations")json={items};
     else if(path==="wallet/analytics"){status=fixture.analytics||200;json={outgoing:"25000"};}
@@ -82,4 +83,27 @@ test("switching a report from operation A to B preserves A and submits B",async(
   await expect(page.locator("[name=description]")).toHaveValue("Сообщение о второй операции");
   fixture.reportStatus=200;await page.locator("#report-form button").click();await expect.poll(()=>fixture.sent?.transaction_id).toBe(ids[1]);
   await report(ids[0]);await expect(page.locator("[name=description]")).toHaveValue("Черновик первой операции");
+});
+
+test("desktop wallet navigation uses a vertical list of readable labels",async({page,baseURL})=>{
+  await page.setViewportSize({width:1280,height:850});
+  await enter(page,baseURL);
+  const buttons=page.locator(".connected-nav [data-nav]");
+  await expect(buttons.first()).toBeVisible();
+  const geometry=await buttons.evaluateAll(items=>items.map(item=>{
+    const box=item.getBoundingClientRect(), label=item.querySelector("span").getBoundingClientRect();
+    return {top:box.top,height:box.height,labelHeight:label.height,width:box.width};
+  }));
+  expect(geometry).toHaveLength(5);
+  expect(geometry.every((item,i)=>item.width>=140 && item.labelHeight<40 && (i===0||item.top>=geometry[i-1].top+geometry[i-1].height-1))).toBeTruthy();
+});
+
+test("a new security event appears in the open inbox without a manual reload",async({page,baseURL})=>{
+  const fixture={messages:[]};
+  await enter(page,baseURL,fixture);
+  await page.locator("[data-nav=settings]").click();
+  await page.locator("[data-action=inbox]").click();
+  await expect(page.locator("h1")).toContainText("Сообщения безопасности");
+  fixture.messages.push({kind:"transfer",object_id:ids[0],state:"cooling_off",time:"2026-11-20T10:00:00Z"});
+  await expect(page.locator('[data-object-id="'+ids[0]+'"]')).toBeVisible({timeout:5500});
 });
