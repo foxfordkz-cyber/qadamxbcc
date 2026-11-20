@@ -120,7 +120,9 @@ async function main() {
     return { width: canvas.width, height: canvas.height, scale: new DOMMatrix(getComputedStyle(viewport).transform).a, fitted: nodes.length === expected && nodes.every(box => box.left >= -1 && box.left + box.width <= canvas.width + 1 && box.top >= -1 && box.top + box.height <= canvas.height + 1), nodes };
   }, expectedCount);
   try {
-    await page.goto(target, { waitUntil: 'domcontentloaded' }); await language('ru');
+    await page.goto(target, { waitUntil: 'domcontentloaded' });
+    // SSR starts in Kazakh. Restoring our saved Russian locale proves React is handling clicks.
+    await page.locator('html[lang="ru"]').waitFor();
     await preset('normal'); await page.locator('.phone-receipt .badge.approved').waitFor();
     const normalId = await page.locator('.phone-receipt').getAttribute('data-transaction-id');
     check('normal_preset_approved_receipt_inside_phone', await page.locator('.phone-frame .phone-receipt').isVisible() && records.get(normalId)?.status === 'approved');
