@@ -6,7 +6,8 @@ COPY android-app/www ./www
 COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs ./scripts/
 WORKDIR /src/backend/.qadam-web/install
 COPY deliverables/android/Saq-Bol-Android-2.5.apk deliverables/android/Saq-Bol-Android-2.5.apk.sha256 ./
-RUN sha256sum Saq-Bol-Android-2.5.apk | cmp - Saq-Bol-Android-2.5.apk.sha256
+COPY deliverables/android/Saq-Bol-Android-2.6.apk deliverables/android/Saq-Bol-Android-2.6.apk.sha256 ./
+RUN sha256sum -c Saq-Bol-Android-2.5.apk.sha256 Saq-Bol-Android-2.6.apk.sha256
 WORKDIR /src/android-app
 RUN npm run web && test -s ../backend/.qadam-web/install/index.html
 

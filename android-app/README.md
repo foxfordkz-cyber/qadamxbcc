@@ -1,10 +1,10 @@
-# Saq Bol × BCC · Android 2.5
+# Saq Bol × BCC · Android 2.6
 
 ## Қазақша
 
 Клиент аударым жасайды, тәуекел себептерін көреді және операцияны тоқтата алады. SOC қызметкері тиісті аударымды, графты және өтініштің тарихын ашады. Күмәнді скриншоттың мәтіні телефонда танылады. Әр оқу рөліне сервер жеке, мерзімі шектеулі сеанс береді.
 
-Жергілікті іске қосу үшін төмендегі пәрмендерді орындаңыз. Браузерден http://127.0.0.1:18001/wallet/ мекенжайын ашыңыз. `client_demo` үшін қорғалған жергілікті файлдағы `client` мәнін, `admin_demo` үшін `admin` мәнін қолданыңыз. Бастапқы оқу қалдығы 5 000 000 ₸. Сома орындалған синтетикалық аударымдарға қарай өзгереді. Офлайн шолу бөлек үлгі деректерін пайдаланады.
+Жергілікті іске қосу үшін төмендегі пәрмендерді орындаңыз. Браузерден http://127.0.0.1:18001/wallet/ мекенжайын ашыңыз. Қорғалған жергілікті файлда клиенттің (`client_demo`) құпиясөзі `client` өрісінде, SOC қызметкерінікі (`admin_demo`) `admin` өрісінде, платформа әкімшісінікі (`platform_demo`) `platform_admin` өрісінде сақталады. Әкімші техникалық көрсеткіштерді көреді және қызметкердің кіру рұқсатын басқарады. Бастапқы оқу қалдығы 5 000 000 ₸. Сома орындалған синтетикалық аударымдарға қарай өзгереді. Офлайн шолу бөлек үлгі деректерін пайдаланады.
 
 ## Запуск на ноутбуке
 
@@ -18,7 +18,7 @@ cd ..
 docker compose -f docker-compose.android.yml up -d --build --wait
 ```
 
-Откройте [кошелёк на localhost](http://127.0.0.1:18001/wallet/) и выберите ҚАЗ или РУС. Для входа под `client_demo` возьмите значение `client`, для `admin_demo` — значение `admin` из локального файла `.local-checks/mobile-access/access.json`. Шлюз генерирует пароли заново при старте. Для сценария CI с отдельными кодами можно установить `QADAM_MOBILE_AUTH_MODE=rehearsal` перед запуском Compose.
+Откройте [кошелёк на localhost](http://127.0.0.1:18001/wallet/) и выберите ҚАЗ или РУС. Пароли находятся в локальном файле `.local-checks/mobile-access/access.json`. Клиенту `client_demo` соответствует поле `client`, сотруднику SOC `admin_demo` — `admin`, администратору платформы `platform_demo` — `platform_admin`. Шлюз генерирует пароли заново при старте. Для сценария CI с отдельными кодами можно установить `QADAM_MOBILE_AUTH_MODE=rehearsal` перед запуском Compose.
 
 1. Войдите в аккаунт клиента. Откройте кошелёк, выберите учебного получателя, отправьте перевод и посмотрите серверную квитанцию. Учебный баланс рассчитывается от начальных 5 000 000 ₸ с учётом исполненных операций.
 2. Откройте удержанный перевод с активным звонком, отметьте окончание разговора. Сообщение об обмане отменяет его через платёжное ядро. Через пять минут можно подтвердить собственный выбор. Платёжная пауза проверяется отдельно при решении о переводе.
@@ -35,7 +35,7 @@ docker compose -f docker-compose.android.yml up -d --build --wait
 
 С версии 2.5 тот же кошелёк можно открыть в браузере с учебной учётной записью мобильного стенда. Для входа используются защищённые cookie. [Открыть кошелёк / Әмиянды ашу](https://saq-bol-mobile.onrender.com/wallet/)
 
-Для своего экземпляра разверните этот профиль из приватного репозитория в Render. Укажите приватный каталог в `QADAM_PRIVATE_DIR` и выполните `python -m scripts.mobile_accounts` из `backend/`. Передайте в `BCC_MOBILE_CLIENT_HASH` и `BCC_MOBILE_ADMIN_HASH` только scrypt-хэши двух разных паролей. Сборке APK нужен публичный HTTPS-адрес из поля URL созданного сервиса в переменной `QADAM_API_ORIGIN`.
+Для своего экземпляра разверните этот профиль из приватного репозитория в Render. Укажите приватный каталог в `QADAM_PRIVATE_DIR` и выполните `python -m scripts.mobile_accounts` из `backend/`. Скрипт создаёт недостающие файлы учётных записей. Передайте scrypt-хэши отдельных паролей в `BCC_MOBILE_CLIENT_HASH`, `BCC_MOBILE_ADMIN_HASH` и, для входа администратора платформы, `BCC_MOBILE_PLATFORM_HASH`. Сборке APK нужен публичный HTTPS-адрес из поля URL созданного сервиса в переменной `QADAM_API_ORIGIN`.
 
 Нужны JDK 21+, Android SDK 36 и Node.js 22+. Для работы через USB в Windows PowerShell выполните из `android-app` при запущенном локальном шлюзе.
 
@@ -56,7 +56,7 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 Запустите контейнер из `backend/Dockerfile` командой `python -m scripts.mobile_hosted` с рабочим каталогом `backend`. Этот процесс обслуживает `/mobile/v1` и `/health`. Используйте отдельные учебные PostgreSQL и Redis и задайте на сервере:
 
 - `BCC_ENVIRONMENT=demo`, `BCC_BOOTSTRAP_DEMO=true`, `BCC_MOBILE_ENABLED=true`, `BCC_MOBILE_AUTH_MODE=password`.
-- `BCC_DATABASE_URL`, `BCC_REDIS_URL` и два разных scrypt-хеша в `BCC_MOBILE_CLIENT_HASH` и `BCC_MOBILE_ADMIN_HASH`. Личные пароли создаёт `QADAM_PRIVATE_DIR=<private-dir> python -m scripts.mobile_accounts`. Функция `app.mobile_gateway.passwords.encode` получает серверный хеш каждого пароля.
+- `BCC_DATABASE_URL`, `BCC_REDIS_URL` и разные scrypt-хеши в `BCC_MOBILE_CLIENT_HASH` и `BCC_MOBILE_ADMIN_HASH`. Для отдельного кабинета администратора задайте также `BCC_MOBILE_PLATFORM_HASH`. Личные пароли создаёт `QADAM_PRIVATE_DIR=<private-dir> python -m scripts.mobile_accounts`. Функция `app.mobile_gateway.passwords.encode` получает серверный хеш каждого пароля.
 - Для учебной доставки `BCC_INTEGRATIONS_ENABLED=true`, `BCC_INTEGRATIONS_ENVIRONMENT=test`, `BCC_INTEGRATIONS_TELEGRAM_MODE=fake` и отдельный `BCC_INTEGRATIONS_SIGNING_KEY`. Приватный Telegram-круг веб-стенда имеет собственные базу и проверку владельца.
 
 ## Проверки
