@@ -1,3 +1,7 @@
+import {revealChartSelection} from "./spending-chart.mjs";
+import {walletUI,icon as walletIcon} from "./wallet.mjs";
+import {offlineWallet} from "./offline-wallet.mjs";
+import {ledgerTime,ledgerInstant} from "./wallet-date.mjs";
 import { COPY } from "./copy.mjs";
 import {
   STORAGE_KEY,
@@ -110,8 +114,21 @@ function welcome() {
 function languageButtons() {
   return `<div class="languages" role="group" aria-label="Тіл / Язык"><button data-lang="kk" aria-pressed="${state.language === "kk"}">ҚАЗ</button><button data-lang="ru" aria-pressed="${state.language === "ru"}">РУС</button></div>`;
 }
+const T=(ru,kk)=>state.language==="ru"?ru:kk;
+const wallet=walletUI({T,E:esc,amount:money,when:ledgerTime,button:action,status:t});
+let days=7,selection=null,hideBalance=false,historyFilter={q:"",status:"",direction:"",day:"",through:"",days:""};
 function home() {
-  return `${heading(t("greeting"))}<section class="balance-card"><div class="card-top"><span>${t("balance")}</span><span class="card-dot"></span></div><div class="balance">${money(850000)}</div><p>${t("balanceNote")}</p><div class="card-bottom"><span>QADAM <b>DEMO</b></span>${icon("shield")}</div></section><div class="section-title"><h2>${t("actions")}</h2><span class="offline-dot">${t("ready")}</span></div><div class="quick-grid"><button class="quick" data-action="transfer"><span class="quick-icon">${icon("arrow")}</span><strong>${t("transfer")}</strong></button><button class="quick lavender" data-action="check"><span class="quick-icon">${icon("scan")}</span><strong>${t("check")}</strong></button></div><button class="insight" data-route="safety"><div><span class="eyebrow">QADAM GUARD</span><h2>${t("protection")}</h2><p>${t("protectionText")}</p></div><span class="insight-mark">${icon("shield")}</span></button><div class="section-title"><h2>${t("recent")}</h2><button class="text-button" data-route="history">${t("more")}</button></div>${rows(state.transfers.slice(0, 3))}`;
+  const local=offlineWallet(state);
+  return wallet.home(local.account,{items:local.items},local.analytics(7),hideBalance,"",true);
+}
+function practiceHistory(){
+  let items=offlineWallet(state).items.filter(r=>{
+    const day=ledgerInstant(r.created_at).day;
+    return (!historyFilter.q||(r.counterparty+" "+r.transaction_id).toLowerCase().includes(historyFilter.q.toLowerCase())) &&
+      (!historyFilter.status||r.status===historyFilter.status) && (!historyFilter.direction||r.direction===historyFilter.direction) &&
+      (!historyFilter.day||(day>=historyFilter.day && day<=(historyFilter.through||historyFilter.day)));
+  });
+  return wallet.history({items,has_more:false},historyFilter);
 }
 function transfer() {
   return `${heading(t("scenario"), t("scenarioHint"))}<div class="presets">${Object.entries(
@@ -140,7 +157,7 @@ function receipt() {
   return `<div class="receipt"><span class="result-icon ${tx.status}">${icon(statusIcon)}</span>${heading(t(tx.status), t(`${tx.status}Text`))}<div class="amount">${money(PRESETS[tx.preset].amount)}</div><p>${PRESETS[tx.preset].recipient} · ${date(tx.createdAt)}</p></div><section class="paper"><h2>${t("timeline")}</h2><ol class="timeline"><li><strong>${t("evaluated")}</strong><small>${t(tx.preset)}</small></li><li><strong>${t("decision")}</strong><small>${t(tx.status)}</small></li><li><strong>${t("noMessage")}</strong><small>${t("saved")}</small></li></ol></section>${tx.status === "cooling_off" ? `${action("check", t("check"))}${action("cancel-transfer", t("cancelTransfer"), "secondary", "close")}` : action("home", t("done"))}`;
 }
 function safety() {
-  return `${heading(t("safetyTitle"), t("safetyText"))}<button class="safety-feature" data-action="check"><span class="feature-icon">${icon("scan")}</span><h2>${t("questionnaire")}</h2><p>${t("questionnaireText")}</p><span class="round-arrow">${icon("arrow")}</span></button><section class="paper"><div class="section-title"><h2>${t("circle")}</h2>${icon("people")}</div><div class="avatars"><span>A</span><span>B</span><span>C</span><small>DEMO</small></div><p>${t("circleText")}</p><p class="fine">${t("circleNote")}</p>${action("connect", t("connectTeam"), "secondary", "scan")}</section><section class="paper"><h2>${t("learn")}</h2><ul class="rules">${[1, 2, 3].map((n) => `<li><span>${n}</span>${t(`rule${n}`)}</li>`).join("")}</ul></section>`;
+  return `${heading(t("safetyTitle"), t("safetyText"))}<button class="safety-feature" data-action="check"><span class="feature-icon">${icon("scan")}</span><h2>${t("questionnaire")}</h2><p>${t("questionnaireText")}</p><span class="round-arrow">${icon("arrow")}</span></button><section class="paper"><div class="section-title"><h2>${t("circle")}</h2>${icon("people")}</div><div class="avatars"><span>A</span><span>B</span><span>C</span><small>DEMO</small></div><p>${t("circleText")}</p><p class="fine">${t("circleNote")}</p>${action("connect", T("Войти в Qadam Shield","Qadam Shield жүйесіне кіру"), "secondary", "scan")}</section><section class="paper"><h2>${t("learn")}</h2><ul class="rules">${[1, 2, 3].map((n) => `<li><span>${n}</span>${t(`rule${n}`)}</li>`).join("")}</ul></section>`;
 }
 function check() {
   const result = safetyResult(answers);
@@ -149,7 +166,7 @@ function check() {
   return `${heading(t("questionnaire"), t("questionnaireText"))}<div class="progress" aria-label="${t("question")} ${answers.length + 1} / 3">${[0, 1, 2].map((i) => `<span class="${i <= answers.length ? "filled" : ""}"></span>`).join("")}</div><span class="eyebrow">${t("question")} ${answers.length + 1} / 3</span><div class="question-card"><h2>${t(`q${answers.length + 1}`)}</h2></div><div class="answer-grid">${action("yes", t("yes"), "primary", "check")}${action("no", t("no"), "secondary", "close")}</div><p class="fine">${t("advisory")}</p>`;
 }
 function settings() {
-  return `${heading(t("profileTitle"), t("localProfile"))}<section class="paper"><div class="section-title"><h2>${t("language")}</h2>${languageButtons()}</div></section><section class="paper"><h2>${t("connection")}</h2><div class="connection"><span class="tile approved">${icon("check")}</span><div><strong>${t("offline")}</strong><small>${t("offlineNote")}</small></div></div><button class="connection" data-action="connect"><span class="tile">${icon("scan")}</span><span><strong>${t("connectTeam")}</strong><small>${t("teamNote")}</small></span>${icon("arrow")}</button><a class="connection" href="connect.html"><span class="tile">${icon("scan")}</span><span><strong>QR · Saq Bol</strong><small>${state.language === "ru" ? "Веб-клиент Айданы" : "Айдананың веб-клиенті"}</small></span></a><button class="connection" data-action="website"><span class="tile">${icon("globe")}</span><span><strong>${t("publicDemo")}</strong><small>${t("publicNote")}</small></span>${icon("arrow")}</button></section><section class="paper"><h2>${t("data")}</h2><p>${t("dataNote")}</p>${action("reset", t("reset"), "danger-button", "close")}</section><p class="fine">${t("version")}</p><p class="fine">${t("copyright")}</p>${resetting ? `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title"><h2 id="reset-title">${t("resetAsk")}</h2><p>${t("resetNote")}</p>${action("erase", t("erase"), "primary", "close")}${action("dismiss", t("cancel"), "secondary")}</section></div>` : ""}`;
+  return `${heading(t("profileTitle"), t("localProfile"))}<section class="paper"><div class="section-title"><h2>${t("language")}</h2>${languageButtons()}</div></section><section class="paper"><h2>${t("connection")}</h2><div class="connection"><span class="tile approved">${icon("check")}</span><div><strong>${t("offline")}</strong><small>${t("offlineNote")}</small></div></div><button class="connection" data-action="connect"><span class="tile">${icon("scan")}</span><span><strong>${T("Войти в Qadam Shield","Qadam Shield жүйесіне кіру")}</strong><small>${T("Учебный аккаунт клиента или сотрудника","Клиенттің немесе қызметкердің оқу аккаунты")}</small></span>${icon("arrow")}</button></section><section class="paper"><h2>${t("data")}</h2><p>${t("dataNote")}</p>${action("reset", t("reset"), "danger-button", "close")}</section><p class="fine">${t("version")}</p><p class="fine">${t("copyright")}</p>${resetting ? `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title"><h2 id="reset-title">${t("resetAsk")}</h2><p>${t("resetNote")}</p>${action("erase", t("erase"), "primary", "close")}${action("dismiss", t("cancel"), "secondary")}</section></div>` : ""}`;
 }
 function render() {
   document.documentElement.lang = state.language;
@@ -157,7 +174,7 @@ function render() {
     app.innerHTML = welcome();
     return;
   }
-  const mainRoutes = ["home", "history", "safety", "settings"];
+  const mainRoutes = ["home", "history", "safety", "analytics", "settings"];
   const isRoot = mainRoutes.includes(route);
   const selected = isRoot ? route : route === "check" ? "safety" : "home";
   const screens = {
@@ -168,10 +185,13 @@ function render() {
     safety,
     check,
     settings,
-    history: () =>
-      heading(t("history"), t("historyText")) + rows(state.transfers),
+    analytics:()=>wallet.analytics(offlineWallet(state).analytics(days),selection),
+    history:practiceHistory,
   };
-  app.innerHTML = `<div class="shell"><header class="topbar">${isRoot ? '<div class="wordmark"><img src="mark.svg" alt=""><span>qadam<span class="wordmark-light"> shield</span></span></div>' : `<button class="back" data-action="back" aria-label="${t("back")}">${icon("back")}</button><span class="top-title">Qadam Shield</span>`}<button class="profile-dot" data-route="settings" aria-label="${t("settings")}">Q</button></header><div class="demo-strip">${t("demo")}</div>${!navigator.onLine ? `<div class="network-note" role="status">${t("noInternet")}</div>` : ""}${storageFailed ? `<div class="network-note">${t("storageError")}</div>` : ""}<main id="main">${(screens[route] ?? home)()}</main><nav class="bottom-nav" aria-label="${t("home")}">${mainRoutes.map((key) => `<button data-route="${key}" aria-current="${selected === key ? "page" : "false"}">${icon(key === "safety" ? "shield" : key)}<span>${t(key)}</span></button>`).join("")}</nav></div>`;
+  app.dataset.screen=route;app.dataset.actor="client";
+  app.innerHTML=`<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${t("back")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>qadam</span></div><button class="text-button" data-action="language">${T("ҚАЗ","РУС")}</button></header><main><div class="offline-source">${T("Офлайн · учебные данные телефона","Офлайн · телефондағы оқу деректері")}<button data-action="connect">${T("Войти","Кіру")}</button></div>${storageFailed?'<p class="network-note">'+t("storageError")+'</p>':""}${(screens[route]??home)()}</main><nav class="bottom-nav connected-nav">${mainRoutes.map(key=>`<button data-route="${key}" aria-current="${selected===key?"page":"false"}"><b>${walletIcon(key)}</b><span>${key==="analytics"?T("Аналитика","Талдау"):t(key)}</span></button>`).join("")}</nav></div>`;
+  if(route==="analytics")revealChartSelection(app);
+
 }
 function back() {
   if (resetting) {
@@ -200,6 +220,17 @@ app.addEventListener("click", async (event) => {
     render();
     return;
   }
+  if(button.dataset.days){days=Number(button.dataset.days);selection=null;render();return;}
+  if(button.dataset.chartDay){selection=offlineWallet(state).analytics(days).series.findIndex(d=>d.day===button.dataset.chartDay);render();return;}
+  if(button.dataset.drillDay||button.hasAttribute("data-drill-status")){
+    const stats=offlineWallet(state).analytics(days);
+    historyFilter={q:"",status:button.dataset.drillStatus||"",direction:"",days:"",day:button.dataset.drillDay||stats.from,through:button.dataset.through||stats.series.at(-1).day};
+    navigate("history");return;
+  }
+  if(button.dataset.action==="clear-period"){historyFilter={q:"",status:"",direction:"",days:"",day:"",through:""};render();return;}
+  if(button.dataset.action==="mask-balance"){hideBalance=!hideBalance;render();return;}
+  if(button.dataset.action==="language"){state.language=T("kk","ru");try{localStorage.setItem("qadam.language",state.language);}catch{} save();render();return;}
+  if(["settings","history","safety","analytics"].includes(button.dataset.action)){navigate(button.dataset.action);return;}
   if (button.dataset.route) {
     navigate(button.dataset.route);
     return;
@@ -223,7 +254,7 @@ app.addEventListener("click", async (event) => {
     case "offline":
       state.welcomed = true;
       save();
-      history.replaceState(null, "", "demo.html?offline=1");
+      history.replaceState(null, "", "index.html?offline=1");
       navigate("home");
       break;
     case "transfer":
@@ -311,3 +342,5 @@ render();
 installBackHandler(back).catch(() => {
   /* Browser preview has no native back button. */
 });
+
+app.addEventListener("submit",event=>{if(event.target.id!=="ledger-filter")return;event.preventDefault();Object.assign(historyFilter,Object.fromEntries(new FormData(event.target)));render();});

@@ -1,3 +1,6 @@
+import {revealChartSelection} from "./spending-chart.mjs";
+import { layoutNetwork, graphCamera } from "./network-graph.mjs";
+let camera;
 import { ledgerTime } from "./wallet-date.mjs";
 import { walletUI, icon } from "./wallet.mjs";
 import { shortcuts, familyView, checkView, packetContent } from "./guardian.mjs";
@@ -12,6 +15,31 @@ let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],reque
 let walletDays=7,socDays=7,selectedDay=null,caseFilter="",caseOffset=0,backStack=[];
 let lastRead=null;
 let guardRefreshed = "", guardReceived = 0;
+let scanText = "", reportChoice = false;
+let drafts = {byOperation:{}, last:null};
+const reportKey = id => id || "general";
+function readDrafts(value) {
+  if (value?.version === 2) return value;
+  if (!value) return {version:2, byOperation:{}, last:null};
+  const key = reportKey(value.transaction_id);
+  return {version:2, byOperation:{[key]:value}, last:key};
+}
+function persistDrafts() {
+  const slot = "report." + ownerScope;
+  const snapshot = structuredClone(drafts);
+  const write = savingDraft.catch(() => {}).then(() => identity.write(slot, snapshot));
+  savingDraft = write;
+  return write;
+}
+function selectReport(id) {
+  reportTx = id || null;
+  reportDraft = drafts.byOperation[reportKey(reportTx)] || null;
+  reportChoice = false;
+}
+function reportContext(id) {
+  return id ? T("Связанная операция","Байланысты операция") + " · " + E(id) :
+    T("Без привязки к переводу","Аударымға байланыстырылмаған");
+}
 let savingDraft = Promise.resolve(), reportTx = null;
 let presetMode = false, mutationOutcome = false, expiryChecked = null;
 const accountLabel = () => T("Учебный счёт · виртуальные средства", "Оқу шоты · виртуалды қаражат");
@@ -35,13 +63,15 @@ async function loadOwner(g, subject) {
     } catch { /* Preserve an unproven legacy request in quarantine. */ }
   }
   if (product) {
-    reportDraft = await identity.read("report." + ownerScope);
+    await savingDraft.catch(() => {});
+    drafts = readDrafts(await identity.read("report." + ownerScope));
     invitation = await identity.read("invite." + ownerScope);
   }
   offset = 0;
   await open("home");
 }
 function clearVisible() {
+  scanText=""; reportChoice=false; drafts=readDrafts(null);
   lastRead=null;
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
@@ -208,7 +238,10 @@ async function open(next, id, remember=true) {
     if (next === "home" || next === "history") {
       if(product && gateway.role==="client") {
         if(next==="home"){
-          [account,data,summary]=await Promise.all([gateway.request("/account"),gateway.request("/wallet/operations?limit=3"),gateway.request("/wallet/analytics?days=7")]);
+          const results=await Promise.allSettled([gateway.request("/account"),gateway.request("/wallet/operations?limit=3"),gateway.request("/wallet/analytics?days=7")]);
+          const authFailure=results.find(r=>r.status==="rejected" && r.reason?.status===401);
+          if(authFailure)throw authFailure.reason;
+          [account,data,summary]=results.map(r=>r.status==="fulfilled"?r.value:null);
         }else{
           const params=new URLSearchParams({offset:String(offset),limit:"20"});
           for(const [k,v] of Object.entries(ledgerFilter))if(v)params.set(k,v);
@@ -385,8 +418,12 @@ function transferView() {
       "",
     )}<button type="submit" class="primary">${T("Проверить детали", "Мәліметті тексеру")} →</button></form></section>`;
 }
+async function back() {
+  const previous = backStack.pop();
+  await open(previous?.page || "home", previous?.id, false);
+}
 function reviewView() {
-  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}<section class="paper"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name ?? draft.recipient_phone)}</h2><small>${E(draft.recipient_phone)}</small><div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p></section>${button("submit-transfer", T("Отправить на анализ", "Талдауға жіберу"))}`;
+  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}<section class="paper"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name ?? draft.recipient_phone)}</h2><small>${E(draft.recipient_phone)}</small><div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p></section>${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"))}`;
 }
 const questions = [
   [
@@ -453,10 +490,10 @@ function safetyView() {
   const cards = [
     [
       "scan",
-      T("Scam Check · проверка сообщения", "Scam Check · хабарламаны тексеру"),
+      T("Проверить сообщение", "Хабарламаны тексеру"),
       T(
-        "Локальные правила без внешнего AI и сохранения текста",
-        "Мәтінді сақтамайтын, сыртқы AI қолданбайтын ережелер",
+        "Узнать признаки обмана в тексте или на скриншоте",
+        "Мәтін мен скриншоттағы алаяқтық белгілері",
       ),
     ],
     [
@@ -476,8 +513,8 @@ function safetyView() {
       "report",
       T("Сообщить о подозрении", "Күдік туралы хабарлау"),
       T(
-        "Синтетическое обращение в демо-SOC",
-        "Демо-SOC-қа жасанды деректермен хабарлама",
+        "Передать ситуацию сотруднику безопасности",
+        "Жағдайды қауіпсіздік қызметіне хабарлау",
       ),
     ],
     [
@@ -487,7 +524,7 @@ function safetyView() {
     ],
     [
       "gateway",
-      T("Mock Gateway", "Mock Gateway"),
+      T("Проверить получателя", "Алушыны тексеру"),
       T(
         "Только синтетические идентификаторы; не НБК",
         "Тек жасанды идентификаторлар; ҰБ емес",
@@ -502,10 +539,14 @@ function safetyView() {
   return `${title(T("Защита", "Қорғаныс"))}<div class="action-list">${cards.map(([key, label, sub]) => `<button data-action="${key}">${label}<small>${sub}</small></button>`).join("")}</div>`;
 }
 function scanView() {
-  return `${title("Scam Check", T("Вводи только синтетический текст, без кодов и реквизитов.", "Кодтар мен деректемелерсіз тек жасанды мәтін енгіз."))}<section class="paper"><form id="scan-form" class="form-stack"><label>${T("Текст сообщения", "Хабарлама мәтіні")}<textarea name="text" minlength="1" maxlength="2000" required autocomplete="off"></textarea></label><button class="primary" type="submit">${T("Проверить", "Тексеру")} →</button></form></section>${scanResult ? `<section class="paper"><h2>${T("Результат", "Нәтиже")}</h2><p>${E(scanResult.guidance)}</p>${(scanResult.signals ?? []).map((s) => `<div class="reason"><p>${E(s.explanation)}</p></div>`).join("")}<p class="fine">${E(scanResult.limitation)}</p></section>` : ""}`;
+  return `${title("Scam Check", T("Вводи только синтетический текст, без кодов и реквизитов.", "Кодтар мен деректемелерсіз тек жасанды мәтін енгіз."))}<section class="paper"><form id="scan-form" class="form-stack"><label>${T("Текст сообщения", "Хабарлама мәтіні")}<textarea name="text" minlength="1" maxlength="2000" required autocomplete="off">${E(scanText)}</textarea></label><button class="primary" type="submit">${T("Проверить", "Тексеру")} →</button></form></section>${button("clear-scan",T("Очистить текст","Мәтінді тазарту"),"text-button")}${scanResult ? `<section class="paper"><h2>${T("Результат", "Нәтиже")}</h2><p>${E(scanResult.guidance)}</p>${(scanResult.signals ?? []).map((s) => `<div class="reason"><p>${E(s.explanation)}</p></div>`).join("")}<p class="fine">${E(scanResult.limitation)}</p></section>` : ""}`;
 }
 function reportView() {
-  return `${title(T("Демо-обращение", "Демо-өтініш"))}<section class="paper"><form id="report-form" class="form-stack"><label>${T("Категория", "Санат")}<select name="category"><option value="impersonation">${T("Представился банком", "Банк атынан танысты")}</option><option value="safe_account">${T("«Безопасный счёт»", "«Қауіпсіз шот»")}</option><option value="remote_access">${T("Удалённый доступ", "Қашықтан кіру")}</option><option value="other">${T("Другое", "Басқа")}</option></select></label><label>${T("Синтетическое описание", "Жасанды сипаттама")}<textarea name="description" minlength="10" maxlength="500" required autocomplete="off"></textarea></label><label class="tick-field"><input type="checkbox" name="consent" required>${T("Подтверждаю отправку в демо-SOC. В тексте нет настоящих личных данных.", "Демо-SOC-қа жіберуді растаймын. Мәтінде нақты жеке деректер жоқ.")}</label><button class="primary" type="submit">${T("Отправить в демо-SOC", "Демо-SOC-қа жіберу")} →</button></form></section>`;
+  if (reportChoice) return title(T("Выберите черновик","Нобайды таңдаңыз")) +
+    '<section class="paper"><p>'+reportContext(drafts.byOperation[drafts.last]?.transaction_id)+'</p>'+
+    button("report-previous",T("Продолжить прежний черновик","Алдыңғы нобайды жалғастыру"),"secondary")+
+    '<p>'+reportContext(reportTx)+'</p>'+button("report-current",T("Открыть форму для этой операции","Осы операцияның нысанын ашу"))+'</section>';
+  return `${title(T("Сообщить о подозрении", "Күдік туралы хабарлау"))}<section class="paper"><p class="report-context">${reportContext(reportTx)}</p><form id="report-form" class="form-stack"><label>${T("Категория", "Санат")}<select name="category"><option value="impersonation">${T("Представился банком", "Банк атынан танысты")}</option><option value="safe_account">${T("«Безопасный счёт»", "«Қауіпсіз шот»")}</option><option value="remote_access">${T("Удалённый доступ", "Қашықтан кіру")}</option><option value="other">${T("Другое", "Басқа")}</option></select></label><label>${T("Что произошло", "Не болды")}<textarea name="description" minlength="10" maxlength="500" required autocomplete="off"></textarea></label><label class="tick-field"><input type="checkbox" name="consent" required>${T("Подтверждаю отправку в демо-SOC. В тексте нет настоящих личных данных.", "Демо-SOC-қа жіберуді растаймын. Мәтінде нақты жеке деректер жоқ.")}</label><button class="primary" type="submit">${T("Отправить в демо-SOC", "Демо-SOC-қа жіберу")} →</button></form></section>`;
 }
 function reportsView() {
   return `${title(T("Обращения", "Өтініштер"))}${!data?.length ? `<p class="empty">${T("Обращений нет", "Өтініштер жоқ")}</p>` : data.map((r) => `<section class="paper"><span class="status-pill">${E(label(r.state))}</span><p>${E(r.description)}</p><p class="fine">${E(label(r.category))} · ${when(r.created_at)}</p><small>${E(r.id)}</small><button class="text-button" data-object="report" data-object-id="${E(r.id)}">${T("Открыть квитанцию","Түбіртекті ашу")}</button>${gateway.role === "admin" ? `<div class="inline-actions"><button data-ack="${E(r.id)}">${T("Отметить", "Белгілеу")}</button><button data-open-case="${E(r.id)}">${T("Открыть дело", "Іс ашу")}</button></div>` : ""}</section>`).join("")}${button("reports", T("Обновить", "Жаңарту"), "secondary")}`;
@@ -522,24 +563,14 @@ const labels = {
 };
 const label = key => labels[key] ? T(...labels[key]) : T("Статус уточняется","Күйі нақтылануда");
 function contactsView() {
-  return `${title(T("Круг доверия", "Сенім шеңбері"), T("Контакт может сообщить о подозрении, но не одобрить перевод. Приглашение не означает согласие.", "Сенімді адам күдік туралы хабарлай алады, бірақ аударымды мақұлдай алмайды. Шақыру келісім болып саналмайды."))}<section class="paper">${(data?.contacts ?? []).map((c) => `<div class="contact"><strong>${E(c.alias || T("Контакт", "Контакт"))}</strong><p>${E(label(c.state))}</p><small>${E(c.language)}</small>${c.state !== "CONTACT_REVOKED" ? `<button class="text-button" data-revoke="${E(c.id)}">${T("Отозвать согласие", "Келісімді қайтарып алу")}</button>` : ""}</div>`).join("") || `<p>${T("Контакты не подключены.", "Контактілер қосылмаған.")}</p>`}</section><p class="callout">${T("Этот стенд работает с Fake Telegram. Реальные сообщения из приложения выключены. Подключение живого бота — отдельная согласованная проверка.", "Бұл стенд Fake Telegram-мен жұмыс істейді. Қолданбадан нақты хабарлама жіберу өшірулі. Нақты ботты қосу — бөлек келісілген тексеру.")}</p>${button("invite-confirm", T("Создать тестовое приглашение", "Тест шақыруын жасау"), "secondary")}`;
+  return `${title(T("Круг доверия", "Сенім шеңбері"), T("Контакт может сообщить о подозрении, но не одобрить перевод. Приглашение не означает согласие.", "Сенімді адам күдік туралы хабарлай алады, бірақ аударымды мақұлдай алмайды. Шақыру келісім болып саналмайды."))}<section class="paper">${(data?.contacts ?? []).map((c) => `<div class="contact"><strong>${E(c.alias || T("Контакт", "Контакт"))}</strong><p>${E(label(c.state))}</p><small>${E(c.language)}</small>${c.state !== "CONTACT_REVOKED" ? `<button class="text-button" data-revoke="${E(c.id)}">${T("Отозвать согласие", "Келісімді қайтарып алу")}</button>` : ""}</div>`).join("") || `<p>${T("Контакты не подключены.", "Контактілер қосылмаған.")}</p>`}</section><p class="callout">${T("Этот стенд работает с Fake Telegram. Реальные сообщения из приложения выключены. Подключение живого бота — отдельная согласованная проверка.", "Бұл стенд Fake Telegram-мен жұмыс істейді. Қолданбадан нақты хабарлама жіберу өшірулі. Нақты ботты қосу — бөлек келісілген тексеру.")}</p>${button("invite-confirm", T("Пригласить близкого", "Жақын адамды шақыру"), "secondary")}`;
 }
 function graphView() {
   const nodes = data?.nodes ?? [],
     edges = data?.edges ?? [],
     visible = nodes.slice(0, 30);
-  const coords = new Map(
-    visible.map((n, i) => [
-      n.id,
-      {
-        x:
-          180 + 125 * Math.cos((2 * Math.PI * i) / Math.max(visible.length, 1)),
-        y:
-          150 + 110 * Math.sin((2 * Math.PI * i) / Math.max(visible.length, 1)),
-      },
-    ]),
-  );
-  return `${title(T("Связи получателя", "Алушының байланыстары"), T("Признаки дроп-сети — основание для проверки, а не доказательство вины.", "Дроп-желі белгілері — тексеруге негіз, кінәнің дәлелі емес."))}<svg class="graph" viewBox="0 0 360 300" role="img" aria-label="${T("Граф связей", "Байланыстар графы")}">${edges
+  const {points:coords,box}=layoutNetwork(visible);
+  return `${title(T("Связи получателя", "Алушының байланыстары"), T("Признаки дроп-сети — основание для проверки, а не доказательство вины.", "Дроп-желі белгілері — тексеруге негіз, кінәнің дәлелі емес."))}<svg class="graph" tabindex="0" viewBox="${box.join(" ")}" role="img" aria-label="${T("Граф связей", "Байланыстар графы")}">${edges
     .filter((e) => coords.has(e.source) && coords.has(e.target))
     .map(
       (e) =>
@@ -576,7 +607,7 @@ function gatewayView() {
   return `${title("Mock Gateway", T("Учебные данные. Это не обращение в НБК.", "Оқу деректері. Бұл ҰБ-ке сұрау емес."))}<section class="paper"><form id="gateway-form" class="form-stack"><label>${T("Синтетический идентификатор", "Жасанды идентификатор")}<select name="identifier"><option>SYN-CLEAR-001</option><option>SYN-REVIEW-001</option><option>SYN-NETWORK-001</option></select></label><button type="submit" class="primary">${T("Проверить", "Тексеру")} →</button></form>${data ? `<p>${E(data[lang === "ru" ? "description_ru" : "description_kk"])}</p><p class="fine">${E(data.result?.status)} · MOCK</p>` : ""}</section>`;
 }
 function settingsView() {
-  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${gateway.role === "admin" ? T("Сотрудник безопасности","Қауіпсіздік қызметкері") : E(account?.display_name||"Qadam")}</h2><p>${accountLabel()}</p><small>Qadam Shield 2.3 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
+  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${gateway.role === "admin" ? T("Сотрудник безопасности","Қауіпсіздік қызметкері") : E(account?.display_name||"Qadam")}</h2><p>${accountLabel()}</p><small>Qadam Shield 2.4 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
     button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
     (gateway.role === "client" ? button("contacts",T("Мои согласия","Келісімдерім"),"secondary")+button("open-guardian","Telegram Guardian","secondary") : "") + button("logout",T("Выйти","Шығу"));
   return `${title(T("Профиль доступа", "Кіру профилі"))}<section class="paper"><h2>${gateway.role === "admin" ? "SOC / Admin" : T("Клиент", "Клиент")}</h2><p>${T("Роль назначена сервером. Сессия действует 30 минут, затем нужен повторный вход.", "Рөлді сервер тағайындады. Сессия 30 минутқа жарамды, содан кейін қайта кіру қажет.")}</p><p class="fine">${E(gateway.origin)}</p></section>${button("logout", T("Выйти из аккаунта", "Аккаунттан шығу"), "secondary")}`;
@@ -641,7 +672,7 @@ const screens = {
   confirmCancel: () =>
     `${title(T("Отменить перевод?", "Аударым тоқтатылсын ба?"))}<p class="callout">${T("Отмена тестовой операции необратима. Администратор не может отправить её за тебя.", "Тест әрекетін тоқтату қайтарылмайды. Әкімші оны сенің атыңнан жібере алмайды.")}</p>${button("cancel-transfer", T("Да, отменить", "Иә, тоқтату"))}${button("refresh-detail", T("Вернуться", "Қайту"), "secondary")}`,
   invite: () =>
-    `${title(T("Тестовое приглашение", "Тест шақыруы"))}<p class="callout">${T("Подтверждаю своё согласие пригласить синтетический контакт. Согласие контакта отдельно; сообщение в Telegram не отправляется.", "Жасанды контактіні шақыруға келісімімді растаймын. Контактінің келісімі бөлек; Telegram-ға хабарлама жіберілмейді.")}</p>${button("create-invite", T("Подтверждаю", "Растаймын"))}`,
+    `${title(T("Тестовое приглашение", "Тест шақыруы"))}<p class="callout">${T("Создайте приглашение для близкого. Уведомления доступны только после его личного согласия.", "Жақын адамыңызға шақыру жасаңыз. Хабарламалар оның жеке келісімінен кейін ғана қолжетімді.")}</p>${button("create-invite", T("Подтверждаю", "Растаймын"))}`,
 };
 function render() {
   document.documentElement.lang = lang;
@@ -690,7 +721,7 @@ function render() {
         if(!file) return;
         e.target.disabled=submit.disabled=true;
         message.textContent=T("Распознаём на устройстве…","Құрылғыда мәтін танылуда…");
-        try {const text=await readScreenshot(file); if(text) form.elements.text.value=text;
+        try {const text=await readScreenshot(file); if(text && form.isConnected){scanText=text;form.elements.text.value=text;scanResult=null;}
           message.textContent=text?T("Проверьте распознанный текст.","Танылған мәтінді тексеріңіз."):T("Не удалось прочитать текст. Введите его вручную.","Мәтін оқылмады. Қолмен енгізіңіз.");}
         catch{message.textContent=T("Не удалось открыть изображение. Выберите PNG/JPEG до 8 МБ или введите текст.","Сурет ашылмады. 8 МБ дейінгі PNG/JPEG таңдаңыз немесе мәтінді енгізіңіз.");}
         finally {e.target.disabled=submit.disabled=false;e.target.value="";}
@@ -720,13 +751,14 @@ function render() {
       root.querySelector("main").insertAdjacentHTML("beforeend",'<section class="paper"><h2>'+T("История обращения","Өтініш тарихы")+'</h2>'+log+'</section>'+
         requests.map(r=>'<section class="paper"><h3>'+E(r[lang==="ru"?"description_ru":"description_kk"])+'</h3>'+(r.answered?T("Ответ получен","Жауап алынды"):'<form class="form-stack" id="request-answer" data-id="'+E(r.id)+'"><label>'+T("Ответ для демо-SOC","Демо-SOC үшін жауап")+'<textarea name="body" minlength="10" maxlength="500" required></textarea></label><button>'+T("Отправить ответ","Жауапты жіберу")+'</button></form>')+'</section>').join(""));
     }
-    if (page === "report" && reportDraft) {
+    if (page === "report" && !reportChoice && reportDraft) {
       const form = root.querySelector("#report-form");
       form.elements.category.value = reportDraft.category;
       form.elements.description.value = reportDraft.description;
       form.elements.consent.checked = reportDraft.consent;
     }
     if (page === "graph" && data) {
+      camera=graphCamera(root.querySelector(".graph"));
       const nodes = data.nodes ?? [], edges = data.edges ?? [];
       const controls = `<div class="inline-actions">${button("graph-zoom",T("Увеличить","Үлкейту"),"secondary")}${button("graph-fit",T("Вместить","Сыйғызу"),"secondary")}${button("graph-full",T("На весь экран","Толық экран"),"secondary")}</div>
         <p>${T("Зелёная линия — связь, отмеченная анализатором. Красные узлы требуют проверки.","Жасыл сызық — талдаушы жүйе белгілеген байланыс. Қызыл түйіндер тексеруді қажет етеді.")}</p>
@@ -737,6 +769,7 @@ function render() {
       menu.insertAdjacentHTML("beforebegin",'<label>'+T("Выбрать узел","Түйінді таңдау")+'<select id="node-focus"><option value="">—</option>'+nodes.slice(0,30).map((n,i)=>'<option value="'+i+'">'+(i+1)+'. '+E(n.data.label)+'</option>').join("")+'</select></label><p id="node-detail" aria-live="polite"></p>');
       const selectNode=i=>{
         const n=nodes[i];
+        camera.focus(root.querySelectorAll(".graph circle")[i]);
         root.querySelector("#node-focus").value=i;
         [...(root.querySelectorAll(".graph g"))].forEach((g,j)=>g.classList.toggle("focused-node",String(j)===String(i)));
         root.querySelector("#node-detail").textContent=n? n.data.label+' · '+T("Входящие / исходящие","Кіріс / шығыс")+' '+n.data.in_degree+' / '+n.data.out_degree:'';
@@ -763,6 +796,7 @@ function render() {
       root.querySelector("main").insertAdjacentHTML("beforeend",button("report",T("Сообщить о мошенничестве","Алаяқтық туралы хабарлау"),"secondary"));
     }
   }
+  if(page==="analytics")revealChartSelection(root);
   const locked = loading || (initializingAccount && page === "login");
   root.querySelector("main").setAttribute("aria-busy", String(locked));
   if (locked) {
@@ -902,6 +936,11 @@ root.addEventListener("click", async (event) => {
   }
   if (act==="print-packet" && data) {await perform(()=>identity.printPacket(packetContent(data,T,when,status)));return;}
   if(act==="reload-screen" && lastRead){await open(lastRead.page,lastRead.id,false);return;}
+  if (act==="retry-summary") {
+    await perform(async()=>{summary=await gateway.request("/wallet/analytics?days=7");});
+    return;
+  }
+  if(act==="retry-home"){await open("home",null,false);return;}
   if(act==="mask-balance"){const key="qadam.mask."+ownerScope;putLocal(key,getLocal(key,"0")==="1"?"0":"1");render();return;}
   if(act==="open-guardian"){if(account?.guardian_username)await perform(()=>identity.openGuardian(account.guardian_username));else await open("safety");return;}
   if(act==="clear-period"){ledgerFilter=defaultLedger();offset=0;await open("history");return;}
@@ -915,7 +954,17 @@ root.addEventListener("click", async (event) => {
     b.textContent = reveal ? T("Скрыть","Жасыру") : T("Показать","Көрсету");
     return;
   }
-  if (act === "report") reportTx = page === "detail" ? selectedId : null;
+  if (act === "report") {
+    const requested = page === "detail" ? selectedId : null;
+    selectReport(requested);
+    reportChoice = product && drafts.last && drafts.last !== reportKey(requested) && !!drafts.byOperation[drafts.last];
+  }
+  if (act === "report-current" || act === "report-previous") {
+    selectReport(act === "report-previous" ? drafts.byOperation[drafts.last]?.transaction_id : reportTx);
+    render(); return;
+  }
+  if (act === "clear-scan") { scanText=""; scanResult=null; error=""; render(); return; }
+  if (act === "edit-transfer") { await back(); return; }
   if (act === "presets") { presetMode = true; render(); return; }
   if (
     [
@@ -953,10 +1002,10 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "graph-fit" || act === "graph-zoom") {
-    root.querySelector(".graph")?.setAttribute("viewBox",act === "graph-fit" ? "0 0 360 300" : "55 45 250 210"); return;
+    if (act === "graph-fit") camera?.fit(); else camera?.enlarge(); return;
   }
   if (act === "graph-full") { const el=root.querySelector(".graph"); if (el?.requestFullscreen) await el.requestFullscreen().catch(()=>{}); return; }
-  if (act === "back" && product) {const prev=backStack.pop();await open(prev?.page||"home",prev?.id,false);return;}
+  if (act === "back" && product) {await back();return;}
   if (act === "back") {
     if (page === "login") location.assign("index.html");
     else
@@ -970,7 +1019,7 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "offline") {
-    if (product) { location.assign("demo.html?offline=1"); return; }
+    if (product) { location.assign("index.html?offline=1"); return; }
     if (chosenRole === "admin") {
       page = "sample";
       sampleId = null;
@@ -1039,7 +1088,7 @@ root.addEventListener("click", async (event) => {
       });
       accept(value);
       await savePending("");
-      page = "detail";
+      page = "detail"; backStack=[];
       const guarded=product && draft.context?.active_call && value.status==="cooling_off";
       draft = null;
       if (product && value.status==="cooling_off") {
@@ -1219,8 +1268,7 @@ root.addEventListener("submit", async (event) => {
         is_new_recipient: fields.has("is_new_recipient"),
       },
     };
-    page = "review";
-    render();
+    await open("review");
     return;
   }
   if (form.id === "case-note") {
@@ -1236,8 +1284,8 @@ root.addEventListener("submit", async (event) => {
     return;
   }
   if (form.id === "scan-form") {
-    const text = String(fields.get("text"));
-    form.reset();
+    const text = scanText = String(fields.get("text"));
+    scanResult=null;
     await perform(async () => {
       scanResult = await api("integrations/guardian/scam-check", "POST", {
         text,
@@ -1248,7 +1296,7 @@ root.addEventListener("submit", async (event) => {
   }
   if (form.id === "report-form") {
     const body = {
-      ...(reportDraft?.transaction_id || reportTx ? {transaction_id:reportDraft?.transaction_id || reportTx} : {}),
+      ...(reportTx ? {transaction_id:reportTx} : {}),
       category: String(fields.get("category")),
       description: String(fields.get("description")),
       confirmed_demo_submission: true,
@@ -1256,9 +1304,9 @@ root.addEventListener("submit", async (event) => {
     const key = reportDraft?.key || crypto.randomUUID();
     reportDraft = {...body, consent: fields.has("consent"), key};
     await perform(async () => {
-      if (product) { await savingDraft; await identity.write("report." + ownerScope, reportDraft); }
+      if (product) { drafts.byOperation[reportKey(reportTx)]=reportDraft; drafts.last=reportKey(reportTx); await persistDrafts(); }
       const receipt = await api("integrations/guardian/reports", "POST", body, key);
-      if (product) await identity.write("report." + ownerScope, null);
+      if (product) { delete drafts.byOperation[reportKey(reportTx)]; drafts.last=null; await persistDrafts(); }
       reportDraft = null; reportTx = null; selectedId = receipt.id;
     });
     if (!error) await open(product ? "reportDetail" : "reports", selectedId);
@@ -1284,7 +1332,7 @@ installBackHandler(() => {
     return true;
   }
   if (page !== "home") {
-    const prev=product?backStack.pop():null;void open(prev?.page||"home",prev?.id,false);
+    if(product)void back();else void open("home",null,false);
     return true;
   }
   return false;
@@ -1311,14 +1359,15 @@ if (product) identity.initialize(loadOwner, e => {
 }).catch(() => { error = T("Защищённое хранилище недоступно.","Қорғалған қойма қолжетімсіз."); render(); }).finally(() => { initializingAccount=false;render(); });
 
 root.addEventListener("input", event => {
+  if (event.target.matches("#scan-form textarea")) { scanText=event.target.value; scanResult=null; }
   const form = event.target.closest("#report-form");
   if (!form || !product || !ownerScope) return;
   const fields = new FormData(form);
   const draft = {category: fields.get("category"), description: fields.get("description"),
-    consent: fields.has("consent"), transaction_id: reportDraft?.transaction_id || reportTx, key:reportDraft?.key || crypto.randomUUID()};
+    consent: fields.has("consent"), transaction_id: reportTx, key:reportDraft?.key || crypto.randomUUID()};
   reportDraft = draft;
-  const slot = "report." + ownerScope;
-  savingDraft = savingDraft.then(() => identity.write(slot, draft)).catch(() => {
+  drafts.byOperation[reportKey(reportTx)] = draft; drafts.last=reportKey(reportTx);
+  persistDrafts().catch(() => {
     error = T("Не удалось сохранить черновик на устройстве.","Құрылғыға нобайды сақтау мүмкін болмады.");
   });
 });

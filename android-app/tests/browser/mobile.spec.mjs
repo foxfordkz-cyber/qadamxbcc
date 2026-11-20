@@ -46,7 +46,7 @@ for (const [preset, status] of [
     }
     await page.reload();
     await page.locator('.bottom-nav [data-route="history"]').click();
-    await expect(page.locator(".transaction")).toHaveCount(1);
+    await expect(page.locator(".ledger-row")).toHaveCount(1);
     expect(mutations).toEqual([]);
   });
 }
@@ -117,7 +117,7 @@ test("blocked storage is announced without a blank screen", async ({
   });
   await page.goto("/index.html?offline=1");
   await expect(page.locator(".network-note")).toBeVisible();
-  await expect(page.locator(".balance-card")).toBeVisible();
+  await expect(page.locator(".q-card")).toBeVisible();
 });
 test("live role gate is server-derived and errors do not trigger demo fallback", async ({
   page,
@@ -142,7 +142,7 @@ test("live role gate is server-derived and errors do not trigger demo fallback",
         headers: { "Access-Control-Allow-Origin": "*" },
       });
   });
-  await page.goto("/connected.html");
+  await page.goto("/dev/connected.html");
   await page.locator('[name="origin"]').fill("http://127.0.0.1:18001");
   await page.locator('[name="code"]').fill("synthetic-test-access-code-12345");
   await page.locator("#login-form button").click();

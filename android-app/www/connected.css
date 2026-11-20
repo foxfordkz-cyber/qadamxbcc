@@ -116,7 +116,7 @@
   min-height: 44px;
 }
 .filter-row button[aria-pressed="true"] {
-  background: #27253f;
+  background: var(--pine, #164d36);
   color: white;
 }
 .live-row {
@@ -150,7 +150,7 @@
   font-size: 13px;
   padding: 6px 9px;
   border-radius: 9px;
-  background: #eeeaf5;
+  background: var(--wash, #e6eee6);
   white-space: nowrap;
 }
 .risk-meter {
@@ -243,20 +243,20 @@
 .graph {
   width: 100%;
   height: 300px;
-  background: #f4f3fa;
+  background: var(--surface, #f4f7f4);
   border-radius: 18px;
   overflow: hidden;
 }
 .graph text {
-  font: 10px sans-serif;
-  fill: #342c49;
+  font: 600 13px system-ui, sans-serif;
+  fill: var(--ink, #152820);
 }
 .graph line {
-  stroke: #c6badb;
+  stroke: #a8bfae;
   stroke-width: 1.5;
 }
 .graph circle {
-  fill: #cfc6e3;
+  fill: #c5dcca;
   stroke: white;
   stroke-width: 3;
 }
@@ -268,7 +268,7 @@
   display: flex;
   gap: 18px;
   font-size: 10px;
-  color: #78687e;
+  color: var(--muted, #52665b);
   margin: 12px 0;
 }
 .node-list {
@@ -278,14 +278,14 @@
 }
 .node-list > div {
   padding: 15px;
-  background: #f7f5fb;
+  background: var(--paper, white);
   border-radius: 14px;
 }
 .node-list strong {
   font-size: 12px;
 }
 .node-list small {
-  font-size: 10px;
+  font-size: .8rem;
 }
 .busy-banner {
   padding: 15px;

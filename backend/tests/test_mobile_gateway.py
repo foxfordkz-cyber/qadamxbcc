@@ -568,6 +568,7 @@ async def test_wallet_amounts_history_and_role_boundaries(
                     currency="KZT",
                     status=state,
                     device_id="wallet-test",
+                    latency_ms=[1.0, 10.0, 3.0, 0.0][len(ids) - 1],
                 )
             )
         await session.commit()
@@ -615,6 +616,10 @@ async def test_wallet_amounts_history_and_role_boundaries(
     assert stats["states"]["blocked"]["amount"] == "700.00"
     assert stats["states"]["cooling_off"]["amount"] == "900.00"
     assert stats["blocked_recipients"] == 1
+    assert stats["latency_sample_size"] == 3
+    assert stats["p95_engine_ms"] == 10.0
+    assert len(stats["series"]) == 7
+    assert sum(sum(d["states"].values()) for d in stats["series"]) == 4
     assert (await client.get(base + "analytics", headers=admin)).status_code == 403
     assert (await client.get(base + "cases?state=NEW", headers=admin)).json()["items"] == []
 

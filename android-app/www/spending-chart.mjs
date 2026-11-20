@@ -130,9 +130,9 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
     E(tickLabel(maximum)) +
     "</span><span>" +
     E(tickLabel(maximum / 2)) +
-    '</span><span>0</span></div><div class="plot-columns">' +
+    '</span><span>0</span></div><div class="plot-viewport" tabindex="0"><div class="plot-columns">' +
     cols +
-    "</div></div>" +
+    "</div></div></div>" +
     '<button class="selected-day" data-drill-day="' +
     selected.from +
     '" data-through="' +
@@ -149,4 +149,12 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
     icon("arrow") +
     "</button>"
   );
+}
+
+export function revealChartSelection(root) {
+  const viewport=root.querySelector(".plot-viewport");
+  const selected=viewport?.querySelector('[aria-pressed="true"]');
+  if (!selected || viewport.scrollWidth <= viewport.clientWidth) return;
+  const bounds=viewport.getBoundingClientRect(), item=selected.getBoundingClientRect();
+  if(item.right>bounds.right || item.left<bounds.left) viewport.scrollLeft+=item.left-bounds.left-(bounds.width-item.width)/2;
 }

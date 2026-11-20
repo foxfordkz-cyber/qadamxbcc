@@ -647,29 +647,31 @@ label {
   font-size: 0.72rem;
 }
 .plot-layout {
+  --plot-height: clamp(180px, 26vh, 220px);
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 6px;
   min-width: 0;
 }
 .plot-scale {
-  height: 130px;
+  height: var(--plot-height);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   color: var(--muted);
-  font-size: 0.67rem;
+  font-size: .78rem;
 }
+.plot-viewport { overflow-x: auto; min-width: 0; }
 .plot-columns {
+  width: max-content; min-width: 100%;
   display: flex;
-  min-width: 0;
   position: relative;
   background: linear-gradient(to bottom, #dee6de 1px, transparent 1px) 0 0/100%
-    65px repeat-y;
-  height: 153px;
+    calc(var(--plot-height) / 2) repeat-y;
+  height: calc(var(--plot-height) + 29px);
 }
 .plot-col {
-  min-width: 0;
+  min-width: 44px;
   padding: 0;
   flex: 1;
   display: flex;
@@ -681,7 +683,7 @@ label {
   border-radius: 0;
 }
 .plot-col svg {
-  height: 130px;
+  height: var(--plot-height);
   width: 75%;
   max-width: 33px;
   display: block;
@@ -701,7 +703,7 @@ label {
 }
 .plot-col span {
   display: block;
-  font-size: clamp(0.56rem, 2vw, 0.75rem);
+  font-size: .78rem;
   white-space: nowrap;
   margin-top: 4px;
 }
@@ -892,7 +894,7 @@ input:focus-visible {
     padding: 12px;
   }
   .plot-col span {
-    font-size: 0.58rem;
+    font-size: .78rem;
   }
   .card-foot b {
     max-width: 18ch;
@@ -1039,3 +1041,10 @@ input:focus-visible {
 .paper.receipt{text-align:start;position:relative;padding:16px 20px;background:#e9f0e5}.receipt>.amount{font-size:clamp(1.75rem,7.8vw,2.55rem);letter-spacing:-.04em}
 .hold-card .timer{font-variant-numeric:tabular-nums;text-align:start;color:#73531a;font-size:2.1rem;margin:.4rem 0}.hold-card .inline-actions{justify-content:start}
 #app[data-screen=contacts] .contact{padding:10px 0;border-bottom:1px solid var(--line)}#app[data-screen=reportDetail] .paper small{overflow-wrap:anywhere}.topbar .profile-button{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--mint);color:var(--pine)}
+
+.report-context {overflow-wrap:anywhere;font-weight:600;color:var(--pine)}
+.graph {touch-action:none;max-height:65vh;min-height:230px;aspect-ratio:1;display:block;width:100%}.graph:fullscreen{max-height:none;height:100%;background:var(--surface,#fff)}
+
+.offline-source{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--pine);font-size:.85rem;border-bottom:1px solid var(--line);margin-bottom:.7rem}.offline-source button{background:transparent;color:inherit;padding:.6rem;font-weight:650}.shell .report-context{overflow-wrap:anywhere}
+
+.trend-row{display:grid;grid-template-columns:minmax(5.5rem,auto) minmax(30px,1fr) 3ch;align-items:center;gap:8px;padding:.35rem 0;font-size:.85rem}.trend-row meter{width:100%;accent-color:var(--pine)}.trend-row b{text-align:end}

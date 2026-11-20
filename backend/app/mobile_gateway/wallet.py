@@ -1,5 +1,6 @@
 """Read-only synthetic wallet. Bank decisions and transfer execution stay in the core."""
 
+import math
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from typing import Annotated, Any, Literal
@@ -16,6 +17,7 @@ from app.integrations.cases.schemas import CaseOut, State
 from app.mobile_gateway.app import IdentityDep
 from app.mobile_gateway.protection import client
 from app.models import Account, Transaction, TransactionStatus
+from app.services.soc import LATENCY_SAMPLE_LIMIT
 
 KZ = timezone(timedelta(hours=5))
 OPENING = Decimal("5000000.00")
@@ -261,6 +263,27 @@ def install_wallet(app: FastAPI) -> None:
                 ).where(T.created_at.between(start, end))
             )
         ).one()
+        daily = day_column(session)
+        activity = (
+            await session.execute(
+                select(daily, T.status, func.count(T.id))
+                .where(T.created_at.between(start, end))
+                .group_by(daily, T.status)
+            )
+        ).all()
+        series: dict[str, dict[str, Any]] = {
+            str(first + timedelta(days=i)): {"day": str(first + timedelta(days=i)), "states": {}}
+            for i in range(days)
+        }
+        for day, state, count in activity:
+            series[str(day)]["states"][state] = count
+        measured = await session.scalars(
+            select(T.latency_ms)
+            .where(T.created_at.between(start, end), T.latency_ms > 0)
+            .order_by(T.created_at.desc(), T.id.desc())
+            .limit(LATENCY_SAMPLE_LIMIT)
+        )
+        sample = sorted(float(ms) for ms in measured if math.isfinite(ms))
         return {
             "days": days,
             "from": first,
@@ -269,4 +292,8 @@ def install_wallet(app: FastAPI) -> None:
             "case_states": dict(cases),
             "blocked_recipients": hubs,
             "mean_engine_ms": latency,
+            "series": list(series.values()),
+            "p95_engine_ms": sample[math.ceil(len(sample) * 0.95) - 1] if sample else None,
+            "latency_sample_size": len(sample),
+            "latency_sample_limit": LATENCY_SAMPLE_LIMIT,
         }
