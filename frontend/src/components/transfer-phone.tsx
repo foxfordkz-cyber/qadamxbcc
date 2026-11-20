@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, BatteryFull, Check, ChevronDown, Clock3, History, House, Landmark, LoaderCircle, LockKeyhole, Menu, PhoneCall, ReceiptText, ShieldCheck, ShieldX, Signal, SlidersHorizontal, Smartphone, Wifi, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, BatteryFull, Check, ChevronDown, Clock3, House, Landmark, LoaderCircle, LockKeyhole, Users, PhoneCall, ScanText, ShieldCheck, ShieldX, Signal, SlidersHorizontal, Smartphone, Wifi, XCircle } from "lucide-react";
 import { api, type AppConfig, type CallCheck, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
 import { groupAmount, rawAmount } from "@/lib/amount";
 import { Badge } from "./risk";
+import { CircleMembers } from "./circle-members";
+import { MessageCheck } from "./message-check";
+import { TrustedCircle } from "./trusted-circle";
 import type { Biometrics } from "./use-biometrics";
 import "./mobile-client.css";
+import "./mobile-tools.css";
 
 export type RecipientType = "phone" | "card" | "iban";
 interface Props {
@@ -39,7 +43,7 @@ function maskRecipient(value: string, type: RecipientType) {
   const compact = value.replace(/\s/g, "");
   if (type === "phone" && /^\+?7\d{10}$/.test(compact)) {
     const digits = compact.replace(/^\+?7/, "");
-    return `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`;
+    return `+7 ••• ••• ${digits.slice(6, 8)} ${digits.slice(8)}`;
   }
   if (type === "card" && compact.length >= 4) return `•••• ${compact.slice(-4)}`;
   if (type === "iban" && compact.length > 8) return `${compact.slice(0, 4)} •••• ${compact.slice(-4)}`;
@@ -52,6 +56,14 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const contextDetails = useRef<HTMLDetailsElement>(null);
   const confirmHeading = useRef<HTMLHeadingElement>(null);
   const [step, setStep] = useState<"details" | "confirm">("details");
+  const [screen, setScreen] = useState<"home" | "transfer" | "circle" | "scam">(bare ? "home" : "transfer");
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine);
+    update(); window.addEventListener("online", update); window.addEventListener("offline", update);
+    return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); };
+  }, []);
+  useEffect(() => { if (result?.transaction_id) setScreen("transfer"); }, [result?.transaction_id]);
   const [callCheck, setCallCheck] = useState<CallCheck | null>(null);
   const [callChecking, setCallChecking] = useState(false);
   const [callCheckFailed, setCallCheckFailed] = useState(false);
@@ -91,21 +103,28 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const chosenContact = recipientType === "phone" ? contacts.find(contact => config.presets[contact.key].recipient === form.recipient) : undefined;
   const activeContext = contextKeys.filter(key => form.context[key]).length;
   const numericAmount = Number(form.amount);
-  const title = receipt ? m("receiptTitle") : step === "confirm" ? m("stepConfirm") : t("transfer");
+  const title = screen === "home" ? m("tabHome") : screen === "circle" ? m("circle") : screen === "scam" ? m("scam")
+    : receipt ? m("receiptTitle") : step === "confirm" ? m("stepConfirm") : t("transfer");
   const showUnknown = blocked && !receipt;
 
   return <div className={`phone-stage${bare ? " is-bare" : ""}`}>
     <section className="phone-frame" aria-label={t("mobile")}>
       {!bare && <div className="phone-status" aria-hidden="true"><span>9:41</span><i /><div><Signal size={14} /><Wifi size={14} /><BatteryFull size={19} /></div></div>}
       <header className="phone-appbar">
-        {step === "confirm" && !receipt
+        {screen === "transfer" && step === "confirm" && !receipt
           ? <button type="button" className="appbar-back" disabled={busy} onClick={() => setStep("details")} aria-label={m("editCta")}><ArrowLeft size={20} /></button>
-          : <span className="appbar-back" aria-hidden="true"><ArrowLeft size={20} /></span>}
-        <div className="appbar-title"><h2>{title}</h2>{!receipt && <small>{step === "confirm" ? 2 : 1} / 2 · {m("stepOf")}</small>}</div>
+          : screen !== "home" ? <button className="appbar-back" type="button" aria-label={m("tabHome")} disabled={busy} onClick={() => setScreen("home")}><ArrowLeft size={20} /></button> : <span />}
+        <div className="appbar-title"><h2>{title}</h2>{screen === "transfer" && !receipt && <small>{step === "confirm" ? 2 : 1} / 2 · {m("stepOf")}</small>}</div>
         <span className="demo-tag">{m("demoBadge")}</span>
       </header>
       <div className="phone-body">
-        {receipt ? <section className={`phone-receipt receipt-${receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
+        {offline && <p className="phone-alert warning" role="status">{m("offline")}</p>}
+        {screen === "home" ? <section className="mobile-tool home-tools">
+          <div className="source-card"><small>{m("available")} · {m("demoValue")}</small><strong>{money(DEMO_BALANCE, lang)}</strong><span>•••• 4821</span></div>
+          <button type="button" className="primary" onClick={() => { if (receipt && !blocked) onNewTransfer(); setScreen("transfer"); }}><ArrowLeftRight size={18}/>{m("homeTransfer")}</button>
+          <button type="button" className="secondary" onClick={() => setScreen("circle")}><Users size={18}/>{m("circle")}</button>
+          <button type="button" className="secondary" onClick={() => setScreen("scam")}><ScanText size={18}/>{m("scam")}</button>
+        </section> : screen === "circle" ? <CircleMembers /> : screen === "scam" ? <MessageCheck /> : receipt ? <section className={`phone-receipt receipt-${receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
           <div className="receipt-symbol" aria-hidden="true"><ReceiptIcon size={32} strokeWidth={1.8} /></div>
           <Badge status={receipt.status} />
           <strong className="receipt-amount">{money(receipt.amount ?? amount, lang)}</strong>
@@ -122,6 +141,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             <button type="button" className={receipt.status === "cooling_off" ? "secondary receipt-new" : "primary receipt-new"} disabled={busy} onClick={onNewTransfer}>{m("receiptNext")}</button>
           </div>
           <p className="receipt-disclaimer">{m("receiptHint")}</p>
+          {config.mode === "live" && receipt.status !== "cooling_off" && <TrustedCircle key={receipt.transaction_id} transactionId={receipt.transaction_id} active={false} historyOnly />}
         </section>
         : step === "confirm" ? <section className="phone-confirm" aria-labelledby="confirm-title" aria-busy={busy}>
           <h3 id="confirm-title" ref={confirmHeading} tabIndex={-1} className="sr-only">{m("stepConfirm")}</h3>
@@ -137,7 +157,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           {showUnknown && <div className="phone-alert warning" role="status"><AlertTriangle size={18} aria-hidden="true" /><div><strong>{m("unknownTitle")}</strong><p>{m("unknownText")}</p></div></div>}
           {error && !showUnknown && <p className="error" role="alert">{t(error)}</p>}
           <div className="confirm-actions">
-            <button type="button" className="primary transfer-confirm" disabled={busy || blocked || completed} onClick={onSubmit}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
+            <button type="button" className="primary transfer-confirm" disabled={busy || blocked || completed || offline} onClick={onSubmit}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
             <button type="button" className="secondary transfer-edit" disabled={busy} onClick={() => setStep("details")}>{m("editCta")}</button>
           </div>
         </section>
@@ -201,7 +221,11 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           </fieldset>
         </form>}
       </div>
-      <nav className="phone-tabbar" aria-hidden="true">{([["tabHome", House], ["tabPayments", ReceiptText], ["tabTransfers", ArrowLeftRight], ["tabHistory", History], ["tabMore", Menu]] as const).map(([key, Icon]) => <span key={key} className={key === "tabTransfers" ? "active" : ""}><Icon size={20} strokeWidth={key === "tabTransfers" ? 2.2 : 1.7} />{m(key)}</span>)}</nav>
+      <nav className="phone-tabbar" aria-label={t("mobile")}>
+        {([["home", "tabHome", House], ["transfer", "tabTransfers", ArrowLeftRight], ["circle", "circle", Users], ["scam", "scam", ScanText]] as const).map(([page, label, Icon]) =>
+          <button key={page} type="button" className={screen === page ? "active" : ""} aria-current={screen === page ? "page" : undefined}
+            disabled={busy} onClick={() => setScreen(page)}><Icon size={18} aria-hidden="true" />{m(label)}</button>)}
+      </nav>
       {!bare && <div className="home-indicator" aria-hidden="true" />}
     </section>
     {!bare && <p className="phone-caption">{m("phoneCaption")}</p>}

@@ -26,7 +26,8 @@ async function handle(request: NextRequest, context: RouteContext) {
   const graph = request.method === "GET" && /^soc\/graph\/[0-9a-f-]{36}$/i.test(route);
   const callCheck = request.method === "POST" && route === "call-check";
   const bankCall = request.method === "POST" && route === "call-check/demo/bank-call";
-  if (!evaluate && !resolve && !cancel && !abandon && !detail && !feed && !graph && !callCheck && !bankCall) return json({ error: "notFound" }, 404);
+  const guide = request.method === "GET" && route === "scam-check/guide";
+  if (!evaluate && !resolve && !cancel && !abandon && !detail && !feed && !graph && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
   if ((abandon || graph) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
   if ((resolve || cancel || detail) && !z.uuid().safeParse(path[1]).success) return json({ error: "invalid" }, 422);
   const admission = apiAdmission();
@@ -63,6 +64,7 @@ async function handle(request: NextRequest, context: RouteContext) {
       body = parsed;
     }
     if (cancel || abandon) body = z.object({}).strict().parse(await readBoundedJson(request));
+    if (guide && config.mode === "demo") return json({ error: "unavailable" }, 503);
     if (abandon && config.mode === "demo") return json(abandonDemo(path[2]));
     if (config.mode === "demo") return json(cancel ? cancelDemo(path[1]) : detail ? detailDemo(path[1]) : feed ? feedDemo(feedQuerySchema.parse(Object.fromEntries(request.nextUrl.searchParams))) : graphDemo(path[2], z.coerce.number().int().min(1).max(3).parse(request.nextUrl.searchParams.get("depth") ?? 2)));
     const base = (process.env.BCC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");

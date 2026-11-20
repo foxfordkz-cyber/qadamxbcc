@@ -60,6 +60,8 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
     const { customer_id } = z.object({ customer_id: z.uuid() }).strict().parse(body);
     return route === "call-check" ? callCheckDemo(customer_id) : bankCallDemo(customer_id);
   }
+  // Same answer as the server's demo mode: the guide text lives in the backend.
+  if (method === "GET" && route === "scam-check/guide") throw new ApiError("unavailable", 503);
   // The trusted circle needs Bekzat's live integrations; the static demo has none.
   if (route.startsWith("trusted-circle/")) throw new ApiError("unavailable", 404);
   throw new ApiError("notFound", 404);
