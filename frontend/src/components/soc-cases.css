@@ -86,6 +86,17 @@
 .case-notes article strong { display: flex; align-items: flex-start; gap: 6px; font-size: 11px; }
 .soc-case-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.7; }
 .case-notes article small { font-size: 10px; color: var(--muted); }
+.case-export { margin: 16px 0; }
+.case-export .secondary { display: inline-flex; align-items: center; gap: 8px; }
+.case-deferred { margin: 16px 0; padding: 16px; background: #fffcf5; border: 1px solid #fedf89; border-radius: 16px; }
+.case-deferred summary { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #93370d; }
+.case-deferred > p { font-size: 12px; line-height: 1.6; color: var(--muted); }
+.case-deferred ul { list-style: none; padding: 0; margin: 0; }
+.case-deferred li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #fef0c7; padding: 13px 0; }
+.case-deferred li > div { min-width: 0; display: grid; gap: 5px; }
+.case-deferred strong { font-size: 12px; }
+.case-deferred code, .case-deferred small { font-size: 11px; overflow-wrap: anywhere; }
+.case-defer-explanation { margin-top: 14px; border-top: 1px solid #fedf89; padding-top: 10px; }
 @media (min-width: 1600px) { .soc-cases-layout { grid-template-columns: minmax(320px, 1fr) minmax(0, 2fr); } }
 @media (max-width: 1050px) { .soc-cases-workspace { padding: 21px; } .soc-cases-layout { grid-template-columns: minmax(230px, .9fr) minmax(0, 1.3fr); } .soc-cases-list { padding-right: 17px; } .soc-case-detail { padding-left: 19px; } .soc-case-filters { grid-template-columns: 1fr; } .soc-case-reset { justify-self: start; padding: 0; } }
 @media (max-width: 720px) { .soc-cases-workspace { padding: 17px; } .soc-cases-heading { flex-wrap: wrap; gap: 13px; } .soc-cases-heading h2 { font-size: 21px; } .soc-case-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .soc-case-kpis > div { padding: 13px; } .soc-cases-layout { grid-template-columns: 1fr; } .soc-cases-list { padding-right: 0; border-right: 0; } .soc-case-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .soc-case-rows { max-height: 360px; } .soc-case-detail { padding: 23px 0 0; margin-top: 23px; border-top: 1px solid var(--line); } .soc-case-detail-heading { flex-wrap: wrap; } .soc-case-composer { padding: 14px; } }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { validateSocIntegrationResponse } from "./soc-integrations";
+import { recipientFlagReceiptSchema, recipientFlagSchema } from "./recipient-flag";
 
 export type Lang = "kk" | "ru";
 export type Status = "approved" | "cooling_off" | "blocked" | "cancelled";
@@ -46,7 +47,7 @@ export const answersSchema = z.object({
 export type Answers = z.infer<typeof answersSchema>;
 export type TransferInput = z.infer<typeof transferSchema>;
 export type Context = z.infer<typeof contextSchema>;
-export interface Reason { code: string; layer: string; score_delta: number; reason_kk: string; reason_ru: string }
+export interface Reason { code: string; layer: string; score_delta: number; reason_kk: string; reason_ru: string; evidence?: Record<string, unknown> }
 export interface Decision {
   transaction_id: string; status: Status; risk_score: number;
   headline_kk: string; headline_ru: string; reasons_kk: string[]; reasons_ru: string[];
@@ -108,6 +109,7 @@ export class ApiError extends Error {
 }
 const statusSchema = z.enum(["approved", "cooling_off", "blocked", "cancelled"]);
 export const feedQuerySchema = z.object({
+  alerts_only: z.union([z.boolean(), z.enum(["true", "false"]).transform(value => value === "true")]).default(false),
   status: statusSchema.optional(), q: z.string().max(128).refine(value => !value.includes("\u0000")).transform(value => value.trim()).default(""),
   min_score: z.coerce.number().int().min(0).max(100).default(0),
   offset: z.coerce.number().int().min(0).max(100_000).default(0),
@@ -161,10 +163,12 @@ export function validateApiResponse(path: string, value: unknown, method = "GET"
   const schema = /^transfers\/requests\/[0-9a-f-]+\/abandon$/i.test(route) ? abandonResponseSchema
     : route === "transfers/evaluate" || /^transfers\/[0-9a-f-]+(?:\/(?:resolve-cooling|cancel))?$/i.test(route) ? evaluationResponseSchema
     : route === "call-check" ? callCheckSchema : route === "call-check/demo/bank-call" ? bankCallSchema
-    : route === "soc/feed" ? feedResponseSchema : route.startsWith("soc/graph/") ? graphResponseSchema : undefined;
+    : route === "soc/feed" ? feedResponseSchema : route.startsWith("soc/graph/") ? graphResponseSchema
+    : /^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route) ? method.toUpperCase() === "POST" ? recipientFlagReceiptSchema : recipientFlagSchema : undefined;
   if (!schema) return value;
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw new ApiError("invalidResponse", 502);
+  if (/^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route) && (!("account_id" in parsed.data) || typeof parsed.data.account_id !== "string" || parsed.data.account_id.toLowerCase() !== route.split("/")[2].toLowerCase())) throw new ApiError("invalidResponse", 502);
   if (/^transfers\/[0-9a-f-]+$/i.test(route) && (!("transaction_id" in parsed.data) || typeof parsed.data.transaction_id !== "string"
     || parsed.data.transaction_id.toLowerCase() !== route.split("/")[1].toLowerCase())) throw new ApiError("invalidResponse", 502);
   if (route.startsWith("soc/graph/") && (!("center" in parsed.data) || typeof parsed.data.center !== "string"

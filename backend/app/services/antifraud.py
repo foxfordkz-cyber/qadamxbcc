@@ -125,6 +125,8 @@ class TransferContext:
     from_deposit: bool = False
     is_new_device: bool = False
     is_new_recipient: bool | None = None  # None → derived from the transfer graph
+    # Internal locked SQL snapshot. Never accepted through TransferContextIn.
+    recipient_flagged: bool | None = None
     pasted_recipient: bool = False
     typing_duration_ms: int | None = None
     hesitation_count: int = 0
@@ -300,6 +302,10 @@ class AntifraudEngine:
         t2 = time.perf_counter()
 
         recipient_metrics = self.graph.metrics(ctx.recipient_id)
+        if ctx.recipient_flagged is not None:
+            # A projection rebuild may swap the resident graph while Redis is
+            # awaited. The locked SQL recipient remains authoritative for flags.
+            recipient_metrics = replace(recipient_metrics, flagged=ctx.recipient_flagged)
         graph = self._graph(ctx, recipient_metrics, is_new_recipient)
         if record_attempt and self.allow_demo_overrides:
             self.graph.link_device(ctx.sender_id, ctx.device_id)
@@ -349,6 +355,22 @@ class AntifraudEngine:
                 )
             )
             reasons.sort(key=lambda r: (-r.score_delta, r.code))
+        if recipient_metrics.flagged and score < BLOCK_THRESHOLD:
+            # An explicitly reviewed SOC flag is a hard guard, independent of
+            # synthetic ML confidence. Attribute its floor to that graph reason.
+            deficit = BLOCK_THRESHOLD - score
+            reasons = [
+                replace(
+                    r,
+                    score_delta=r.score_delta + deficit,
+                    evidence={**r.evidence, "confirmed_flag_minimum": BLOCK_THRESHOLD},
+                )
+                if r.code == "RECIPIENT_FLAGGED"
+                else r
+                for r in reasons
+            ]
+            reasons.sort(key=lambda r: (-r.score_delta, r.code))
+            score = BLOCK_THRESHOLD
         decision = decide(score)
         head_kk, head_ru = explain.headline(decision, minutes=self.cooling_off_minutes)
         t4 = time.perf_counter()

@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, Clock3, FileText, History, LoaderCircle, MessageSquare, Plus, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, Clock3, Download, FileText, History, LoaderCircle, MessageSquare, Plus, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
 import { api, ApiError } from "@/lib/contracts";
 import { useLocale } from "@/lib/i18n";
 import { randomId } from "@/lib/secure-fallback";
-import { caseActionSchema, openCaseSchema, type CaseAction, type CaseAnalytics, type CaseEvidence, type CaseOut, type CasePage, type ContentPage, type EventPage } from "@/lib/soc-integrations";
+import { caseActionSchema, openCaseSchema, type CaseAction, type CaseAnalytics, type CaseEvidence, type CaseExport, type CaseOut, type CasePage, type ContentPage, type EventPage } from "@/lib/soc-integrations";
 import { caseText, type SocCaseMessage } from "@/lib/soc-case-copy";
-import { actionAllowed, CASE_SESSION_KEY, caseCategories, caseQuestions, caseReasons, caseStaff, caseStates, caseTransitions, emptyCaseSession, filterCases, intentMarker, mergeCases, readCaseSession, rebaseCaseAction, serializeCaseSession, type CaseIntent, type CaseSession } from "@/lib/soc-case-session";
+import { actionAllowed, CASE_SESSION_KEY, caseCategories, caseQuestions, caseReasons, caseStaff, caseStates, caseTransitions, deferUnavailableCase, emptyCaseSession, filterCases, intentMarker, MAX_DEFERRED_CASES, mergeCases, readCaseSession, rebaseCaseAction, resumeDeferredCase, serializeCaseSession, type CaseIntent, type CaseSession } from "@/lib/soc-case-session";
 import "./soc-cases.css";
 
 const BASE = "integrations/guardian/soc/cases";
@@ -69,6 +69,8 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
   const [pending, setPending] = useState<CaseIntent | null>(null);
   const [conflict, setConflict] = useState<CaseIntent | null>(null);
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const exportSerial = useRef(0);
   const [notice, setNotice] = useState<SocCaseMessage | null>(null);
   const [actionError, setActionError] = useState<SocCaseMessage | null>(null);
   const lock = useRef(false);
@@ -195,6 +197,7 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
   }, [ready, revision, loadList, loadAnalytics, loadDetail]);
   useEffect(() => {
     if (!ready) return;
+    exportSerial.current++; setExporting(false);
     contentSerial.current.history++; contentSerial.current.notes++; contentSerial.current.evidence++;
     setDetail(null); detailRef.current = null; setDetailError(null); setHistory(readState()); setNotes(readState()); setEvidence(readState()); setReadAt(null);
     setProposal(null); setConflict(null); setActionError(null); setNotice(null); setNote("");
@@ -216,11 +219,37 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
   }, [current?.state, nextState]);
 
   const refresh = () => { void loadList(null, true); void loadAnalytics(); if (currentId.current) void loadDetail(currentId.current, true, true); };
-  function select(id: string) { if (!busy && !unresolved && !throttled) setSession(value => ({ ...value, selectedId: id })); }
-  function persistMarker(marker: CaseSession["pending"]) {
-    const next = { ...sessionRef.current, pending: marker }; sessionRef.current = next; setSession(next);
+  function saveReconciliation(next: CaseSession): boolean {
+    // Never release the current lock if its metadata could not be persisted first.
+    try { sessionStorage.setItem(CASE_SESSION_KEY, serializeCaseSession(next)); }
+    catch { setStorageFailed(true); return false; }
+    sessionRef.current = next; setSession(next); return true;
+  }
+  function resumeReview(key: string) {
+    if (busy || unresolved || throttled) return;
+    const next = resumeDeferredCase(sessionRef.current, key);
+    if (next && saveReconciliation(next)) { setPending(null); setProposal(null); setConflict(null); }
+  }
+  function select(id: string) {
+    if (busy || unresolved || throttled) return;
+    const deferred = sessionRef.current.deferred.find(item => item.caseId === id);
+    if (deferred) resumeReview(deferred.key);
+    else setSession(value => ({ ...value, selectedId: id }));
+  }
+  function deferUnknown() {
+    if (busy || detailLoading || throttled || (detailError !== "expired" && detailError !== "missing")) return;
+    const next = deferUnavailableCase(sessionRef.current, detailError);
+    if (!next) { setActionError("deferredFull"); return; }
+    if (saveReconciliation(next)) { setPending(null); setProposal(null); setConflict(null); setActionError(null); setNote(""); }
+  }
+  function persistMarker(marker: CaseSession["pending"]): boolean {
+    const next = { ...sessionRef.current, pending: marker };
     // Synchronous write before POST means reload can warn even if the response is lost.
-    try { sessionStorage.setItem(CASE_SESSION_KEY, serializeCaseSession(next)); } catch { setStorageFailed(true); }
+    let saved = true;
+    try { sessionStorage.setItem(CASE_SESSION_KEY, serializeCaseSession(next)); } catch { saved = false; setStorageFailed(true); }
+    // A failed clear can leave a conservative warning on reload. A new write must never lose its key.
+    if (marker && !saved) return false;
+    sessionRef.current = next; setSession(next); return saved;
   }
   function prepareAction() {
     if (!current || !editable) return;
@@ -238,7 +267,8 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
   async function perform(intent: CaseIntent) {
     if (lock.current || retryUntilRef.current > Date.now()) return;
     const retryingUnknown = pending?.key === intent.key && sessionRef.current.pending?.key === intent.key;
-    lock.current = true; setBusy(true); setActionError(null); setNotice(null); setProposal(null); setConflict(null); setPending(intent); persistMarker(intentMarker(intent));
+    if (!persistMarker(intentMarker(intent)) && !retryingUnknown) { setActionError("storageActionBlocked"); return; }
+    lock.current = true; setBusy(true); setActionError(null); setNotice(null); setProposal(null); setConflict(null); setPending(intent);
     try {
       const value = await api<CaseOut>(intent.caseId ? `${BASE}/${intent.caseId}/actions` : BASE, { method: "POST", headers: { "Idempotency-Key": intent.key }, body: JSON.stringify(intent.body) });
       if (!mounted.current) return;
@@ -255,7 +285,11 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
       if (!mounted.current) return;
       observeBackoff(error);
       // Rejecting a retry does not prove that the original timed-out request failed.
-      if (retryingUnknown) { setActionError(messageFor(error)); }
+      if (retryingUnknown) {
+        setActionError(messageFor(error));
+        // A 404/410 on a retry is not proof the first write failed. Read the case before offering local deferral.
+        if (intent.caseId && error instanceof ApiError && [404, 410].includes(error.status)) await loadDetail(intent.caseId, true);
+      }
       else if (error instanceof ApiError && error.status === 409 && ["case_version_conflict", "case_write_conflict"].includes(error.code) && intent.caseId) {
         persistMarker(null); setPending(null); setConflict(intent);
         const fresh = await loadDetail(intent.caseId, true);
@@ -272,6 +306,24 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
     if (!rebased) { setActionError("conflictInvalid"); return; }
     void perform({ ...conflict, body: rebased, key: randomId(), createdAt: Date.now() });
   }
+  async function downloadExport() {
+    if (!current || detailLoading || detailError || busy || unresolved || throttled || exporting) return;
+    const id = current.id; const serial = ++exportSerial.current; const detailSerial = loadSerial.current;
+    setExporting(true); setActionError(null); setNotice(null);
+    try {
+      const value = await api<CaseExport>(`${BASE}/${id}/export`);
+      if (!mounted.current || currentId.current !== id || serial !== exportSerial.current || detailSerial !== loadSerial.current || sessionRef.current.pending || lock.current || !detailRef.current || Date.parse(detailRef.current.expires_at) <= Date.now()) return;
+      const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json;charset=utf-8" }));
+      const anchor = document.createElement("a");
+      try { anchor.href = url; anchor.download = "saq-bol-case-summary.json"; document.body.appendChild(anchor); anchor.click(); setNotice("exportReady"); }
+      finally { anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1_000); }
+    } catch (error) {
+      if (mounted.current && currentId.current === id && serial === exportSerial.current) {
+        observeBackoff(error); setActionError(messageFor(error));
+        if (error instanceof ApiError && [404, 410].includes(error.status)) await loadDetail(id, true);
+      }
+    } finally { if (mounted.current && serial === exportSerial.current) setExporting(false); }
+  }
   const visible = filterCases(rows.filter(item => Date.parse(item.expires_at) > clock), session);
   const expireMessage = detail && !current ? "expired" : null;
   const proposalBody = proposal?.body;
@@ -282,6 +334,7 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
     <p className="soc-case-advisory"><ShieldCheck size={17} />{c("advisory")}</p>
     {throttled && <p className="soc-case-warning case-rate-limit" role="status">{c("rateLimited")} {Math.ceil((retryUntil - clock) / 1_000)} {c("seconds")}</p>}
     {storageFailed && <p className="soc-case-warning" role="status">{c("storageUnavailable")}</p>}
+    {session.deferred.length > 0 && <details className="case-deferred"><summary><History size={16} />{c("deferredTitle")} · {session.deferred.length}</summary><p>{c("deferredScope")}</p><ul>{session.deferred.map(item => <li key={item.key}><div><strong>{c(item.action === "open" ? "openCase" : item.action)}</strong><code>{item.caseId}</code><small>{c("requestKey")}: {item.key}</small><small>{date(item.recordedAt)} · {c(item.reason)}</small></div><button type="button" className="secondary case-resume-review" disabled={busy || unresolved || throttled} onClick={() => resumeReview(item.key)}>{c("resumeReview")}</button></li>)}</ul></details>}
     {analytics && <><div className="soc-case-kpis">{(["total", "open", "closed", "escalated"] as const).map(key => <div key={key}><span>{c(key)}</span><strong>{key === "escalated" ? analytics.escalated_cases : analytics[key]}</strong></div>)}</div><p className="soc-case-scope">{c("analyticsScope")} · {date(analytics.as_of)}</p></>}{showError(analyticsError)}
     <div className="soc-cases-layout"><aside className="soc-cases-list" aria-label={c("filters")}>
       <div className="soc-case-filters"><label htmlFor="soc-case-status">{c("status")}<select id="soc-case-status" value={session.status} onChange={event => setSession(value => ({ ...value, status: event.target.value as CaseSession["status"] }))}><option value="all">{c("all")}</option>{caseStates.map(state => <option key={state} value={state}>{c(state)}</option>)}</select></label><label htmlFor="soc-case-assignee">{c("assignee")}<select id="soc-case-assignee" value={session.assignee} onChange={event => setSession(value => ({ ...value, assignee: event.target.value as CaseSession["assignee"] }))}><option value="all">{c("all")}</option><option value="unassigned">{c("unassigned")}</option>{caseStaff.map(value => <option key={value} value={value}>{staff(value)}</option>)}</select></label><label htmlFor="soc-case-since">{c("since")}<input id="soc-case-since" type="date" value={session.since} onChange={event => setSession(value => ({ ...value, since: event.target.value }))} /></label><button type="button" className="soc-case-reset" onClick={() => setSession(value => ({ ...value, status: "all", assignee: "all", since: "" }))}>{c("reset")}</button></div>
@@ -292,13 +345,16 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
       <details className="soc-case-open"><summary><Plus size={15} />{c("openCase")}</summary><form onSubmit={event => { event.preventDefault(); prepareOpen(); }}><label htmlFor="soc-case-report">{c("reportId")}<input id="soc-case-report" value={reportId} onChange={event => setReportId(event.target.value)} maxLength={36} autoComplete="off" placeholder="00000000-0000-4000-8000-000000000000" disabled={busy || unresolved || throttled} /></label><p>{c("openHint")}</p><button className="secondary" disabled={busy || unresolved || !ready || throttled}>{c("preview")}</button></form></details>
     </aside>
     <div className="soc-case-detail" data-case-id={session.selectedId ?? ""} aria-busy={detailLoading}>
-      {unresolved && <aside className="case-unknown soc-case-warning" role="alert"><AlertTriangle size={20} /><div><p>{c(pending ? "unknown" : "reloadUnknown")}</p><p>{c("pendingBlocksNavigation")}</p>{pending ? <button type="button" className="secondary case-unknown-retry" disabled={busy || throttled} onClick={() => void perform(pending)}>{busy ? c("applying") : c("exactRetry")}</button> : <><button type="button" className="secondary" disabled={detailLoading || busy || throttled} onClick={refresh}>{c("retry")}</button><button type="button" className="secondary case-reload-ack" disabled={throttled || detailLoading || !!detailError || history.loading || !!history.error || (!!session.pending?.caseId && (!current || !history.data || history.data.next_after_version !== null))} onClick={() => { persistMarker(null); setActionError(null); }}>{c("reviewedHistory")}</button></>}</div></aside>}
+      {unresolved && <aside className="case-unknown soc-case-warning" role="alert"><AlertTriangle size={20} /><div><p>{c(pending ? "unknown" : "reloadUnknown")}</p><p>{c("pendingBlocksNavigation")}</p>{pending ? <button type="button" className="secondary case-unknown-retry" disabled={busy || throttled} onClick={() => void perform(pending)}>{busy ? c("applying") : c("exactRetry")}</button> : <><button type="button" className="secondary" disabled={detailLoading || busy || throttled} onClick={refresh}>{c("retry")}</button><button type="button" className="secondary case-reload-ack" disabled={throttled || detailLoading || busy || !!detailError || history.loading || !!history.error || (!!session.pending?.caseId && (!current || !history.data || history.data.next_after_version !== null))} onClick={() => { persistMarker(null); setActionError(null); }}>{c("reviewedHistory")}</button></>}
+        {session.pending?.caseId === session.selectedId && (detailError === "expired" || detailError === "missing") && <div className="case-defer-explanation"><p>{c("deferredHint")}</p>{session.deferred.length >= MAX_DEFERRED_CASES && <p>{c("deferredFull")}</p>}<button type="button" className="secondary case-defer-unknown" disabled={busy || throttled || detailLoading || session.deferred.length >= MAX_DEFERRED_CASES} onClick={deferUnknown}>{c("deferUnknown")}</button></div>}
+      </div></aside>}
       {proposal && <aside className="case-action-preview"><h3>{c("confirm")}</h3><p>{pendingDescription}</p>{proposalBody && "action" in proposalBody ? <><p>{c("version")}: {proposalBody.expected_version}</p>{proposalBody.action === "assign" && <strong>{staff(proposalBody.assignee)}</strong>}{proposalBody.action === "transition" && <strong>{c(proposalBody.state)} · {c(proposalBody.reason)}</strong>}{proposalBody.action === "note" && <p className="soc-case-text">{proposalBody.body}</p>}{proposalBody.action === "categorize" && <strong>{c(proposalBody.category)}</strong>}{proposalBody.action === "request_information" && <p>{c(proposalBody.question === "remote_access" ? "remote_access_question" : proposalBody.question)}</p>}</> : proposalBody && <code>{proposalBody.report_id}</code>}<div><button type="button" className="primary case-action-confirm" disabled={busy || unresolved || throttled || (proposal.caseId !== null && (!current || !!detailError || detailLoading))} onClick={() => void perform(proposal)}>{c("confirm")}</button><button type="button" className="secondary" disabled={busy || throttled} onClick={() => setProposal(null)}>{c("back")}</button></div></aside>}
       {showError(detailError ?? expireMessage)}
       {!current ? <p className="soc-case-empty">{c(detailLoading ? "loading" : "selectCase")}</p> : <>
         <div className="soc-case-detail-heading"><div><h3>{c("detail")}</h3><code>{current.id}</code></div><span className={`soc-case-badge state-${current.state}`}>{c(current.state)}</span></div>
         <dl className="soc-case-meta"><div><dt>{c("assignee")}</dt><dd><UserRound size={14} />{staff(current.assignee)}</dd></div><div><dt>{c("category")}</dt><dd>{c(current.category)}</dd></div><div><dt>{c("source")}</dt><dd>{c(current.source)}</dd></div><div><dt>{c("version")}</dt><dd className="tabular-nums">{current.version}</dd></div><div><dt>{c("created")}</dt><dd>{date(current.created_at)}</dd></div><div><dt>{c("expires")}</dt><dd>{date(current.expires_at)}</dd></div></dl>
         {readAt && <p className="soc-case-scope">{c("latest")}: {date(readAt)} · UTC+5</p>}
+        <div className="case-export"><button type="button" className="secondary case-export-download" aria-describedby="case-export-hint" disabled={busy || unresolved || throttled || exporting || detailLoading || !!detailError} onClick={() => void downloadExport()}>{exporting ? <LoaderCircle size={15} className="animate-spin" /> : <Download size={15} />}{c("exportCase")}</button><p id="case-export-hint" className="soc-case-scope">{c("exportHint")}</p></div>
         {evidence.data?.transaction_id ? <button type="button" className="soc-case-transfer" onClick={() => transactionCallback.current?.(evidence.data!.transaction_id)}>{c("relatedTransfer")}<code>{evidence.data.transaction_id}</code><ArrowRight size={15} /></button> : !evidence.loading && !evidence.error && <p className="soc-case-scope">{c("noTransfer")}</p>}{showError(evidence.error)}
         {conflict && <aside className="case-conflict soc-case-warning" role="alert"><p>{c("conflict")}</p><p>{c("version")}: {current.version}</p><button type="button" className="primary case-conflict-confirm" disabled={busy || throttled || detailLoading || !!detailError || !rebaseCaseAction(conflict, current)} onClick={confirmConflict}>{c("reconfirm")}</button><button type="button" className="secondary" onClick={() => { setConflict(null); setActionError(null); }}>{c("back")}</button></aside>}
         {showError(actionError)}{notice && <p className="soc-case-success" role="status"><CheckCircle2 size={16} />{c(notice)}</p>}

@@ -31,7 +31,27 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build static demo
         working-directory: frontend
+        env:
+          # The export must ignore a developer's inherited live configuration.
+          BCC_API_MODE: live
+          BCC_NORMAL_SENDER_ID: 11111111-1111-4111-8111-111111111111
         run: node scripts/build-pages.mjs pages-out --base "/${{ github.event.repository.name }}"
+      - name: Verify static transfer and recipient flags
+        working-directory: frontend
+        env:
+          SOC_SYNTHETIC_REHEARSAL: '1'
+          QA_EXPECT_STATIC: '1'
+          QA_OUTPUT: ${{ github.workspace }}/.local-checks/pages-browser-ci
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          npx --no-install playwright install --with-deps chromium
+          mkdir -p "$RUNNER_TEMP/saqbol-pages"
+          ln -s "$PWD/pages-out" "$RUNNER_TEMP/saqbol-pages/$REPO_NAME"
+          python3 -m http.server 3014 --bind 127.0.0.1 --directory "$RUNNER_TEMP/saqbol-pages" > "$RUNNER_TEMP/saqbol-pages.log" 2>&1 &
+          static_pid=$!
+          trap 'kill "$static_pid"' EXIT
+          sleep 1
+          node scripts/qa-recipient-flags.cjs "http://127.0.0.1:3014/$REPO_NAME/"
       - name: Publish to gh-pages
         working-directory: frontend/pages-out
         env:

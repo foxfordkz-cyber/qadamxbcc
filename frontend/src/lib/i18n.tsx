@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Lang } from "./contracts";
 
 const messages = {
+  alertsOnly: ["Тек дабылдар", "Только тревоги"],
+  flaggedAccount: ["SOC белгісі бар шот", "Счёт с пометкой SOC"],
   tabMobile: ["Клиент · bcc.kz", "Клиент · bcc.kz"],
   tabSoc: ["SOC панелі", "Панель SOC"],
   decisionPanel: ["Saq Bol не көреді", "Что видит Saq Bol"],

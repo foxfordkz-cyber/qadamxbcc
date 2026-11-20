@@ -1,9 +1,10 @@
+import unicodedata
 import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models import TransactionStatus
 from app.schemas.transfers import (
@@ -12,6 +13,37 @@ from app.schemas.transfers import (
     RiskReasonOut,
     TransferContextIn,
 )
+
+
+class RecipientFlagRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    flagged: bool = Field(strict=True)
+    note: str = Field(min_length=1, max_length=200)
+    request_id: uuid.UUID | None = None
+    expected_version: int | None = Field(None, ge=0, strict=True)
+
+    @field_validator("note")
+    @classmethod
+    def plain_note(cls, value: str) -> str:
+        value = value.strip()
+        if not value or any(unicodedata.category(char).startswith("C") for char in value):
+            raise ValueError("provide a nonempty plain-text reason")
+        return value
+
+
+class RecipientFlagState(BaseModel):
+    account_id: uuid.UUID
+    flagged: bool
+    version: int = Field(ge=0)
+    updated_at: datetime | None
+
+
+class RecipientFlagResponse(RecipientFlagState):
+    audit_id: uuid.UUID
+    actor: str
+    note: str
+    previous_flagged: bool
 
 
 class FeedParty(BaseModel):

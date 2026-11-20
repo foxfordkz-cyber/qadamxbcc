@@ -64,8 +64,8 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
     const incoming = new Set(graph.edges.filter(e => e.data.edge_type === "transfer" && suspicious.has(e.target)).map(e => e.source));
     return directGraphLayout(graph).map(n => ({ ...n, type: "account" as const, data: { ...n.data,
       isCenter: n.id === graph.center,
-      tone: hubs.has(n.id) ? "danger" : suspicious.has(n.id) || n.data.shared_device_accounts > 0 || incoming.has(n.id) ? "warning" : "safe",
-      caption: t(hubs.has(n.id) ? "hub" : n.data.shared_device_accounts > 0 ? "shared" : incoming.has(n.id) ? "victim" : suspicious.has(n.id) ? "account" : "safeAccount"),
+      tone: n.data.flagged || hubs.has(n.id) ? "danger" : suspicious.has(n.id) || n.data.shared_device_accounts > 0 || incoming.has(n.id) ? "warning" : "safe",
+      caption: t(n.data.flagged ? "flaggedAccount" : hubs.has(n.id) ? "hub" : n.data.shared_device_accounts > 0 ? "shared" : incoming.has(n.id) ? "victim" : suspicious.has(n.id) ? "account" : "safeAccount"),
     } }));
   // Translation changes rebuild labels while the effect below preserves dragged positions.
   // eslint-disable-next-line react-hooks/exhaustive-deps

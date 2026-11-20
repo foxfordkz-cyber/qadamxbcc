@@ -293,6 +293,50 @@ async def test_case_contact_information_does_not_reach_bank_owner(iw: Integratio
     assert iw.adapter.messages == {}
 
 
+@pytest.mark.parametrize("state", ["IN_REVIEW", "ESCALATED", "RESOLVED", "CLOSED"])
+async def test_outstanding_information_survives_active_review_but_not_case_closure(
+    iw: IntegrationWorld, state: str
+) -> None:
+    row = await opened(iw)
+    row = await act(iw, row, action="transition", state="IN_REVIEW", reason="review_started")
+    row = await act(iw, row, action="request_information", question="caller_request")
+    path = f"{ROOT}/reports/{row['report_id']}/information-requests"
+    question = (await iw.client.get(path, headers=iw.auth())).json()[0]
+    row = await act(iw, row, action="transition", state="IN_REVIEW", reason="needs_followup")
+    if state != "IN_REVIEW":
+        row = await act(iw, row, action="transition", state=state, reason="review_complete")
+    headers = {**iw.auth(), "Idempotency-Key": str(uuid.uuid4())}
+    body = {
+        "body": "The caller asked to install remote access software.",
+        "confirmed_demo_submission": True,
+    }
+    response = await iw.client.post(path + "/" + question["id"], headers=headers, json=body)
+    current = (await iw.client.get(f"{CASES}/{row['id']}", headers=iw.auth("soc"))).json()
+    assert current["state"] == state, "An owner reply must not undo an officer's transition"
+    if state in {"RESOLVED", "CLOSED"}:
+        assert response.status_code == 409
+        assert response.json() == {"detail": "case_information_closed"}
+        assert current["version"] == row["version"]
+        assert not (await iw.client.get(path, headers=iw.auth())).json()[0]["answered"]
+        return
+    assert response.status_code == 200
+    assert current["version"] == row["version"] + 1
+    assert (
+        await iw.client.post(path + "/" + question["id"], headers=headers, json=body)
+    ).json() == (response.json())
+    assert (await iw.client.get(path, headers=iw.auth())).json()[0]["answered"]
+    history = (await iw.client.get(f"{CASES}/{row['id']}/history", headers=iw.auth("soc"))).json()[
+        "items"
+    ]
+    assert history[-1]["code"] == "INFORMATION_RECEIVED"
+    assert history[-1]["state"] == state
+    assert history[-1]["actor_role"] == "owner"
+    # The completed question no longer leaves the case permanently unable to
+    # request additional information after the analyst resumed active review.
+    next_question = await act(iw, current, action="request_information", question="remote_access")
+    assert next_question["state"] == "NEEDS_INFORMATION"
+
+
 async def test_case_cursor_authentication_and_stable_pagination(iw: IntegrationWorld) -> None:
     first = await opened(iw)
     async with iw.factory() as session:

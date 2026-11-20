@@ -6,12 +6,13 @@
  */
 import { z } from "zod";
 import { ApiError, answersSchema, feedQuerySchema, transferSchema } from "./contracts";
-import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, resolveDemo } from "./demo";
+import { abandonDemo, bankCallDemo, callCheckDemo, cancelDemo, DemoError, detailDemo, evaluateDemo, feedDemo, graphDemo, recipientFlagDemo, resolveDemo, setRecipientFlagDemo } from "./demo";
+import { recipientFlagInputSchema } from "./recipient-flag";
 import { ids } from "./demo-ids";
 import { staticCircle, staticGuide } from "./static-circle";
 
 const STORE = "saqbol-static-demo-v1";
-const keys = ["bccDemoTransfers", "bccDemoDetails", "bccDemoRequests", "bccDemoAbandoned", "bccDemoBankCalls", "bccDemoCallChecks"] as const;
+const keys = ["bccDemoTransfers", "bccDemoDetails", "bccDemoRequests", "bccDemoAbandoned", "bccDemoBankCalls", "bccDemoCallChecks", "bccDemoRecipientFlags", "bccDemoFlagReceipts"] as const;
 type Root = Record<(typeof keys)[number], unknown>;
 const root = globalThis as unknown as Partial<Root>;
 // Re-read on every call: the main page and the /pitch iframe share one store, and a
@@ -25,7 +26,7 @@ function load() {
     const saved = JSON.parse(localStorage.getItem(STORE) ?? "null") as Record<string, unknown> | null;
     if (!saved) return;
     root.bccDemoTransfers = saved.bccDemoTransfers as unknown[];
-    for (const key of ["bccDemoDetails", "bccDemoRequests", "bccDemoBankCalls", "bccDemoCallChecks"] as const) root[key] = new Map(saved[key] as [string, unknown][]);
+    for (const key of ["bccDemoDetails", "bccDemoRequests", "bccDemoBankCalls", "bccDemoCallChecks", "bccDemoRecipientFlags", "bccDemoFlagReceipts"] as const) root[key] = new Map(saved[key] as [string, unknown][]);
     root.bccDemoAbandoned = new Set(saved.bccDemoAbandoned as string[]);
   } catch { /* Unreadable or blocked storage starts a fresh demo. */ }
 }
@@ -59,6 +60,10 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
   if (method === "POST" && /^transfers\/requests\/[0-9a-f-]{36}\/abandon$/i.test(route)) return abandonDemo(uuid(path[2]));
   if (method === "GET" && /^transfers\/[0-9a-f-]{36}$/i.test(route)) return detailDemo(uuid(path[1]));
   if (method === "GET" && route === "soc/feed") return feedDemo(feedQuerySchema.parse(Object.fromEntries(search)));
+  if (/^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route)) {
+    if (method === "GET") return recipientFlagDemo(uuid(path[2]));
+    if (method === "POST") return setRecipientFlagDemo(uuid(path[2]), recipientFlagInputSchema.parse(body));
+  }
   if (method === "GET" && /^soc\/graph\/[0-9a-f-]{36}$/i.test(route)) return graphDemo(uuid(path[2]), z.coerce.number().int().min(1).max(3).parse(search.get("depth") ?? 2));
   if (method === "POST" && (route === "call-check" || route === "call-check/demo/bank-call")) {
     const { customer_id } = z.object({ customer_id: z.uuid() }).strict().parse(body);

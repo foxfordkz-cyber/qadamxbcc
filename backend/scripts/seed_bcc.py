@@ -45,6 +45,7 @@ from app.models import (
     EdgeType,
     GraphEdge,
     ProjectionEvent,
+    RecipientFlagAudit,
     RiskEvent,
     Transaction,
     TransactionStatus,
@@ -516,7 +517,8 @@ def _resolve_historic_cooling(
 async def _clear(session: AsyncSession, redis: Redis) -> int:
     # Explicit demo reset removes stale deliveries even with SQLite foreign keys disabled.
     # Abandoned UUID promises survive resets so late old requests cannot execute.
-    for model in (ProjectionEvent, RiskEvent, Transaction, GraphEdge, Account):
+    # SOC flag history belongs to the disposable synthetic accounts being replaced.
+    for model in (RecipientFlagAudit, ProjectionEvent, RiskEvent, Transaction, GraphEdge, Account):
         await session.execute(delete(model))
     await session.commit()
     keys = [k async for k in redis.scan_iter(match=f"{KEY_PREFIX}:*", count=1_000)]
@@ -544,11 +546,15 @@ async def seed(
     rng_seed: int = RNG_SEED,
     now: datetime | None = None,
 ) -> SeedReport:
+    settings = get_settings()
+    if settings.environment == "pilot":
+        raise RuntimeError(
+            "Synthetic demo reset is disabled in pilot; use a disposable demo database"
+        )
     started = time.perf_counter()
     await redis.ping()  # connect before scoring so no history row carries connect latency
     rng = random.Random(rng_seed)
     now = (now or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0)
-    settings = get_settings()
     report = SeedReport()
 
     pop = build_population(rng, now, n_background_accounts)

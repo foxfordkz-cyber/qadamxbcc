@@ -2,7 +2,7 @@ name: Integration verification
 on:
   pull_request:
   push:
-    branches: [main, 'feature/bekzat-*', 'codex/bekzat-main-readiness-*']
+    branches: [main, 'feature/bekzat-*', 'codex/**']
 permissions:
   contents: read
 jobs:
@@ -53,7 +53,7 @@ jobs:
         run: |
           uv run --no-sync python -m scripts.verify_merged_migrations
           uv run --no-sync python -m scripts.verify_case_migrations
-          uv run --no-sync pytest tests/integrations tests/test_postgres_concurrency.py
+          uv run --no-sync pytest tests/integrations tests/test_postgres_concurrency.py tests/test_recipient_flag_postgres.py
   compose-demo:
     # Pin the OS together with the browser harness; ubuntu-latest can change underneath it.
     runs-on: ubuntu-24.04
@@ -88,12 +88,17 @@ jobs:
           npm install --prefix /tmp/bcc-browser-qa --no-save --package-lock=false --no-audit --no-fund playwright@1.56.1
           node /tmp/bcc-browser-qa/node_modules/playwright/cli.js install --with-deps chromium
           PLAYWRIGHT_MODULE=/tmp/bcc-browser-qa/node_modules/playwright QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/browser-ci" node frontend/scripts/qa-mobile-soc.cjs http://127.0.0.1:3000
+          PLAYWRIGHT_MODULE=/tmp/bcc-browser-qa/node_modules/playwright QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/soc-cases-ci" node frontend/scripts/qa-soc-cases.cjs http://127.0.0.1:3000
+          SOC_SYNTHETIC_REHEARSAL=1 PLAYWRIGHT_MODULE=/tmp/bcc-browser-qa/node_modules/playwright QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/recipient-flags-ci" node frontend/scripts/qa-recipient-flags.cjs http://127.0.0.1:3000
       - name: Save synthetic browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: integrations-disabled-browser-qa
-          path: .local-checks/browser-ci/
+          path: |
+            .local-checks/browser-ci/
+            .local-checks/soc-cases-ci/
+            .local-checks/recipient-flags-ci/
           if-no-files-found: ignore
           include-hidden-files: true
           retention-days: 7

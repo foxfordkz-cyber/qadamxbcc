@@ -30,7 +30,7 @@ function append(item, code, body, actor = 'soc') {
 }
 for (const item of records.values()) append(item, 'OPENED');
 append(records.get(caseA), 'INFORMATION_RECEIVED', 'QA синтетический ответ клиента', 'owner');
-const fixture = { disabled: false, conflict: false, unknown: false, throttle: false, expired: new Set(), timelineAsOf: now() };
+const fixture = { disabled: false, conflict: false, unknown: false, throttle: false, expired: new Set(), missing: new Set(), timelineAsOf: now() };
 const health = () => ({ status: 'degraded', checked_at: now(), cache_seconds: 5, database: 'ok', redis: 'unavailable', worker: 'unknown', telegram: 'test_enabled', gateway: 'mock_ready', queue: null, last_successful_processing: null, real_provider_probed: false });
 const report = { target, mocked_api: true, started_at: now(), checks: [], requests: [], mutations: [], errors: [], screenshots: [] };
 const check = (name, passed, detail) => { report.checks.push({ name, passed: Boolean(passed), ...(detail === undefined ? {} : { detail }) }); assert.ok(passed, name); };
@@ -79,7 +79,7 @@ async function main() {
     const match = pathname.match(/\/guardian\/soc\/cases\/([0-9a-f-]{36})(?:\/(actions|history|notes|evidence|export))?$/i);
     if (match) {
       const item = records.get(match[1]);
-      if (!item) return route.fulfill({ status: 404, json: { error: 'case_not_found' } });
+      if (!item || fixture.missing.has(match[1])) return route.fulfill({ status: 404, json: { error: 'case_not_found' } });
       if (fixture.expired.has(item.id)) return route.fulfill({ status: 410, json: { error: 'case_expired' } });
       if (match[2] === 'actions' && method === 'POST') {
         if (fixture.throttle) { fixture.throttle = false; return route.fulfill({ status: 429, headers: { 'Retry-After': '1' }, json: { error: 'rate_limited' } }); }
@@ -93,7 +93,7 @@ async function main() {
       if (match[2] === 'history') return route.fulfill({ json: { items: history.get(item.id) || [], next_after_version: null } });
       if (match[2] === 'notes') return route.fulfill({ json: { items: notes.get(item.id) || [], next_after_version: null } });
       if (match[2] === 'evidence') return route.fulfill({ json: { report_available: true, transaction_id: item.id === caseA ? transactionId : null, report_events: [], advisory_only: true } });
-      if (match[2] === 'export') return route.fulfill({ json: { category: item.category, state: item.state, source: item.source, created_at: item.created_at, events: (history.get(item.id) || []).map(event => ({ code: event.code, state: event.state, timestamp: event.timestamp })), demonstration_only: true } });
+      if (match[2] === 'export') return route.fulfill({ json: { category: item.category, state: item.state, source: item.source, created_at: item.created_at, events: (history.get(item.id) || []).map(event => ({ code: event.code, state: event.state, timestamp: event.timestamp, body: 'PRIVATE_EXPORT_EVENT' })), demonstration_only: true, case_id: item.id, body: 'PRIVATE_EXPORT_NOTE', signing_key: 'PRIVATE_EXPORT_TOKEN' } });
       return route.fulfill({ json: item });
     }
     if (pathname === '/api/v1/integrations/health/details') return route.fulfill({ json: health() });
@@ -123,18 +123,23 @@ async function main() {
     if (pathname.endsWith('/soc/feed')) return route.fulfill({ json: { server_time: now(), items: [], pagination: { total_filtered: 0, offset: 0, limit: 25, has_more: false }, stats: { total: 0, approved: 0, cooling_off: 0, blocked: 0, blocked_hubs: 0, avg_latency_ms: 0, max_latency_ms: 0, p95_latency_ms: null, latency_sample_size: 0, latency_sample_limit: 500 } } });
     return route.fulfill({ status: 404, json: { error: 'notFound' } });
   });
-  const page = await context.newPage(); page.setDefaultTimeout(15000);
+  const page = await context.newPage(); page.setDefaultTimeout(15000); page.setDefaultNavigationTimeout(60000);
   page.on('pageerror', error => report.errors.push(error.message));
   page.on('dialog', dialog => dialog.type() === 'beforeunload' ? dialog.accept() : dialog.dismiss());
   const workspace = page.locator('.soc-cases-workspace'), detail = page.locator('.soc-case-detail');
   const settle = () => page.waitForTimeout(250);
+  const failSessionWrites = () => page.evaluate(() => {
+    window.__qaStorageSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) { if (this === sessionStorage && key === 'saq-bol-soc-cases-v1') throw new DOMException('QA quota', 'QuotaExceededError'); return window.__qaStorageSetItem.call(this, key, value); };
+  });
+  const restoreSessionWrites = () => page.evaluate(() => { Storage.prototype.setItem = window.__qaStorageSetItem; delete window.__qaStorageSetItem; });
   const screenshot = async name => { const file = path.join(output, `${name}.png`); await page.screenshot({ path: file, fullPage: true }); report.screenshots.push(file); };
   const language = lang => page.locator('.topbar').getByRole('button', { name: lang === 'kk' ? 'ҚАЗ' : 'РУС', exact: true }).click();
   const selectCase = async id => { await workspace.locator(`.soc-case-row[data-case-id="${id}"]`).click(); await page.locator(`.soc-case-detail[data-case-id="${id}"]`).waitFor(); await page.locator('#case-action-kind').waitFor(); };
   const prepare = async (action, selector, value) => { await page.locator('#case-action-kind').selectOption(action); if (selector) { const field = page.locator(selector); if (await field.evaluate(node => node.tagName === 'SELECT')) await field.selectOption(value); else await field.fill(value); } await page.locator('.case-action-submit').click(); await page.locator('.case-action-confirm').waitFor(); };
   const confirm = async () => { const sent = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname.startsWith(base)); await page.locator('.case-action-confirm').click(); await sent; await page.waitForFunction(() => !document.querySelector('.case-action-confirm')); await settle(); };
   try {
-    await page.goto(target, { waitUntil: 'domcontentloaded' }); await page.locator('#tab-soc').click();
+    await page.goto(target, { waitUntil: 'networkidle' }); await page.locator('#tab-soc').click();
     await page.getByTestId('soc-mode-cases').click(); await workspace.waitFor(); await workspace.locator('.soc-case-row').first().waitFor();
     check('queue_reads_backend_cases', await workspace.locator('.soc-case-row').count() === 2);
     check('queue_has_explicit_pagination', await workspace.locator('.case-load-more').isVisible());
@@ -146,6 +151,13 @@ async function main() {
     check('authoritative_case_detail_and_history', await detail.getAttribute('data-case-id') === caseA && (await page.locator('.case-history').innerText()).includes('OPENED'));
     await page.locator('.case-notes').getByText('QA синтетический ответ клиента', { exact: true }).waitFor();
     check('customer_reply_visible_in_notes', (await page.locator('.case-notes').innerText()).includes('QA синтетический ответ клиента'));
+    const beforeExport = report.mutations.length;
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('.case-export-download').click();
+    const download = await downloadPromise;
+    const exported = await fs.readFile(await download.path(), 'utf8');
+    check('case_export_uses_existing_readonly_endpoint', report.mutations.length === beforeExport && report.requests.some(item => item.method === 'GET' && item.path === `${base}/${caseA}/export`) && download.suggestedFilename() === 'saq-bol-case-summary.json');
+    check('case_export_strips_notes_identifiers_and_secret_fields', !exported.includes('PRIVATE_') && !exported.includes(caseA) && JSON.parse(exported).demonstration_only === true && JSON.parse(exported).events.length > 0);
     await page.getByTestId('incident-timeline').getByText('QA: внешняя проверка недоступна', { exact: true }).waitFor();
     await page.locator('.gateway-results').waitFor();
     const healthText = await page.getByTestId('integration-health').innerText();
@@ -168,6 +180,10 @@ async function main() {
     const beforePreview = report.mutations.length;
     await prepare('assign', '#case-assignee', 'demo_analyst_a');
     check('preview_does_not_write_case', report.mutations.length === beforePreview);
+    await failSessionWrites(); await page.locator('.case-action-confirm').click();
+    await workspace.getByText('Действие не отправлено: браузер не смог сохранить ключ восстановления. Восстановите доступ к хранилищу сессии и подтвердите заново.', { exact: true }).waitFor();
+    check('first_action_requires_durable_recovery_key_before_post', report.mutations.length === beforePreview && await page.locator('.case-action-confirm').isVisible() && await page.locator('.case-unknown').count() === 0 && await page.evaluate(() => JSON.parse(sessionStorage.getItem('saq-bol-soc-cases-v1')).pending) === null);
+    await restoreSessionWrites();
     await confirm();
     check('assignment_is_versioned_and_idempotent', records.get(caseA).assignee === 'demo_analyst_a' && report.mutations.at(-1).body.expected_version === 1 && /^[0-9a-f-]{36}$/.test(report.mutations.at(-1).key));
     fixture.conflict = true;
@@ -183,6 +199,7 @@ async function main() {
     await prepare('note', '#case-note', sensitiveNote); await confirm(); await page.locator('.case-unknown-retry').waitFor();
     const unknownRequest = structuredClone(report.mutations.at(-1));
     check('unknown_result_blocks_new_action', await page.locator('#case-action-kind').isDisabled());
+    check('unknown_result_disables_export_of_unreconciled_case', await page.locator('.case-export-download').isDisabled());
     fixture.throttle = true;
     await page.locator('.case-unknown-retry').click(); await page.locator('.case-rate-limit').waitFor();
     check('retry_rate_limit_preserves_original_unknown_intent', await page.locator('.case-unknown-retry').isDisabled() && await page.locator('#case-action-kind').isDisabled() && report.mutations.at(-1).key === unknownRequest.key && await page.evaluate(() => JSON.parse(sessionStorage.getItem('saq-bol-soc-cases-v1')).pending !== null));
@@ -212,6 +229,33 @@ async function main() {
     await selectCase(caseA);
     await page.getByTestId('incident-timeline').getByText('QA: внешняя проверка недоступна', { exact: true }).waitFor();
     check('returning_to_case_restarts_timeline_at_first_page', await page.locator('.incident-events li').count() === 1 && await page.getByTestId('incident-more').isVisible() && !report.requests.filter(item => item.path.endsWith('/timeline')).at(-1).search.includes('cursor='));
+    fixture.unknown = true;
+    await prepare('note', '#case-note', 'QA отложенная синтетическая заметка'); await confirm();
+    const unavailableRequest = structuredClone(report.mutations.at(-1));
+    fixture.expired.add(caseA);
+    await page.locator('.case-unknown-retry').click(); await page.locator('.case-defer-unknown').waitFor();
+    check('expired_retry_keeps_exact_unknown_key_and_clears_content', report.mutations.at(-1).key === unavailableRequest.key && await page.locator('#case-action-kind').count() === 0 && !(await workspace.innerText()).includes('QA отложенная'));
+    const beforeDeferral = report.mutations.length;
+    await failSessionWrites();
+    await page.locator('.case-defer-unknown').click(); await settle();
+    check('failed_metadata_storage_never_releases_unknown_action_lock', await page.locator('.case-unknown').isVisible() && await workspace.locator(`.soc-case-row[data-case-id="${caseB}"]`).isDisabled());
+    await restoreSessionWrites();
+    await page.locator('.case-defer-unknown').click(); await page.locator('.case-unknown').waitFor({ state: 'hidden' });
+    const parked = await page.evaluate(() => JSON.parse(sessionStorage.getItem('saq-bol-soc-cases-v1')));
+    check('expired_unknown_can_be_deferred_without_resubmission_or_false_success', report.mutations.length === beforeDeferral && parked.pending === null && parked.deferred[0].key === unavailableRequest.key && parked.deferred[0].reason === 'expired' && !JSON.stringify(parked).includes('QA отложенная'));
+    await selectCase(caseB);
+    check('deferral_allows_other_cases_to_be_reviewed', await page.locator('#case-action-kind').isEnabled());
+    await page.reload({ waitUntil: 'domcontentloaded' }); await page.locator('#case-action-kind').waitFor();
+    check('deferred_receipt_metadata_survives_reload_without_private_body', await page.locator('.case-deferred').isVisible() && report.mutations.length === beforeDeferral);
+    await workspace.locator(`.soc-case-row[data-case-id="${caseA}"]`).click(); await page.locator('.case-defer-unknown').waitFor();
+    check('returning_to_unavailable_case_restores_review_lock_without_replay', await page.locator('.case-reload-ack').isDisabled() && report.mutations.length === beforeDeferral && await page.locator('.case-unknown-retry').count() === 0);
+    fixture.expired.clear(); fixture.missing.add(caseA);
+    await page.locator('.case-refresh').click(); await detail.getByText('Кейс не найден или недоступен.', { exact: true }).first().waitFor();
+    await page.locator('.case-defer-unknown').click(); await page.locator('.case-unknown').waitFor({ state: 'hidden' });
+    check('missing_case_uses_the_same_explicit_reconciliation_path', await page.evaluate(() => JSON.parse(sessionStorage.getItem('saq-bol-soc-cases-v1')).deferred[0].reason) === 'missing' && report.mutations.length === beforeDeferral);
+    fixture.missing.clear(); await page.locator('.case-deferred summary').click(); await page.locator('.case-resume-review').click();
+    await page.locator('.case-reload-ack').click(); await settle();
+    check('available_case_requires_full_history_review_before_new_actions', await page.locator('#case-action-kind').isEnabled() && await page.locator('.case-deferred').count() === 0 && report.mutations.length === beforeDeferral);
     fixture.expired.add(caseA);
     await page.locator('.case-refresh').click(); await settle();
     check('expired_case_removes_private_content_and_actions', !(await workspace.innerText()).includes(sensitiveNote) && await page.locator('#case-action-kind').count() === 0);

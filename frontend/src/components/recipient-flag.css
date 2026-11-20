@@ -1,0 +1,19 @@
+.recipient-flag { margin: 20px 0; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: #fcfcfd; font-size: 12px; }
+.recipient-flag-heading, .recipient-flag-heading h3 { display: flex; align-items: center; gap: 8px; }
+.recipient-flag-heading { justify-content: space-between; }
+.recipient-flag-heading h3 { margin: 0; font-size: 14px; }
+.recipient-flag-scope { color: var(--muted); line-height: 1.7; }
+.recipient-flag-state { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 600; }
+.recipient-flag-state.flagged, .recipient-flag-error { color: #b42318; }
+.recipient-flag-state.clear, .recipient-flag-success { color: #067647; }
+.recipient-flag-actions, .recipient-flag-confirmation > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.recipient-flag-actions .secondary { flex: 1; min-width: 150px; justify-content: center; }
+.recipient-flag-open { color: #b42318; }
+.recipient-flag-confirmation { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.recipient-flag-confirmation label { display: grid; gap: 6px; }
+.recipient-flag-confirmation textarea { width: 100%; box-sizing: border-box; min-height: 74px; padding: 10px; border: 1px solid var(--line-strong); border-radius: 10px; background: white; resize: vertical; font: inherit; }
+.recipient-flag-confirmation small, .recipient-flag-audit { color: var(--muted); line-height: 1.6; }
+.recipient-flag-confirmation code, .recipient-flag-audit { display: block; overflow-wrap: anywhere; }
+.recipient-flag-unknown { padding: 14px; margin: 12px 0; background: #fffaeb; border: 1px solid #fedf89; border-radius: 12px; color: #93370d; line-height: 1.6; }
+.recipient-flag-unknown .secondary { margin: 4px 4px 4px 0; max-width: 100%; white-space: normal; }
+.recipient-flag-audit { margin-top: 12px; font-size: 10px; }

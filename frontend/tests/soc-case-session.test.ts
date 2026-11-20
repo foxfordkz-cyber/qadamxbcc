@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { CaseOut } from "../src/lib/soc-integrations";
-import { actionAllowed, emptyCaseSession, filterCases, intentMarker, mergeCases, readCaseSession, rebaseCaseAction, serializeCaseSession, type CaseIntent } from "../src/lib/soc-case-session";
+import { actionAllowed, deferUnavailableCase, emptyCaseSession, filterCases, intentMarker, MAX_DEFERRED_CASES, mergeCases, readCaseSession, rebaseCaseAction, resumeDeferredCase, serializeCaseSession, type CaseIntent } from "../src/lib/soc-case-session";
 import { caseText, socCaseCopy } from "../src/lib/soc-case-copy";
 
 const id = "00000000-0000-4000-8000-000000000001";
@@ -27,6 +27,37 @@ test("broken or stale session formats reset safely without inventing a selected 
   for (const value of [null, "{", "null", '{"selectedId":"malformed"}', '{"status":"FROZEN"}', '{"pending":{"body":"secret"}}']) {
     assert.deepEqual(readCaseSession(value), emptyCaseSession);
   }
+});
+
+test("unavailable-case deferral preserves unknown outcome metadata without replayable text", () => {
+  const original = { ...emptyCaseSession, selectedId: id, pending: { ...intentMarker(noteIntent()), body: "PRIVATE_NOTE", token: "PRIVATE_TOKEN" } };
+  const deferred = deferUnavailableCase(original, "expired", 100)!;
+  assert.equal(deferred.pending, null); assert.equal(deferred.selectedId, null);
+  assert.equal(original.pending.key, key);
+  const raw = serializeCaseSession(deferred);
+  assert.ok(!raw.includes("PRIVATE_"));
+  assert.deepEqual(readCaseSession(raw).deferred, [{ caseId: id, key, action: "note", reason: "expired", recordedAt: 100 }]);
+  assert.equal(deferUnavailableCase({ ...original, selectedId: otherId }, "expired"), null);
+  assert.equal(deferUnavailableCase({ ...original, pending: { caseId: null, key, action: "open" } }, "missing"), null);
+});
+
+test("resuming a deferred case restores only the review lock, never an executable action", () => {
+  const deferred = deferUnavailableCase({ ...emptyCaseSession, selectedId: id, pending: intentMarker(noteIntent()) }, "missing", 100)!;
+  const restored = resumeDeferredCase(readCaseSession(serializeCaseSession(deferred)), key)!;
+  assert.equal(restored.selectedId, id); assert.deepEqual(restored.pending, { caseId: id, key, action: "note" });
+  assert.equal(restored.deferred.length, 0);
+  assert.equal(resumeDeferredCase(restored, key), null);
+  assert.equal(resumeDeferredCase(deferred, otherId), null);
+  assert.deepEqual(readCaseSession('{"selectedId":null,"pending":null}').deferred, []);
+});
+
+test("bounded local reconciliation never silently evicts an older unresolved action", () => {
+  const marker = { caseId: id, key, action: "note" as const };
+  const deferred = Array.from({ length: MAX_DEFERRED_CASES }, (_, index) => ({ ...marker, key: `00000000-0000-4000-8000-${(index + 100).toString().padStart(12, "0")}`, reason: "expired" as const, recordedAt: index }));
+  const original = { ...emptyCaseSession, selectedId: id, pending: marker, deferred };
+  assert.equal(deferUnavailableCase(original, "missing"), null);
+  assert.equal(original.deferred.length, MAX_DEFERRED_CASES);
+  assert.equal(deferUnavailableCase({ ...original, pending: deferred[0] }, "missing")?.deferred.length, MAX_DEFERRED_CASES);
 });
 
 test("local filters use loaded rows and Kazakhstan day boundaries without mutating the source", () => {

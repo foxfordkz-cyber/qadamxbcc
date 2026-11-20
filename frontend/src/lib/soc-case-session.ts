@@ -7,20 +7,38 @@ export const caseStaff = ["demo_analyst_a", "demo_analyst_b"] as const;
 export const caseCategories = ["impersonation", "safe_account", "remote_access", "other"] as const;
 export const caseQuestions = ["caller_request", "remote_access", "secrecy_pressure"] as const;
 export const caseReasons = ["review_started", "needs_followup", "review_complete", "duplicate", "reopened"] as const;
+const pendingMarkerSchema = z.object({ caseId: z.uuid().nullable(), key: z.uuid(), action: z.enum(["open", "assign", "transition", "note", "request_information", "categorize"]) });
+export const MAX_DEFERRED_CASES = 50;
 const sessionSchema = z.object({
   selectedId: z.uuid().nullable().default(null),
   status: z.enum(["all", ...caseStates]).default("all"),
   assignee: z.enum(["all", "unassigned", ...caseStaff]).default("all"),
   since: z.string().regex(/^(?:|\d{4}-\d{2}-\d{2})$/).default(""),
-  pending: z.object({ caseId: z.uuid().nullable(), key: z.uuid(), action: z.enum(["open", "assign", "transition", "note", "request_information", "categorize"]) }).nullable().default(null),
+  pending: pendingMarkerSchema.nullable().default(null),
+  deferred: z.array(pendingMarkerSchema.extend({ caseId: z.uuid(), reason: z.enum(["expired", "missing"]), recordedAt: z.number().int().nonnegative() })).max(MAX_DEFERRED_CASES).default([]),
 });
 export type CaseSession = z.infer<typeof sessionSchema>;
-export const emptyCaseSession: CaseSession = { selectedId: null, status: "all", assignee: "all", since: "", pending: null };
+export const emptyCaseSession: CaseSession = { selectedId: null, status: "all", assignee: "all", since: "", pending: null, deferred: [] };
 export function readCaseSession(raw: string | null): CaseSession {
   try { return sessionSchema.parse(JSON.parse(raw ?? "{}")); } catch { return { ...emptyCaseSession }; }
 }
-/** Allowlist only IDs, filters and an unresolved-action marker. Never persist notes or tokens. */
+/** Allowlist only IDs, filters and reconciliation markers. Never persist notes or tokens. */
 export function serializeCaseSession(value: CaseSession): string { return JSON.stringify(sessionSchema.parse(value)); }
+/** This only parks a local marker; it neither cancels nor declares a server action successful. */
+export function deferUnavailableCase(session: CaseSession, reason: "expired" | "missing", recordedAt = Date.now()): CaseSession | null {
+  const marker = session.pending;
+  if (!marker?.caseId || marker.caseId !== session.selectedId) return null;
+  const remaining = session.deferred.filter(item => item.key !== marker.key);
+  if (remaining.length >= MAX_DEFERRED_CASES) return null;
+  return { ...session, selectedId: null, pending: null, deferred: [...remaining, { ...marker, caseId: marker.caseId, reason, recordedAt }] };
+}
+/** Returning to a deferred case restores the lock until its full server history is reviewed. */
+export function resumeDeferredCase(session: CaseSession, key: string): CaseSession | null {
+  if (session.pending) return null;
+  const marker = session.deferred.find(item => item.key === key);
+  if (!marker) return null;
+  return { ...session, selectedId: marker.caseId, pending: { caseId: marker.caseId, key: marker.key, action: marker.action }, deferred: session.deferred.filter(item => item.key !== key) };
+}
 export function filterCases(items: readonly CaseOut[], filters: Pick<CaseSession, "status" | "assignee" | "since">) {
   const since = filters.since ? Date.parse(`${filters.since}T00:00:00+05:00`) : NaN;
   return items.filter(item => (filters.status === "all" || item.state === filters.status)

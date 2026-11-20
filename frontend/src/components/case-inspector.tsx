@@ -8,6 +8,7 @@ import { caseTimeline } from "@/lib/case-timeline";
 import { policeReportHtml } from "@/lib/police-report";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { Badge, Gauge } from "./risk";
+import { RecipientFlagControls } from "./recipient-flag-controls";
 
 type Props = { detail: Evaluation | null; loading: boolean; error: MessageKey | null; receivedAt: number | null; selectedId: string | null; onReview: (id: string) => void; busy: boolean; onRetry: () => void };
 const nextSteps = { approved: "caseNextApproved", cooling_off: "caseNextHeld", blocked: "caseNextBlocked", cancelled: "caseNextCancelled" } as const;
@@ -54,6 +55,7 @@ export function CaseInspector({ detail, loading, error, receivedAt, selectedId, 
     {!current ? <p className="empty">{t(selectedId ? error ? "caseUnavailable" : "refreshing" : "select")}</p> : <>
       <div className="investigation-summary"><strong>{current.amount === undefined ? "— ₸" : money(current.amount, lang)}</strong><Gauge compact score={current.risk_score} /></div>
       <p className="case-recipient">{current.recipient.display_name} · {current.recipient.iban_masked}</p>
+      <RecipientFlagControls key={current.recipient.id} accountId={current.recipient.id} disabled={loading || !!error || busy} onChanged={onRetry} />
       {typeof current.ml_score === "number" && <div className="investigation-model"><span className="ml-badge ready" title={t("mlScoreHint")}>{t("mlScore")}: {current.ml_score.toFixed(1)}%</span><small>{current.ml_model_version}</small></div>}
       <div className="investigation-id"><span>{t("caseId")}</span><code className="tabular-nums">{current.transaction_id}</code><button onClick={() => void copyId()} aria-label={t("copyCaseId")} title={t("copyCaseId")}><Copy size={15} /></button></div>
       {receivedAt !== null && <p className="investigation-updated">{error ? `${t("staleData")} · ` : ""}{t("lastUpdated")}: {date(receivedAt)} · UTC+5</p>}

@@ -12,18 +12,18 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from sqlalchemy import inspect
+from sqlalchemy import MetaData, Table, inspect, select
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.kz import make_kz_iban
 from app.db.base import utcnow
 from app.integrations.models import TrustedContact
-from app.models import Account
+from app.models import Account, RecipientFlagAudit
 
 ACCOUNT = uuid.UUID("00000000-0000-4000-8000-000000000901")
 CONTACT = uuid.UUID("00000000-0000-4000-8000-000000000902")
-HEAD = "0008_core_integration_merge"
+HEAD = "0009_recipient_flags"
 
 
 async def require_empty(url: str) -> None:
@@ -40,16 +40,25 @@ async def require_empty(url: str) -> None:
 async def sentinel(url: str, *, insert: bool, contact: bool) -> None:
     engine = create_async_engine(url)
     try:
+        async with engine.connect() as connection:
+            accounts = await connection.run_sync(
+                lambda conn: Table("accounts", MetaData(), autoload_with=conn)
+            )
         async with async_sessionmaker(engine)() as session:
             if insert:
-                session.add(
-                    Account(
+                # Reflect the historical schema: current ORM defaults include
+                # columns that do not exist at the two published pre-merge heads.
+                await session.execute(
+                    accounts.insert().values(
                         id=ACCOUNT,
                         iin="000000000901",
                         iban=make_kz_iban("0000000000901"),
                         phone="+77000000901",
                         full_name="Synthetic migration sentinel",
                         device_id="synthetic-migration",
+                        avg_tx_amount=0,
+                        is_flagged=True,
+                        created_at=utcnow(),
                     )
                 )
                 await session.flush()
@@ -66,15 +75,61 @@ async def sentinel(url: str, *, insert: bool, contact: bool) -> None:
                     )
                 await session.commit()
             else:
-                account = await session.get(Account, ACCOUNT)
-                assert account is not None
+                account = (
+                    await session.execute(
+                        select(accounts.c.full_name, accounts.c.is_flagged).where(
+                            accounts.c.id == ACCOUNT
+                        )
+                    )
+                ).one()
                 assert account.full_name == "Synthetic migration sentinel"
+                assert account.is_flagged
                 if contact:
                     row = await session.get(TrustedContact, CONTACT)
                     assert row is not None
                     assert row.state == "CONTACT_REVOKED"
                     assert not row.notifications_enabled
                     assert row.telegram_chat_id is None
+    finally:
+        await engine.dispose()
+
+
+async def flag_audit_sentinel(url: str) -> None:
+    engine = create_async_engine(url)
+    try:
+        factory = async_sessionmaker(engine)
+        async with factory() as session:
+            account = await session.get(Account, ACCOUNT)
+            assert account is not None
+            assert account.flag_version == 0
+            assert account.flag_updated_at is None
+            stamp = utcnow()
+            account.flag_version = 1
+            account.flag_updated_at = stamp
+            session.add(
+                RecipientFlagAudit(
+                    id=CONTACT,
+                    account_id=ACCOUNT,
+                    request_id=CONTACT,
+                    request_hash="a" * 64,
+                    previous_flagged=True,
+                    flagged=True,
+                    version=1,
+                    actor="migration_rehearsal",
+                    note="Synthetic existing flag preserved",
+                    created_at=stamp,
+                )
+            )
+            await session.commit()
+        async with factory() as session:
+            audit = await session.get(RecipientFlagAudit, CONTACT)
+            assert audit is not None
+            assert audit.flagged
+            assert audit.actor == "migration_rehearsal"
+            account = await session.get(Account, ACCOUNT)
+            assert account is not None
+            assert account.flag_version == audit.version
+            assert account.flag_updated_at == audit.created_at
     finally:
         await engine.dispose()
 
@@ -97,12 +152,14 @@ def verify() -> None:
         command.upgrade(config, "head")
         command.check(config)
         asyncio.run(sentinel(url, insert=False, contact=has_contact))
+        asyncio.run(flag_audit_sentinel(url))
         # Existing paths are still independently addressable after removing the merge node.
         command.downgrade(config, previous)
         asyncio.run(sentinel(url, insert=False, contact=has_contact))
         command.upgrade(config, "head")
         command.check(config)
         asyncio.run(sentinel(url, insert=False, contact=has_contact))
+        asyncio.run(flag_audit_sentinel(url))
         command.downgrade(config, "base")
         print(f"PASS: {previous} -> merged head -> {previous} -> head; synthetic rows preserved")
 

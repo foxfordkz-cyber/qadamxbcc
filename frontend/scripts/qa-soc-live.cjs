@@ -82,7 +82,7 @@ const check = (name, value) => { assert.ok(value, name); report.checks.push(name
     check('browser_storage_contains_no_operator_capability', !/soc:[\da-f-]{36}:\d{10}:[\da-f]{64}/i.test(storage));
     check('real_timeline_endpoint_was_used', requests.some(item => item.url.includes(`/soc/transactions/${txId}/timeline`)));
     await page.getByTestId('soc-mode-transfers').click();
-    await page.locator('.filter-row button').nth(3).click();
+    await page.locator('.filter-row button').nth(4).click();
     await page.locator('.row-select').first().waitFor();
     await page.locator('.row-select').first().click();
     await page.locator('.graph-panel .account-node.danger.is-center').waitFor();

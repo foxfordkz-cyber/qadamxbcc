@@ -2,12 +2,18 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 
 from app.api.deps import EngineDep, SessionDep
 from app.models import TransactionStatus
-from app.schemas.soc import FeedResponse, GraphResponse
-from app.services import soc
+from app.schemas.soc import (
+    FeedResponse,
+    GraphResponse,
+    RecipientFlagRequest,
+    RecipientFlagResponse,
+    RecipientFlagState,
+)
+from app.services import recipient_flags, soc
 from app.services.transfers import NotFoundError
 
 router = APIRouter(prefix="/soc", tags=["soc"])
@@ -31,6 +37,7 @@ async def soc_feed(
     ] = None,
     status_filter: Annotated[TransactionStatus | None, Query(alias="status")] = None,
     min_score: Annotated[int, Query(ge=0, le=100)] = 0,
+    alerts_only: bool = False,
 ) -> FeedResponse:
     """Searchable SOC window; offset pages are not a snapshot or lossless event cursor."""
     return await soc.feed(
@@ -41,7 +48,38 @@ async def soc_feed(
         since=since,
         status=status_filter,
         min_score=min_score,
+        alerts_only=alerts_only,
     )
+
+
+@router.get("/recipients/{account_id}/flag", response_model=RecipientFlagState)
+async def recipient_flag_state(
+    account_id: uuid.UUID, session: SessionDep, response: Response
+) -> RecipientFlagState:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return await recipient_flags.state(session, account_id)
+    except recipient_flags.FlagError as exc:
+        raise HTTPException(exc.status, exc.code) from exc
+
+
+@router.post("/recipients/{account_id}/flag", response_model=RecipientFlagResponse)
+async def flag_recipient(
+    account_id: uuid.UUID,
+    body: RecipientFlagRequest,
+    session: SessionDep,
+    engine: EngineDep,
+    request: Request,
+    response: Response,
+) -> RecipientFlagResponse:
+    """Confirm/unmark a reviewed recipient with a durable service-actor audit."""
+    response.headers["Cache-Control"] = "no-store"
+    key = request.app.state.settings.soc_api_key
+    actor = recipient_flags.service_actor(key.get_secret_value() if key else None)
+    try:
+        return await recipient_flags.set_flag(session, engine.graph, account_id, body, actor)
+    except recipient_flags.FlagError as exc:
+        raise HTTPException(exc.status, exc.code) from exc
 
 
 @router.get("/graph/{account_id}", response_model=GraphResponse)

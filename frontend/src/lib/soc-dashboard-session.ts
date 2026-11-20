@@ -6,6 +6,7 @@ const schema = z.object({
   selectedId: z.uuid().nullable().default(null),
   filter: z.enum(["all", "approved", "cooling_off", "blocked", "cancelled"]).default("all"),
   graphDepth: z.union([z.literal(1), z.literal(2)]).default(1),
+  alertsOnly: z.boolean().optional(),
 });
 export type SocDashboardSession = z.infer<typeof schema>;
 export function readSocDashboardSession(raw: string | null): SocDashboardSession {

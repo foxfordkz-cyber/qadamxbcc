@@ -44,6 +44,7 @@ async def feed(
     since: datetime | None = None,
     status: TransactionStatus | None = None,
     min_score: int = 0,
+    alerts_only: bool = False,
 ) -> FeedResponse:
     watermark = datetime.now(UTC)
     stmt = select(Transaction).where(Transaction.updated_at <= watermark)
@@ -51,6 +52,10 @@ async def feed(
         stmt = stmt.where(Transaction.updated_at > since)
     if status is not None:
         stmt = stmt.where(Transaction.status == status)
+    if alerts_only:
+        stmt = stmt.where(
+            Transaction.status.in_((TransactionStatus.COOLING_OFF, TransactionStatus.BLOCKED))
+        )
     if min_score:
         stmt = stmt.where(Transaction.risk_score >= min_score)
     search = (q or "").strip()
@@ -237,6 +242,22 @@ async def account_graph(
     # Accounts created after startup (e.g. seeded while running) are not hydrated yet.
     register_account(graph, account)
     view = graph.subgraph(str(account_id), depth=depth)
+    # Neighbour flags may have changed on another worker. Refresh all visible
+    # database accounts, not just the center, before deriving roles/edge colors.
+    identities = []
+    for node in view.nodes:
+        try:
+            identities.append(uuid.UUID(node.id))
+        except ValueError:
+            continue
+    if identities:
+        for peer in await session.scalars(
+            select(Account)
+            .where(Account.id.in_(identities))
+            .execution_options(populate_existing=True)
+        ):
+            register_account(graph, peer)
+        view = graph.subgraph(str(account_id), depth=depth)
 
     positions = _layout(view.nodes)
     roles = {n.id: _role(n) for n in view.nodes}

@@ -260,7 +260,11 @@ async def answer(
     answered = await session.scalar(select(CaseEvent.id).where(CaseEvent.reply_to == request_id))
     if answered:
         raise IntegrationError(409, "case_information_already_answered")
-    if row.state != "NEEDS_INFORMATION" or row.version >= 500:
+    # An officer may resume review or escalate while awaiting the owner. That
+    # administrative transition does not retract an already-issued question.
+    # Keep it answerable until the case is resolved/closed, without changing the
+    # officer's chosen state when the reply arrives.
+    if row.state not in {"IN_REVIEW", "NEEDS_INFORMATION", "ESCALATED"} or row.version >= 500:
         raise IntegrationError(409, "case_information_closed")
     row.version += 1
     await save_event(

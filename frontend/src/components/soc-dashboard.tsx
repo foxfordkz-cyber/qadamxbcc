@@ -25,6 +25,7 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
   const [refresh, setRefresh] = useState(0);
   const [selection, setSelection] = useState(initialSelection);
   const [filter, setFilter] = useState<Status | "all">("all");
+  const [alertsOnly, setAlertsOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [offset, setOffset] = useState(0);
@@ -38,6 +39,7 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
     try {
       const saved = readSocDashboardSession(sessionStorage.getItem(SOC_SESSION_KEY));
       setMode(saved.mode); setGraphDepth(saved.graphDepth);
+      setAlertsOnly(saved.alertsOnly ?? false);
       if (!initialSelection) { setSelection(saved.selectedId); setFilter(saved.filter); }
     } catch { /* Unavailable storage keeps a functional in-memory workspace. */ }
     setRestored(true);
@@ -49,13 +51,13 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
   }, [focusTransfer, onFocusConsumed]);
   useEffect(() => {
     if (!restored) return;
-    try { sessionStorage.setItem(SOC_SESSION_KEY, writeSocDashboardSession({ mode, selectedId: selection, filter, graphDepth })); } catch { /* Storage is optional. */ }
-  }, [mode, selection, filter, graphDepth, restored]);
+    try { sessionStorage.setItem(SOC_SESSION_KEY, writeSocDashboardSession({ mode, selectedId: selection, filter, graphDepth, alertsOnly })); } catch { /* Storage is optional. */ }
+  }, [mode, selection, filter, graphDepth, alertsOnly, restored]);
   const dashboard = useRef<HTMLDivElement>(null);
   const stageToggle = useRef<HTMLButtonElement>(null);
   const searchPending = search.trim() !== query;
   const streaming = stream.active;
-  const feed = useSocPoll<Feed>(restored && mode === "transfers" ? socFeedPath(filter, query, offset) : null, revision + refresh, 3000);
+  const feed = useSocPoll<Feed>(restored && mode === "transfers" ? socFeedPath(filter, query, offset, alertsOnly) : null, revision + refresh, 3000);
   useEffect(() => {
     if (!stage) return;
     const onEscape = (event: KeyboardEvent) => {
@@ -75,7 +77,7 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
   }, [search, query]);
   useEffect(() => { if (feed.data) onTrafficSync(feed.data.items); }, [feed.data, onTrafficSync]);
   useEffect(() => {
-    if (initialSelection) { setSelection(initialSelection); setFilter("all"); setSearch(""); setQuery(""); setOffset(0); }
+    if (initialSelection) { setSelection(initialSelection); setFilter("all"); setAlertsOnly(false); setSearch(""); setQuery(""); setOffset(0); }
   }, [initialSelection]);
   useEffect(() => {
     if (feed.data) setSelection(previous => initialCaseSelection(previous, feed.data!.items.map(item => item.transaction_id)));
@@ -101,7 +103,7 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
     { key: "cooling_off", label: "coolingPrevented", hint: "currentlyHeld", value: stats?.cooling_off, icon: Clock3 },
     { key: "blocked", label: "blockedHubs", hint: stats?.blocked_hubs === undefined ? "visibleHubScope" : "allHubScope", value: stats?.blocked_hubs ?? (feed.data ? countBlockedHubs(items) : undefined), icon: ShieldX },
   ] as const;
-  const resetFilters = () => { setSearch(""); setQuery(""); setFilter("all"); setOffset(0); };
+  const resetFilters = () => { setSearch(""); setQuery(""); setFilter("all"); setAlertsOnly(false); setOffset(0); };
   const time = (value: number | string) => new Date(value).toLocaleTimeString(lang === "kk" ? "kk-KZ" : "ru-KZ", { timeZone: "Asia/Qyzylorda", hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const locale = lang === "kk" ? "kk-KZ" : "ru-KZ";
   const hubCount = stats?.blocked_hubs ?? (feed.data ? countBlockedHubs(items) : undefined);
@@ -129,12 +131,12 @@ export function SocDashboard({ initialSelection, revision, traffic, onTrafficSyn
       {feed.error && <p role="alert" className="error panel-error">{t(feed.error)}</p>}
       <div className="feed-toolbar">
         <div className="soc-search"><label htmlFor="soc-search" className="sr-only">{t("socSearch")}</label><div className="soc-search-input"><Search size={16} aria-hidden="true" /><input id="soc-search" type="search" value={search} maxLength={128} autoComplete="off" aria-describedby="soc-search-hint" placeholder={t("socSearch")} onChange={event => setSearch(event.target.value)} />{search && <button type="button" aria-label={t("clearSearch")} onClick={() => setSearch("")}><X size={16} /></button>}</div><p id="soc-search-hint" className="sr-only">{t("socSearchHint")}</p></div>
-        <div className="filter-row" role="group" aria-label={t("feedToolbar")}>{(["all", "approved", "cooling_off", "blocked", "cancelled"] as const).map(key => <button key={key} className={filter === key ? "active" : ""} aria-pressed={filter === key} onClick={() => { setFilter(key); setOffset(0); }}>{t(key)}</button>)}</div>
+        <div className="filter-row" role="group" aria-label={t("feedToolbar")}><button type="button" data-testid="soc-alerts-only" className={alertsOnly ? "active" : ""} aria-pressed={alertsOnly} onClick={() => { setAlertsOnly(value => !value); setFilter("all"); setOffset(0); }}>{t("alertsOnly")}</button>{(["all", "approved", "cooling_off", "blocked", "cancelled"] as const).map(key => <button key={key} className={filter === key && !alertsOnly ? "active" : ""} aria-pressed={filter === key && !alertsOnly} onClick={() => { setFilter(key); setAlertsOnly(false); setOffset(0); }}>{t(key)}</button>)}</div>
       </div>
       {searchPending && <p className="panel-note" role="status">{t("pageUpdating")}</p>}
       <div className="soc-table-scroll"><table><thead><tr><th scope="col">{t("updatedTime")}</th><th scope="col">{t("route")}</th><th scope="col" className="num">{t("amount")}</th><th scope="col">{t("risk")}</th><th scope="col">{t("status")}</th><th scope="col" className="num">{t("latency")}</th></tr></thead><tbody>
         {items.map(item => <tr key={item.transaction_id} className={selection === item.transaction_id ? "selected" : ""}><td><time className="soc-feed-time" dateTime={item.updated_at ?? item.created_at}><strong className="tabular-nums">{time(item.updated_at ?? item.created_at)}</strong><span className="tabular-nums">{new Date(item.updated_at ?? item.created_at).toLocaleDateString(locale, { timeZone: "Asia/Qyzylorda", day: "2-digit", month: "2-digit", year: "numeric" })}</span></time></td><td><button className="row-select" onClick={() => setSelection(item.transaction_id)} aria-pressed={selection === item.transaction_id}><strong>{item.sender.full_name} <span aria-hidden="true">→</span> {item.recipient.full_name}</strong><small>•••• {item.recipient.iban.slice(-4)}{traffic[item.transaction_id] && <> · {t("simulatedRoute")}: {t(traffic[item.transaction_id].from)} → {t(traffic[item.transaction_id].to)}</>}</small></button></td><td className="num amount-cell tabular-nums">{money(item.amount, lang)}</td><td><Gauge compact score={item.risk_score} /></td><td><Badge status={item.status} /></td><td className="num tabular-nums">{item.latency_ms.toFixed(2)} {t("ms")}</td></tr>)}
-      </tbody></table></div>{!items.length && <div className="empty"><p>{t(feed.loading || searchPending ? "refreshing" : filter !== "all" || query || offset ? "noMatches" : "empty")}</p>{!feed.loading && (filter !== "all" || query || offset > 0) && <button className="secondary" onClick={resetFilters}>{t("resetFilters")}</button>}</div>}
+      </tbody></table></div>{!items.length && <div className="empty"><p>{t(feed.loading || searchPending ? "refreshing" : filter !== "all" || alertsOnly || query || offset ? "noMatches" : "empty")}</p>{!feed.loading && (filter !== "all" || alertsOnly || query || offset > 0) && <button className="secondary" onClick={resetFilters}>{t("resetFilters")}</button>}</div>}
       <div className="soc-pagination" aria-label={t("recoveryPages")}><p role="status">{t("resultsCount")}: <strong className="tabular-nums">{pagination ? `${items.length ? offset + 1 : 0}–${items.length ? offset + items.length : 0} / ${pagination.total_filtered}` : "—"}</strong>{selection && <a className="soc-open-case" href="#soc-investigation">{t("openCaseDetails")}<ArrowRight size={14} /></a>}</p><div><button type="button" className="secondary" disabled={!offset || feed.loading || searchPending} onClick={() => setOffset(0)}>{t("firstPage")}</button><button type="button" className="secondary icon-button" aria-label={t("pagePrevious")} disabled={!offset || feed.loading || searchPending} onClick={() => setOffset(value => Math.max(0, value - SOC_PAGE_SIZE))}><ArrowLeft size={16} /></button><button type="button" className="secondary icon-button" aria-label={t("pageNext")} disabled={!pagination?.has_more || offset + SOC_PAGE_SIZE > SOC_MAX_OFFSET || feed.loading || !!feed.error || searchPending} onClick={() => setOffset(value => value + SOC_PAGE_SIZE)}><ArrowRight size={16} /></button></div></div>
     </section>
     {outsidePage && <p className="soc-selection-note" role="status"><ShieldCheck size={17} /><span>{t("selectedOutsidePage")}</span><a className="soc-open-case" href="#soc-investigation">{t("openCaseDetails")}<ArrowRight size={14} /></a></p>}
