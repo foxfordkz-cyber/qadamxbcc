@@ -1,4 +1,5 @@
-import { parseServer, rememberServer } from "./lib.mjs";
+import { openExternal, installBackHandler } from "../native.mjs";
+import { parseServer, rememberServer } from "../lib.mjs";
 
 const TEXT = {
   kk: {
@@ -52,10 +53,10 @@ async function reachable(origin) {
   // no-cors: an opaque response still proves the laptop answered on the Wi-Fi.
   try { await fetch(`${origin}/health`, { mode: "no-cors", cache: "no-store", signal: AbortSignal.timeout(4000) }); return true; } catch { return false; }
 }
-function open(target) {
+async function open(target) {
   store.set("bcc-shield.app.recent", rememberServer(store.get("bcc-shield.app.recent", []), target.label));
   status("opening", "ok");
-  window.location.href = target.url;
+  try { await openExternal(target.url); } catch { status("unreachable", "error"); }
 }
 async function connect(input, fromQr = false) {
   const target = parseServer(input);
@@ -91,3 +92,5 @@ $("manual").addEventListener("submit", event => { event.preventDefault(); void c
 $("force").addEventListener("click", () => { if (pending) open(pending); });
 document.addEventListener("visibilitychange", () => { if (document.hidden && stream) stopScan(); });
 render();
+
+installBackHandler(() => { if (stream) { stopScan(); } else { location.assign("/dev/connected.html"); } return true; }).catch(() => {});

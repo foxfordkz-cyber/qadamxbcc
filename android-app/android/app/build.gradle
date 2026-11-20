@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+def usbRehearsal = System.getenv('QADAM_USB_REHEARSAL') == '1'
+def apiOrigin = (System.getenv('QADAM_API_ORIGIN') ?: '').trim()
+if (apiOrigin && !(apiOrigin ==~ /https:\/\/[a-zA-Z0-9.-]+/)) {
+    throw new GradleException("Set a canonical HTTPS mobile API origin")
+}
+
 android {
     namespace = "kz.qadamx.bccshield"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +13,9 @@ android {
         applicationId "kz.qadamx.bccshield"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 7
+        versionName "2.4"
+        resValue "string", "qadam_api_origin", apiOrigin
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -17,6 +24,12 @@ android {
         }
     }
     buildTypes {
+        debug {
+            applicationIdSuffix ".demo"
+            if (usbRehearsal && !apiOrigin) {
+                resValue "string", "qadam_api_origin", "http://127.0.0.1:18001"
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

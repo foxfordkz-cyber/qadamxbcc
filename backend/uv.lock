@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -394,6 +394,7 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "joblib" },
     { name = "networkx" },
     { name = "numpy" },
@@ -417,6 +418,9 @@ dev = [
     { name = "ruff" },
     { name = "types-networkx" },
 ]
+mobile-ephemeral = [
+    { name = "aiosqlite" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -424,6 +428,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13" },
     { name = "asyncpg", specifier = ">=0.29" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "joblib", specifier = ">=1.4,<2" },
     { name = "networkx", specifier = ">=3.3" },
     { name = "numpy", specifier = ">=2,<3" },
@@ -447,6 +452,7 @@ dev = [
     { name = "ruff", specifier = ">=0.6" },
     { name = "types-networkx", specifier = ">=3.2" },
 ]
+mobile-ephemeral = [{ name = "aiosqlite", specifier = ">=0.20" }]
 
 [[package]]
 name = "certifi"

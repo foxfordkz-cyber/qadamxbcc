@@ -21,6 +21,14 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // Alternate Maven Central endpoint for the original instrumentation test dependencies.
+        maven {
+            url 'https://maven-central.storage-download.googleapis.com/maven2/'
+            content {
+                includeGroup 'junit'
+                includeGroup 'org.hamcrest'
+            }
+        }
     }
 }
 

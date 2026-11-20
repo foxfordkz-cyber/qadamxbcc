@@ -1,0 +1,46 @@
+name: Android gateway E2E
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ["android-app/**", "backend/**", "docker-compose.android.yml", ".github/workflows/android-gateway.yml"]
+  push:
+    branches: [main]
+    paths: ["android-app/**", "backend/**", "docker-compose.android.yml", ".github/workflows/android-gateway.yml"]
+permissions:
+  contents: read
+jobs:
+  gateway:
+    env:
+      QADAM_MOBILE_AUTH_MODE: rehearsal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: android-app/package-lock.json
+      - run: docker compose -f docker-compose.android.yml up -d --build --wait --wait-timeout 240
+      - name: Read synthetic access codes without logging them
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" .local-checks/mobile-access
+          chmod 700 .local-checks/mobile-access
+          chmod 600 .local-checks/mobile-access/access.json
+      - working-directory: android-app
+        run: npm ci && npm run vendor
+      - name: Client to real ML to SOC acceptance
+        working-directory: android-app
+        env:
+          QADAM_LIVE: '1'
+          QADAM_ACCESS_FILE: ../.local-checks/mobile-access/access.json
+          QADAM_GATEWAY: http://127.0.0.1:18001
+        run: npm run test:ui -- tests/browser/live.spec.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qadam-gateway-synthetic-evidence
+          path: android-app/test-results/
+          retention-days: 7
+      - if: always()
+        run: docker compose -f docker-compose.android.yml down

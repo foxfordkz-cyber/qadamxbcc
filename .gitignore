@@ -11,6 +11,9 @@ __pycache__/
 !.env.example
 *.log
 .local-checks/
+.local-tools/
+android-app/test-results/
+android-app/playwright-report/
 node_modules/
 .next/
 .pytest_tmp/

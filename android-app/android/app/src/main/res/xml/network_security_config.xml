@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The demo laptop serves plain http on the local Wi-Fi (http://192.168.x.x:3105/mobile).
-     Cleartext is a demo-only allowance: this app opens only private-network hosts
-     (see capacitor.config.json allowNavigation and www/lib.mjs). -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="true" />
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain>127.0.0.1</domain>
+        <domain>localhost</domain>
+    </domain-config>
 </network-security-config>
