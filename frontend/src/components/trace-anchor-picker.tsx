@@ -19,7 +19,7 @@ export function TraceAnchorPicker({ accountId, onSelect }: { accountId: string; 
     {anchors.error && <p role="alert">{t(anchors.error)}</p>}
     {anchors.loading && !anchors.data && <p role="status">{t("refreshing")}</p>}
     {anchors.data?.items.length === 0 && <p>{kk ? "Орындалған теңгелік түсімдер табылмады." : "Среди этих операций нет исполненных поступлений в тенге."}</p>}
-    {anchors.data?.items.map(item => <button type="button" key={item.transaction_id} onClick={() => onSelect(item.transaction_id)}>
+    {anchors.data?.items.map(item => <button type="button" key={item.transaction_id} data-transaction-id={item.transaction_id} onClick={() => onSelect(item.transaction_id)}>
       <time dateTime={item.settled_at}>{new Date(item.settled_at).toLocaleString(kk ? "kk-KZ" : "ru-KZ", {
         timeZone: "Asia/Almaty", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
       })}</time>

@@ -229,19 +229,25 @@ async def test_original_payer_risk_rechecked(world: World, monkeypatch: pytest.M
 
 
 async def test_active_hold_follows_return_and_cancel_replay_keeps_same_id(
-    world: World,monkeypatch: pytest.MonkeyPatch
+    world: World, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(returns, "DEMO_OWNER", world.acc["alice"].id)
-    incoming = await world.evaluate("scammer","alice",1200,occurred_at=DAY.isoformat())
+    incoming = await world.evaluate("scammer", "alice", 1200, occurred_at=DAY.isoformat())
     assert incoming["status"] == "approved"
-    first = await world.evaluate("alice","scammer",900000,context={"active_call":True,"from_deposit":True},occurred_at=DAY.isoformat())
+    first = await world.evaluate(
+        "alice",
+        "scammer",
+        900000,
+        context={"active_call": True, "from_deposit": True},
+        occurred_at=DAY.isoformat(),
+    )
     assert first["status"] == "cooling_off"
     url = f"{API}/returns/{incoming['transaction_id']}"
-    result = (await world.client.post(url,json=RETURN)).json()
+    result = (await world.client.post(url, json=RETURN)).json()
     assert result["refund_status"] == "cooling_off"
     refund_id = result["refund_transaction_id"]
-    cancelled = await world.client.post(f"{API}/transfers/{refund_id}/cancel",json={})
+    cancelled = await world.client.post(f"{API}/transfers/{refund_id}/cancel", json={})
     assert cancelled.json()["status"] == "cancelled"
-    replay = (await world.client.post(url,json=RETURN)).json()
+    replay = (await world.client.post(url, json=RETURN)).json()
     assert replay["refund_transaction_id"] == refund_id
     assert replay["refund_status"] == "cancelled"

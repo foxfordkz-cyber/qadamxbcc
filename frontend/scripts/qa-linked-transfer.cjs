@@ -69,11 +69,11 @@ async function run() {
     const feedResult = page.waitForResponse(r => r.url().includes('soc/feed?') && new URL(r.url()).searchParams.get('q') === source.transaction_id);
     await page.locator('#soc-search').fill(source.transaction_id);
     assert.equal((await (await feedResult).json()).items[0].transaction_id, source.transaction_id);
-    await page.locator('.row-select').first().click();
+    await page.locator(`tr[data-transaction-id="${source.transaction_id}"] .row-select`).click();
     await page.locator('.investigation-card[data-transaction-id="' + source.transaction_id + '"] .investigation-id code').waitFor();
     await page.getByText('Поступления на этот счёт', { exact: true }).click();
     const picker = page.locator('details[open]').filter({ has: page.getByText('Поступления на этот счёт', { exact: true }) });
-    await picker.getByRole('button').first().click();
+    await picker.locator(`button[data-transaction-id="${source.transaction_id}"]`).click();
     const trace = page.getByTestId('funds-trace');
     await trace.getByText('Возможное движение средств', { exact: true }).waitFor();
     const report = await (await context.request.get('/api/v1/soc/transfers/' + source.transaction_id + '/funds-trace')).json();
