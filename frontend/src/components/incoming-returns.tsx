@@ -84,6 +84,11 @@ export function IncomingReturns({
   const [version, setVersion] = useState(0);
   const lock = useRef(false);
   const payment = items.find((item) => item.original_id === selected);
+  function loadPayment(id: string | null) {
+    setLoading(true);
+    setSelected(id);
+    setVersion((value) => value + 1);
+  }
   useEffect(() => {
     let current = true;
     setLoading(true);
@@ -128,7 +133,7 @@ export function IncomingReturns({
     <section className="mobile-tool return-tool" aria-busy={loading}>
       <div className="tool-heading">
         {selected ? (
-          <button className="secondary" disabled={loading} onClick={() => setSelected(null)}>
+          <button className="secondary" disabled={loading} onClick={() => loadPayment(null)}>
             <ArrowLeft size={16} />
             {t("back")}
           </button>
@@ -140,7 +145,7 @@ export function IncomingReturns({
           title={t("refresh")}
           aria-label={t("refresh")}
           disabled={loading}
-          onClick={() => setVersion((v) => v + 1)}
+          onClick={() => loadPayment(selected)}
         >
           <RefreshCw size={16} />
         </button>
@@ -240,7 +245,7 @@ export function IncomingReturns({
           <ul className="return-list">
             {items.map((item) => (
               <li key={item.original_id}>
-                <button onClick={() => setSelected(item.original_id)}>
+                <button onClick={() => loadPayment(item.original_id)}>
                   <span className="return-mark">
                     <ArrowDownLeft size={18} />
                   </span>

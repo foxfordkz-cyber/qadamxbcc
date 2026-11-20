@@ -34,7 +34,10 @@ async function run() {
     const receipts = (await (await listLoaded).json()).items;
     const row = receipts.findIndex(item => item.original_id === source.transaction_id);
     assert.ok(row >= 0);
+    const detailsLoaded = page.waitForResponse(r => r.url().endsWith('/returns/' + source.transaction_id) && r.request().method() === 'GET');
     await page.locator('.return-list button').nth(row).click();
+    assert.equal((await (await detailsLoaded).json()).original_id, source.transaction_id);
+    await page.locator('.return-tool[aria-busy="false"] .return-receipt').waitFor();
     await page.getByRole('button', { name: 'Вернуть отправителю', exact: true }).waitFor();
     await page.screenshot({ path: path.join(output, 'linked-return-ru.png') });
     await lang('ҚАЗ');

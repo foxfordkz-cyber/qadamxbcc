@@ -117,6 +117,22 @@ Saq Bol — независимый прототип для кейса Bank Cente
 </p>
 
 <details>
+<summary><strong>Ақшаны қайтару және қаражаттың жолы / Возврат и путь средств</strong></summary>
+
+Клиент **17 405,25 ₸** сомасын бастапқы жіберушіге қайтарады. В SOC виден исходящий перевод на ту же сумму после зачисления.
+
+<p align="center">
+  <a href="docs/screenshots/readme/linked-return-ru.png"><img src="docs/screenshots/readme/linked-return-ru.png" width="30%" alt="Кіріс аударымының сомасы мен бастапқы жіберуші / сумма и отправитель исходного перевода на экране возврата"></a>
+  <a href="docs/screenshots/readme/funds-trace-ru.png"><img src="docs/screenshots/readme/funds-trace-ru.png" width="61%" alt="SOC панеліндегі қаражаттың ықтимал қозғалысы / путь суммы после зачисления и время следующего перевода"></a>
+</p>
+
+Бөлек сынақта сенімді адам күдік туралы хабарлайды, клиент өтініш береді, SOC іс ашады. В этой записи репетиции видны сообщение близкого о подозрении, обращение клиента и регистрация дела.
+
+[![Клиент, сенімді адам және SOC оқиғалары / время действий клиента, доверенного контакта и SOC](docs/screenshots/readme/case-story-kk.png)](docs/screenshots/readme/case-story-kk.png)
+
+</details>
+
+<details>
 <summary><strong>Telegram · Сенімді адамдарға кіру / Вход в доверенный круг</strong></summary>
 
 <p align="center"><a href="docs/screenshots/readme/trusted-circle-ru.png"><img src="docs/screenshots/readme/trusted-circle-ru.png" width="340" alt="Бір реттік кодпен кіру / гостевой экран входа по коду из бота"></a></p>
@@ -168,7 +184,14 @@ Saq Bol — независимый прототип для кейса Bank Cente
 
 ## Іске қосу және тексеру / Запуск и проверка
 
-Әр командалар блогын репозиторийдің түбірінен бастаңыз. Каждый блок команд запускайте из корня репозитория.
+Алдымен репозиторийді жүктеп, жоба бумасына кіріңіз. Для первого запуска понадобятся Git и доступ к репозиторию.
+
+```bash
+git clone https://github.com/foxfordkz-cyber/qadamxbcc.git
+cd qadamxbcc
+```
+
+Docker арқылы іске қосу үшін Docker Engine мен Compose v2 қажет. Windows жүйесінде Docker қолданбай іске қосу үшін Node.js 22.12+ және `uv` орнатыңыз. Для варианта с контейнерами нужны Docker Engine и Compose v2. Для запуска напрямую в Windows установите Node.js 22.12+ и `uv`. Команды ниже выполняются из корня проекта.
 
 **Docker · PostgreSQL 16 + Redis 7 + FastAPI + Next.js**
 
