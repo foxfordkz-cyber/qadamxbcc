@@ -580,3 +580,11 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
 .pending-panel > div:first-child strong { font-size: 14px; color: var(--ink); }
 .pending-panel > div:first-child .muted { font-size: 12.5px; line-height: 1.45; }
 .pending-panel .recovery-list li { background: var(--surface-2); border-color: var(--line); padding: 8px 12px; }
+
+/* Held transfers: one quiet line instead of a long list above the product. */
+.recovery-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px 10px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); font-size: 14px; color: var(--ink-2, var(--ink)); }
+.recovery-summary span { display: inline-flex; align-items: center; gap: 8px; }
+.recovery-summary svg { color: var(--muted); }
+.recovery-summary .secondary { min-height: 36px; padding: 6px 14px; font-size: 13px; }
+.demo-reset { min-height: 36px; padding: 6px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--muted); background: transparent; }
+.demo-reset:hover:not(:disabled) { color: var(--ink); background: var(--surface-2, var(--bg)); }

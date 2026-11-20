@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Activity, ArrowRight, CircleHelp, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
-import { api, transferSchema, type AbandonResult, type Answers, type AppConfig, type CallCheck, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
+import { api, ApiError, transferSchema, type AbandonResult, type Answers, type AppConfig, type CallCheck, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { reconcileTraffic, type TrafficRecord } from "@/lib/traffic";
 import type { FeedItem } from "@/lib/contracts";
 import { useBiometrics } from "./use-biometrics";
@@ -22,6 +22,10 @@ import { retainCoolingDraft } from "@/lib/cooling-flow";
 import { reconcileCoolingDrafts } from "@/lib/mobile-session";
 import { randomId } from "@/lib/secure-fallback";
 import { mobileRecovery } from "@/lib/mobile-recovery";
+import { resetStaticDemo } from "@/lib/static-api";
+import type { RecoveryRecord } from "@/lib/recovery";
+
+const STATIC_DEMO = process.env.NEXT_PUBLIC_BCC_STATIC === "1";
 
 
 const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
@@ -108,6 +112,18 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   }, [remember]);
   const syncTraffic = useCallback((items: FeedItem[]) => setTraffic(previous => reconcileTraffic(previous, items)), []);
   const stream = useTrafficStream(config, recordTraffic, addPending, retireUnused);
+  // GitHub Pages demo only: the transfer lives in this browser's demo store. When that
+  // store no longer holds it (cleared, or another tab of an older build overwrote it),
+  // the receipt is closed instead of blocking every new transfer forever. The server
+  // build keeps such IDs open until the bank confirms them.
+  const closeLost = useCallback(async (record: RecoveryRecord) => {
+    if (!STATIC_DEMO || Date.now() - record.updatedAt < 10000) return;
+    if (record.state === "unknown") {
+      const value = await api<AbandonResult>(`transfers/requests/${record.id}/abandon`, { method: "POST", body: "{}" });
+      if (value.status === "processed" && value.evaluation) { remember(value.evaluation); return; }
+    }
+    recovery.record({ id: record.id, state: "abandoned", updatedAt: Date.now() });
+  }, [remember, recovery.record]);
   const reconciling = useRef(false);
   const recoveryCursor = useRef(0);
   const lastReconciledAt = useRef(-Infinity);
@@ -116,10 +132,13 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     lastReconciledAt.current = performance.now();
     reconciling.current = true; setCheckingRecovery(true);
     try {
-      const batch = recoveryBatch(recovery.refresh(), recoveryCursor.current, selection.current.id);
+      const batch = recoveryBatch(recovery.refresh(), recoveryCursor.current, selection.current.id, STATIC_DEMO ? 500 : 4);
       recoveryCursor.current = batch.nextCursor;
       await Promise.allSettled(batch.records.map(async record => {
-        const value = remember(await api<Evaluation>(`transfers/${record.id}`));
+        let fetched: Evaluation;
+        try { fetched = await api<Evaluation>(`transfers/${record.id}`); }
+        catch (failure) { if (failure instanceof ApiError && failure.status === 404) await closeLost(record); throw failure; }
+        const value = remember(fetched);
         if (!value) return;
         const matchesAttempt = attempt.current?.input.request_id === value.transaction_id;
         if (matchesAttempt) setUnknown(false);
@@ -135,7 +154,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
         } else if (value.status !== "cooling_off") setModal(false);
       }));
     } finally { reconciling.current = false; setCheckingRecovery(false); }
-  }, [recovery.refresh, remember]);
+  }, [recovery.refresh, remember, closeLost]);
   useEffect(() => {
     const refresh = () => { if (document.visibilityState === "visible") void reconcilePending(); };
     refresh(); const timer = setInterval(refresh, 15000);
@@ -160,7 +179,11 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       if (attempt.current?.input.request_id === id) { setUnknown(false); sensor.complete(); setCompletedIdentity(attemptIdentity.current); }
       setResult(value); setResultAmount(value.amount ?? "0"); setResultContext(value.context ?? {}); setModal(value.status === "cooling_off");
       if (value.status !== "cooling_off") { stream.stop(); setTab("mobile"); }
-    } catch (failure) { setError(errorKey(failure)); }
+    } catch (failure) {
+      setError(errorKey(failure));
+      const lost = failure instanceof ApiError && failure.status === 404 ? recovery.get().find(record => record.id === id) : undefined;
+      if (lost) void closeLost(lost).catch(() => undefined);
+    }
     finally { lock.current = false; setBusy(false); }
   }
   async function execute(current: TransferAttempt, chosen?: Preset) {
@@ -286,6 +309,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       <section className="demo-bar" aria-label={t("presets")}>
         <div className="demo-bar-label"><CircleHelp size={16} aria-hidden="true" /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "demoScenarios")}</span></div>
         <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map(key => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
+        {STATIC_DEMO && <button type="button" className="demo-reset" disabled={busy} onClick={() => { if (window.confirm(t("resetDemoConfirm"))) { resetStaticDemo(); window.location.reload(); } }}>{t("resetDemo")}</button>}
         {config.demoActionsEnabled !== false && <Link href="/pitch" className="pitch-link">{t("pitchLink")}<ArrowRight size={15} aria-hidden="true" /></Link>}
       </section>
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />

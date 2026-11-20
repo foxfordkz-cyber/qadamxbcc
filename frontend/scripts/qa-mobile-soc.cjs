@@ -105,6 +105,12 @@ async function main() {
   const screenshot = async name => { const file = path.join(output, `${name}.png`); await page.screenshot({ path: file, fullPage: true }); report.screenshots.push(file); };
   const answer = async (index, value) => { await dialog.locator(`input[name="${questions[index]}"]`).nth(value ? 0 : 1).check(); await dialog.locator('.cooling-next').click(); };
   const close = () => dialog.locator('.sheet-close').click();
+  // Held transfers are listed only after the summary line is expanded.
+  const openFromRecovery = async id => {
+    const summary = page.locator('.recovery-summary button');
+    if (await summary.isVisible()) await summary.click();
+    await page.locator('.recovery-list li').filter({ hasText: id.slice(-8) }).getByRole('button', { name: 'Открыть перевод' }).click();
+  };
   const reopen = async () => { await page.locator('.telemetry-panel .review-button').click(); await dialog.waitFor(); };
   const settle = () => page.waitForTimeout(250);
   const overflow = () => page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
@@ -170,7 +176,7 @@ async function main() {
     await page.reload({ waitUntil: 'domcontentloaded' });
     // Recovery may reopen the questionnaire by itself after the reload; wait for that first.
     await dialog.waitFor({ timeout: 5000 }).catch(() => {});
-    if (!await dialog.isVisible()) await page.locator('.recovery-list li').filter({ hasText: heldId.slice(-8) }).getByRole('button', { name: 'Открыть перевод' }).click();
+    if (!await dialog.isVisible()) await openFromRecovery(heldId);
     await dialog.waitFor();
     check('reload_restores_server_saved_answers', await dialog.getAttribute('data-step') === 'review' && await dialog.locator('.cooling-review-list li').count() === 5 && await dialog.locator('.cooling-submit').isDisabled());
     const beforeExpiry = report.mutations.length; records.get(heldId).cooling_until = new Date(Date.now() - 1000).toISOString();
@@ -200,7 +206,7 @@ async function main() {
     await dialog.locator('.cooling-submit').click(); await savedA;
     await page.waitForFunction(() => document.querySelector('.cooling-submit')?.disabled === true);
     await close(); await preset('scam'); await dialog.waitFor(); const holdB = [...records.keys()].at(-1); await close();
-    await page.locator('.recovery-list li').filter({ hasText: holdA.slice(-8) }).getByRole('button', { name: 'Открыть перевод' }).click(); await dialog.waitFor();
+    await openFromRecovery(holdA); await dialog.waitFor();
     // Wait for the actual recovery interval, so the last attempt B is read while A is selected.
     await page.waitForResponse(response => response.url().endsWith(`/transfers/${holdB}`), { timeout: 20000 }); await settle();
     check('background_recovery_of_B_does_not_replace_open_A', await page.locator('.phone-receipt').getAttribute('data-transaction-id') === holdA && await dialog.isVisible());
