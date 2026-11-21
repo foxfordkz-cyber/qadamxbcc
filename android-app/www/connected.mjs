@@ -395,9 +395,22 @@ function transactionRows(items, soc = false) {
     )
     .join("");
 }
+function feedParticipants(items) {
+  const people = new Map();
+  for (const row of items || []) {
+    for (const party of [row.sender, row.recipient]) {
+      if (party?.id) people.set(party.id, party.full_name);
+    }
+  }
+  if (!people.size) return "";
+  const links = [...people].map(([id, name]) =>
+    '<button class="secondary" data-graph="'+E(id)+'">'+E(name)+'</button>').join("");
+  return '<details class="paper"><summary>'+T("Клиенты в этой ленте", "Осы тізімдегі клиенттер")+
+    ' · '+people.size+'</summary><div class="action-list">'+links+'</div></details>';
+}
 function historyView() {
   if(product && gateway.role==="client")return page==="history"?wallet.history(data,ledgerFilter):wallet.home(account,data,summary,getLocal("qadam.mask."+ownerScope,"0")==="1",pending);
-  if(product && gateway.role==="admin")return wallet.soc(summary)+title(T("Лента операций","Операциялар тізімі"))+
+  if(product && gateway.role==="admin")return wallet.soc(summary)+feedParticipants(data?.items)+title(T("Лента операций","Операциялар тізімі"))+
     '<div class="filter-row">'+["","approved","cooling_off","blocked","cancelled"].map(k=>'<button data-filter="'+k+'" aria-pressed="'+(k===filter)+'">'+(k?E(status(k)):T("Все","Барлығы"))+'</button>').join("")+'</div><form id="search-form"><input name="q" maxlength="128" value="'+E(query)+'" aria-label="'+T("Имя или ID","Аты немесе ID")+'" placeholder="'+T("Имя или ID","Аты немесе ID")+'"></form>'+transactionRows(data?.items,true)+(offset?button("prev",T("Назад","Артқа"),"secondary"):"")+(data?.pagination?.has_more?button("next",T("Ещё","Тағы"),"secondary"):"");
   const admin = gateway.role === "admin",
     stats = data?.stats;

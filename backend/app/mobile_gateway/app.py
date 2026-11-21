@@ -511,9 +511,15 @@ def create_mobile_app(
                 if body.get("sender_id", str(principal.subject)) != str(principal.subject):
                     raise HTTPException(403, "mobile_owner_forbidden")
                 if cfg.auth_mode == "password":
-                    from app.mobile_gateway.accounts import RECIPIENTS
+                    from app.mobile_gateway.accounts import RECIPIENTS, wallet_recipients
 
-                    if body.get("recipient_phone") not in RECIPIENTS or body.get("recipient_iban"):
+                    allowed = RECIPIENTS
+                    if body.get("recipient_phone") not in allowed:
+                        allowed = {
+                            item.phone
+                            for item in await wallet_recipients(session, principal.subject)
+                        }
+                    if body.get("recipient_phone") not in allowed or body.get("recipient_iban"):
                         raise HTTPException(422, "mobile_recipient_unavailable")
                 body["sender_id"] = str(principal.subject)
                 # Replayed request IDs must also belong to this customer.

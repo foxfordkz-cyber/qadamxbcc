@@ -2,6 +2,8 @@
 
 <h1 align="center">Saq Bol × BCC</h1>
 
+[Открытие Android 2.7 в Android Studio](docs/ANDROID_STUDIO_HANDOFF_RU.md) · [Демонстрационные данные](docs/DEMO_DATA_RU.md)
+
 <p align="center">
   Аударым кезіндегі алаяқтықтан қорғау · Защита от мошенничества при переводах<br>
   ITU Hackathon 2026 · Bank CenterCredit кейсі / кейс Bank CenterCredit

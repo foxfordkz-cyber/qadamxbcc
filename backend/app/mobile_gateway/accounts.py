@@ -19,6 +19,23 @@ from app.models import Account, RiskEvent, Transaction, TransactionStatus
 RECIPIENTS = {"+77010000002", "+77010000003", "+77010000004"}
 
 
+async def wallet_recipients(session: SessionDep, owner_id: Any) -> list[Account]:
+    from app.mobile_gateway.demo_catalog import key
+
+    extra = select(Transaction.recipient_id).where(
+        Transaction.id.in_([key(f"out/{i}") for i in range(4)]),
+        Transaction.sender_id == owner_id,
+        Transaction.status == TransactionStatus.APPROVED,
+    )
+    return list(
+        await session.scalars(
+            select(Account)
+            .where(Account.phone.in_(RECIPIENTS) | Account.id.in_(extra))
+            .order_by(Account.full_name)
+        )
+    )
+
+
 def install_accounts(app: FastAPI) -> None:
     @app.get("/mobile/v1/account")
     async def account(principal: IdentityDep, session: SessionDep) -> dict[str, Any]:
@@ -57,11 +74,7 @@ def install_accounts(app: FastAPI) -> None:
             .order_by(Transaction.created_at.desc(), Transaction.id.desc())
             .limit(1)
         )
-        recipients = (
-            await session.scalars(
-                select(Account).where(Account.phone.in_(RECIPIENTS)).order_by(Account.full_name)
-            )
-        ).all()
+        recipients = await wallet_recipients(session, principal.subject)
         customer = await session.get(Account, principal.subject)
         if customer is None:
             raise HTTPException(404, "account_not_found")
