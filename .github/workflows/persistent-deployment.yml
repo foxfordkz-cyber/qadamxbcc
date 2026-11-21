@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - backend/Dockerfile.persistent
+      - .dockerignore
+      - deliverables/android/Saq-Bol-Android-2.7.apk
+      - deliverables/android/Saq-Bol-Android-2.7.json
       - backend/scripts/start-persistent.sh
       - deploy/render-persistent.yaml
       - .github/workflows/persistent-deployment.yml
