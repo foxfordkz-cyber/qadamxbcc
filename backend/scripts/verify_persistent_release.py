@@ -148,8 +148,10 @@ def main() -> None:
             for submitted in (normal, cooling, blocked):
                 ident = submitted["result"]["transaction_id"]
                 visible = request(f"/mobile/v1/api/transfers/{ident}", officer)
-                for key in ("transaction_id", "amount", "status"):
-                    assert visible[key] == submitted["result"][key]
+                for key in ("transaction_id", "status", "recipient"):
+                    assert visible[key] == submitted["result"][key], f"SOC mismatch: {key}"
+                # PostgreSQL NUMERIC returns two decimals; the initial request may omit them.
+                assert Decimal(visible["amount"]) == Decimal(submitted["result"]["amount"])
             docker(
                 "run",
                 "-d",
