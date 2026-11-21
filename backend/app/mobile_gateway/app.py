@@ -566,6 +566,7 @@ def create_mobile_app(
 
     index = WEB_ASSETS / "index.html"
     if index.is_file():
+
         @app.get("/", include_in_schema=False)
         async def release_home() -> HTMLResponse:
             return HTMLResponse((WEB_ASSETS / "release.html").read_text(encoding="utf-8"))
