@@ -2,7 +2,7 @@ import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
-import { walletUI, icon } from "./wallet.mjs";
+import { walletUI, icon, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
 import { shortcuts, familyView, checkView, packetContent, secondConfirmationView, secondSettingsView } from "./guardian.mjs";
 import { packetView } from "./packet.mjs";
@@ -158,8 +158,6 @@ const statuses = {
 };
 const productStatuses={approved:["Выполнен","Орындалды"],cooling_off:["На проверке","Тексерілуде"],blocked:["Отклонён","Қабылданбады"],cancelled:["Отменён","Тоқтатылды"]};
 const status = (value) => product && productStatuses[value] ? T(...productStatuses[value]) : (statuses[value] ? T(...statuses[value]) : value);
-const amount = (value) =>
-  `${new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "kk-KZ").format(Number(value) || 0)} ₸`;
 const when = ledgerTime;
 const button = (action, label, style = "primary", attributes = "") =>
   `<button class="${style}" data-action="${action}" ${attributes} ${loading ? "disabled" : ""}>${E(label)}<span aria-hidden="true">→</span></button>`;

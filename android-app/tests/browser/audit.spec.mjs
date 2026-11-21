@@ -16,7 +16,7 @@ async function enter(page,baseURL,fixture={}) {
       const body=route.request().postDataJSON();
       fixture.payee=body;
       const outcome=body.bank!=="bcc"?"unavailable":body.expected_name && body.expected_name!=="Арман"?"mismatch":"identified";
-      json={recipient:body.recipient,bank:body.bank,status:outcome,source:"synthetic_directory",display_name:outcome==="unavailable"?null:"Арман"};
+      json={recipient:body.recipient,bank:body.bank,status:outcome,source:"synthetic_directory",display_name:outcome==="unavailable"?null:"Арман А."};
     }
     else if(path==="requests")json={request_id:ids[0]};
     else if(path==="api/transfers/evaluate"){

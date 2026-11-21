@@ -2,7 +2,15 @@ import { ledgerInstant, ledgerTime } from "../www/wallet-date.mjs";
 import { bucketDays, scaleMax } from "../www/spending-chart.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { walletUI } from "../www/wallet.mjs";
+import { formatTenge, walletUI } from "../www/wallet.mjs";
+
+test("KZT amounts use the same thousands and tiyn separators on both wallet locales", () => {
+  assert.equal(formatTenge("900000.00"), "900\u00a0000 ₸");
+  assert.equal(formatTenge(-5000012.5), "-5\u00a0000\u00a0012,5 ₸");
+  assert.equal(formatTenge("0.01"), "0,01 ₸");
+  assert.equal(formatTenge(0), "0 ₸");
+  assert.equal(formatTenge(null), "— ₸");
+});
 
 const ui = walletUI({
   T: (ru) => ru,

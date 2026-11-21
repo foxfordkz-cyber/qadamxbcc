@@ -123,10 +123,11 @@ test("three personal accounts share a protected case and separate operational me
       const receipt = client.page.locator(".desk-resolution");
       await expect(receipt).toContainText(caseFile.id);
       await expect(receipt).toContainText(/Мошенничество подтверждено|Алаяқтық расталды/);
-      await expect(receipt).toContainText(/900\s000/);
+      const disputed = receipt.locator("p").filter({hasText: /Сумма перевода по делу|Іске қатысты аударым сомасы/});
+      await expect(disputed.locator("strong")).toHaveText("900 000 ₸");
       await expect(receipt).toContainText(/На проверке|Тексерілуде/);
       const view = await api(client, "/reports/" + report.id + "/callback");
-      expect(view.resolution.operation.transaction_id).toBe(transfer.transaction_id);
+      expect(view.resolution.operation).toMatchObject({transaction_id: transfer.transaction_id, amount:"900000.00", status:"cooling_off"});
       expect(view.resolution.balance).toBe((await api(client, "/account")).balance);
     });
 
