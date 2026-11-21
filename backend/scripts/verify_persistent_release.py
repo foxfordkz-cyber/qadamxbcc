@@ -7,11 +7,13 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 IMAGE = "qadam-persistent"
 CONTAINER = "qadam-persistent-acceptance"
+WORKER = "qadam-persistent-worker-acceptance"
 ORIGIN = "http://127.0.0.1:10000"
 
 
@@ -41,6 +43,45 @@ def ready() -> None:
             pass
         time.sleep(1)
     raise AssertionError("Persistent API did not become ready")
+
+
+def expect_status(path: str, status: int, token: str = "", body: Any = None) -> None:
+    try:
+        request(path, token, body)
+    except urllib.error.HTTPError as exc:
+        if exc.code != status:
+            raise AssertionError(f"Expected HTTP {status}, received {exc.code}") from None
+        return
+    raise AssertionError(f"Expected HTTP {status}")
+
+
+def worker_ready() -> None:
+    for _ in range(30):
+        checked = subprocess.run(
+            ["docker", "exec", WORKER, "python", "-m", "app.integrations.worker", "--health"],
+            capture_output=True,
+            timeout=10,
+        )
+        if checked.returncode == 0:
+            return
+        time.sleep(1)
+    raise AssertionError("Worker did not publish its heartbeat")
+
+
+def transfer(token: str, phone: str, amount: str, *, active_call: bool = False) -> dict[str, Any]:
+    reserved = request("/mobile/v1/requests", token, {})
+    body = {
+        "request_id": reserved["request_id"],
+        "recipient_phone": phone,
+        "amount": amount,
+        "currency": "KZT",
+        "context": {
+            "active_call": active_call,
+            "from_deposit": active_call,
+            "is_new_recipient": phone != "+77010000002",
+        },
+    }
+    return {"body": body, "result": request("/mobile/v1/api/transfers/evaluate", token, body)}
 
 
 def main() -> None:
@@ -74,6 +115,11 @@ def main() -> None:
         try:
             docker("run", "-d", "--name", CONTAINER, *common, IMAGE)
             ready()
+            expect_status(
+                "/mobile/v1/auth/login",
+                401,
+                body={"login": "client_demo", "password": "incorrect-synthetic-password"},
+            )
             login = request(
                 "/mobile/v1/auth/login",
                 body={
@@ -82,29 +128,95 @@ def main() -> None:
                 },
             )
             token = login["token"]
+            officer = request(
+                "/mobile/v1/auth/login",
+                body={"login": "admin_demo", "password": "synthetic-ci-officer"},
+            )["token"]
+            opening = Decimal(request("/mobile/v1/account", token)["balance"])
+            normal = transfer(token, "+77010000002", "25000")
+            assert normal["result"]["status"] == "approved"
+            cooling = transfer(token, "+77010000003", "900000", active_call=True)
+            assert cooling["result"]["status"] == "cooling_off"
+            assert cooling["result"]["cooling_off_until"]
+            blocked = transfer(token, "+77010000004", "250000")
+            assert blocked["result"]["status"] == "blocked"
             account = request("/mobile/v1/account", token)
+            assert Decimal(account["balance"]) == opening - Decimal("25000")
             operations = request("/mobile/v1/wallet/operations", token)
             assert request("/health")["ephemeral_store"] is False
-            try:
-                request("/mobile/v1/api/soc/feed", token)
-                raise AssertionError("Client unexpectedly accessed SOC")
-            except urllib.error.HTTPError as exc:
-                if exc.code != 403:
-                    raise AssertionError("Unexpected client authorization response") from None
+            expect_status("/mobile/v1/api/soc/feed", 403, token)
+            for submitted in (normal, cooling, blocked):
+                ident = submitted["result"]["transaction_id"]
+                visible = request(f"/mobile/v1/api/transfers/{ident}", officer)
+                for key in ("transaction_id", "amount", "status"):
+                    assert visible[key] == submitted["result"][key]
+            docker(
+                "run",
+                "-d",
+                "--name",
+                WORKER,
+                *common,
+                IMAGE,
+                "sh",
+                "scripts/start-persistent.sh",
+                "worker",
+            )
+            worker_ready()
             docker("restart", CONTAINER)
             ready()
             assert request("/mobile/v1/account", token) == account
             assert request("/mobile/v1/wallet/operations", token) == operations
+            replay = request("/mobile/v1/api/transfers/evaluate", token, normal["body"])
+            assert replay["transaction_id"] == normal["result"]["transaction_id"]
+            assert request("/mobile/v1/account", token) == account
+            expect_status(
+                "/mobile/v1/api/transfers/evaluate",
+                409,
+                token,
+                {**normal["body"], "amount": "25001"},
+            )
+            # Remove only this CI worker's heartbeat, so a stale TTL cannot pass recovery.
+            docker(
+                "exec",
+                WORKER,
+                "python",
+                "-c",
+                "import os; from redis import Redis; "
+                "from app.integrations.observability import HEARTBEAT; "
+                "Redis.from_url(os.environ['BCC_REDIS_URL']).delete(HEARTBEAT)",
+            )
+            docker("restart", WORKER)
+            worker_ready()
+            # Exact GitHub service-container IDs, never a discovered/shared developer service.
+            for variable in ("PERSISTENT_POSTGRES_CONTAINER", "PERSISTENT_REDIS_CONTAINER"):
+                dependency = os.environ[variable]
+                docker("pause", dependency)
+                try:
+                    time.sleep(6)  # let readiness's bounded five-second cache expire
+                    expect_status("/ready", 503)
+                finally:
+                    docker("unpause", dependency)
+                ready()
+                assert request("/mobile/v1/account", token) == account
+                assert request("/mobile/v1/wallet/operations", token) == operations
             # Running a later predeploy must preserve balances and history.
             docker("run", "--rm", *common, IMAGE, "sh", "scripts/start-persistent.sh", "migrate")
             assert request("/mobile/v1/account", token) == account
             assert request("/mobile/v1/wallet/operations", token) == operations
             print(
-                "PASS: password login, client isolation, durable session/data "
-                "and idempotent bootstrap"
+                "PASS: three presets, both roles, unchanged money on replay/conflict, "
+                "API/worker restart, PostgreSQL/Valkey failure recovery and idempotent bootstrap"
+            )
+            print("Observed container memory (not a peak/load benchmark):")
+            print(
+                docker(
+                    "stats", "--no-stream", "--format", "{{.Name}} {{.MemUsage}}", CONTAINER, WORKER
+                )
             )
         finally:
-            subprocess.run(["docker", "rm", "-f", CONTAINER], check=False, capture_output=True)
+            subprocess.run(
+                ["docker", "rm", "-f", CONTAINER, WORKER], check=False, capture_output=True
+            )
 
 
 if __name__ == "__main__":

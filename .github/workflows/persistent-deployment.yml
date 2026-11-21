@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_DB: qadam
           POSTGRES_PASSWORD: synthetic-ci-only
@@ -29,7 +29,7 @@ jobs:
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s --health-timeout 5s --health-retries 12
       redis:
-        image: redis:7-alpine
+        image: valkey/valkey:8-alpine
         ports: ["6379:6379"]
     steps:
       - uses: actions/checkout@v4
@@ -59,4 +59,7 @@ jobs:
         run: |
           docker run --rm qadam-persistent sh -c 'test -s .qadam-web/index.html && test -f alembic/versions/0013_staff_access.py && python -c "from app.mobile_gateway.app import factory"'
       - name: Persistent storage and restart acceptance
+        env:
+          PERSISTENT_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+          PERSISTENT_REDIS_CONTAINER: ${{ job.services.redis.id }}
         run: python backend/scripts/verify_persistent_release.py
