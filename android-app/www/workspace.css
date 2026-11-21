@@ -5,6 +5,8 @@ html[data-product] body {background:#f1f5f2;color:var(--ink)}
 #app .entry.sign-in{max-width:32rem;margin:clamp(1rem,7vh,5rem) auto;background:white;border:1px solid var(--line);border-radius:22px;padding:clamp(1.1rem,5vw,2.25rem);display:grid;gap:1.4rem}
 #app .entry.sign-in .sign-heading{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:1rem;min-height:0;padding:0 0 1.1rem;border-bottom:1px solid var(--line);background:none;color:var(--ink);border-radius:0;grid-area:auto}
 #app .sign-heading img{width:48px;height:48px}
+#app .sign-heading::after{content:none}
+#app .entry.sign-in #personal-login{border:0;padding:0;box-shadow:none}
 #app .sign-heading :is(h1,small){margin:0;color:var(--ink)}
 #app .entry.sign-in #personal-login,#app .entry.sign-in .sign-footer{grid-area:auto}
 #app .entry.sign-in{grid-template-columns:minmax(0,1fr)}
