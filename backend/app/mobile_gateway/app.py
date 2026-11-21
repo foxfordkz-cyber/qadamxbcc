@@ -43,6 +43,7 @@ CLIENT_PATHS = [
     ("GET", rf"transfers/{UUID_PATTERN}"),
     ("POST", rf"transfers/{UUID_PATTERN}/(?:resolve-cooling|cancel)"),
     ("POST", r"call-check"),
+    ("POST", r"payee-check"),
     ("GET", r"trusted-contacts"),
     ("POST", r"trusted-contacts"),
     ("DELETE", rf"trusted-contacts/{UUID_PATTERN}"),
@@ -509,7 +510,7 @@ def create_mobile_app(
                 if body.get("sender_id", str(principal.subject)) != str(principal.subject):
                     raise HTTPException(403, "mobile_owner_forbidden")
                 if cfg.auth_mode == "password":
-                    from app.mobile_gateway.accounts import RECIPIENTS
+                    from app.api.v1.payee_check import RECIPIENTS
 
                     if body.get("recipient_phone") not in RECIPIENTS or body.get("recipient_iban"):
                         raise HTTPException(422, "mobile_recipient_unavailable")

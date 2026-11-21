@@ -18,11 +18,14 @@ from app.api.deps import SessionDep
 from app.db.base import utcnow
 from app.integrations.capabilities import Principal
 from app.integrations.cases.models import CaseEvent, FraudCase
+from app.integrations.cases.schemas import OUTCOME_REASONS
 from app.integrations.cases.service import prior_event, save_event
 from app.integrations.errors import IntegrationError
 from app.integrations.models import GuardianReport
 from app.mobile_gateway.app import IdentityDep
 from app.mobile_gateway.config import MobileSettings
+from app.mobile_gateway.wallet import balance, money
+from app.models import Transaction, TransactionStatus
 
 ASKED = "CALLBACK_OWNER_REQUESTED"
 INVITED = "CALLBACK_INVITED"
@@ -54,6 +57,24 @@ class CaseCallback(BaseModel):
     case_id: UUID
     case_state: str
     callback: Callback | None
+
+
+class ReviewedTransfer(BaseModel):
+    transaction_id: UUID
+    amount: str
+    currency: str
+    status: TransactionStatus
+
+
+class CaseResolution(BaseModel):
+    outcome: Literal["confirmed_fraud", "legitimate_transfer", "insufficient_evidence"] | None
+    closed_at: datetime
+    operation: ReviewedTransfer | None
+    balance: str
+
+
+class OwnerCaseView(CaseCallback):
+    resolution: CaseResolution | None = None
 
 
 class CallbackList(BaseModel):
@@ -169,6 +190,9 @@ def callback_state(
         report_id=report.id,
         transaction_id=report.transaction_id,
         status=status,
+        reason="transfer_review",
+        department="antifraud",
+        demonstration_only=True,
         requested_at=(invitation or first).created_at,
         expires_at=valid_until,
         answered_at=answered_at,
@@ -274,19 +298,51 @@ def install_callbacks(app: FastAPI, cfg: MobileSettings, enabled: bool) -> None:
         case, report = await case_for(session, cid=case_id, lock=True)
         return await record(session, case, report, actor, key, body, INVITED)
 
-    @app.get(owner_route)
+    @app.get(owner_route, response_model_exclude_unset=True)
     async def owner_view(
         report_id: UUID,
         session: SessionDep,
         actor: Annotated[Principal, Depends(customer)],
-    ) -> CaseCallback:
+    ) -> OwnerCaseView:
         case, report = await case_for(session, report_id=report_id, owner=actor.subject)
         events = (await history(session, [case.id]))[case.id]
-        return CaseCallback(
+        view = OwnerCaseView(
             case_id=case.id,
             case_state=case.state,
             callback=callback_state(case, report, events, utcnow()),
         )
+        if case.state == "CLOSED":
+            closing = next(
+                (
+                    e
+                    for e in reversed(events)
+                    if e.version <= case.version and e.code == "TRANSITION" and e.state == "CLOSED"
+                ),
+                None,
+            )
+            reason = closing.result.get("reason") if closing is not None else None
+            operation = None
+            if report.transaction_id is not None:
+                tx = await session.scalar(
+                    select(Transaction).where(
+                        Transaction.id == report.transaction_id,
+                        Transaction.sender_id == actor.subject,
+                    )
+                )
+                if tx is not None:
+                    operation = ReviewedTransfer(
+                        transaction_id=tx.id,
+                        amount=money(tx.amount),
+                        currency=tx.currency,
+                        status=tx.status,
+                    )
+            view.resolution = CaseResolution(
+                outcome=reason if reason in OUTCOME_REASONS else None,
+                closed_at=closing.created_at if closing is not None else case.status_since,
+                operation=operation,
+                balance=await balance(session, actor.subject),
+            )
+        return view
 
     @app.post(owner_route)
     async def request_callback(

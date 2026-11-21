@@ -158,7 +158,7 @@ def build_ingress_router(
         ):
             return
         parts = (query.data or "").split(":", 1)
-        if len(parts) != 2 or parts[0] not in {"consent", "revoke", "ack", "suspect"}:
+        if len(parts) != 2 or parts[0] not in {"consent", "revoke", "ack", "suspect", "approve"}:
             return
         update = SimulatedUpdate.model_validate(
             {

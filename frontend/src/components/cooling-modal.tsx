@@ -65,7 +65,7 @@ export function CoolingModal({ draftFailed, result, context, answers, onAnswersC
     if (inFlight.current || (action === "verify" && !completeCoolingAnswers(answers))) return;
     inFlight.current = true; setBusy(true); setError(null);
     const route = action === "verify" ? "resolve-cooling" : action === "cancel" || action === "report" ? "cancel" : "post-call";
-    const body = action === "verify" ? { answers } : action === "cancel" ? {} : action === "report" ? { reason: "post_call_scam" } : { action };
+    const body = action === "verify" ? { answers, save_only: seconds !== 0 } : action === "cancel" ? {} : action === "report" ? { reason: "post_call_scam" } : { action };
     try {
       const value = await api<Evaluation>(`transfers/${result.transaction_id}/${route}`, { method: "POST", body: JSON.stringify(body) });
       onResolved(value);
@@ -75,7 +75,7 @@ export function CoolingModal({ draftFailed, result, context, answers, onAnswersC
         const current = await api<Evaluation>(`transfers/${result.transaction_id}`);
         const recorded = (action === "ended" && current.reasons.some(r => r.code === "POST_CALL_ENDED"))
           || (action === "recognized" && current.reasons.some(r => r.code === "POST_CALL_RECOGNIZED"))
-          || (action === "verify" && completeCoolingAnswers(answers) && questions.every(q => current.verification_answers?.[q] === answers[q]));
+          || (action === "verify" && seconds !== 0 && completeCoolingAnswers(answers) && questions.every(q => current.verification_answers?.[q] === answers[q]));
         if (current.status !== "cooling_off" || recorded) {
           onResolved(current);
           if (action === "recognized" && recorded) setStep(Math.max(0, firstCoolingStep(answers)));

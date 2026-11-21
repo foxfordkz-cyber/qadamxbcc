@@ -7,7 +7,7 @@ import type { CallCheck, Context, Evaluation } from "@/lib/contracts";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { Badge, Explain, Gauge } from "./risk";
 
-type Props = { callCheck?: CallCheck | null; result: Evaluation | null; amount: string; roundtrip: number; busy: boolean; error?: MessageKey | null; onReview: () => void; sensor: Biometrics; sender?: string; context?: Partial<Context> };
+type Props = { callCheck?: CallCheck | "unavailable" | null; result: Evaluation | null; amount: string; roundtrip: number; busy: boolean; error?: MessageKey | null; onReview: () => void; sensor: Biometrics; sender?: string; context?: Partial<Context> };
 
 /** What Saq Bol sees while the client fills in the transfer, then its decision. */
 export function Telemetry({ callCheck, result, amount, roundtrip, busy, error, onReview, sensor, sender, context }: Props) {
@@ -17,7 +17,7 @@ export function Telemetry({ callCheck, result, amount, roundtrip, busy, error, o
   const signals: { key: string; label: MessageKey; value: string; risk: boolean }[] = [
     { key: "call", label: "sigCall", value: t(context?.active_call ? "sigCallOn" : "sigNo"), risk: !!context?.active_call },
     ...(context?.payment_requested_after_call ? [{ key: "reported-call-request", label: "reportedCallRequest" as const, value: t("sigYes"), risk: true }] : []),
-    { key: "bank-log", label: "sigBankLog", value: callCheck ? t(callCheck.verified ? "sigBankCalling" : "sigBankNotCalling") : context?.active_call ? t("sigChecking") : "—", risk: !!callCheck && !callCheck.verified },
+    { key: "bank-log", label: "sigBankLog", value: callCheck === "unavailable" ? t("sigCallUnavailable") : callCheck ? t(callCheck.verified ? "sigBankCalling" : "sigBankNotCalling") : context?.active_call ? t("sigChecking") : "—", risk: !!callCheck && callCheck !== "unavailable" && !callCheck.verified },
     { key: "deposit", label: "sigDeposit", value: t(context?.from_deposit ? "sigYes" : "sigNo"), risk: !!context?.from_deposit },
     { key: "paste", label: "sigRequisites", value: snap.pasted_recipient ? t("pasteDetected") : snap.edits ? t("sigTyped") : "—", risk: !!snap.pasted_recipient },
     { key: "typing", label: "sigTyping", value: typing, risk: false },

@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from pydantic import Field, SecretStr, model_validator
@@ -18,11 +18,27 @@ class IntegrationSettings(BaseSettings):
     telegram_token: SecretStr = SecretStr("")
     telegram_allowed_chat_ids: list[int] = Field(default_factory=list)
     circle_web_owners: dict[int, UUID] = Field(default_factory=dict, repr=False)
+    family_owner_chats: dict[UUID, Annotated[int, Field(gt=0, le=2**52)]] = Field(
+        default_factory=dict, repr=False
+    )
     invitation_ttl_seconds: int = Field(600, ge=60, le=900)
     adapter_timeout_seconds: float = Field(2.0, gt=0, le=5)
     rate_limit_per_minute: int = Field(30, ge=1, le=300)
     gateway_enabled: bool = True
     gateway_timeout_seconds: float = Field(0.2, gt=0, le=1)
+
+    def approval_chat_allowed(self, owner: UUID, chat_id: int) -> bool:
+        if not self.enabled or chat_id <= 0 or self.circle_web_owners.get(chat_id) == owner:
+            return False
+        if self.telegram_mode == "fake":
+            return True
+        owner_chat = self.family_owner_chats.get(owner)
+        return (
+            self.telegram_mode == "test"
+            and chat_id in self.telegram_allowed_chat_ids
+            and owner_chat is not None
+            and chat_id != owner_chat
+        )
 
     @model_validator(mode="after")
     def validate_secrets(self) -> Self:

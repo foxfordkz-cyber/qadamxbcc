@@ -4,10 +4,21 @@ import { serviceDesk } from "../www/service-desk.mjs";
 
 function desk(kk=false) {
   return serviceDesk({
-    T:(ru,kz)=>kk?kz:ru, E:String, when:String, title:heading=>heading,
+    T:(ru,kz)=>kk?kz:ru, E:String, when:String, amount:v=>v+" ₸", status:String, title:heading=>heading,
     button:(action,label)=>'<button data-action="'+action+'">'+label+'</button>',
   });
 }
+test("case results distinguish the analyst's finding, live ledger state and next action",()=>{
+  const view={case_id:"case-123",case_state:"CLOSED",resolution:{closed_at:"now",outcome:"confirmed_fraud",
+    operation:{transaction_id:"tx-10",amount:"13000.50",status:"cooling_off"},balance:"51000.00"}};
+  const rendered=desk().resolution(view);
+  for(const text of ["case-123","Мошенничество подтверждено","13000.50 ₸","51000.00 ₸","отмените перевод",'data-detail="tx-10"']) assert.ok(rendered.includes(text));
+  assert.match(desk(true).resolution(view),/Алаяқтық расталды/);
+  assert.equal(desk().resolution({...view,case_state:"IN_REVIEW"}),"");
+  assert.equal(desk().closeCase({state:"CLOSED"}),"");
+  assert.match(desk().closeCase({state:"IN_REVIEW"}),/value="insufficient_evidence"/);
+  assert.doesNotMatch(desk().resolution({...view,resolution:{...view.resolution,outcome:null,operation:null}}),/data-detail=|Мошенничество подтверждено/);
+});
 const row={id:"synthetic-callback",case_id:"case-12345678",demonstration_only:true};
 const invite={state:"IN_REVIEW",assignee:"demo_analyst_a"};
 test("only an assigned officer can offer contact, a terminal answer requires a new customer request",()=>{

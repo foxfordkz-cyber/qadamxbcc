@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy import func, select
 
 from app.api.deps import SessionDep
+from app.api.v1.payee_check import RECIPIENTS
 from app.integrations.models import (
     ContactNotification,
     GuardianReport,
@@ -15,8 +16,6 @@ from app.mobile_gateway.app import IdentityDep
 from app.mobile_gateway.protection_models import PostCall
 from app.mobile_gateway.wallet import balance
 from app.models import Account, RiskEvent, Transaction, TransactionStatus
-
-RECIPIENTS = {"+77010000002", "+77010000003", "+77010000004"}
 
 
 def install_accounts(app: FastAPI) -> None:

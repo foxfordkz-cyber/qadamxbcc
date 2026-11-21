@@ -41,6 +41,7 @@ class CallCheck:
     checked_at: str
     employee_name: str | None = None
     department: str | None = None
+    started_at: str | None = None
 
 
 class CallCheckService:
@@ -72,6 +73,7 @@ class CallCheckService:
             checked_at=datetime.now(UTC).isoformat(),
             employee_name=call.employee_name if call else None,
             department=call.department if call else None,
+            started_at=call.started_at if call else None,
         )
         await self._redis.set(
             _CHECK_KEY.format(check=result.check_id), json.dumps(asdict(result)), ex=CHECK_TTL_S

@@ -13,7 +13,8 @@ const codes = (value: { reasons: { code: string }[] }) => value.reasons.map(r =>
 test("«bank is not calling» is a signed reason on the next transfer of the same customer", () => {
   const check = callCheckDemo(ids.sender);
   assert.equal(check.verified, false);
-  assert.match(check.message_ru, /НЕ звонит/);
+  assert.match(check.message_ru, /В журнале нет/);
+  assert.equal(check.started_at, null);
   assert.ok(callCheckSchema.safeParse(check).success);
   assert.ok(codes(evaluateDemo(scam(check.check_id))).includes("BANK_CALL_DENIED"));
   assert.ok(!codes(evaluateDemo(scam())).includes("BANK_CALL_DENIED"));
@@ -25,6 +26,8 @@ test("a real bank call is confirmed and never removes risk", () => {
   const check = callCheckDemo(ids.sender, now + 1000);
   assert.equal(check.verified, true);
   assert.equal(check.employee_name, "Асем Нурланова");
+  assert.equal(check.started_at, new Date(now).toISOString());
+  assert.equal(check.checked_at, new Date(now + 1000).toISOString());
   const value = evaluateDemo(scam(check.check_id));
   assert.ok(!codes(value).includes("BANK_CALL_DENIED"));
   assert.ok(codes(value).includes("ACTIVE_CALL"));

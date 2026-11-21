@@ -1,6 +1,8 @@
 import asyncio
 import os
+import re
 import shutil
+import uuid
 from collections.abc import AsyncIterator, Callable
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -126,3 +128,74 @@ async def test_active_rooms_and_reused_slot_isolate_sessions_sql_and_risk_state(
             platform = await sign_in(fresh, "platform_demo", "platform fixture")
             assert (await fresh.get(BASE + "/admin/staff", headers=platform)).json()["audit"] == []
     assert await asyncio.to_thread(lambda: list(rooms.iterdir())) == []
+
+
+async def test_room_contact_can_approve_only_its_own_request(
+    rooms: Path, connect: Callable[[int], Redis]
+) -> None:
+    from app.mobile_gateway.jury_rooms import CONTACT_INBOX, create_jury_app
+
+    host = "https://jury.test"
+    origin = {"Origin": host}
+    app = create_jury_app(jury_storage(rooms, connect).room)
+    transport = ASGITransport(app=app)
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=transport, base_url=host) as client,
+        AsyncClient(transport=transport, base_url=host) as contact,
+        AsyncClient(transport=transport, base_url=host) as unrelated,
+    ):
+        assert (await client.post("/jury/start", headers=origin)).status_code == 303
+        invite = re.search(
+            r'href="(/jury/invite-contact/[\w-]+)"', (await client.get("/jury")).text
+        )
+        assert invite is not None
+        assert (await client.get(invite[1])).status_code == 409
+        assert (await contact.get(invite[1])).headers["location"] == CONTACT_INBOX
+        assert (await contact.get(BASE + "/account")).status_code == 401
+        assert (await client.get(CONTACT_INBOX)).status_code == 403
+        assert "Запросов пока нет" in (await contact.get(CONTACT_INBOX + "?lang=ru")).text
+        access = await sign_in(client, "client_demo", "customer fixture")
+        policy = BASE + "/protection/second-confirmation"
+        config = (await client.get(policy, headers=access)).json()
+        assert len(config["contacts"]) == 1
+        enabled = await client.post(
+            policy,
+            headers=access,
+            json={"action": "enable", "contact_id": config["contacts"][0]["id"]},
+        )
+        assert enabled.status_code == 200, enabled.text
+        held = await client.post(
+            BASE + "/api/transfers/evaluate",
+            headers=access,
+            json={
+                "request_id": str(uuid.uuid4()),
+                "recipient_phone": "+77010000003",
+                "amount": "250000",
+                "context": {},
+            },
+        )
+        assert held.status_code == 200, held.text
+        assert held.json()["status"] == "cooling_off"
+        assert "FAMILY_APPROVAL_REQUIRED" in {r["code"] for r in held.json()["reasons"]}
+        listing = (await contact.get(CONTACT_INBOX + "?lang=ru")).text
+        assert "250 000 ₸" in listing
+        assert "Алексей" in listing
+        decision = re.search(r'action="([^"]+/approve\?lang=ru)"', listing)
+        assert decision is not None
+        assert (await client.post(decision[1], headers=origin)).status_code == 403
+        assert (await unrelated.post(decision[1], headers=origin)).status_code == 403
+        assert (await contact.post(decision[1])).status_code == 403
+        assert (await contact.post(decision[1], headers=origin)).status_code == 303
+        assert "Клиенттің шешімі күтілуде" in (await contact.get(CONTACT_INBOX)).text
+        balance = (await client.get(BASE + "/account", headers=access)).json()
+        assert balance["active_pause"] == held.json()["transaction_id"]
+        followup = (await contact.get(CONTACT_INBOX + "?lang=ru")).text
+        suspect = re.search(r'action="([^"]+/suspect\?lang=ru)"', followup)
+        assert suspect is not None
+        assert (await contact.post(suspect[1], headers=origin)).status_code == 303
+        assert "О подозрении сообщили" in (await contact.get(CONTACT_INBOX + "?lang=ru")).text
+        path = BASE + "/api/trusted-contacts/" + config["contacts"][0]["id"]
+        assert (await client.delete(path, headers=access)).status_code == 200
+        assert "Запросов пока нет" in (await contact.get(CONTACT_INBOX + "?lang=ru")).text
+        assert (await contact.post(decision[1], headers=origin)).status_code == 404

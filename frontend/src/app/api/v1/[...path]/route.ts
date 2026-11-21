@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { returnActionInput, returnRoute, reviewInput } from "@/lib/payment-returns";
 import { z } from "zod";
+import { demoPayee, payeeInput, payeeResult } from "@/lib/payee-check";
 import { traceRoute } from "@/lib/funds-trace";
 import { anchorsRoute } from "@/lib/trace-anchors";
 import { lookbackRoute, priorReceiptQuery } from "@/lib/recipient-lookback";
@@ -38,9 +39,10 @@ async function handle(request: NextRequest, context: RouteContext) {
   if (fundsTrace && request.nextUrl.search) return json({ error: "invalid" }, 422);
   const recipientFlag = ["GET", "POST"].includes(request.method) && /^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route);
   const callCheck = request.method === "POST" && route === "call-check";
+  const payee = request.method === "POST" && route === "payee-check" && !request.nextUrl.search;
   const bankCall = request.method === "POST" && route === "call-check/demo/bank-call";
   const guide = request.method === "GET" && route === "scam-check/guide";
-  if (!linked && !evaluate && !resolve && !cancel && !postCall && !abandon && !detail && !feed && !graph && !fundsTrace && !recipientFlag && !lookback && !callCheck && !bankCall && !guide) return json({ error: "notFound" }, 404);
+  if (!linked && !evaluate && !resolve && !cancel && !postCall && !abandon && !detail && !feed && !graph && !fundsTrace && !recipientFlag && !lookback && !callCheck && !bankCall && !guide && !payee) return json({ error: "notFound" }, 404);
   if ((abandon || graph || fundsTrace || recipientFlag || lookback) && !z.uuid().safeParse(path[2]).success) return json({ error: "invalid" }, 422);
   if ((resolve || cancel || postCall || detail) && !z.uuid().safeParse(path[1]).success) return json({ error: "invalid" }, 422);
   const admission = apiAdmission();
@@ -64,6 +66,12 @@ async function handle(request: NextRequest, context: RouteContext) {
       return json({ error: "integrationForbidden" }, 403);
     }
     let body: unknown;
+    if (payee) {
+      if (!config.demoActionsEnabled || (config.mode !== "demo" && config.accountMode !== "test")) return json({ error: "notFound" }, 404);
+      const input = payeeInput.parse(await readBoundedJson(request));
+      if (config.mode === "demo") return json(demoPayee(input));
+      body = input;
+    }
     let returnTransfer = false;
     if (linked && request.method === "POST") {
       if (linked.kind === "review") body = reviewInput.parse(await readBoundedJson(request));
@@ -91,8 +99,8 @@ async function handle(request: NextRequest, context: RouteContext) {
       body = rest;
     }
     if (resolve) {
-      const parsed = z.object({ answers: answersSchema }).strict().parse(await readBoundedJson(request));
-      if (config.mode === "demo") return json(resolveDemo(path[1], parsed.answers));
+      const parsed = z.object({ answers: answersSchema, save_only: z.boolean().optional() }).strict().parse(await readBoundedJson(request));
+      if (config.mode === "demo") return json(resolveDemo(path[1], parsed.answers, Date.now(), false, parsed.save_only));
       body = parsed;
     }
     if (callCheck || bankCall) {
@@ -150,6 +158,12 @@ async function handle(request: NextRequest, context: RouteContext) {
     let value: unknown;
     try { value = await response.json(); }
     catch { return json({ error: "invalidResponse" }, 502); }
+    if (payee) {
+      const reply = payeeResult.safeParse(value);
+      const input = payeeInput.parse(body);
+      if (!reply.success || reply.data.bank !== input.bank || reply.data.recipient !== input.recipient) return json({error: "invalidResponse"}, 502);
+      return json(reply.data);
+    }
     if (linked) {
       try { return json(validateApiResponse(route, value, request.method)); }
       catch { return json({error:"invalidResponse"}, 502); }

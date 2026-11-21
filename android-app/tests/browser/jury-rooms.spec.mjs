@@ -107,6 +107,26 @@ test("jurors can invite colleagues without sharing transfers, metrics or employe
     expect(cases.some(c => c.id === caseFile.id)).toBe(false);
     await request(officerA, "/cases/" + caseFile.id + "/callback");
     await request(officerB, "/cases/" + caseFile.id + "/callback", 404);
+    await test.step("A room's officer can send a finding only to its reporting customer", async () => {
+      await officerA.page.bringToFront();
+      await officerA.page.locator('[data-nav="cases"]').click();
+      await officerA.page.locator(`[data-case="${caseFile.id}"]`).click();
+      await officerA.page.locator('[data-action="case-review"]').click();
+      const form = officerA.page.locator("#case-close");
+      await form.locator("select").selectOption("confirmed_fraud");
+      await form.locator("button").click();
+      await expect(form).toHaveCount(0);
+      await ownerPage.bringToFront();
+      await ownerPage.goto(origin + "/wallet/?report=" + report.id);
+      const result = ownerPage.locator(".desk-resolution");
+      await expect(result).toContainText(caseFile.id);
+      await expect(result).toContainText(/Алаяқтық расталды|Мошенничество подтверждено/);
+      await result.locator("[data-detail]").click();
+      await expect(ownerPage.locator("#countdown")).toBeVisible();
+      const receipt = await request(owner, "/reports/" + report.id + "/callback");
+      expect(receipt.resolution.operation).toMatchObject({transaction_id:transfer.transaction_id, status:"cooling_off", amount:"900000.00"});
+      expect(receipt.resolution.balance).toBe((await request(owner, "/account")).balance);
+    });
     expect((await request(adminA, "/admin/metrics")).requests).toBe(1);
     expect((await request(adminB, "/admin/metrics")).requests).toBe(0);
 

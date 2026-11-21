@@ -1,7 +1,39 @@
 import { ledgerInstant } from "./wallet-date.mjs";
 
 // Views for the connected wallet. Case and access decisions always come from the gateway.
-export function serviceDesk({ T, E, when, title, button }) {
+export function serviceDesk({ T, E, when, title, button, amount, status }) {
+  const outcomes = {
+    confirmed_fraud: ["Мошенничество подтверждено", "Алаяқтық расталды"],
+    legitimate_transfer: ["Перевод признан правомерным", "Аударым заңды деп танылды"],
+    insufficient_evidence: ["Недостаточно сведений", "Мәлімет жеткіліксіз"],
+  };
+  const outcomeLabel = code => Object.hasOwn(outcomes, code) ? T(...outcomes[code]) : "";
+  function closeCase(c) {
+    if (!["IN_REVIEW", "ESCALATED", "NEEDS_INFORMATION", "RESOLVED"].includes(c.state)) return "";
+    return `<form id="case-close" class="form-stack paper"><h2>${T("Результат расследования", "Тексеру қорытындысы")}</h2>
+      <label>${T("Заключение сотрудника", "Қызметкердің қорытындысы")}<select name="outcome" required>
+      <option value="">${T("Выберите заключение", "Қорытындыны таңдаңыз")}</option>
+      ${Object.keys(outcomes).map(code => `<option value="${code}">${outcomeLabel(code)}</option>`).join("")}</select></label>
+      <p>${T("Заключение сохранится в деле. Статус перевода и баланс определяются отдельно.", "Қорытынды іске тіркеледі. Аударым күйі мен шоттағы қалдық бөлек анықталады.")}</p>
+      <button class="primary">${T("Закрыть дело", "Істі жабу")}</button></form>`;
+  }
+  function resolution(view) {
+    if (view?.case_state !== "CLOSED" || !view.resolution) return "";
+    const { outcome, operation, closed_at, balance } = view.resolution;
+    let next = T("Сохраните номер дела. Если появились новые сведения, сообщите их банку.", "Іс нөмірін сақтаңыз. Жаңа мәлімет шықса, банкке хабарлаңыз.");
+    if (outcome === "confirmed_fraud") next = operation?.status === "approved"
+      ? T("Обратитесь в банк через официальный канал по поводу уже проведённого перевода и укажите номер дела.", "Орындалған аударым бойынша банктің ресми арнасына хабарласып, іс нөмірін айтыңыз.")
+      : operation?.status === "cooling_off"
+        ? T("Откройте квитанцию и отмените перевод. Прекратите общение со звонившим.", "Түбіртекті ашып, аударымды тоқтатыңыз. Қоңырау шалушымен байланысты үзіңіз.")
+        : T("Прекратите общение со звонившим и сохраните номер дела для обращения в банк.", "Қоңырау шалушымен байланысты үзіп, банкке хабарласу үшін іс нөмірін сақтаңыз.");
+    if (outcome === "legitimate_transfer" && operation?.status === "cooling_off") next = T("Откройте квитанцию. Если хотите продолжить, подтвердите перевод после окончания паузы.", "Түбіртекті ашыңыз. Жалғастырғыңыз келсе, кідіріс біткен соң аударымды растаңыз.");
+    if (outcome === "insufficient_evidence") next = T("Уточните реквизиты у получателя по знакомому вам каналу. При новых сведениях обратитесь в банк с номером дела.", "Алушының деректемелерін өзіңіз білетін байланыс арнасымен тексеріңіз. Жаңа мәлімет болса, іс нөмірін көрсетіп банкке хабарласыңыз.");
+    return `<section class="paper desk-resolution"><small>${T("Дело", "Іс")} № ${E(view.case_id)} · ${E(when(closed_at))}</small>
+      <h2>${outcomeLabel(outcome) || T("Дело закрыто без классификации", "Іс қорытынды түрі көрсетілмей жабылды")}</h2>
+      ${operation ? `<p>${T("Сумма перевода по делу", "Іске қатысты аударым сомасы")} <strong>${amount(operation.amount)}</strong></p><p>${T("Текущий статус перевода", "Аударымның қазіргі күйі")} · ${E(status(operation.status))}</p>` : `<p>${T("К обращению не привязан перевод.", "Өтінішке аударым тіркелмеген.")}</p>`}
+      ${balance != null ? `<p>${T("Баланс учебного счёта сейчас", "Оқу шотының қазіргі қалдығы")} <strong>${amount(balance)}</strong></p>` : ""}
+      <p>${next}</p>${operation ? `<button class="secondary" data-detail="${E(operation.transaction_id)}">${T("Открыть квитанцию перевода", "Аударым түбіртегін ашу")}</button>` : ""}</section>`;
+  }
   const stateLabel = state => ({
     customer_requested: T("Клиент попросил связаться", "Клиент хабарласуды сұрады"),
     requested: T("Ожидается ответ клиента", "Клиенттің жауабы күтілуде"),
@@ -93,5 +125,5 @@ export function serviceDesk({ T, E, when, title, button }) {
         v.audit.map(a=>'<li><strong>'+enabledText(a.enabled)+'</strong><small>'+E(when(a.at))+' · '+E(v.items.find(s=>s.subject===a.subject)?.login??a.subject)+'</small>'+
           '<small>'+T("Администратор","Әкімші")+' · '+E(a.actor.slice(-8))+'</small></li>').join("")+'</ol></section>' : "");
   }
-  return {callbackCard,callbacks,reportCallback,officerCallback,queue,metrics,staff};
+  return {callbackCard,callbacks,reportCallback,officerCallback,closeCase,resolution,outcomeLabel,queue,metrics,staff};
 }

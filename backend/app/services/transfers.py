@@ -32,6 +32,7 @@ from app.models import (
     Transaction,
     TransactionStatus,
 )
+from app.models.family_approval import FamilyApprovalPolicy
 from app.schemas.transfers import (
     AbandonRequestResponse,
     CoolingQuestionnaire,
@@ -43,7 +44,7 @@ from app.schemas.transfers import (
     TransferEvaluateRequest,
     TransferEvaluateResponse,
 )
-from app.services import explain
+from app.services import explain, family_approval
 from app.services.antifraud import (
     ACTIVE_HOLD_RULE,
     NEW_PAYEE_NIGHT_RULE,
@@ -580,6 +581,16 @@ class TransferService:
         evaluation = await self.engine.evaluate(ctx)
 
         received_at = datetime.now(UTC)
+        protected = None
+        if (
+            is_first_payment
+            and req.amount >= family_approval.MIN_AMOUNT
+            and evaluation.decision != TransactionStatus.BLOCKED
+        ):
+            policy = await self.session.get(FamilyApprovalPolicy, sender.id)
+            if policy and family_approval.active(policy, received_at):
+                protected = policy
+                evaluation = family_approval.hold_for_approval(evaluation)
         inherited_until = (
             active_until if any(r.code == ACTIVE_HOLD_RULE for r in evaluation.reasons) else None
         )
@@ -639,6 +650,14 @@ class TransferService:
         response = self._evaluation_response(tx, evaluation, recipient)
         tx.evaluation_snapshot = response.model_dump(mode="json")
         self.session.add(tx)
+        if protected is not None:
+            await self.session.flush()
+            await family_approval.queue_approval(
+                self.session,
+                tx,
+                protected,
+                f"{mask_name(recipient.full_name)} · {mask_iban(recipient.iban)}",
+            )
         if evaluation.decision is TransactionStatus.APPROVED:
             await upsert_transfer_edge(
                 self.session, sender.id, recipient.id, ctx.amount, received_at
@@ -708,7 +727,7 @@ class TransferService:
         )
 
     async def resolve_cooling(
-        self, tx_id: uuid.UUID, answers: CoolingQuestionnaire
+        self, tx_id: uuid.UUID, answers: CoolingQuestionnaire, *, save_only: bool = False
     ) -> TransferEvaluateResponse:
         await self.engine.ensure_consistent()
         async with self._serialized(tx_id):
@@ -770,8 +789,8 @@ class TransferService:
                 kk, ru = explain.render("RECIPIENT_FLAGGED")
                 code = "RECIPIENT_FLAGGED_AT_RELEASE"
                 final_status = TransactionStatus.BLOCKED
-            elif tx.cooling_until is None or now < tx.cooling_until:
-                # Answers may be saved early; money never moves just because the timer ends.
+            elif save_only or tx.cooling_until is None or now < tx.cooling_until:
+                # A save submitted just before expiry may arrive after it.
                 if tx.verification_answers != saved:
                     tx.verification_answers = saved
                     tx.updated_at = now
@@ -816,6 +835,17 @@ class TransferService:
                                 )
                             )
                 else:
+                    approval, deadline = await family_approval.approval_state(
+                        self.session,
+                        tx,
+                        datetime.now(UTC),
+                        required=family_approval.REQUIRED in codes,
+                        releasing=True,
+                    )
+                    if deadline and datetime.now(UTC) >= deadline:
+                        raise ConflictError("family_approval_expired")
+                    if approval not in {"none", "confirmed"}:
+                        raise ConflictError("family_approval_required")
                     # A completed hold and clean questionnaire may override behavioral
                     # friction, but never current hard-blocking network evidence.
                     kk, ru = explain.render("QUESTIONNAIRE_PASSED")

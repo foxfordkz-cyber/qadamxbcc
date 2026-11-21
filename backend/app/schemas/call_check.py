@@ -16,6 +16,7 @@ class CallCheckResponse(BaseModel):
     employee_name: str | None = None
     department: str | None = None
     checked_at: datetime
+    started_at: datetime | None = None
     message_kk: str
     message_ru: str
     simulated_log: bool = Field(True, description="The outbound call log is a prototype stub")

@@ -845,6 +845,65 @@
         }
       }
     },
+    "/api/v1/payee-check": {
+      "post": {
+        "tags": [
+          "transfers"
+        ],
+        "summary": "Check Payee",
+        "operationId": "check_payee_api_v1_payee_check_post",
+        "parameters": [
+          {
+            "name": "X-BCC-API-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayeeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayeeResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/scam-check/guide": {
       "get": {
         "tags": [
@@ -3991,6 +4050,18 @@
             "format": "date-time",
             "title": "Checked At"
           },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
           "message_kk": {
             "type": "string",
             "title": "Message Kk"
@@ -6722,6 +6793,96 @@
         ],
         "title": "PartyOut"
       },
+      "PayeeRequest": {
+        "properties": {
+          "recipient": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "scam",
+              "hub"
+            ],
+            "title": "Recipient"
+          },
+          "bank": {
+            "type": "string",
+            "enum": [
+              "bcc",
+              "other"
+            ],
+            "title": "Bank"
+          },
+          "expected_name": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Expected Name",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "recipient",
+          "bank"
+        ],
+        "title": "PayeeRequest"
+      },
+      "PayeeResult": {
+        "properties": {
+          "recipient": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "scam",
+              "hub"
+            ],
+            "title": "Recipient"
+          },
+          "bank": {
+            "type": "string",
+            "enum": [
+              "bcc",
+              "other"
+            ],
+            "title": "Bank"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "identified",
+              "match",
+              "close",
+              "mismatch",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "source": {
+            "type": "string",
+            "const": "synthetic_directory",
+            "title": "Source",
+            "default": "synthetic_directory"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipient",
+          "bank",
+          "status"
+        ],
+        "title": "PayeeResult"
+      },
       "PermissionEvent": {
         "properties": {
           "id": {
@@ -7500,6 +7661,11 @@
         "properties": {
           "answers": {
             "$ref": "#/components/schemas/CoolingQuestionnaire"
+          },
+          "save_only": {
+            "type": "boolean",
+            "title": "Save Only",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -7881,7 +8047,8 @@
               "consent",
               "revoke",
               "ack",
-              "suspect"
+              "suspect",
+              "approve"
             ],
             "title": "Kind"
           },

@@ -12,6 +12,12 @@ async function enter(page,baseURL,fixture={}) {
     if(path==="auth/login")json={role:"client",subject:"audit-fixture",token:"fixture-session"};
     else if(path==="inbox")json={items:fixture.messages || []};
     else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",recipients:[{name:"Арман",phone:"+77010000002"}]};
+    else if(path==="api/payee-check"){
+      const body=route.request().postDataJSON();
+      fixture.payee=body;
+      const outcome=body.bank!=="bcc"?"unavailable":body.expected_name && body.expected_name!=="Арман"?"mismatch":"identified";
+      json={recipient:body.recipient,bank:body.bank,status:outcome,source:"synthetic_directory",display_name:outcome==="unavailable"?null:"Арман"};
+    }
     else if(path==="requests")json={request_id:ids[0]};
     else if(path==="api/transfers/evaluate"){
       fixture.evaluated=route.request().postDataJSON();
@@ -58,6 +64,25 @@ test("both edit and toolbar Back retain the transfer draft",async({page,baseURL}
     await expect(page.locator("[name=recipient_phone]")).toHaveValue("+77010000002");
     await expect(page.locator("[name=active_call]")).toBeChecked();
   }
+});
+test("changed bank and mismatched expected name remove the previous recipient confirmation",async({page,baseURL})=>{
+  const fixture={};
+  await enter(page,baseURL,fixture);
+  await page.locator("[data-action=transfer]").click();
+  await page.locator("[name=recipient_phone]").selectOption("+77010000002");
+  await page.locator("[name=amount]").fill("45000");
+  await page.locator("#transfer-form button").click();
+  await expect(page.locator("[data-payee-status=identified]")).toBeVisible();
+  await expect(page.locator("[data-action=submit-transfer]")).toBeEnabled();
+  for (const [field,value,outcome] of [["payee_name","Другой","mismatch"],["payee_bank","other","unavailable"]]) {
+    await page.locator("[data-action=edit-transfer]").click();
+    const target=page.locator('[name="'+field+'"]');
+    if(field==="payee_name") await target.fill(value); else await target.selectOption(value);
+    await page.locator("#transfer-form button").click();
+    await expect(page.locator('[data-payee-status="'+outcome+'"]')).toBeVisible();
+    await expect(page.locator("[data-action=submit-transfer]")).toBeDisabled();
+  }
+  expect(fixture.evaluated).toBeUndefined();
 });
 test("the payer reports a request from an ended call for the reviewed draft only",async({page,baseURL})=>{
   const fixture={};await enter(page,baseURL,fixture);

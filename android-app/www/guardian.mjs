@@ -3,6 +3,7 @@ export const eventNames = {
   pause_started:["Началась защитная пауза","Қорғаныс кідірісі басталды"], resolved:["Обновлён итог операции","Операция нәтижесі жаңартылды"],
   call_ended:["Клиент закончил разговор","Клиент сөйлесуді аяқтады"], my_choice:["Клиент подтвердил свой выбор","Клиент өз таңдауын растады"],
   pressure:["Клиент сообщил о давлении","Клиент қысым туралы хабарлады"], contact_queued:["Уведомление поставлено в очередь","Хабарлама кезекке қойылды"],
+  family_approved:["Доверенный человек подтвердил сумму и получателя","Сенімді адам сома мен алушыны растады"],
   report_created:["Создано обращение в демо-SOC","Демо-SOC өтініші жасалды"]
 };
 const icons = {
@@ -34,6 +35,54 @@ export function checkView(d,T,B,when,label) {
   return '<section class="paper guard-state"><h1>'+heading+'</h1><p>'+body+'</p>'+
    (on?B("call-end",T("Разговор закончился","Әңгіме аяқталды")):ready?B("choice",T("Это мой выбор","Бұл менің таңдауым")):wait?B("guard-refresh",T("Проверить время","Уақытты тексеру"),"secondary"):"")+((wait||ready)?B("pressure",T("Меня обманывают — отменить перевод","Мені алдап жатыр — аударымды тоқтату"),"secondary"):"")+'</section>'+
    (!on?'<section class="paper"><h2>'+T("Ответ доверенного лица","Сенімді адамның жауабы")+'</h2><p>'+ (d.contact_state?label(d.contact_state):T("Ответа пока нет","Әзірге жауап жоқ"))+'</p>'+(!d.contact_state && d.family_enabled && d.state!=="none"?B("notify-family",T("Попросить перезвонить","Қайта қоңырау шалуды сұрау"),"secondary"):"")+'</section>':"")+B("refresh-detail",T("Открыть квитанцию","Түбіртекті ашу"),"secondary");
+}
+
+export function secondSettingsView(settings, T, button, when, amount, escape, webWallet) {
+  if (!settings) return "";
+  const on = Boolean(settings.contact_id);
+  const contacts = settings.contacts || [];
+  const choose = T("Кто подтвердит перевод?", "Аударымды кім растайды?");
+  const names = contacts.map((contact, index) => [
+    contact.id, contact.alias || T("Контакт ", "Сенімді адам ") + (index + 1)
+  ]);
+  const current = names.find(([id]) => id === settings.contact_id);
+  const jury = settings.channel === "jury";
+  const delivery = jury ? T("в учебном кабинете", "оқу кабинетінде") :
+    settings.channel === "telegram" ? T("в личном чате Telegram", "Telegram-дағы жеке чатта") :
+    T("в симуляторе уведомлений", "хабарлама симуляторында");
+  const control = on
+    ? '<p><strong>' + (current ? escape(current[1]) : T("Контакт недоступен", "Сенімді адам қолжетімсіз")) + '</strong></p>' +
+      (settings.disable_at ? '<p>' + T("Отключение после ", "Өшірілетін уақыт ") + escape(when(settings.disable_at)) + '</p>' +
+          (current ? button("second-on", T("Оставить подтверждение включённым", "Растауды қосулы қалдыру"), "secondary") : "") :
+        button("second-off", T("Отключить через 24 часа", "24 сағаттан кейін өшіру"), "secondary"))
+    : names.length ? '<label>' + choose + '<select name="approval-contact">' +
+        names.map(([id, name]) => '<option value="' + escape(id) + '">' + escape(name) + '</option>').join("") + '</select></label>' +
+        button("second-on", T("Включить второе подтверждение", "Екінші растауды қосу")) :
+      settings.owner_channel_ready === false
+        ? '<p>' + T("Для подключения оператор стенда должен привязать ваш собственный Telegram. Затем выберите отдельный контакт близкого.", "Қосу үшін стенд операторы сіздің Telegram аккаунтыңызды байланыстыруы керек. Содан кейін жақыныңыздың жеке контактісін таңдаңыз.") + '</p>'
+        : '<p>' + T("Добавьте доверенного человека и дождитесь его согласия.", "Сенімді адамды қосып, оның келісімін күтіңіз.") + '</p>' +
+          button("contacts", T("Открыть доверенные контакты", "Сенімді адамдарды ашу"), "secondary");
+  return '<section class="paper family-panel"><h2>' + T("Второе подтверждение", "Екінші растау") + '</h2><p>' +
+    T("При первом переводе получателю на сумму от ", "Жаңа алушыға алғаш рет ") + escape(amount(settings.threshold_kzt)) +
+    T(" выбранный человек увидит ", " немесе одан көп аударсаңыз, таңдаған адамыңыз ") + delivery +
+    T(" сумму и скрытые реквизиты. После его согласия и защитной паузы вы сами подтверждаете отправку.", " соманы және жартылай жасырылған деректемелерді көреді. Оның келісімі мен қорғаныс кідірісінен кейін аударымды өзіңіз растайсыз.") +
+    '</p>' + control + (jury && webWallet ? '<p><a href="/jury">' + T("Приглашение доверенному лицу", "Сенімді адамға шақыру") + '</a></p>' : "") + '</section>';
+}
+
+export function secondConfirmationView(approval, T, when) {
+  if (!approval) return "";
+  const statuses = {
+    pending: ["Ждём подтверждения суммы и получателя от доверенного человека.", "Сенімді адамның сома мен алушыны растауын күтеміз."],
+    confirmed: ["Сумма и получатель подтверждены. После паузы решение об отправке принимаете вы.", "Сома мен алушы расталды. Кідірістен кейін жіберу туралы шешімді өзіңіз қабылдайсыз."],
+    closed: ["Перевод завершён. Запрос доверенному человеку закрыт.", "Аударым аяқталды. Сенімді адамға жіберілген сұрау жабылды."],
+    suspicious: ["Доверенный человек сообщил о подозрении. Отмените перевод или обратитесь в службу безопасности.", "Сенімді адам күдіктенетінін хабарлады. Аударымды тоқтатыңыз немесе қауіпсіздік қызметіне хабарласыңыз."],
+    expired: ["Срок подтверждения истёк. Деньги остаются у вас. Отмените перевод или отправьте обращение.", "Растау мерзімі аяқталды. Ақша шотыңызда қалды. Аударымды тоқтатыңыз немесе өтініш жіберіңіз."],
+    unavailable: ["Подтверждение недоступно. Можно отменить перевод или отправить обращение.", "Растау қолжетімсіз. Аударымды тоқтатуға немесе өтініш жіберуге болады."]
+  };
+  const validUntil = approval.expires_at && ["pending","confirmed"].includes(approval.state)
+    ? ' ' + T("Действует до ", "Растау мерзімі ") + when(approval.expires_at) + '.' : '';
+  return '<div class="callout" role="status"><strong>' + T("Второе подтверждение", "Екінші растау") + '</strong><p>' +
+    T(...(statuses[approval.state] || statuses.unavailable)) + validUntil + '</p></div>';
 }
 export function packetContent(d,T,when,status) {
   const heading=T("Материалы по операции","Операция құжаттары");

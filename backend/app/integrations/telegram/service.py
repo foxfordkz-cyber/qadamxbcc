@@ -22,6 +22,8 @@ from app.integrations.telegram.schemas import (
     NotificationState,
 )
 from app.models import Account, Transaction, TransactionStatus
+from app.models.family_approval import FamilyApproval
+from app.services.family_approval import matches_terms
 
 CONTACT_LIMIT = 3
 
@@ -285,7 +287,7 @@ class TrustedContactService:
             raise IntegrationError(403, "invalid_callback")
         if row.expires_at <= utcnow():
             raise IntegrationError(409, "notification_expired")
-        if action not in {"ack", "suspect"}:
+        if action not in {"ack", "suspect", "approve"}:
             raise IntegrationError(422, "invalid_callback_action")
         if row.state not in {
             NotificationState.SENT,
@@ -293,6 +295,38 @@ class TrustedContactService:
             NotificationState.SUSPICION,
         }:
             raise IntegrationError(409, "notification_not_sent")
+        if action == "approve":
+            approval = await self.session.get(
+                FamilyApproval, row.transaction_id, with_for_update=True
+            )
+            tx = await self.session.get(Transaction, row.transaction_id)
+            now = utcnow()
+            if (
+                approval is None
+                or tx is None
+                or not matches_terms(approval, tx)
+                or tx.sender_id != row.owner_id
+                or contact.owner_id != row.owner_id
+                or not self.cfg.approval_chat_allowed(row.owner_id, chat_id)
+                or approval.contact_id != contact.id
+                or approval.expires_at <= now
+                or not contact.contact_consented_at
+                or not contact.notifications_enabled
+                or tx.status != TransactionStatus.COOLING_OFF
+                or row.state == NotificationState.SUSPICION
+            ):
+                raise IntegrationError(409, "approval_unavailable")
+            if approval.approved_at is None:
+                approval.approved_at = now
+                record(
+                    self.session,
+                    row.owner_id,
+                    row.id,
+                    row.correlation_id,
+                    "FAMILY_APPROVAL_RECORDED",
+                )
+                await self.session.commit()
+            return row
         target = (
             NotificationState.SUSPICION if action == "suspect" else NotificationState.ACKNOWLEDGED
         )

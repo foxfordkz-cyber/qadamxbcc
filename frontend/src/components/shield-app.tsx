@@ -88,7 +88,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     }, Math.max(0, submissionRetryAt - Date.now()));
     return () => clearTimeout(timer);
   }, [submissionRetryAt]);
-  const [callVerdict, setCallVerdict] = useState<CallCheck | null>(null);
+  const [callVerdict, setCallVerdict] = useState<CallCheck | "unavailable" | null>(null);
   const [modal, setModal] = useState(false);
   const [coolingDrafts, setCoolingDrafts] = useState<Record<string, Partial<Answers>>>({});
   const [revision, setRevision] = useState(0);

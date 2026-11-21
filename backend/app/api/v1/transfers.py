@@ -85,7 +85,9 @@ async def resolve_cooling(
 ) -> TransferEvaluateResponse:
     """Save answers; release only after the deadline and explicit clean verification."""
     try:
-        return await TransferService(session, engine).resolve_cooling(transaction_id, body.answers)
+        return await TransferService(session, engine).resolve_cooling(
+            transaction_id, body.answers, save_only=body.save_only
+        )
     except DomainError as exc:
         raise _http(exc) from exc
 

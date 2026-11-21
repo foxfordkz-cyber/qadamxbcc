@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { payeeResult } from "./payee-check";
 import { incomingSchema, paymentSchema, returnRoute } from "./payment-returns";
 import { fundsTraceSchema, traceRoute } from "./funds-trace";
 import { anchorsRoute, traceAnchorsSchema } from "./trace-anchors";
@@ -27,7 +28,8 @@ export const contextSchema = z.object({
 /** «Банк мне звонит?» — answered from the bank's outbound call log (simulated in the prototype). */
 export const callCheckSchema = z.object({
   check_id: z.uuid(), verified: z.boolean(), employee_name: z.string().nullable().optional(), department: z.string().nullable().optional(),
-  checked_at: z.iso.datetime({ offset: true }), message_kk: z.string(), message_ru: z.string(), simulated_log: z.boolean().optional(),
+  checked_at: z.iso.datetime({ offset: true }), started_at: z.iso.datetime({ offset: true }).nullish(),
+  message_kk: z.string(), message_ru: z.string(), simulated_log: z.boolean().optional(),
 }).passthrough();
 export type CallCheck = z.infer<typeof callCheckSchema>;
 export const bankCallSchema = z.object({ customer_id: z.uuid(), employee_name: z.string(), department: z.string(), expires_in_s: z.number().int().positive() }).passthrough();
@@ -197,7 +199,7 @@ export function validateApiResponse(path: string, value: unknown, method = "GET"
   }
   const schema = /^transfers\/requests\/[0-9a-f-]+\/abandon$/i.test(route) ? abandonResponseSchema
     : route === "transfers/evaluate" || /^transfers\/[0-9a-f-]+(?:\/(?:resolve-cooling|cancel|post-call))?$/i.test(route) ? evaluationResponseSchema
-    : route === "call-check" ? callCheckSchema : route === "call-check/demo/bank-call" ? bankCallSchema
+    : route === "payee-check" ? payeeResult : route === "call-check" ? callCheckSchema : route === "call-check/demo/bank-call" ? bankCallSchema
     : route === "soc/feed" ? feedResponseSchema : route.startsWith("soc/graph/") ? graphResponseSchema
     : /^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route) ? method.toUpperCase() === "POST" ? recipientFlagReceiptSchema : recipientFlagSchema : undefined;
   if (!schema) return value;

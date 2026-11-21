@@ -79,9 +79,10 @@ export function callCheckDemo(customerId: string, now = Date.now()) {
   callChecks().set(check_id, { customer: customerId, verified, at: now });
   return {
     check_id, verified, checked_at: new Date(now).toISOString(), simulated_log: true,
+    started_at: verified ? new Date(bankCalls().get(customerId)! - BANK_CALL_TTL_MS).toISOString() : null,
     employee_name: verified ? DEMO_EMPLOYEE.employee_name : null, department: verified ? DEMO_EMPLOYEE.department : null,
-    message_kk: verified ? `Иә, бұл банк қызметкері: ${DEMO_EMPLOYEE.employee_name}, ${DEMO_EMPLOYEE.department}.` : "Банк сізге қазір қоңырау шалып жатқан жоқ. Тұтқаны қойыңыз: бұл алаяқтар болуы мүмкін.",
-    message_ru: verified ? `Да, это сотрудник банка: ${DEMO_EMPLOYEE.employee_name}, ${DEMO_EMPLOYEE.department}.` : "Банк вам сейчас НЕ звонит. Положите трубку: это могут быть мошенники.",
+    message_kk: verified ? `Журналда шығыс қоңырауы тіркелген. Қызметкер: ${DEMO_EMPLOYEE.employee_name}.` : "Журналда сізге шалынған белсенді шығыс қоңырау табылмады.",
+    message_ru: verified ? `В журнале есть исходящий звонок. Сотрудник в записи: ${DEMO_EMPLOYEE.employee_name}.` : "В журнале нет активного исходящего звонка на ваш номер.",
   };
 }
 function bankCallDenied(checkId: string | undefined, customerId: string, now: number) {
@@ -171,7 +172,7 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
   if (ctx.duress) reasons.push(reason("DURESS_SIGNAL", "behavioral", 100, "Клиент жасырын дабыл берді (растау батырмасын ұстап тұрды): аударым тоқтатылды, экран клиенттің жанындағы адамға ештеңе көрсетпейді.", "Клиент подал тихий сигнал тревоги (удержал кнопку подтверждения): перевод остановлен, экран ничего не выдаёт человеку рядом с клиентом."));
   if (ctx.active_call) reasons.push(reason("ACTIVE_CALL", "behavioral", 25, "Аударым кезінде қоңырау белсенді.", "Во время перевода активен телефонный звонок."));
   if (ctx.active_call && ctx.pasted_recipient) reasons.push(reason("PASTED_DURING_CALL", "behavioral", 15, "Реквизиттер белсенді қоңырау кезінде алмасу буферінен қойылды", "Реквизиты вставлены из буфера обмена во время активного звонка"));
-  if (ctx.active_call && bankCallDenied(ctx.bank_call_check_id, sender.id, now)) reasons.push(reason("BANK_CALL_DENIED", "behavioral", 20, "Клиент «Банк маған қоңырау шалып тұр ма?» деп тексерді: банк журналы бойынша банк бұл клиентке қоңырау шалмайды.", "Клиент проверил «Банк мне звонит?»: по журналу банка банк этому клиенту не звонит."));
+  if (ctx.active_call && bankCallDenied(ctx.bank_call_check_id, sender.id, now)) reasons.push(reason("BANK_CALL_DENIED", "behavioral", 20, "Тексерілген кезде банк журналында осы клиентке шығыс қоңырау туралы жазба табылмады.", "При проверке в журнале банка не нашлась запись об исходящем звонке этому клиенту."));
   if (ctx.from_deposit) reasons.push(reason("DEPOSIT_WITHDRAWAL", "behavioral", 15, "Қаражат депозиттен жаңа шығарылған.", "Средства только что сняты с депозита."));
   if (ctx.is_new_device) reasons.push(reason("NEW_DEVICE", "behavioral", 15, "Аударым жаңа құрылғыдан жасалуда.", "Перевод выполняется с нового устройства."));
   if (isNew) reasons.push(reason("NEW_RECIPIENT", "behavioral", 10, "Бұл алушыға алғашқы аударым.", "Первый перевод этому получателю."));
@@ -254,7 +255,7 @@ export function abandonDemo(id: string, now = Date.now(), capacity = 5000): Aban
   abandoned().add(id);
   return { request_id: id, status: "abandoned", server_time: new Date(now).toISOString() };
 }
-export function resolveDemo(id: string, answers: Answers, now = Date.now(), contactSuspicion = false): Evaluation {
+export function resolveDemo(id: string, answers: Answers, now = Date.now(), contactSuspicion = false, saveOnly = false): Evaluation {
   const row = rows().find(r => r.transaction_id === id);
   if (!row) throw new DemoError(404, "notFound");
   const detail = detailDemo(id, now);
@@ -272,7 +273,7 @@ export function resolveDemo(id: string, answers: Answers, now = Date.now(), cont
   detail.verification_answers = answers;
   row.updated_at = new Date(now).toISOString();
   detail.updated_at = row.updated_at;
-  if (!blocked && row.cooling_until && now < Date.parse(row.cooling_until)) {
+  if (!blocked && (saveOnly || !row.cooling_until || !(now >= Date.parse(row.cooling_until)))) {
     details().set(id, detail);
     return detail;
   }

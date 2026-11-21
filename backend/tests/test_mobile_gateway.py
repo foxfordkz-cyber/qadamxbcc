@@ -83,6 +83,48 @@ async def test_role_chosen_by_secret_not_request(mobile_world: tuple[AsyncClient
         assert response.headers["cache-control"] == "no-store"
 
 
+async def test_payee_check_uses_scoped_directory_and_minimal_response(
+    mobile_world: tuple[AsyncClient, Any], session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    client, _ = mobile_world
+    path = "/mobile/v1/api/payee-check"
+    body = {"recipient": "normal", "bank": "bcc", "expected_name": ""}
+    assert (await client.post(path, json=body)).status_code == 401
+    for role_code in (ADMIN_CODE, PLATFORM_CODE):
+        assert (
+            await client.post(path, json=body, headers=await login(client, role_code))
+        ).status_code == 403
+    auth = await login(client)
+    async with session_factory() as session:
+        recipient = await session.get(Account, OTHER)
+        assert recipient
+        recipient.full_name = "Данияр Асылов"
+        await session.commit()
+    for expected, status in [
+        ("", "identified"),
+        ("данияр асылов", "match"),
+        ("Данияр А.", "close"),
+        ("Марат", "mismatch"),
+    ]:
+        reply = await client.post(path, json={**body, "expected_name": expected}, headers=auth)
+        assert reply.status_code == 200
+        assert reply.json() == {
+            "recipient": "normal",
+            "bank": "bcc",
+            "source": "synthetic_directory",
+            "status": status,
+            "display_name": "Данияр А.",
+        }
+    for change in ({"bank": "other"}, {"recipient": "hub"}):
+        reply = (await client.post(path, json={**body, **change}, headers=auth)).json()
+        assert reply["status"] == "unavailable"
+        assert reply["display_name"] is None
+    assert (
+        await client.post(path, json={**body, "recipient": "+77010000001"}, headers=auth)
+    ).status_code == 422
+    assert (await client.get("/mobile/v1/transfers", headers=auth)).json()["items"] == []
+
+
 @pytest.mark.parametrize(
     "path",
     [

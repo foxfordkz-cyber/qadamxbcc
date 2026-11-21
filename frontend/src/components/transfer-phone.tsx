@@ -13,6 +13,9 @@ import { CircleMembers } from "./circle-members";
 import { FamilyCallback } from "./family-callback";
 import { MessageCheck } from "./message-check";
 import { MarketOrderCheck } from "./market-order-check";
+import { PayeeCheck } from "./payee-check";
+import { recipientRef } from "@/lib/payee-check";
+import { CallLogResult } from "./call-log-result";
 import { TrustedCircle } from "./trusted-circle";
 import type { Biometrics } from "./use-biometrics";
 import "./mobile-client.css";
@@ -42,7 +45,7 @@ interface Props {
   onReviewReturn?: (id: string) => void;
   onNewTransfer: () => void;
   /** The bank-log answer for the current call, for the decision panel next to the phone. */
-  onCallCheck?: (value: CallCheck | null) => void;
+  onCallCheck?: (value: CallCheck | "unavailable" | null) => void;
   /** Full-screen on a real smartphone (/mobile): no bezel, fake status bar or caption. */
   bare?: boolean;
 }
@@ -70,6 +73,11 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const [step, setStep] = useState<"details" | "confirm" | "family" | "discarded">("details");
   const [screen, setScreen] = useState<"home" | "transfer" | "circle" | "scam" | "returns">(bare ? "home" : "transfer");
   const [offline, setOffline] = useState(false);
+  const [verifiedFor, setVerifiedFor] = useState<string | null>(null);
+  const payeeEnabled = !!config.demoActionsEnabled && (config.mode === "demo" || config.accountMode === "test");
+  const payeeKey = recipientType + ":" + form.recipient;
+  const payeeRef = recipientRef(recipientType, form.recipient);
+  const awaitingPayee = payeeEnabled && !!payeeRef && verifiedFor !== payeeKey;
   const [largeText, setLargeText] = useState(false);
   useEffect(() => {
     try { setLargeText(localStorage.getItem("saqbol.a11y.large") === "true"); } catch { /* Storage is optional. */ }
@@ -90,30 +98,53 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const [callCheckFailed, setCallCheckFailed] = useState(false);
   const [bankCallStarted, setBankCallStarted] = useState(false);
   const onCall = form.context.active_call;
-  // A check answers for this call and this customer only. The phone notices the call by
-  // itself (CallKit / TelephonyManager in the bank app) and asks the bank's log at once.
+  const callRequest = useRef<AbortController | null>(null);
+  const outboundRequest = useRef<AbortController | null>(null);
   useEffect(() => {
-    setCallCheck(null); setCallCheckFailed(false); onCallCheck?.(null);
+    setBankCallStarted(false);
+    return () => { outboundRequest.current?.abort(); };
+  }, [form.sender]);
+  // A previous customer's reply must not update the current transfer.
+  useEffect(() => {
+    setCallCheck(null); setCallChecking(false); setCallCheckFailed(false); onCallCheck?.(null);
     setForm(v => v.context.bank_call_check_id ? { ...v, context: { ...v.context, bank_call_check_id: undefined } } : v);
     if (!onCall || !/^[0-9a-f-]{36}$/i.test(form.sender.trim())) return;
     const timer = setTimeout(() => void checkBankCall(), 300);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); callRequest.current?.abort(); outboundRequest.current?.abort(); };
   }, [onCall, form.sender]); // eslint-disable-line react-hooks/exhaustive-deps
   async function checkBankCall() {
-    setCallChecking(true); setCallCheckFailed(false);
+    callRequest.current?.abort();
+    const controller = new AbortController();
+    callRequest.current = controller;
+    const customer = form.sender.trim();
+    setCallChecking(true); setCallCheck(null); setCallCheckFailed(false); onCallCheck?.(null);
+    setForm(v => v.context.bank_call_check_id ? { ...v, context: { ...v.context, bank_call_check_id: undefined } } : v);
     try {
-      const value = await api<CallCheck>("call-check", { method: "POST", body: JSON.stringify({ customer_id: form.sender.trim() }) });
+      const value = await api<CallCheck>("call-check", { method: "POST", body: JSON.stringify({ customer_id: customer }),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]) });
+      if (controller.signal.aborted) return;
       setCallCheck(value); onCallCheck?.(value);
-      setForm(v => ({ ...v, context: { ...v.context, bank_call_check_id: value.check_id } }));
-    } catch { setCallCheck(null); setCallCheckFailed(true); }
-    finally { setCallChecking(false); }
+      setForm(v => v.sender.trim() === customer && v.context.active_call ? { ...v, context: { ...v.context, bank_call_check_id: value.check_id } } : v);
+    } catch {
+      if (controller.signal.aborted) return;
+      setCallCheckFailed(true); onCallCheck?.("unavailable");
+    } finally { if (!controller.signal.aborted) setCallChecking(false); }
   }
   async function startBankCall() {
+    outboundRequest.current?.abort();
+    const controller = new AbortController();
+    outboundRequest.current = controller;
+    const customer = form.sender.trim();
     try {
-      await api("call-check/demo/bank-call", { method: "POST", body: JSON.stringify({ customer_id: form.sender.trim() }) });
+      await api("call-check/demo/bank-call", { method: "POST", body: JSON.stringify({ customer_id: customer }),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]) });
+      if (controller.signal.aborted) return;
       setBankCallStarted(true); setCallCheck(null);
-      setForm(v => ({ ...v, context: { ...v.context, active_call: true, bank_call_check_id: undefined } }));
-    } catch { setBankCallStarted(false); setCallCheckFailed(true); }
+      setForm(v => v.sender.trim() === customer ? { ...v, context: { ...v.context, active_call: true, bank_call_check_id: undefined } } : v);
+      if (onCall) void checkBankCall();
+    } catch {
+      if (!controller.signal.aborted) { setBankCallStarted(false); setCallCheck(null); setCallCheckFailed(true); onCallCheck?.("unavailable"); }
+    }
   }
   const receipt = result && !blocked ? result : null;
   useEffect(() => { if (receipt) setStep("details"); }, [receipt?.transaction_id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -208,6 +239,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             <div className="confirm-total"><dt>{m("totalLabel")}</dt><dd><b className="tabular-nums">{money(form.amount, lang)}</b></dd></div>
           </dl>
           <p className="confirm-note"><ShieldCheck size={16} aria-hidden="true" />{m("confirmNote")}</p>
+          {payeeEnabled && <PayeeCheck key={payeeKey} draftKey={payeeKey} recipient={payeeRef} disabled={busy || submissionPaused || blocked || completed} onVerified={setVerifiedFor}/>}
           {!onCall && <label className="reported-call-request"><input type="checkbox" checked={!!form.context.payment_requested_after_call}
             disabled={busy || blocked || completed || submissionPaused}
             onChange={event => { const checked = event.target.checked; setForm(v => ({ ...v, context: { ...v.context, payment_requested_after_call: checked || undefined } })); }} />
@@ -220,7 +252,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             <button type="button" className="secondary family-check-start" disabled={busy || blocked || completed || submissionPaused} onClick={() => setStep("family")}>
               <PhoneCall size={17} aria-hidden="true" />{m("familyStart")}
             </button>
-            <button type="button" className="primary transfer-confirm" disabled={busy || submissionPaused || blocked || completed || offline} onPointerDown={pressStart} onPointerUp={pressEnd} onPointerCancel={pressEnd} onPointerLeave={pressEnd} onContextMenu={event => event.preventDefault()}
+            <button type="button" className="primary transfer-confirm" disabled={busy || submissionPaused || blocked || completed || offline || awaitingPayee} onPointerDown={pressStart} onPointerUp={pressEnd} onPointerCancel={pressEnd} onPointerLeave={pressEnd} onContextMenu={event => event.preventDefault()}
               onClick={() => { const duress = hold.current.fired; hold.current.fired = false; onSubmit(duress); }}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
             <button type="button" className="secondary transfer-edit" disabled={busy} onClick={() => setStep("details")}>{m("editCta")}</button>
           </div>
@@ -277,8 +309,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             {onCall && <section className="call-check" aria-live="polite">
               <div className="call-check-row"><span className="call-check-icon"><PhoneCall size={18} aria-hidden="true" /></span><div><strong>{m("callActive")}</strong><p>{m("callCheckHint")}</p></div></div>
               <button type="button" className="call-check-cta" disabled={callChecking || !form.sender.trim()} onClick={() => void checkBankCall()}>{callChecking ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" /> : <ShieldCheck size={16} aria-hidden="true" />}{callChecking ? m("callChecking") : callCheck ? m("callRecheck") : m("callCheckCta")}</button>
-              {callCheck && <div className={`call-check-result ${callCheck.verified ? "verified" : "denied"}`} role="status">{callCheck.verified ? <ShieldCheck size={18} aria-hidden="true" /> : <ShieldX size={18} aria-hidden="true" />}<div><strong>{callCheck.verified ? m("callVerified") : m("callDenied")}</strong><p>{lang === "kk" ? callCheck.message_kk : callCheck.message_ru}</p>{!callCheck.verified && <p className="call-check-note">{m("callDeniedNote")}</p>}{callCheck.simulated_log !== false && <p className="call-check-sim">{m("callLogSimulated")}</p>}</div></div>}
-              {callCheckFailed && <p className="error" role="alert">{m("callCheckFailed")}</p>}
+              {(callCheck || callCheckFailed) && <CallLogResult check={callCheck} />}
             </section>}
             {showUnknown && <div className="phone-alert warning" role="status"><AlertTriangle size={18} aria-hidden="true" /><div><strong>{m("unknownTitle")}</strong><p>{m("unknownText")}</p></div></div>}
             {error && !showUnknown && <p className="error" role="alert">{t(error)}</p>}

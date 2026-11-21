@@ -95,7 +95,7 @@ class SimulatedUpdate(BaseModel):
     """Test-only equivalent of authenticated private Telegram updates."""
 
     model_config = ConfigDict(extra="forbid")
-    kind: Literal["start", "consent", "revoke", "ack", "suspect"]
+    kind: Literal["start", "consent", "revoke", "ack", "suspect", "approve"]
     chat_id: int = Field(gt=0, le=2**52)
     reference: str = Field(min_length=1, max_length=80)
     message_id: str | None = Field(None, max_length=32)

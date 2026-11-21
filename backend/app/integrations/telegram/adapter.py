@@ -1,5 +1,5 @@
 import uuid
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError, TelegramRetryAfter
@@ -26,19 +26,48 @@ class TelegramAdapter(Protocol):
     ) -> str: ...
 
 
+@runtime_checkable
+class ApprovalAdapter(Protocol):
+    async def send_approval(
+        self, chat_id: int, text: str, notification_id: uuid.UUID, language: str
+    ) -> str: ...
+
+
 class AiogramTelegramAdapter:
     def __init__(self, bot: Bot, allowed_chat_ids: list[int]) -> None:
         self.bot = bot
         self.allowed = frozenset(allowed_chat_ids)
 
-    async def send(self, chat_id: int, text: str, notification_id: uuid.UUID, language: str) -> str:
+    async def send_approval(
+        self, chat_id: int, text: str, notification_id: uuid.UUID, language: str
+    ) -> str:
+        return await self.send(chat_id, text, notification_id, language, approval=True)
+
+    async def send(
+        self,
+        chat_id: int,
+        text: str,
+        notification_id: uuid.UUID,
+        language: str,
+        *,
+        approval: bool = False,
+    ) -> str:
         if chat_id not in self.allowed:
             raise DeliveryError("recipient_not_allowlisted")
         ack, suspect = BUTTONS[language]
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
-                    InlineKeyboardButton(text=ack, callback_data=f"ack:{notification_id}"),
+                    InlineKeyboardButton(
+                        text=(
+                            "Подтверждаю этот перевод"
+                            if language == "ru"
+                            else "Осы аударымды растаймын"
+                        )
+                        if approval
+                        else ack,
+                        callback_data=f"{'approve' if approval else 'ack'}:{notification_id}",
+                    ),
                     InlineKeyboardButton(text=suspect, callback_data=f"suspect:{notification_id}"),
                 ]
             ]

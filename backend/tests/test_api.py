@@ -242,7 +242,7 @@ async def test_social_engineering_cooling_off_then_red_flag_blocks(world: World)
     tx_id = data["transaction_id"]
     answers = CLEAN | {"caller_claims_bank_or_police": True, "initiated_by_customer": False}
     resp = await world.client.post(
-        f"{API}/transfers/{tx_id}/resolve-cooling", json={"answers": answers}
+        f"{API}/transfers/{tx_id}/resolve-cooling", json={"answers": answers, "save_only": True}
     )
     assert resp.status_code == 200, resp.text
     res = resp.json()
@@ -325,6 +325,14 @@ async def test_cooling_off_clean_questionnaire_releases_funds(world: World) -> N
     assert resp.json()["status"] == "cooling_off"
     assert resp.json()["verification_answers"] == CLEAN
     await world.expire_hold(data["transaction_id"])
+    for _ in range(2):
+        late_save = await world.client.post(
+            f"{API}/transfers/{data['transaction_id']}/resolve-cooling",
+            json={"answers": CLEAN, "save_only": True},
+        )
+        assert late_save.status_code == 200
+        assert late_save.json()["status"] == "cooling_off"
+        assert late_save.json()["resolved_at"] is None
     resp = await world.client.post(
         f"{API}/transfers/{data['transaction_id']}/resolve-cooling", json={"answers": CLEAN}
     )

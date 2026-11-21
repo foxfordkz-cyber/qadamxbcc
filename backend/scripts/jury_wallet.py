@@ -39,6 +39,7 @@ class JuryStorage:
     @asynccontextmanager
     async def room(self, slot: int) -> AsyncIterator[FastAPI]:
         from app.mobile_gateway.app import create_mobile_app
+        from app.mobile_gateway.jury_contact import install_jury_contact
 
         if not 1 <= slot <= 8 or slot in self.active:
             raise ValueError("Invalid or active jury slot")
@@ -83,6 +84,7 @@ class JuryStorage:
                     app = create_mobile_app(
                         self.mobile, settings, resources, integration, browser_only=True
                     )
+                    await install_jury_contact(app, sessions, integration, self.mobile.customer_id)
                     await stack.enter_async_context(app.router.lifespan_context(app))
                 yield app
         finally:

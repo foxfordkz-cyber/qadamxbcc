@@ -50,6 +50,21 @@ async def test_real_adapter_callback_payloads_are_bounded() -> None:
     assert all(len(button.callback_data) <= 64 for button in keyboard.inline_keyboard[0])
 
 
+@pytest.mark.parametrize("language", ["ru", "kk"])
+async def test_approval_keyboard_has_explicit_transaction_action(language: str) -> None:
+    bot = AsyncMock()
+    bot.send_message.return_value.message_id = 12
+    adapter = AiogramTelegramAdapter(cast(Bot, bot), [123])
+    notification = uuid.uuid4()
+    assert await adapter.send_approval(123, "synthetic", notification, language) == "12"
+    positive, suspicion = bot.send_message.call_args.kwargs["reply_markup"].inline_keyboard[0]
+    assert positive.callback_data == f"approve:{notification}"
+    assert positive.text == (
+        "Подтверждаю этот перевод" if language == "ru" else "Осы аударымды растаймын"
+    )
+    assert suspicion.callback_data == f"suspect:{notification}"
+
+
 class SlowAdapter:
     elapsed: float = 0
 

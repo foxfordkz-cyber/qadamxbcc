@@ -10,6 +10,11 @@
 .mobile-tool fieldset { padding: .75rem 0; }
 .mobile-tool fieldset label { display: flex; align-items: center; gap: .5rem; }
 .mobile-tool summary { cursor: pointer; font-weight: 600; }
+.call-log-summary { display: grid; gap: .75rem; padding: .85rem; border: 1px solid var(--line); border-radius: .85rem; background: var(--surface); }
+.call-log-summary dl { display: grid; gap: .25rem; margin: .6rem 0; }
+.call-log-summary dl div { display: flex; justify-content: space-between; gap: .7rem; }
+.call-log-summary dd { text-align: end; font-variant-numeric: tabular-nums; }
+.call-log-summary small { color: var(--muted); }
 .bank-link-check > form, .bank-link-check .safety-result { margin-top: .75rem; }
 .bank-link-check input { min-height: 44px; width: 100%; padding: .6rem .75rem; border: 1px solid var(--line); border-radius: .7rem; background: var(--surface); color: var(--ink); }
 .bank-link-check .safety-result { display: grid; gap: .35rem; background: var(--surface-3); color: var(--ink); }

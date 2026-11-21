@@ -1095,3 +1095,4 @@ input:focus-visible {
 @media(max-width:879px) {
   [data-actor="platform_admin"] .connected-nav { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
+.transfer-sheet [data-manual-phone][hidden] { display: none; }

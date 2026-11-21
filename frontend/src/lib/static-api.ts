@@ -5,6 +5,7 @@
  * The live FastAPI backend, PostgreSQL and the ML model are not part of this build.
  */
 import { z } from "zod";
+import { demoPayee, payeeInput } from "./payee-check";
 import { traceRoute } from "./funds-trace";
 import { anchorsRoute } from "./trace-anchors";
 import { lookbackRoute, priorReceiptQuery } from "./recipient-lookback";
@@ -51,6 +52,7 @@ const uuid = (value: string | undefined) => z.uuid().parse(value);
 
 function dispatch(method: string, route: string, search: URLSearchParams, body: unknown): unknown {
   const path = route.split("/");
+  if (method === "POST" && route === "payee-check" && !search.size) return demoPayee(payeeInput.parse(body));
   if (method === "GET" && lookbackRoute.test(route)) return priorReceiptsDemo(uuid(path[2]), priorReceiptQuery.parse(Object.fromEntries(search)));
   if (method === "GET" && (traceRoute.test(route) || anchorsRoute.test(route))) throw new ApiError("traceBackendRequired", 501);
   if (method === "POST" && route === "transfers/evaluate") {
@@ -63,7 +65,8 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
   }
   if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/resolve-cooling$/i.test(route)) {
     const id = uuid(path[1]);
-    return resolveDemo(id, z.object({ answers: answersSchema }).strict().parse(body).answers, Date.now(), staticContactSuspicion(id));
+    const input = z.object({ answers: answersSchema, save_only: z.boolean().optional() }).strict().parse(body);
+    return resolveDemo(id, input.answers, Date.now(), staticContactSuspicion(id), input.save_only);
   }
   if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/post-call$/i.test(route)) return postCallDemo(uuid(path[1]), postCallSchema.parse(body).action);
   if (method === "POST" && /^transfers\/[0-9a-f-]{36}\/cancel$/i.test(route)) return cancelDemo(uuid(path[1]), Date.now(), cancelSchema.parse(body ?? {}).reason === "post_call_scam");

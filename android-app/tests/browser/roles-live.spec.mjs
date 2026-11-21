@@ -111,6 +111,25 @@ test("three personal accounts share a protected case and separate operational me
       expect((await api(client, "/api/transfers/" + transfer.transaction_id)).status).toBe("cooling_off");
     });
 
+    await test.step("Officer closes a case and its owner receives the finding alongside the held funds", async () => {
+      await officer.page.locator('[data-action="case-review"]').click();
+      const close = officer.page.locator("#case-close");
+      await close.locator("select").selectOption("confirmed_fraud");
+      await close.locator("button").click();
+      await expect(close).toHaveCount(0);
+      await client.page.bringToFront();
+      await client.page.locator('[data-action="reports"]').click();
+      await client.page.locator(`[data-object="report"][data-object-id="${report.id}"]`).click();
+      const receipt = client.page.locator(".desk-resolution");
+      await expect(receipt).toContainText(caseFile.id);
+      await expect(receipt).toContainText(/Мошенничество подтверждено|Алаяқтық расталды/);
+      await expect(receipt).toContainText(/900\s000/);
+      await expect(receipt).toContainText(/На проверке|Тексерілуде/);
+      const view = await api(client, "/reports/" + report.id + "/callback");
+      expect(view.resolution.operation.transaction_id).toBe(transfer.transaction_id);
+      expect(view.resolution.balance).toBe((await api(client, "/account")).balance);
+    });
+
     await test.step("Technical dashboard reflects the evaluation and enforces distinct permissions", async () => {
       await platform.page.bringToFront();
       await platform.page.locator('[data-nav="home"]').click();
