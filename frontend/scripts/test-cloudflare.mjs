@@ -64,6 +64,11 @@ try {
     assert.equal(response.status, 200, pathname);
     const html = await response.text();
     assert.ok(html.includes("Saq Bol"), pathname);
+    if (pathname !== "/pitch") {
+      const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
+      assert.match(header, /<a\b[^>]*href="https:\/\/saq-bol-jury\.onrender\.com\/"[^>]*>[\s\S]*?Қазылар кабинеті<\/a>/, pathname);
+      assert.ok(html.includes('href="https://saq-bol-mobile.onrender.com/wallet/"'), pathname);
+    }
     if (pathname === "/soc") {
       assert.ok(html.includes("сынақ аударымдарын"), "Public SOC must describe the synthetic data");
       assert.ok(!html.includes("soc-mode-cases"), "Private case workspace must stay hidden");
