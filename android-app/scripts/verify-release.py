@@ -48,9 +48,11 @@ def verify(apksigner: str | None) -> None:
                 raise ValueError(f"Packaged UI differs from signed source: {name}")
     if apksigner:
         result = subprocess.check_output([apksigner, "verify", "--print-certs", str(apk)], text=True)
-        digests = re.findall(r"^Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]{64})$", result, re.M)
+        digests = re.findall(r"^Signer #\d+ certificate SHA-256 digest:\s*([0-9a-fA-F]{64})\s*$", result, re.M)
+        if not digests:
+            raise ValueError("apksigner verified the APK but returned no signing certificate digest")
         if [value.lower() for value in digests] != [record["certificate_sha256"]]:
-            raise ValueError("Unexpected Android signing certificate")
+            raise ValueError(f"Unexpected Android signing certificate fingerprints: {digests}")
         print("Android signature and certificate match the release record.")
     print(f"APK {version}: SHA-256 and all {len(files)} UI files verified against {source}.")
 

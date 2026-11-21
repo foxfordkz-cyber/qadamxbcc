@@ -61,8 +61,10 @@ jobs:
           fi
       - name: Verify the released APK, signing certificate and original UI
         run: |
-          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
-          test -x "$signer"
+          signer="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          if [ ! -x "$signer" ]; then
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;36.0.0'
+          fi
           python android-app/scripts/verify-release.py --apksigner "$signer"
       - name: Build persistent image
         run: docker build -f backend/Dockerfile.persistent -t qadam-persistent .
