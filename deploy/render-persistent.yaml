@@ -1,0 +1,88 @@
+# Review and approve billed resources before applying.
+# Existing Cloudflare site stays in place. Route its client/SOC links to /wallet/.
+services:
+  - type: web
+    name: saq-bol-mobile
+    runtime: docker
+    region: oregon
+    plan: 1c-2g
+    branch: feature/bekzat-persistent-release
+    autoDeployTrigger: "off"
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile.persistent
+    preDeployCommand: sh scripts/start-persistent.sh migrate
+    dockerCommand: sh scripts/start-persistent.sh api
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: qadam-persistent
+      - key: DATABASE_URL
+        fromDatabase:
+          name: qadam-persistent-db
+          property: connectionString
+      - key: BCC_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: qadam-persistent-cache
+          property: connectionString
+      - key: BCC_MOBILE_ENABLED
+        value: "true"
+      - key: BCC_MOBILE_AUTH_MODE
+        value: password
+      - key: BCC_MOBILE_CLIENT_HASH
+        sync: false
+      - key: BCC_MOBILE_ADMIN_HASH
+        sync: false
+
+  - type: worker
+    name: saq-bol-guardian
+    runtime: docker
+    region: oregon
+    plan: 0.5c-512mb
+    branch: feature/bekzat-persistent-release
+    autoDeployTrigger: "off"
+    numInstances: 1
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile.persistent
+    dockerCommand: sh scripts/start-persistent.sh worker
+    envVars:
+      - fromGroup: qadam-persistent
+      - key: DATABASE_URL
+        fromDatabase:
+          name: qadam-persistent-db
+          property: connectionString
+      - key: BCC_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: qadam-persistent-cache
+          property: connectionString
+
+  - type: keyvalue
+    name: qadam-persistent-cache
+    region: oregon
+    plan: 256mb
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+databases:
+  - name: qadam-persistent-db
+    region: oregon
+    plan: 0.1c-256mb
+    databaseName: qadam
+    user: qadam
+    ipAllowList: []
+
+envVarGroups:
+  - name: qadam-persistent
+    envVars:
+      - key: BCC_ENVIRONMENT
+        value: demo
+      - key: BCC_BOOTSTRAP_DEMO
+        value: "true"
+      - key: BCC_INTEGRATIONS_ENABLED
+        value: "true"
+      - key: BCC_INTEGRATIONS_ENVIRONMENT
+        value: test
+      - key: BCC_INTEGRATIONS_TELEGRAM_MODE
+        value: fake
+      - key: BCC_INTEGRATIONS_SIGNING_KEY
+        generateValue: true
