@@ -292,7 +292,7 @@ def create_mobile_app(
             response.set_cookie(
                 WEB_COOKIE,
                 result.pop("token"),
-                max_age=cfg.session_seconds,
+                max_age=cfg.session_seconds if request.headers.get("x-qadam-remember") != "0" else None,
                 httponly=True,
                 secure=True,
                 samesite="strict",

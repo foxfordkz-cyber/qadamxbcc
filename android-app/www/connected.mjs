@@ -11,6 +11,7 @@ import * as identity from "./identity.mjs";
 import { PUBLIC_DEMO, openExternal } from "./native.mjs";
 const product = document.documentElement.hasAttribute("data-product");
 let initializingAccount = product;
+let rememberLogin = true, restoreFailed = false;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
 const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""});
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
@@ -60,6 +61,13 @@ async function savePending(id) {
 async function loadOwner(g, subject) {
   loginName="";
   gateway = g;
+  g.onExpired = () => {
+    if (gateway !== g) return;
+    clearVisible();
+    void identity.write("session", null).catch(() => {});
+    error = errText(401);
+    render();
+  };
   ownerScope = await identity.scopeKey(g.origin, subject);
   const durable = product ? await identity.read("pending." + ownerScope) : null;
   pending = durable?.id ?? getLocal(pendingKey(), "");
@@ -91,7 +99,7 @@ function clearVisible() {
   viewRevision++;nextPoll=0;projector=false;loginName="";
   if(webWallet)history.replaceState({wallet:true},"",location.pathname);
   scanText=""; reportChoice=false; drafts=readDrafts(null);
-  lastRead=null;
+  workspaceRead=null; lastRead=null;
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
   callbackView=queueSnapshot=callbackAttempt=null;
@@ -245,6 +253,49 @@ function accept(value) {
   selectedId = value.transaction_id;
   receivedAt = Date.now();
 }
+let workspaceRead=null;
+async function readWorkspace(next) {
+  const g=gateway, revision=++viewRevision;
+  const state={pending:new Set(),failed:new Set()};
+  workspaceRead=state;
+  const current=()=>gateway===g && revision===viewRevision && page===next;
+  const panels = [];
+  const panel=(name,request,accept)=>{
+    state.pending.add(name);
+    panels.push(async()=>{
+      try {
+        const value=await request();
+        if(current())accept(value);
+      } catch(e) {
+        if(current()) {
+          state.failed.add(name);
+          error=errText(e.status);
+        }
+      } finally {
+        state.pending.delete(name);
+        if(current())render();
+      }
+    });
+  };
+  if(next==="home" && g.role==="client") {
+    panel("account",()=>g.request("/account"),v=>{account=v});
+    panel("ledger",()=>g.request("/wallet/operations?limit=3"),v=>{data=v});
+    panel("summary",()=>g.request("/wallet/analytics?days=7"),v=>{summary=v});
+  } else if(next==="home" && g.role==="admin") {
+    panel("summary",()=>g.request("/wallet/soc?days="+socDays),v=>{summary=v});
+    const params=new URLSearchParams({offset:String(offset),limit:"20"});
+    if(filter)params.set("status",filter);
+    if(query)params.set("q",query);
+    panel("feed",()=>g.api("soc/feed?"+params),v=>{data=v});
+  } else if(next==="cases") {
+    panel("cases",()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),v=>{data=v});
+    panel("queue",()=>g.api("integrations/guardian/soc/cases/analytics"),v=>{queueSnapshot=v});
+  } else {
+    panel(next,()=>g.request(next==="staff"?"/admin/staff":"/admin/metrics"),v=>{data=v});
+  }
+  render();
+  await Promise.all(panels.map(load=>load()));
+}
 async function open(next, id, remember=true) {
   if (loading) return;
   if (!gateway?.token && next !== "login") return;
@@ -261,9 +312,12 @@ async function open(next, id, remember=true) {
     if(key && id)url.searchParams.set(key,id);
     history.pushState({wallet:true,page:next,id:id||null,scope:ownerScope,depth:(history.state?.depth||0)+1}, "", url);
   }
+  const samePage=page===next;
+  workspaceRead=null;
   lastRead={page:next,id};
   page = next;
-  data = null;
+  if(!samePage || !["home","cases","staff"].includes(next))data=null;
+  if(next==="home" && !samePage)summary=null;
   callbackView=queueSnapshot=null;
   if (next==="home") awaitingReplyCount=nextCallbackCheck=0;
   error = "";
@@ -273,22 +327,20 @@ async function open(next, id, remember=true) {
     answers = {};
     step = 0;
   }
+  if(product && (next==="home" || next==="staff" || next==="cases" && gateway.role==="admin")) {
+    window.scrollTo(0,0);
+    await readWorkspace(next);
+    return;
+  }
   await perform(async () => {
     if (next==="home" && gateway.role==="platform_admin") data=await gateway.request("/admin/metrics");
     else if (next==="staff") data=await gateway.request("/admin/staff");
     else if (next==="callbacks") data=await gateway.request("/callbacks");
     else if (next === "home" || next === "history") {
       if(product && gateway.role==="client") {
-        if(next==="home"){
-          const results=await Promise.allSettled([gateway.request("/account"),gateway.request("/wallet/operations?limit=3"),gateway.request("/wallet/analytics?days=7")]);
-          const authFailure=results.find(r=>r.status==="rejected" && r.reason?.status===401);
-          if(authFailure)throw authFailure.reason;
-          [account,data,summary]=results.map(r=>r.status==="fulfilled"?r.value:null);
-        }else{
-          const params=new URLSearchParams({offset:String(offset),limit:"20"});
-          for(const [k,v] of Object.entries(ledgerFilter))if(v)params.set(k,v);
-          data=await gateway.request("/wallet/operations?"+params);
-        }
+        const params=new URLSearchParams({offset:String(offset),limit:"20"});
+        for(const [k,v] of Object.entries(ledgerFilter))if(v)params.set(k,v);
+        data=await gateway.request("/wallet/operations?"+params);
       }else if (gateway.role === "admin") {
         if(product)summary=await gateway.request("/wallet/soc?days="+socDays);
         data = await api(
@@ -337,10 +389,15 @@ async function open(next, id, remember=true) {
     else if (next === "case") {
       caseEvidence=null;caseEvents=[];caseTransaction=null;caseNetwork=null;
       data = await api(`integrations/guardian/soc/cases/${id}`);
-      caseEvents = (await api(`integrations/guardian/soc/cases/${id}/history`)).items;
+      render();
+      const path="integrations/guardian/soc/cases/"+id;
+      const [historyRows,evidence,callback]=await Promise.all([
+        api(path+"/history"), product ? api(path+"/evidence") : null,
+        product && data.source==="owner_demo" ? readCallback(gateway,"/cases/"+id+"/callback") : null
+      ]);
+      caseEvents=historyRows.items;
       if(product){
-        caseEvidence=await api(`integrations/guardian/soc/cases/${id}/evidence`);
-        if (data.source==="owner_demo") callbackView=await readCallback(gateway,"/cases/"+id+"/callback");
+        caseEvidence=evidence;callbackView=callback;
         if(caseEvidence?.transaction_id){
           try{
             caseTransaction=await api("transfers/"+caseEvidence.transaction_id);
@@ -376,11 +433,13 @@ async function readReport(session,id) {
   return Promise.all([session.api(path),session.api(path+"/history"),questions,callback]);
 }
 function loginView() {
-  if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><h1>Saq Bol × BCC</h1><p>${T("Переводы под защитой","Қорғалған аударымдар")}</p><div class="sign-promise">${icon("safety")}<span>${T("Ваши деньги. Ваше решение.", "Сіздің ақшаңыз. Сіздің шешіміңіз.")}</span></div></div><p class="sign-intro">${T("Войдите в свой учебный аккаунт.","Оқу аккаунтыңызға кіріңіз.")}</p>
+  if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><div><small>Saq Bol × BCC</small><h1>${T("Вход в кабинет","Кабинетке кіру")}</h1></div></div>
+    ${restoreFailed ? button("restore-access",T("Восстановить сессию","Сессияны қалпына келтіру"),"secondary") : ""}
     <form id="personal-login" class="form-stack">
     ${input("login",T("Логин","Логин"),loginName, "text",'autocomplete="username" required maxlength="64" autocapitalize="none" spellcheck="false"')}
     <label>${T("Пароль","Құпиясөз")}<span class="password-field"><input type="password" name="password" required minlength="1" maxlength="128" autocomplete="current-password">
     <button type="button" data-action="show-password" aria-pressed="false">${T("Показать","Көрсету")}</button></span></label>
+    <label class="remember-choice"><input type="checkbox" name="remember" ${rememberLogin?"checked":""}><span>${T("Запомнить меня","Мені есте сақтау")}</span></label>
     <button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти","Кіру")}</button></form>
     ${webWallet && document.documentElement.hasAttribute("data-install")?'<a class="install-link" href="install/">'+T("Установить на Android","Android жүйесіне орнату")+'</a>':""}<div class="sign-footer">${button("web-client",T("Открыть веб-клиент","Веб-клиентті ашу"),"text-button")}${button("offline",T("Офлайн-обзор","Офлайн шолу"),"text-button")}</div></section>`;
   return `${title(T("Всё начинается с тебя", "Бәрі сенен басталады"), T("Выбери свою роль и войди на тестовый стенд.", "Рөліңді таңдап, тест стендіне кір."))}<div class="role-choice"><button data-role="client" aria-pressed="${chosenRole === "client"}">${T("Клиент", "Клиент")}<small>${T("Свои переводы и защита", "Өз аударымдарың мен қорғаныс")}</small></button><button data-role="admin" aria-pressed="${chosenRole === "admin"}">${T("Сотрудник SOC", "SOC қызметкері")}<small>${T("Мониторинг и расследования", "Мониторинг пен тексеру")}</small></button><button data-role="platform_admin" aria-pressed="${chosenRole === "platform_admin"}">${T("Администратор платформы","Платформа әкімшісі")}<small>${T("Доступ сотрудников и нагрузка","Қызметкерлер рұқсаты мен жүктеме")}</small></button></div><section class="paper login-card"><form id="login-form" class="form-stack" autocomplete="off">${input("origin", T("Адрес тестового сервера", "Тест серверінің мекенжайы"), loginOrigin, "text", 'required inputmode="url" placeholder="127.0.0.1:18001"')}${input("code", T("Код доступа твоей роли", "Өз рөліңнің кіру коды"), "", "password", 'required minlength="24" maxlength="128" autocomplete="off" spellcheck="false"')}<button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти", "Кіру")} →</button></form><p class="fine">${T("Код выдаёт владелец тестового стенда. Роль проверяет сервер. Это отдельный тестовый код, не пароль банка.", "Кодты тест стендінің иесі береді. Рөлді сервер тексереді. Бұл банк құпиясөзі емес, бөлек тест коды.")}</p></section>${button("offline", T("Попробовать без сервера", "Серверсіз байқап көру"), "secondary")}`;
@@ -721,7 +780,8 @@ function roleTitle() {
   return E(account?.display_name || T("Клиент","Клиент"));
 }
 function settingsView() {
-  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.7 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
+  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.8 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
+    button("remember-settings",gateway.remember ? T("Сохранённый вход включён · Изменить","Сақталған кіру қосулы · Өзгерту") : T("Сохранённый вход выключен · Изменить","Сақталған кіру өшірулі · Өзгерту"),"secondary") +
     button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
     (gateway.role === "client" ? button("contacts",T("Мои согласия","Келісімдерім"),"secondary")+button("open-guardian",T("Открыть Telegram-бот","Telegram-ботты ашу"),"secondary") : "") + button("logout",T("Выйти","Шығу"));
   return `${title(T("Профиль доступа", "Кіру профилі"))}<section class="paper"><h2>${roleTitle()}</h2><p>${T("Роль назначена сервером. Сессия действует 30 минут, затем нужен повторный вход.", "Рөлді сервер тағайындады. Сессия 30 минутқа жарамды, содан кейін қайта кіру қажет.")}</p><p class="fine">${E(gateway.origin)}</p></section>${button("logout", T("Выйти из аккаунта", "Аккаунттан шығу"), "secondary")}`;
@@ -819,6 +879,15 @@ function render() {
     ({detail:"history",incoming:"history",callbacks:"safety",contacts:"safety",scan:"safety",call:"safety",family:"safety",guard:"safety",report:"safety",reports:"safety",reportDetail:"safety",invite:"safety",questionnaire:"history",confirmCancel:"history"}[page]||"home"));
   root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>saq bol</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && ["home","settings"].includes(page) ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${page === "login" ? T("Подключаемся. Первый вход после перерыва может занять до двух минут.", "Қосылып жатырмыз. Үзілістен кейінгі алғашқы кіру екі минутқа дейін созылуы мүмкін.") : T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
   if (product) {
+    if(workspaceRead?.pending.size && ["home","staff","cases"].includes(page)) {
+      const marker=document.createElement("p");
+      marker.className="sync-note";marker.setAttribute("role","status");
+      marker.textContent=T("Обновляем данные…","Деректер жаңартылуда…");
+      root.querySelector("main").append(marker);
+      for(const [part,action] of [["summary","retry-summary"],["account","retry-home"]]){
+        if(workspaceRead.pending.has(part))root.querySelector('[data-action="'+action+'"]')?.setAttribute("hidden","");
+      }
+    }
     if (gateway?.role==="client" && page==="home" && awaitingReplyCount>0)
       root.querySelector("main").insertAdjacentHTML("afterbegin",button("callbacks",
         T("Отдел антифрода ждёт ответа","Антифрод бөлімі жауап күтуде")+" · "+awaitingReplyCount,"secondary"));
@@ -871,6 +940,8 @@ function render() {
       }
     }
     if(page==="reportDetail" && data) {
+      if(data.transaction_id) root.querySelector("main").insertAdjacentHTML("beforeend",
+        '<button class="linked-receipt" data-detail="'+E(data.transaction_id)+'"><span>'+T("Связанная квитанция","Байланысты түбіртек")+'</span><small>'+E(data.transaction_id)+'</small></button>');
       const log=reportHistory.map(e=>'<p>'+E(label(e.event))+' · '+when(e.created_at)+'</p>').join("");
       if (gateway.role==="client") root.querySelector("main").insertAdjacentHTML("beforeend",desk.reportCallback(callbackView));
       root.querySelector("main").insertAdjacentHTML("beforeend",'<section class="paper"><h2>'+T("История обращения","Өтініш тарихы")+'</h2>'+log+'</section>'+
@@ -931,6 +1002,7 @@ function render() {
       const panel=document.createElement("section");
       panel.className="paper case-investigation";
       panel.innerHTML='<div><h2>'+T("Операция по делу","Іске қатысты операция")+'</h2><strong class="amount">'+amount(caseTransaction.amount)+'</strong><p>'+E(caseTransaction.recipient.display_name)+'</p>'+wallet.badge(caseTransaction.status)+'<p>'+E(moneyOutcome(caseTransaction.status))+'</p></div>'+
+        '<details class="case-reasoning"><summary>'+T("Основания и границы вывода","Негіз және қорытынды шегі")+'</summary><p>'+T("Статус денег указан в квитанции. Связь на графе показывает участников операции. Для решения по делу сверьте основания проверки с ответом клиента.","Қаражаттың күйі түбіртекте көрсетілген. Граф операцияға қатысушыларды көрсетеді. Іс бойынша шешім қабылдағанда тексеру негізін клиенттің жауабымен салыстырыңыз.")+'</p></details>'+
         (caseNetwork?'<div>'+graphView(caseNetwork,true)+'<button class="secondary" data-graph="'+E(caseTransaction.recipient.id)+'">'+T("Исследовать связи","Байланыстарды зерттеу")+'</button></div>':"");
       root.querySelector("main .paper")?.after(panel);
     }
@@ -1221,7 +1293,12 @@ root.addEventListener("click", async (event) => {
     } else location.assign("index.html?offline=1");
     return;
   }
-  if (act === "logout") {
+  if (act === "restore-access") { await restoreSession(); return; }
+  if (act === "remember-settings") {
+    if (!window.confirm(T("Войти заново и изменить сохранение входа?", "Қайта кіріп, кіруді сақтау параметрін өзгерту керек пе?"))) return;
+    rememberLogin = !gateway.remember;
+  }
+  if (act === "logout" || act === "remember-settings") {
     await perform(async () => {
       try { await gateway.logout(); } finally {
         if (product) await identity.write("session", null);
@@ -1414,7 +1491,9 @@ root.addEventListener("submit", async (event) => {
     try {
       let result;
       await perform(async () => {
-        result=await identity.signIn(String(fields.get("login")).trim(),String(fields.get("password")));
+        rememberLogin=fields.has("remember");
+        restoreFailed=false;
+        result=await identity.signIn(String(fields.get("login")).trim(),String(fields.get("password")),rememberLogin);
       });
       if(result)await loadOwner(result.gateway,result.subject);
     } finally {initializingAccount=false;render();}
@@ -1547,13 +1626,21 @@ setInterval(() => {
 }, 1000);
 render();
 
-if (product) identity.initialize(loadOwner, e => {
+async function restoreSession() {
+  initializingAccount=true;
+  restoreFailed=false;
+  render();
+  return identity.initialize(loadOwner, e => {
+  restoreFailed=e.status!==401 && e.status!==403;
   error = e.status === 499 ? T("Вход отменён.","Кіру тоқтатылды.") : e.status === 401 ?
     T("Войди заново, чтобы продолжить.","Жалғастыру үшін қайта кір.") : T("Сервис входа недоступен. Попробуй позже.","Кіру қызметі қолжетімсіз. Кейін қайтала.");
   render();
 }).catch(() => { error = T("Защищённое хранилище недоступно.","Қорғалған қойма қолжетімсіз."); render(); }).finally(() => { initializingAccount=false;render(); });
 
+}
+if (product) void restoreSession();
 root.addEventListener("change", event => {
+  if (event.target.name === "remember") rememberLogin=event.target.checked;
   if (page === "review" && draft && event.target.name === "payment_requested_after_call") {
     if (event.target.checked) draft.context.payment_requested_after_call = true;
     else delete draft.context.payment_requested_after_call;
@@ -1582,7 +1669,7 @@ async function refreshVisible() {
       Array.from(root.querySelectorAll("#case-note textarea,#request-answer textarea")).some(field=>field.value) ||
       (search && search.value!==query);
   };
-  if (editing()) return;
+  if (editing() || workspaceRead?.pending.size) return;
   const g=gateway, rev=viewRevision, screen=page, id=selectedId;
   const here=()=>g===gateway && rev===viewRevision && page===screen && id===selectedId && !loading && !document.hidden && !editing();
   const same=(a,b)=>JSON.stringify(a,(k,v)=>["server_time","as_of"].includes(k)?undefined:v)===JSON.stringify(b,(k,v)=>["server_time","as_of"].includes(k)?undefined:v);

@@ -14,8 +14,8 @@ android {
         applicationId "kz.qadamx.bccshield"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 10
-        versionName "2.7"
+        versionCode 11
+        versionName "2.8"
         resValue "string", "qadam_api_origin", apiOrigin
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -30,6 +30,14 @@ android {
             if (usbRehearsal && !configuredOrigin) {
                 resValue "string", "qadam_api_origin", "http://127.0.0.1:18001"
             }
+        }
+        showcase {
+            initWith release
+            matchingFallbacks = ['release']
+            applicationIdSuffix ".demo"
+            debuggable false
+            // Hackathon distribution retains the existing demo signing identity.
+            signingConfig signingConfigs.debug
         }
         release {
             minifyEnabled false
