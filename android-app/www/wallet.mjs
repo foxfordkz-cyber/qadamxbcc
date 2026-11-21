@@ -41,10 +41,8 @@ const initials = (name) =>
     .map((w) => Array.from(w)[0])
     .join("")
     .toUpperCase();
-const ribbon = '<svg class="card-ribbon" viewBox="0 0 200 210" aria-hidden="true" preserveAspectRatio="xMaxYMid slice"><g fill="none" stroke="currentColor" stroke-width="1.7">'+
-  Array.from({length:16},(_,i)=>'<ellipse cx="165" cy="146" rx="'+(47+i*7)+'" ry="'+(97+i*6)+'" transform="rotate(-32 165 146)"/>').join("")+'</g></svg>';
-const chip =
-  '<svg class="chip" viewBox="0 0 40 30" aria-hidden="true"><rect x="1" y="1" width="38" height="28" rx="6" fill="#e6d6aa"/><path d="M1 10h11l4 4v3l-5 5H1m38-12H28l-4 4v3l5 5h10M15 1v6l4 4h3l5-5V1M16 29v-5l3-4h4l4 5v4" fill="none" stroke="#927f56" stroke-width="1.1"/></svg>';
+// The miniature represents the training account. Its number always comes from the gateway.
+export const cardThumbnail = '<span class="card-thumbnail" aria-hidden="true"><img src="mark.svg" alt=""></span>';
 export function walletUI({ T, E, amount, when, button, status }) {
   const heading = (name, extra = "") =>
     '<div class="w-heading"><h2>' + name + "</h2>" + extra + "</div>";
@@ -107,9 +105,9 @@ export function walletUI({ T, E, amount, when, button, status }) {
     );
   }
   function card(a, hidden) {
-    return `<article class="q-card">${ribbon}<div class="card-brand"><img src="mark.svg" alt=""><b>Saq Bol × BCC</b></div>
-      <div class="q-balance"><small>${T("Баланс учебной карты", "Оқу картасының балансы")}</small><div><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><button data-action="mask-balance" aria-pressed="${hidden}" aria-label="${T("Скрыть или показать баланс", "Балансты жасыру немесе көрсету")}">${icon("eye")}</button></div></div>
-      <div class="card-foot"><div><span>•••• &nbsp;${hidden ? "••••" : E(a.card_last4)}</span><b>${E(a.display_name)}</b></div>${chip}</div></article>`;
+    return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance" aria-pressed="${hidden}" aria-label="${T("Скрыть или показать баланс", "Балансты жасыру немесе көрсету")}">${icon("eye")}</button></div>
+      <div class="q-balance"><small>${T("Баланс учебной карты", "Оқу картасының балансы")}</small><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong></div>
+      <div class="card-foot">${cardThumbnail}<div><b>${T("Карта Saq Bol", "Saq Bol картасы")}</b><span>•••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</span></div></div></article>`;
   }
   function home(a, ledger, stats, hidden, pending, offline=false) {
     if (!a) return button("retry-home", T("Счёт недоступен · Повторить","Шот қолжетімсіз · Қайталау"),"secondary") + (ledger ? rows(ledger.items) : "");
@@ -118,7 +116,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
       ["safety", T("Защита", "Қорғаныс")],
       offline ? ["check", T("Проверка","Тексеру")] : ["open-guardian", "Telegram"],
     ];
-    const greet = `<header class="wallet-greeting"><span class="avatar">${E(initials(a.display_name))}</span><div><small>${T("Добрый день", "Қайырлы күн")}</small><h1>${E(a.display_name)}</h1></div><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button><button data-action="${offline?"settings":"inbox"}" aria-label="${offline?T("Профиль","Профиль"):T("Уведомления", "Хабарламалар")}">${icon(offline?"settings":"bell")}</button></header>`;
+    const greet = `<header class="wallet-greeting"><h1><button class="profile-entry" data-action="settings" aria-label="${T("Открыть профиль", "Профильді ашу")} · ${E(a.display_name)}"><span class="avatar" aria-hidden="true">${E(initials(a.display_name))}</span><span><small>${T("Добрый день", "Қайырлы күн")}</small><strong>${E(a.display_name)}</strong></span></button></h1><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button>${offline?"":`<button data-action="inbox" aria-label="${T("Уведомления", "Хабарламалар")}">${icon("bell")}</button>`}</header>`;
     const links = actions
       .map(
         ([k, n]) =>
