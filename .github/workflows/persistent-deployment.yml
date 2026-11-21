@@ -6,12 +6,28 @@ on:
       - backend/scripts/start-persistent.sh
       - deploy/render-persistent.yaml
       - .github/workflows/persistent-deployment.yml
+      - backend/app/mobile_gateway/**
+      - backend/scripts/verify_persistent_release.py
+      - android-app/**
 permissions:
   contents: read
 jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: qadam
+          POSTGRES_PASSWORD: synthetic-ci-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -39,3 +55,5 @@ jobs:
       - name: Check packaged application
         run: |
           docker run --rm qadam-persistent sh -c 'test -s .qadam-web/index.html && test -f alembic/versions/0013_staff_access.py && python -c "from app.mobile_gateway.app import factory"'
+      - name: Persistent storage and restart acceptance
+        run: python backend/scripts/verify_persistent_release.py
