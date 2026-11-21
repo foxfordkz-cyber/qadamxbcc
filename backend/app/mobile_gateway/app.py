@@ -18,7 +18,7 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
@@ -238,10 +238,12 @@ def create_mobile_app(
     )
     from app.mobile_gateway.callbacks import install_callbacks
     from app.mobile_gateway.protection import install_protection
+    from app.mobile_gateway.readiness import install_readiness
     from app.mobile_gateway.staff import install_staff
     from app.mobile_gateway.technical_metrics import install_technical_metrics
     from app.mobile_gateway.wallet import install_wallet
 
+    install_readiness(app)
     install_wallet(app)
     install_staff(app, cfg)
     install_technical_metrics(app)
@@ -564,6 +566,21 @@ def create_mobile_app(
 
     index = WEB_ASSETS / "index.html"
     if index.is_file():
+        @app.get("/", include_in_schema=False)
+        async def release_home() -> HTMLResponse:
+            return HTMLResponse((WEB_ASSETS / "release.html").read_text(encoding="utf-8"))
+
+        @app.get("/soc/", include_in_schema=False)
+        async def soc_entry() -> RedirectResponse:
+            # The shared shell resolves the role from the authenticated server session.
+            return RedirectResponse("/wallet/", status_code=307)
+
+        @app.get("/download/", include_in_schema=False)
+        async def release_download() -> RedirectResponse:
+            if browser_only or not (WEB_ASSETS / "install" / "release.json").is_file():
+                raise HTTPException(503, "release_artifact_not_published")
+            return RedirectResponse("/wallet/install/", status_code=307)
+
         if browser_only:
             # The downloadable team APK connects to a different service than a browser room.
             browser_shell = index.read_text(encoding="utf-8").replace(" data-install>", ">", 1)

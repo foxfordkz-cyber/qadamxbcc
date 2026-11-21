@@ -4,6 +4,7 @@ test("wallet card and chart remain usable at phone widths", async ({
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("#personal-login [type=submit]")).toBeEnabled();
   for (const width of [320, 360, 412]) {
     await page.setViewportSize({ width, height: 720 });
     await page.evaluate(async () => {

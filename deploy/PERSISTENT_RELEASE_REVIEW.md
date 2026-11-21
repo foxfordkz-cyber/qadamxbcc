@@ -25,6 +25,20 @@ API 1c-2g $25 + worker 0.5c-512mb $7 + PostgreSQL 0.1c-256mb $6 + Key Value 256m
 
 Rollback restores the previous pinned application image against its compatible schema. Do not downgrade a populated database automatically. Restore backups to a separate database first. Damir owns infrastructure review and payment approval. No external alert recipient is enrolled by this change.
 
-## Remaining independent work
+## Release 2.7 implementation
 
-The requested 2.7 visual redesign, public route consolidation, release manifest, new screenshots, physical device acceptance and stable cloud validation remain pending. This document records deployment preparation only. Current adb inventory is empty. Render dashboard access was not available in the current browser session.
+The mobile client and web wallet share the modified wallet.mjs, connected.mjs and wallet.css. Home now separates the primary transfer action from secondary actions; recipients and recent operations precede explanatory protection on phones. Desktop uses a card/action column, a protection/weekly-summary column and separate recipient/activity sections. The existing team's Saq Bol × BCC identity is preserved. Transfers show their account balance and a three-step progression; review emphasizes the amount. The pause, analytics and SOC layouts use distinct information/action columns on desktop. No financial or scoring rules changed.
+
+The balance visibility control also masks the new weekly summary. Russian/Kazakh and 200% text are covered at 360, 412 and 1440 pixels. Browser screenshots from the layout test use explicitly synthetic HTTP fixtures; they are evidence of rendering, not live bank or deployed service acceptance.
+
+Public / serves a bilingual product entry. /soc/ enters the same session-based shell; the server still chooses the role. /download/ refuses to advertise an absent release manifest. The web build calculates the real APK SHA-256 and per-asset digests when an APK has actually been packaged into install/. No passwords are published there.
+
+/health is liveness; /ready checks PostgreSQL and Redis with a two-second bound and five-second coalesced cache, returning only ready/unavailable. Telegram availability does not gate it. Authenticated integration health and the existing worker heartbeat provide detailed queue/worker diagnostics.
+
+## Acceptance still required
+
+Paid cloud cutover, public same-release APK/web/SOC acceptance, idle-30-minute and local-services-off checks require owner-approved hosting and access. Current adb inventory is empty; no new physical device result is claimed. Live Telegram requires a fresh scoped consent session after hosted configuration. Render dashboard access was not available in this session. All these gates remain open even if build and CI succeed.
+
+## Demonstration (2:45)
+
+0:00–0:25: sign in as client; show the server balance and synthetic-data notice. 0:25–0:55: use the normal preset, inspect the receipt and the same transaction in the other client. 0:55–1:35: use the social-engineering preset; show the server deadline, money state and Guardian delivery mode. 1:35–2:00: client answers/cancels; a contact is advisory only. 2:00–2:30: sign in as SOC, open that transaction/case and its timeline. 2:30–2:45: compare the final status in APK and web. On a fake-adapter stand explicitly say delivery is simulated; do not claim a Telegram callback occurred.

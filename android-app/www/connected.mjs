@@ -376,7 +376,7 @@ async function readReport(session,id) {
   return Promise.all([session.api(path),session.api(path+"/history"),questions,callback]);
 }
 function loginView() {
-  if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><h1>Saq Bol × BCC</h1><p>${T("Переводы под защитой","Қорғалған аударымдар")}</p></div><p class="sign-intro">${T("Войдите в свой учебный аккаунт.","Оқу аккаунтыңызға кіріңіз.")}</p>
+  if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><h1>Saq Bol × BCC</h1><p>${T("Переводы под защитой","Қорғалған аударымдар")}</p><div class="sign-promise">${icon("safety")}<span>${T("Ваши деньги. Ваше решение.", "Сіздің ақшаңыз. Сіздің шешіміңіз.")}</span></div></div><p class="sign-intro">${T("Войдите в свой учебный аккаунт.","Оқу аккаунтыңызға кіріңіз.")}</p>
     <form id="personal-login" class="form-stack">
     ${input("login",T("Логин","Логин"),loginName, "text",'autocomplete="username" required maxlength="64" autocapitalize="none" spellcheck="false"')}
     <label>${T("Пароль","Құпиясөз")}<span class="password-field"><input type="password" name="password" required minlength="1" maxlength="128" autocomplete="current-password">
@@ -442,10 +442,13 @@ const presetValues = {
     },
   },
 };
+function transferSteps(review=false) {
+  return `<ol class="transfer-steps"><li ${review ? "" : 'aria-current="step"'}>01 · ${T("Реквизиты", "Деректемелер")}</li><li ${review ? 'aria-current="step"' : ""}>02 · ${T("Проверка", "Тексеру")}</li><li>03 · ${T("Результат", "Нәтиже")}</li></ol>`;
+}
 function transferView() {
   if (pending)
     return `${title(T("Сначала проверь предыдущий запрос", "Алдыңғы сұрауды тексер"))}${button("recover", T("Проверить статус", "Күйін тексеру"))}${button("abandon", T("Безопасно закрыть запрос", "Сұрауды қауіпсіз жабу"), "secondary")}`;
-  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + `<div class="from-account">${icon("outgoing")}<span><small>${T("Со счёта","Шоттан")}</small><strong>Saq Bol × BCC · •••• ${E(account?.card_last4)}</strong></span></div><section class="paper transfer-sheet"><form id="transfer-form" class="form-stack">
+  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + transferSteps() + `<div class="from-account">${icon("outgoing")}<span><small>${T("Со счёта","Шоттан")}</small><strong>Saq Bol × BCC · •••• ${E(account?.card_last4)}</strong><small>${T("Остаток на счёте", "Шоттағы қалдық")} · ${account ? amount(account.balance) : "—"}</small></span></div><section class="paper transfer-sheet"><form id="transfer-form" class="form-stack">
     <label>${T("Учебный получатель","Оқу аударымын алушы")}<select required name="recipient_phone"><option value="">${T("Выбери получателя","Алушыны таңда")}</option>
     ${(account?.recipients ?? []).map(r => `<option value="${E(r.phone)}" ${draft?.recipient_phone === r.phone ? "selected" : ""}>${E(r.name)}</option>`).join("")}</select></label>
     ${input("amount",T("Сумма, ₸","Сома, ₸"), draft?.amount ?? "", "number", 'required min="0.01" max="999999999" step="0.01" inputmode="decimal"')}
@@ -493,7 +496,7 @@ async function back() {
 }
 function reviewView() {
   const callRequest = draft.context.active_call ? "" : `<label class="tick-field"><input type="checkbox" name="payment_requested_after_call" ${draft.context.payment_requested_after_call ? "checked" : ""}>${T("В только что завершившемся звонке меня попросили сделать этот перевод","Жаңа ғана аяқталған қоңырауда менен осы аударымды жасауды сұрады")}</label>`;
-  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}<section class="paper"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name ?? draft.recipient_phone)}</h2><small>${E(draft.recipient_phone)}</small><div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p>${callRequest}</section>${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"))}`;
+  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}${transferSteps(true)}<section class="paper transfer-review"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name ?? draft.recipient_phone)}</h2><small>${E(draft.recipient_phone)}</small><div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p>${callRequest}</section>${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"))}`;
 }
 const questions = [
   [
@@ -544,7 +547,7 @@ function detailView() {
     contributors = tx.ml_contributors ?? [];
   if(product && !admin) {
     const held=tx.status==="cooling_off";
-    const hold=held?'<section class="paper hold-card"><h2>'+T("Защитная пауза","Қорғаныс кідірісі")+'</h2><div class="timer" id="countdown">'+timerText()+'</div><p>'+T("По окончании паузы решение обновит сервер.","Кідіріс аяқталған соң шешімді сервер жаңартады.")+'</p><div class="inline-actions">'+button("questionnaire",T("Пройти опрос","Сауалнамадан өту"))+button("cancel-confirm",T("Отменить перевод","Аударымды тоқтату"),"secondary")+'</div></section>':"";
+    const hold=held?'<section class="paper hold-card"><div class="pause-clock"><span class="eyebrow">'+T("Время на проверку","Тексеру уақыты")+'</span><h2>'+T("Защитная пауза","Қорғаныс кідірісі")+'</h2><div class="timer" id="countdown">'+timerText()+'</div></div><div class="pause-next"><p>'+T("По окончании паузы решение обновит сервер.","Кідіріс аяқталған соң шешімді сервер жаңартады.")+'</p><div class="inline-actions">'+button("questionnaire",T("Пройти опрос","Сауалнамадан өту"))+button("cancel-confirm",T("Отменить перевод","Аударымды тоқтату"),"secondary")+'</div></div></section>':"";
     const contact=held?'<section class="paper"><h2>'+T("Доверенный контакт в Telegram","Telegram-дағы сенімді адам")+'</h2><p>'+(!data||data.transaction_id!==tx.transaction_id?T("Обновите статус для проверки доставки.","Жеткізу күйін жаңартыңыз."):data.contact_state?E(label(data.contact_state)):T("Уведомление для этой операции пока не зарегистрировано.","Бұл операцияның хабарламасы әлі тіркелмеген."))+'</p>'+button("notifications",T("История уведомлений","Хабарлама тарихы"),"secondary")+'</section>':"";
     return title(status(tx.status),tx[lang==="ru"?"headline_ru":"headline_kk"])+
       '<section class="paper receipt"><div class="amount">'+amount(tx.amount)+'</div><strong>'+E(tx.recipient?.display_name)+'</strong><p>'+E(tx.recipient?.iban_masked)+'</p>'+wallet.badge(tx.status)+'<p class="funds-outcome">'+E(moneyOutcome(tx.status))+'</p></section>'+hold+
@@ -705,7 +708,7 @@ function roleTitle() {
   return E(account?.display_name || T("Клиент","Клиент"));
 }
 function settingsView() {
-  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.6 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
+  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.7 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
     button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
     (gateway.role === "client" ? button("contacts",T("Мои согласия","Келісімдерім"),"secondary")+button("open-guardian",T("Открыть Telegram-бот","Telegram-ботты ашу"),"secondary") : "") + button("logout",T("Выйти","Шығу"));
   return `${title(T("Профиль доступа", "Кіру профилі"))}<section class="paper"><h2>${roleTitle()}</h2><p>${T("Роль назначена сервером. Сессия действует 30 минут, затем нужен повторный вход.", "Рөлді сервер тағайындады. Сессия 30 минутқа жарамды, содан кейін қайта кіру қажет.")}</p><p class="fine">${E(gateway.origin)}</p></section>${button("logout", T("Выйти из аккаунта", "Аккаунттан шығу"), "secondary")}`;

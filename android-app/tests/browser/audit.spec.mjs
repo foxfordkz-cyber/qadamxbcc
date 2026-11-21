@@ -38,6 +38,35 @@ async function enter(page,baseURL,fixture={}) {
   await page.locator("[name=password]").fill("fixture");
   await page.locator("#personal-login [type=submit]").click();
 }
+
+test("dashboard hierarchy, hidden amounts and RU/KK fit phone and desktop at large text",async({page,baseURL},info)=>{
+  await enter(page,baseURL);
+  await expect(page.locator(".transfer-primary")).toBeVisible();
+  for(const width of [360,412,1440]) {
+    await page.setViewportSize({width,height:900});
+    await page.screenshot({path:info.outputPath(`home-ru-${width}.png`),fullPage:true});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.evaluate(()=>document.documentElement.style.fontSize="200%");
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.locator(".transfer-primary").scrollIntoViewIfNeeded();
+    await expect(page.locator(".transfer-primary")).toBeVisible();
+    await page.evaluate(()=>document.documentElement.style.fontSize="");
+  }
+  await page.locator("[data-action=mask-balance]").click();
+  await expect(page.locator(".week-summary strong")).toHaveText("•••••• ₸");
+  await expect(page.locator(".q-balance strong")).toHaveText("•••••• ₸");
+  await page.locator("[data-action=language]:visible").first().click();
+  await expect(page.locator(".transfer-primary")).toContainText("Ақша аудару");
+  await page.setViewportSize({width:360,height:900});
+  await page.screenshot({path:info.outputPath("home-kk-360.png"),fullPage:true});
+  await page.locator(".transfer-primary").click();
+  await expect(page.locator(".transfer-steps [aria-current=step]")).toContainText("Деректемелер");
+  await page.locator("[name=recipient_phone]").selectOption("+77010000002");
+  await page.locator("[name=amount]").fill("12500");
+  await page.locator("#transfer-form button").click();
+  await expect(page.locator(".transfer-steps [aria-current=step]")).toContainText("Тексеру");
+  await page.screenshot({path:info.outputPath("review-kk-360.png"),fullPage:true});
+});
 test("summary failure leaves the card and ledger available and supports retry",async({page,baseURL})=>{
   const fixture={analytics:503};await enter(page,baseURL,fixture);
   await expect(page.locator(".q-card")).toBeVisible();

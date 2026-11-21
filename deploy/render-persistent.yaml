@@ -12,7 +12,7 @@ services:
     dockerfilePath: ./backend/Dockerfile.persistent
     preDeployCommand: sh scripts/start-persistent.sh migrate
     dockerCommand: sh scripts/start-persistent.sh api
-    healthCheckPath: /health
+    healthCheckPath: /ready
     envVars:
       - fromGroup: qadam-persistent
       - key: DATABASE_URL
