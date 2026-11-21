@@ -1,14 +1,13 @@
+# syntax=docker/dockerfile:1
 FROM node:22-bookworm-slim AS wallet
 WORKDIR /src/android-app
 COPY android-app/package*.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY android-app/www ./www
-COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs ./scripts/
-WORKDIR /src/backend/.qadam-web/install
-COPY deliverables/android/Saq-Bol-Android-2.5.apk deliverables/android/Saq-Bol-Android-2.5.apk.sha256 ./
-COPY deliverables/android/Saq-Bol-Android-2.6.apk deliverables/android/Saq-Bol-Android-2.6.apk.sha256 ./
-RUN sha256sum -c Saq-Bol-Android-2.5.apk.sha256 Saq-Bol-Android-2.6.apk.sha256
-WORKDIR /src/android-app
+COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs android-app/scripts/stage-installer.mjs ./scripts/
+ARG APK_API_ORIGIN=https://saq-bol-mobile.onrender.com
+RUN --mount=type=bind,source=deliverables/android,target=/releases \
+    node scripts/stage-installer.mjs package.json /releases ../backend/.qadam-web/install "$APK_API_ORIGIN"
 RUN npm run web && test -s ../backend/.qadam-web/install/index.html
 
 FROM python:3.12-slim

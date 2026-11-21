@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import case, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import EngineDep, SessionDep
@@ -15,6 +15,7 @@ from app.db.base import utcnow
 from app.integrations.config import IntegrationSettings
 from app.integrations.errors import IntegrationError
 from app.integrations.models import ContactNotification, GuardianReport, TrustedContact
+from app.integrations.telegram.schemas import ContactState, NotificationState
 from app.integrations.telegram.service import TrustedContactService
 from app.mobile_gateway.app import Identity, IdentityDep
 from app.mobile_gateway.protection_models import FamilyShield, PostCall
@@ -95,16 +96,44 @@ def call_state(tx: Transaction, row: CallCheck | None, now: datetime) -> str:
     return "ready" if row.ended_at + QUIET <= now else "waiting"
 
 
-async def receipt(db: AsyncSession, tx: Transaction) -> ContactNotification | None:
-    return await db.scalar(
-        select(ContactNotification)
+@dataclass
+class ContactReceipt:
+    state: str
+    first_queued_at: datetime
+
+
+async def receipt(db: AsyncSession, tx: Transaction) -> ContactReceipt | None:
+    notice = ContactNotification
+    # A recorded reply remains significant after the response window closes.
+    waiting = notice.state.in_([NotificationState.QUEUED, NotificationState.SENT])
+    state = case(
+        (waiting & (TrustedContact.state == ContactState.REVOKED), NotificationState.REVOKED.value),
+        (waiting & (notice.expires_at <= utcnow()), NotificationState.EXPIRED.value),
+        else_=notice.state,
+    )
+    priority = case(
+        {
+            NotificationState.SUSPICION: 0,
+            NotificationState.ACKNOWLEDGED: 1,
+            NotificationState.SENT: 2,
+            NotificationState.QUEUED: 3,
+        },
+        value=state,
+        else_=4,
+    )
+    rows = await db.execute(
+        select(state, func.min(notice.created_at).over())
+        .select_from(notice)
+        .join(TrustedContact, TrustedContact.id == notice.contact_id)
         .where(
-            ContactNotification.transaction_id == tx.id,
-            ContactNotification.owner_id == tx.sender_id,
+            notice.transaction_id == tx.id,
+            notice.owner_id == tx.sender_id,
         )
-        .order_by(ContactNotification.created_at, ContactNotification.id)
+        .order_by(priority, notice.created_at.desc(), notice.id)
         .limit(1)
     )
+    row = rows.first()
+    return ContactReceipt(row[0], row[1]) if row is not None else None
 
 
 async def snapshot(db: AsyncSession, tx: Transaction) -> dict[str, Any]:
@@ -199,7 +228,15 @@ def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
             raise HTTPException(409, "family_disabled")
         if not settings.enabled or settings.telegram_mode == "disabled":
             raise HTTPException(503, "contact_channel_unavailable")
-        if not await receipt(session, tx):
+        already_requested = await session.scalar(
+            select(
+                exists().where(
+                    ContactNotification.transaction_id == tx.id,
+                    ContactNotification.owner_id == owner,
+                )
+            )
+        )
+        if not already_requested:
             contact = await session.scalar(
                 select(TrustedContact)
                 .where(
@@ -236,7 +273,7 @@ def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
             if row.answered_at and row.answer:
                 items.append((row.answered_at, row.answer))
         if notice:
-            items.append((notice.created_at, "contact_queued"))
+            items.append((notice.first_queued_at, "contact_queued"))
         reports = await session.scalars(
             select(GuardianReport.created_at)
             .where(GuardianReport.owner_id == tx.sender_id, GuardianReport.transaction_id == tx.id)

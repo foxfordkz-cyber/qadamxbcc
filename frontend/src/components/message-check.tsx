@@ -6,6 +6,7 @@ import { api } from "@/lib/contracts";
 import { useLocale } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
 import { messageSignals, type MessageSignal } from "@/lib/message-check";
+import { BankLinkCheck } from "./bank-link-check";
 
 const guideSchema = z.object({
   questions: z.array(z.object({ field: z.string(), ru: z.string(), kk: z.string(), caution_answer: z.boolean() })).length(5),
@@ -43,6 +44,7 @@ export function MessageCheck() {
       {signals.length > 0 && <ul>{signals.map(key => <li key={key}>{m(key)}</li>)}</ul>}
       <p>{guide ? guide[lang === "kk" ? "advice_kk" : "advice_ru"] : m("advice")}</p>
     </div>}
+    <BankLinkCheck />
     {guide && <details><summary>{m("questions")}</summary>{guide.questions.map(q => <fieldset key={q.field}>
       <legend>{q[lang]}</legend>{[true, false].map(value => <label key={String(value)}>
         <input type="radio" name={q.field} checked={answers[q.field] === value}

@@ -707,6 +707,83 @@ async def test_family_one_recipient_actual_callback(
     assert evidence["transaction_id"] == txid
 
 
+@pytest.mark.parametrize(
+    ("states", "revoked_contact", "expected"),
+    [
+        (
+            ("CONTACT_ACKNOWLEDGED", "SUSPICION_REPORTED", "NOTIFICATION_SENT"),
+            1,
+            "SUSPICION_REPORTED",
+        ),
+        (
+            ("NOTIFICATION_SENT", "CONTACT_ACKNOWLEDGED", "NOTIFICATION_QUEUED"),
+            None,
+            "CONTACT_ACKNOWLEDGED",
+        ),
+        (
+            ("NOTIFICATION_SENT", "DELIVERY_FAILED", "NOTIFICATION_QUEUED"),
+            None,
+            "NOTIFICATION_QUEUED",
+        ),
+        (
+            ("NOTIFICATION_SENT", "NOTIFICATION_QUEUED", "NOTIFICATION_SENT"),
+            None,
+            "NOTIFICATION_SENT",
+        ),
+        (
+            ("NOTIFICATION_SENT", "NOTIFICATION_QUEUED", "NOTIFICATION_SENT"),
+            2,
+            "NOTIFICATION_QUEUED",
+        ),
+    ],
+)
+async def test_family_receipt_summarizes_all_contacts(
+    mobile_world: tuple[AsyncClient, Any],
+    session_factory: async_sessionmaker[AsyncSession],
+    states: tuple[str, str, str],
+    revoked_contact: int | None,
+    expected: str,
+) -> None:
+    from app.integrations.models import ContactNotification, TrustedContact
+
+    client, _ = mobile_world
+    auth = await login(client)
+    txid = await call_tx(client, auth)
+    now = utcnow()
+    async with session_factory() as db:
+        for index, state in enumerate(states):
+            contact = TrustedContact(
+                owner_id=OWNER,
+                language="ru",
+                state="CONTACT_REVOKED" if index == revoked_contact else "CONTACT_VERIFIED",
+                contact_consented_at=now,
+                invitation_expires_at=now + timedelta(hours=1),
+            )
+            db.add(contact)
+            await db.flush()
+            db.add(
+                ContactNotification(
+                    owner_id=OWNER,
+                    contact_id=contact.id,
+                    transaction_id=uuid.UUID(txid),
+                    state=state,
+                    created_at=now - timedelta(seconds=3 - index),
+                    expires_at=now + timedelta(seconds=-1 if index == 0 else 300),
+                )
+            )
+        await db.commit()
+
+    path = f"/mobile/v1/protection/{txid}"
+    check = (await client.get(path + "/check", headers=auth)).json()
+    packet = (await client.get(path + "/packet", headers=auth)).json()
+    assert check["contact_state"] == packet["contact_state"] == expected
+    assert check["answer"] is None
+    assert packet["status"] == "cooling_off"
+    queued = [e for e in packet["events"] if e["kind"] == "contact_queued"]
+    assert len(queued) == 1
+    assert datetime.fromisoformat(queued[0]["at"]) == now - timedelta(seconds=3)
+
+
 async def test_wallet_amounts_history_and_role_boundaries(
     mobile_world: tuple[AsyncClient, Any],
     session_factory: async_sessionmaker[AsyncSession],
