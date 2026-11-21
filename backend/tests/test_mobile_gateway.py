@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -553,6 +553,38 @@ async def test_family_switch_delay_independent_of_contact(
     assert (
         await client.post(f"/mobile/v1/protection/{txid}/notify", headers=auth)
     ).status_code == 409
+
+
+async def test_family_shutdown_can_be_cancelled_and_rescheduled_for_a_full_day(
+    mobile_world: tuple[AsyncClient, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.mobile_gateway import protection
+
+    client, _ = mobile_world
+    auth = await login(client)
+    base = "/mobile/v1/protection/family"
+    now = utcnow()
+    monkeypatch.setattr(protection, "utcnow", lambda: now)
+    assert (await client.post(base, headers=auth, json={"action": "enable"})).status_code == 200
+    first = await client.post(base, headers=auth, json={"action": "disable"})
+    original_deadline = datetime.fromisoformat(first.json()["disable_at"])
+    assert original_deadline == now + timedelta(hours=24)
+
+    now = original_deadline - timedelta(seconds=1)
+    cancelled = await client.post(base, headers=auth, json={"action": "enable"})
+    assert cancelled.json()["disable_at"] is None
+    now = original_deadline + timedelta(seconds=1)
+    after_original_deadline = (await client.get(base, headers=auth)).json()
+    assert after_original_deadline["enabled"] is True
+    assert after_original_deadline["disable_at"] is None
+
+    second = await client.post(base, headers=auth, json={"action": "disable"})
+    new_deadline = datetime.fromisoformat(second.json()["disable_at"])
+    assert new_deadline == now + timedelta(hours=24)
+    now = new_deadline - timedelta(seconds=1)
+    assert (await client.get(base, headers=auth)).json()["enabled"] is True
+    now = new_deadline
+    assert (await client.get(base, headers=auth)).json()["enabled"] is False
 
 
 async def test_protection_requires_owner(

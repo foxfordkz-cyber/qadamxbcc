@@ -17,23 +17,11 @@
 
 20 ноября 2026 после включения бота проверены защищённый `/api/v1/integrations/health` (PostgreSQL, Redis и worker вернули `ok`) и `getMyCommands` Telegram (по 13 команд в локалях `ru` и `kk`). Сервер работает на одном бесплатном экземпляре. Вход в тестовый чат и согласие получать уведомления о конкретном переводе — отдельные действия.
 
-## GitHub Pages — статическое демо (уже настроено)
+## Статическая сборка
 
-Адрес: <https://foxfordkz-cyber.github.io/qadamxbcc/> (страницы `/`, `/mobile/`, `/pitch/`).
-Workflow `.github/workflows/pages.yml` при каждом пуше в `main` собирает
-`frontend/scripts/build-pages.mjs` и публикует в ветку `gh-pages`.
+На 21 ноября 2026 года GitHub Pages выключен в этом репозитории. Публичный стенд работает на Cloudflare Workers и Render. При изменениях в `frontend/` или в самом `.github/workflows/pages.yml` публикация в `main` запускает сборку для ветки `gh-pages`.
 
-Ограничения статической версии: GitHub Pages отдаёт только файлы, поэтому FastAPI, PostgreSQL,
-Redis, ML-модель, граф NetworkX и Telegram в ней не работают. Решения считает синтетический
-демо-движок на TypeScript (`frontend/src/lib/demo.ts`) прямо в браузере; история хранится в
-`localStorage` этого браузера. Доверенный круг показывает «не подключено». Для показа
-настоящего backend нужна серверная версия ниже.
-
-Если сайт не открылся после первой публикации: **Settings → Pages → Build and deployment →
-Source: Deploy from a branch → `gh-pages` / root → Save.**
-
-Локальная проверка: `cd frontend && node scripts/build-pages.mjs`, затем отдать папку
-`pages-out` по пути `/qadamxbcc/` любым статическим сервером.
+Статическую версию можно открыть локально. В `frontend/` выполните `node scripts/build-pages.mjs` и раздайте папку `pages-out` по пути `/qadamxbcc/` через статический HTTP-сервер. Доступны страницы `/`, `/mobile/` и `/pitch/`. Демо-движок TypeScript рассчитывает риск в браузере, а история хранится в `localStorage`. Для проверки серверной ML-модели и Telegram используйте основной стенд.
 
 ## Сайт и API в одном контейнере Render
 

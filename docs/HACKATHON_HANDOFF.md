@@ -16,16 +16,16 @@
   трёхминутный сценарий, экономика пилота и ответы жюри; всё на `kk` и `ru`.
   «Полный экран» предназначен для проектора, стрелки переключают слайды.
   В защищённом профиле `pilot` этот раздел отключён.
-- [Презентация RU](../deliverables/BCC-Shield-ru.pptx) и
-  [презентация KK](../deliverables/BCC-Shield-kk.pptx) — ранее созданные материалы,
+- [Презентация RU](../deliverables/Saq-Bol-ru.pptx) и
+  [презентация KK](../deliverables/Saq-Bol-kk.pptx) — ранее созданные материалы,
   не обновлённый в этой работе комплект для подачи.
 - [Репетиция и команды](REHEARSAL.md) — отдельная база, три пресета и автоматическая
   проверка без изменения истории текущего пользовательского preview.
 - [Прежний черновик выступления](PITCH_5MIN.md),
   [текущий статус проверок](MAIN_READINESS.md), [индекс контрактов](API_CONTRACTS.md).
-- [Резервное HD-видео](../deliverables/demo/BCC-Shield-demo.webm),
-  [субтитры RU](../deliverables/demo/BCC-Shield-demo.ru.srt),
-  [субтитры KK](../deliverables/demo/BCC-Shield-demo.kk.srt) — три сценария на живом API.
+- [Резервное HD-видео](../deliverables/demo/Saq-Bol-demo.webm),
+  [субтитры RU](../deliverables/demo/Saq-Bol-demo.ru.srt),
+  [субтитры KK](../deliverables/demo/Saq-Bol-demo.kk.srt) — три сценария на живом API.
   [Повтор записи](DEMO_VIDEO.md); [проверки UI и локализации](FRONTEND_QA.md).
 - [Источники и реестр утверждений](HACKATHON_EVIDENCE.md),
   [международные практики](ANTIFRAUD_PRACTICES.md),

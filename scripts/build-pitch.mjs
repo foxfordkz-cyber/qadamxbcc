@@ -186,7 +186,7 @@ for (const lang of ['ru', 'kk']) {
   }
   const candidatePath = path.join(langDir, 'candidate.pptx');
   await (await PresentationFile.exportPptx(presentation)).save(candidatePath);
-  const finalPath = path.join(finalDir, `BCC-Shield-${lang}.pptx`);
+  const finalPath = path.join(finalDir, `Saq-Bol-${lang}.pptx`);
   await finalizePresentation({
     workspaceDir,
     candidatePath,
@@ -202,8 +202,8 @@ for (const lang of ['ru', 'kk']) {
     verifyArtifactToolImport: true,
     receiptPath: path.join(langDir, 'validation.json'),
   });
-  await fs.copyFile(finalPath, path.join(outputDir, `BCC-Shield-${lang}.pptx`));
-  manifest.decks.push({ language: lang, file: `BCC-Shield-${lang}.pptx`, sha256: createHash('sha256').update(await fs.readFile(finalPath)).digest('hex') });
-  console.log(JSON.stringify({ language: lang, output: path.join(outputDir, `BCC-Shield-${lang}.pptx`), previewDir, validation: path.join(langDir, 'validation.json') }));
+  await fs.copyFile(finalPath, path.join(outputDir, `Saq-Bol-${lang}.pptx`));
+  manifest.decks.push({ language: lang, file: `Saq-Bol-${lang}.pptx`, sha256: createHash('sha256').update(await fs.readFile(finalPath)).digest('hex') });
+  console.log(JSON.stringify({ language: lang, output: path.join(outputDir, `Saq-Bol-${lang}.pptx`), previewDir, validation: path.join(langDir, 'validation.json') }));
 }
 await fs.writeFile(path.join(outputDir, 'pitch-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
