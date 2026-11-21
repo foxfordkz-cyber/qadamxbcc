@@ -1547,6 +1547,7 @@ root.addEventListener("change", event => {
   }
 });
 root.addEventListener("input", event => {
+  if (event.target.matches('#personal-login [name="login"]')) loginName=event.target.value;
   if (event.target.matches("#scan-form textarea")) { scanText=event.target.value; scanResult=null; }
   const form = event.target.closest("#report-form");
   if (!form || !product || !ownerScope) return;
