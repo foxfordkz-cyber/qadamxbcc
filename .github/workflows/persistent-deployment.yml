@@ -4,6 +4,8 @@ on:
   pull_request:
     paths: &persistent_paths
       - backend/Dockerfile.persistent
+      - backend/pyproject.toml
+      - backend/uv.lock
       - .dockerignore
       - deliverables/android/Saq-Bol-Android-2.7.apk
       - deliverables/android/Saq-Bol-Android-2.7.json

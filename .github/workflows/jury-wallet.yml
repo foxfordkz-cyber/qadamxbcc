@@ -7,6 +7,8 @@ on:
       - "README.md"
       - "docker-compose.jury.yml"
       - "backend/Dockerfile.mobile-free*"
+      - "backend/pyproject.toml"
+      - "backend/uv.lock"
       - "backend/scripts/mobile_ephemeral.py"
       - "backend/scripts/jury_wallet.py"
       - "backend/app/mobile_gateway/jury_rooms.py"

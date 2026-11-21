@@ -10,8 +10,11 @@ import json
 import statistics
 import time
 import uuid
+from typing import Literal
 
+from redis._parsers import _AsyncHiredisParser, _AsyncRESP3Parser
 from redis.asyncio import Redis
+from redis.asyncio.connection import DefaultParser
 
 from app.services.velocity import (
     KEY_PREFIX,
@@ -22,13 +25,24 @@ from app.services.velocity import (
 
 
 async def benchmark(
-    redis_url: str | None = None, samples: int = 100, *, history_rows: int = MAX_HISTORY_ROWS
+    redis_url: str | None = None,
+    samples: int = 100,
+    *,
+    history_rows: int = MAX_HISTORY_ROWS,
+    parser: Literal["default", "python"] = "default",
 ) -> dict[str, float | int | str]:
     if not 1 <= history_rows <= MAX_HISTORY_ROWS:
         raise ValueError("Benchmark rows must fit the configured capacity")
     if redis_url:
-        redis = Redis.from_url(redis_url, socket_connect_timeout=2, socket_timeout=2)
+        redis = Redis.from_url(
+            redis_url,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+            parser_class=_AsyncRESP3Parser if parser == "python" else DefaultParser,
+        )
     else:
+        if parser != "default":
+            raise ValueError("Parser comparison requires a real Redis URL")
         from fakeredis import FakeAsyncRedis
 
         redis = FakeAsyncRedis()
@@ -48,7 +62,20 @@ async def benchmark(
         )
     ]
     try:
-        await redis.ping()
+        parser_name = "fakeredis"
+        if redis_url:
+            async with redis.client() as probe:
+                await probe.ping()
+                connection = probe.connection
+                if connection is None:
+                    raise RuntimeError("Expected a connected Redis client")
+                parser_name = (
+                    "hiredis"
+                    if isinstance(connection._parser, _AsyncHiredisParser)
+                    else f"python-resp{connection.protocol}"
+                )
+        else:
+            await redis.ping()
         now = time.time()
         pipe = redis.pipeline(transaction=True)
         for key in keys:
@@ -84,6 +111,7 @@ async def benchmark(
                 raise AssertionError("Incomplete history was incorrectly accepted")
         return {
             "redis": "real" if redis_url else "fakeredis",
+            "parser": parser_name,
             "samples_per_case": samples,
             "warmup_per_case": 10,
             "exact_rows_per_history": history_rows,
@@ -102,10 +130,16 @@ async def benchmark(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--redis-url")
+    parser.add_argument("--parser", choices=("default", "python"), default="default")
     parser.add_argument("--history-rows", type=int, default=MAX_HISTORY_ROWS)
     args = parser.parse_args()
     print(
-        json.dumps(asyncio.run(benchmark(args.redis_url, history_rows=args.history_rows)), indent=2)
+        json.dumps(
+            asyncio.run(
+                benchmark(args.redis_url, history_rows=args.history_rows, parser=args.parser)
+            ),
+            indent=2,
+        )
     )
 
 
