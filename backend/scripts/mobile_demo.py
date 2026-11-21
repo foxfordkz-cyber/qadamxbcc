@@ -1,4 +1,4 @@
-"""Start the synthetic Android gateway with fresh, locally stored role access codes.
+"""Start the synthetic Android gateway with stable, locally stored role access codes.
 
 Requires an already migrated and seeded isolated test database. Credentials are never
 printed. The owner reads the access file locally; do not paste it into chat or commit it.
@@ -37,6 +37,35 @@ def protect(directory: Path) -> None:
         directory.chmod(0o700)
 
 
+def load_access(path: Path) -> dict[str, str]:
+    """Create once; fail closed instead of replacing an existing credential file."""
+    roles = ("client", "admin", "platform_admin")
+    try:
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        try:
+            access = json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, UnicodeError):
+            raise RuntimeError(
+                "Existing mobile access file is invalid; preserve it for recovery"
+            ) from None
+        if (
+            not isinstance(access, dict)
+            or set(access) != set(roles)
+            or any(not isinstance(v, str) or not 24 <= len(v) <= 128 for v in access.values())
+            or len(set(access.values())) != len(roles)
+        ):
+            raise RuntimeError(
+                "Existing mobile access file is invalid; preserve it for recovery"
+            ) from None
+        return access
+    else:
+        access = {role: secrets.token_urlsafe(24) for role in roles}
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(access, handle)
+        return access
+
+
 def main() -> None:
     # This runner never configures or starts real Telegram.
     if os.environ.get("BCC_ENVIRONMENT", "local") not in {"local", "demo"}:
@@ -48,11 +77,8 @@ def main() -> None:
         )
     ).resolve()
     protect(directory)
-    access = {role: secrets.token_urlsafe(24) for role in ("client", "admin", "platform_admin")}
     path = directory / "access.json"
-    fd = os.open(path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        json.dump(access, handle)
+    access = load_access(path)
     os.environ.update(
         {
             "BCC_MOBILE_ENABLED": "true",
