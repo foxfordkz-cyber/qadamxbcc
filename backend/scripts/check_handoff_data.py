@@ -63,10 +63,15 @@ async def verify() -> None:
                 )
             )
             assert len(cases) == 10
+            states = {report.id: report.state for report in reports}
             versions = {c.id: c.version for c in cases}
             events = set(await db.scalars(select(CaseEvent.id)))
         await main(True)
         async with factory() as db:
+            for report_id, state in states.items():
+                saved_report = await db.get(GuardianReport, report_id)
+                assert saved_report is not None
+                assert saved_report.state == state
             for case_id, version in versions.items():
                 case = await db.get(FraudCase, case_id)
                 assert case is not None

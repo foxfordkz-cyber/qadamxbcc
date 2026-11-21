@@ -10,6 +10,7 @@ await mkdir(output, {recursive:true});
 const browser = await chromium.launch({channel:process.env.PLAYWRIGHT_CHANNEL || "chrome"});
 async function signIn(name, field) {
   const page = await browser.newPage({viewport:{width:465,height:900},serviceWorkers:"block"});
+  page.setDefaultTimeout(90_000);
   await page.route("**/*", route => new URL(route.request().url()).origin===origin ? route.continue() : route.abort());
   await page.goto(origin+"/wallet/");
   const login = page.locator("#personal-login");
@@ -25,9 +26,13 @@ async function signIn(name, field) {
 async function api({page, subject}, path, expected=200, method="GET") {
   const reply = await page.evaluate(async ({subject, path, method}) => {
     const headers = {"X-Qadam-Subject": subject, "X-Qadam-Web": "1"};
-    if (method === "POST") headers["Idempotency-Key"] = crypto.randomUUID();
+    if (method === "POST") {
+      headers["Idempotency-Key"] = crypto.randomUUID();
+      headers["Content-Type"] = "application/json";
+    }
     const response = await fetch("/mobile/v1" + path, {
       method, headers, credentials: "same-origin", redirect: "error",
+      body: method === "POST" ? "{}" : undefined,
     });
     return {status: response.status, data: await response.json()};
   }, {subject, path, method});
@@ -44,6 +49,8 @@ try {
   const soc=await signIn("admin_demo","admin");
   const platform=await signIn("platform_demo","platform_admin");
   await api(platform,"/admin/staff");
+  await screen(platform.page,"platform-metrics",'[data-nav="staff"]');
+  await platform.page.close();
   await api(client,"/wallet/cases",403);
   const account=await api(client,"/account");
   assert.equal(account.recipients.length,7);
@@ -55,6 +62,8 @@ try {
       rows.push(...batch.items);more=batch.has_more;
     }
     assert.equal(stats.count,rows.length);
+    console.log(days + " days: " + rows.length + " operations; " +
+      stats.incoming + " KZT incoming, " + stats.outgoing + " KZT outgoing.");
     for(const dir of ["incoming","outgoing"]) {
       const cents=rows.filter(r=>r.direction===dir && r.status==="approved")
         .reduce((sum,r)=>sum+Math.round(Number(r.amount)*100),0);
@@ -64,8 +73,9 @@ try {
   const reports=await api(client,"/api/integrations/guardian/reports");
   const cases=await api(soc,"/wallet/cases");
   assert.ok(reports.length>=4 && cases.items.length>=10);
-  const report=reports.find(r=>r.transaction_id && r.state==="SUBMITTED") ??
-    reports.find(r=>r.transaction_id);
+  // wallet-v1 out/0 contains the information request and the client's answer.
+  const report=reports.find(r=>r.transaction_id==="c374f6fa-0f91-5f8d-ad9b-9812698fa305");
+  assert.ok(report, "The signed-in client owns the linked demonstration report");
   const reportPath = "/api/integrations/guardian/reports/" + report.id;
   await api(soc, reportPath + "/acknowledge", 200, "POST");
   assert.equal((await api(client, reportPath)).state, "DEMO_ACKNOWLEDGED");
@@ -77,10 +87,15 @@ try {
   const same=await api(soc,"/api/transfers/"+report.transaction_id);
   assert.deepEqual([receipt.amount,receipt.status,receipt.recipient.id],[same.amount,same.status,same.recipient.id]);
   await screen(client.page,"client-home",".q-card");
+  await client.page.locator('[data-nav="history"]').click();
+  await screen(client.page,"client-history","[data-detail]");
+  await client.page.locator("[data-detail]").first().click();
+  await screen(client.page,"client-receipt",'[data-screen="detail"] main');
   await client.page.locator('[data-nav="analytics"]').click();
   await screen(client.page,"client-analytics","main h1");
   await client.page.goto(origin+"/wallet/?report="+report.id);
-  await screen(client.page,"client-report",".paper");
+  await client.page.getByText(report.description, {exact: true}).first().waitFor();
+  await screen(client.page,"client-report",'[data-screen="reportDetail"] main .paper');
   await screen(soc.page,"soc-feed","[data-detail]");
   await soc.page.locator("details summary").first().click();
   await soc.page.locator("details [data-graph]").first().click();
