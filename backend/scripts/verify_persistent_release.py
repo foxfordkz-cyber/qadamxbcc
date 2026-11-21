@@ -100,7 +100,8 @@ def main() -> None:
             assert request("/mobile/v1/account", token) == account
             assert request("/mobile/v1/wallet/operations", token) == operations
             print(
-                "PASS: password login, client isolation, durable session/data and idempotent bootstrap"
+                "PASS: password login, client isolation, durable session/data "
+                "and idempotent bootstrap"
             )
         finally:
             subprocess.run(["docker", "rm", "-f", CONTAINER], check=False, capture_output=True)

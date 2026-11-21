@@ -1,0 +1,11 @@
+{
+  "version": "2.7",
+  "versionCode": 10,
+  "package": "kz.qadamx.bccshield.demo",
+  "apk_sha256": "1d32913fa4d8e501a0ef10df30db6bc82e37e531b2ecd64acb28038462f524ef",
+  "apk_source_commit": "20f7bac17f9182fdaaee44e5e7f4816957487417",
+  "certificate_sha256": "0dd732df01a3c1d98ec7b2ebfbd448b7d783080bfc784845676df8eb10aad0ab",
+  "api_origin": "https://saq-bol-mobile.onrender.com",
+  "public_backend_persistent": false,
+  "physical_install": "Honor VNE-LX1: upgrade from 2.5 succeeded; existing credentials rejected by public service; full online acceptance blocked"
+}

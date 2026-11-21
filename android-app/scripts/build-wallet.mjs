@@ -24,12 +24,20 @@ const installer = await stat(path.join(install, apkName)).catch(() => null);
 const published = installer?.isFile();
 if (published) {
   const sha256 = createHash("sha256").update(await readFile(path.join(install, apkName))).digest("hex");
+  const recordFile = path.join(install, apkName.replace(/\.apk$/, ".json"));
+  const record = await readFile(recordFile, "utf8").then(JSON.parse).catch(e => {
+    if (e.code === "ENOENT") return {};
+    throw e;
+  });
+  if (record.apk_sha256 && (record.apk_sha256 !== sha256 || record.version !== version)) {
+    throw Error("APK release record does not match the packaged installer");
+  }
   const assets = {};
   for (const file of (await readdir(destination)).filter(f => /\.(mjs|css|html|svg)$/.test(f)).sort()) {
     if (file === "index.html") continue;
     assets[file] = createHash("sha256").update(await readFile(path.join(destination, file))).digest("hex");
   }
-  await writeFile(path.join(install, "release.json"), JSON.stringify({version, apk: apkName, sha256, bytes: installer.size, assets}, null, 2)+"\n");
+  await writeFile(path.join(install, "release.json"), JSON.stringify({...record, version, apk: apkName, sha256, bytes: installer.size, assets}, null, 2)+"\n");
   const date = new Intl.DateTimeFormat("ru-RU", {timeZone:"Asia/Almaty"}).format(installer.mtime);
   const html = `<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../wallet.css"><title>Saq Bol × BCC · Android</title><main class="shell"><section class="paper"><img src="../mark.svg" width="48" alt=""><h1>Saq Bol × BCC ${version}</h1><p>Android · ${date} · Демонстрационная сборка / Демо жинақ</p><p><a download href="${apkName}">Скачать APK / APK жүктеу</a></p><a href="../">Войти в браузере / Браузерде кіру</a></section></main></html>`;
   await writeFile(path.join(install, "index.html"), html.replace("</section>", `<p>SHA-256</p><code style="overflow-wrap:anywhere">${sha256}</code><p><a href="release.json">Release manifest</a></p></section>`));

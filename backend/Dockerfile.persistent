@@ -4,6 +4,8 @@ COPY android-app/package*.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY android-app/www ./www
 COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs ./scripts/
+COPY deliverables/android/Saq-Bol-Android-2.7.apk /src/backend/.qadam-web/install/Saq-Bol-Android-2.7.apk
+COPY deliverables/android/Saq-Bol-Android-2.7.json /src/backend/.qadam-web/install/Saq-Bol-Android-2.7.json
 RUN npm run web
 
 FROM python:3.12-slim
