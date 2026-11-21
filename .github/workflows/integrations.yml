@@ -33,6 +33,8 @@ jobs:
         with:
           node-version: '24'
       - name: Full project oracle
+        env:
+          PYTEST_ADDOPTS: --junitxml=../.local-checks/backend-full.xml -ra
         run: bash verify.sh
       - name: Reproducible private Scam Check evaluation
         working-directory: backend
@@ -53,7 +55,34 @@ jobs:
         run: |
           uv run --no-sync python -m scripts.verify_merged_migrations
           uv run --no-sync python -m scripts.verify_case_migrations
-          uv run --no-sync pytest tests/integrations tests/test_postgres_concurrency.py tests/test_recipient_flag_postgres.py tests/test_active_hold_postgres.py tests/test_postgres_linked_returns.py
+          uv run --no-sync pytest --junitxml=../.local-checks/backend-postgres.xml -ra tests/integrations tests/test_postgres_concurrency.py tests/test_recipient_flag_postgres.py tests/test_active_hold_postgres.py tests/test_postgres_linked_returns.py
+      - name: Count unique backend cases without double-counting reruns
+        run: |
+          python - <<'PY'
+          import json, xml.etree.ElementTree as ET
+          from pathlib import Path
+          passed, skipped = set(), set()
+          for file in ('.local-checks/backend-full.xml', '.local-checks/backend-postgres.xml'):
+              for case in ET.parse(file).iter('testcase'):
+                  key = (case.attrib['classname'], case.attrib['name'])
+                  if case.find('skipped') is not None:
+                      skipped.add(key)
+                  elif case.find('failure') is None and case.find('error') is None:
+                      passed.add(key)
+          result = {'unique_passed': len(passed), 'still_skipped': sorted(skipped - passed)}
+          Path('.local-checks/backend-unique.json').write_text(json.dumps(result, indent=2))
+          print(json.dumps(result))
+          PY
+      - name: Save exact backend test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-case-evidence
+          path: |
+            .local-checks/backend-*.xml
+            .local-checks/backend-unique.json
+          include-hidden-files: true
+          retention-days: 7
   compose-demo:
     # Pin the OS together with the browser harness; ubuntu-latest can change underneath it.
     runs-on: ubuntu-24.04

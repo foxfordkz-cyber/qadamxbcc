@@ -53,6 +53,26 @@ jobs:
           if DATABASE_URL=sqlite:///tmp/demo.db sh backend/scripts/start-persistent.sh api; then
             exit 1
           fi
+      - name: Verify signed APK contains the same UI as the web source
+        run: |
+          python - <<'PY'
+          import hashlib, json, zipfile
+          from pathlib import Path
+          root = Path('deliverables/android')
+          record = json.loads((root / 'Saq-Bol-Android-2.7.json').read_text())
+          apk = root / 'Saq-Bol-Android-2.7.apk'
+          assert hashlib.sha256(apk.read_bytes()).hexdigest() == record['apk_sha256']
+          count = 0
+          with zipfile.ZipFile(apk) as archive:
+              for source in Path('android-app/www').iterdir():
+                  if source.suffix not in {'.mjs', '.css', '.html', '.svg'}:
+                      continue
+                  packed = archive.read('assets/public/' + source.name).replace(b'\r\n', b'\n')
+                  assert packed == source.read_bytes().replace(b'\r\n', b'\n'), source.name
+                  count += 1
+          assert count > 0
+          print(f'PASS: APK digest and {count} shared UI assets match')
+          PY
       - name: Build persistent image
         run: docker build -f backend/Dockerfile.persistent -t qadam-persistent .
       - name: Check packaged application

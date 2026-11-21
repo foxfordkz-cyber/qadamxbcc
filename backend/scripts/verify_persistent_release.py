@@ -119,7 +119,19 @@ def main() -> None:
             + "\n",
             encoding="utf-8",
         )
-        common = ["--network", "host", "--env-file", str(env)]
+        # Exercise the proposed entry-level paid compute envelope, including bootstrap.
+        common = [
+            "--network",
+            "host",
+            "--env-file",
+            str(env),
+            "--memory",
+            "512m",
+            "--memory-swap",
+            "512m",
+            "--cpus",
+            "0.5",
+        ]
         docker("run", "--rm", *common, IMAGE, "sh", "scripts/start-persistent.sh", "migrate")
         try:
             docker("run", "-d", "--name", CONTAINER, *common, IMAGE)
@@ -187,16 +199,17 @@ def main() -> None:
                 {**normal["body"], "amount": "25001"},
             )
             # Remove only this CI worker's heartbeat, so a stale TTL cannot pass recovery.
+            docker("stop", WORKER)
             docker(
                 "exec",
-                WORKER,
+                CONTAINER,
                 "python",
                 "-c",
                 "import os; from redis import Redis; "
                 "from app.integrations.observability import HEARTBEAT; "
                 "Redis.from_url(os.environ['BCC_REDIS_URL']).delete(HEARTBEAT)",
             )
-            docker("restart", WORKER)
+            docker("start", WORKER)
             worker_ready()
             # Exact GitHub service-container IDs, never a discovered/shared developer service.
             for variable in ("PERSISTENT_POSTGRES_CONTAINER", "PERSISTENT_REDIS_CONTAINER"):
@@ -224,6 +237,9 @@ def main() -> None:
                     "stats", "--no-stream", "--format", "{{.Name}} {{.MemUsage}}", CONTAINER, WORKER
                 )
             )
+            for name in (CONTAINER, WORKER):
+                peak = int(docker("exec", name, "cat", "/sys/fs/cgroup/memory.peak"))
+                print(f"{name} observed cgroup peak: {peak / (1024 * 1024):.1f} MiB")
         finally:
             subprocess.run(
                 ["docker", "rm", "-f", CONTAINER, WORKER], check=False, capture_output=True

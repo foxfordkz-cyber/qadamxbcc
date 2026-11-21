@@ -5,7 +5,7 @@ services:
     name: saq-bol-mobile
     runtime: docker
     region: oregon
-    plan: 1c-2g
+    plan: 0.5c-512mb
     branch: feature/bekzat-persistent-release
     autoDeployTrigger: "off"
     dockerContext: .
