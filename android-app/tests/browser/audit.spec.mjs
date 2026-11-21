@@ -17,12 +17,12 @@ async function enter(page,baseURL,fixture={}) {
       status = fixture.inboxStatus || 200;
       json = {items: actions ? fixture.actions || [] : fixture.messages || []};
     }
-    else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",recipients:[{name:"Арман",phone:"+77010000002"}]};
+    else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",recipients:fixture.recipients || [{name:"Арман",phone:"+77010000002"}]};
     else if(path==="api/payee-check"){
       const body=route.request().postDataJSON();
       fixture.payee=body;
       const outcome=body.bank!=="bcc"?"unavailable":body.expected_name && body.expected_name!=="Арман"?"mismatch":"identified";
-      json={recipient:body.recipient,bank:body.bank,status:outcome,source:"synthetic_directory",display_name:outcome==="unavailable"?null:"Арман А."};
+      json={recipient:fixture.returnedRef || body.recipient,bank:body.bank,status:outcome,source:"synthetic_directory",display_name:outcome==="unavailable"?null:"Арман А."};
     }
     else if(path==="requests")json={request_id:ids[0]};
     else if(path==="api/transfers/evaluate"){
@@ -54,6 +54,37 @@ async function enter(page,baseURL,fixture={}) {
   await page.locator("[name=password]").fill("fixture");
   await page.locator("#personal-login [type=submit]").click();
 }
+
+test("dashboard hierarchy, hidden amounts and RU/KK fit phone and desktop at large text",async({page,baseURL},info)=>{
+  await enter(page,baseURL);
+  await expect(page.locator(".transfer-primary")).toBeVisible();
+  for(const width of [360,412,1440]) {
+    await page.setViewportSize({width,height:900});
+    await page.screenshot({path:info.outputPath(`home-ru-${width}.png`),fullPage:true});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.evaluate(()=>document.documentElement.style.fontSize="200%");
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.locator(".transfer-primary").scrollIntoViewIfNeeded();
+    await expect(page.locator(".transfer-primary")).toBeVisible();
+    await page.evaluate(()=>document.documentElement.style.fontSize="");
+  }
+  await page.locator("[data-action=mask-balance]").click();
+  await expect(page.locator(".week-summary strong")).toHaveText("•••••• ₸");
+  await expect(page.locator(".q-balance strong")).toHaveText("•••••• ₸");
+  await page.locator("[data-action=language]:visible").first().click();
+  await expect(page.locator(".transfer-primary")).toContainText("Ақша аудару");
+  await page.setViewportSize({width:360,height:900});
+  await page.screenshot({path:info.outputPath("home-kk-360.png"),fullPage:true});
+  await page.locator(".transfer-primary").click();
+  await expect(page.locator(".transfer-steps [aria-current=step]")).toContainText("Деректемелер");
+  await expect(page.locator(".from-account")).toContainText("•••••• ₸");
+  await expect(page.locator(".from-account")).not.toContainText("1001");
+  await page.locator("[name=recipient_phone]").selectOption("+77010000002");
+  await page.locator("[name=amount]").fill("12500");
+  await page.locator("#transfer-form button").click();
+  await expect(page.locator(".transfer-steps [aria-current=step]")).toContainText("Тексеру");
+  await page.screenshot({path:info.outputPath("review-kk-360.png"),fullPage:true});
+});
 test("summary failure leaves the card and ledger available and supports retry",async({page,baseURL})=>{
   const fixture={analytics:503};await enter(page,baseURL,fixture);
   await expect(page.locator(".q-card")).toBeVisible();
@@ -93,6 +124,27 @@ test("changed bank and mismatched expected name remove the previous recipient co
     await expect(page.locator("[data-action=submit-transfer]")).toBeDisabled();
   }
   expect(fixture.evaluated).toBeUndefined();
+});
+test("a saved wallet contact can be checked and paid only after the matching directory response",async({page,baseURL})=>{
+  const contact={phone:"+77015550124",name:"Арман А.",payee_ref:"saved-3"};
+  const fixture={recipients:[contact],returnedRef:"saved-1"};
+  await enter(page,baseURL,fixture);
+  await page.locator(`[data-payee="${contact.phone}"]`).click();
+  await expect(page.locator("[name=recipient_phone]")).toHaveValue(contact.phone);
+  await page.locator("[name=amount]").fill("4050.25");
+  await page.locator("#transfer-form button").click();
+  expect(fixture.payee).toEqual({recipient:"saved-3",bank:"bcc",expected_name:""});
+  await expect(page.locator("[data-payee-status=unavailable]")).toBeVisible();
+  await expect(page.locator("[data-action=submit-transfer]")).toBeDisabled();
+  fixture.returnedRef=contact.payee_ref;
+  await page.locator("[data-action=edit-transfer]").click();
+  await page.locator("#transfer-form button").click();
+  await expect(page.locator("[data-payee-status=identified]")).toContainText(contact.name);
+  await page.locator("[data-action=language]:visible").first().click();
+  await expect(page.locator("[data-payee-status]")).toContainText("Алушы табылды");
+  await page.locator("[data-action=submit-transfer]").click();
+  await expect.poll(()=>fixture.evaluated?.recipient_phone).toBe(contact.phone);
+  expect(fixture.evaluated.amount).toBe("4050.25");
 });
 test("the payer reports a request from an ended call for the reviewed draft only",async({page,baseURL})=>{
   const fixture={};await enter(page,baseURL,fixture);

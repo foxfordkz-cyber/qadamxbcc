@@ -1,0 +1,59 @@
+{
+  "origin": "https://saq-bol-mobile.onrender.com",
+  "service_id": "srv-dc064iafngtc73b40ua0",
+  "phase": "final",
+  "accounts": [
+    {
+      "account": "client_demo",
+      "login_http": 200,
+      "role": "client",
+      "session_http": 200
+    },
+    {
+      "account": "admin_demo",
+      "login_http": 200,
+      "role": "admin",
+      "session_http": 200
+    },
+    {
+      "account": "platform_demo",
+      "login_http": 200,
+      "role": "platform_admin",
+      "session_http": 200
+    }
+  ],
+  "role_boundary_checks": 12,
+  "operations_count": 12,
+  "reports_count": 0,
+  "cases_first_page_count": 0,
+  "history_unchanged_during_acceptance": true,
+  "snapshot_sha256": "37d407cc1be8cd847e97caa33a96849c5f18475bfa62556ac0629fed5ad52e89",
+  "credentials_saved": true,
+  "verified_at": "2026-11-21T08:13:47.658199+00:00",
+  "honor": {
+    "model": "Honor VNE-LX1",
+    "android": "14",
+    "apk": "2.7 (10)",
+    "roles_opened": [
+      "client",
+      "admin",
+      "platform_admin"
+    ],
+    "client_restored_after_process_stop": true,
+    "left_on_client_home": true,
+    "adb_reverse_used": false
+  },
+  "web": {
+    "roles_opened": [
+      "client",
+      "admin",
+      "platform_admin"
+    ],
+    "reload_restored_each_role": true,
+    "server_ui_version": "2.6"
+  },
+  "server_restarted": false,
+  "hashes_changed": false,
+  "downloads_deleted": false,
+  "full_database_backup": false
+}

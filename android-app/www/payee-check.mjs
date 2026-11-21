@@ -7,8 +7,9 @@ export function phoneNumber(raw) {
   return /^[78]\d{10}$/.test(digits) ? "+7" + digits.slice(1) : digits;
 }
 
-export async function checkPayee(draft, api) {
-  const recipient = contacts.get(draft.recipient_phone);
+export async function checkPayee(draft, api, recipients = []) {
+  const savedRef = recipients.find(contact => contact.phone === draft.recipient_phone)?.payee_ref;
+  const recipient = contacts.get(draft.recipient_phone) || (/^saved-[1-4]$/.test(savedRef) ? savedRef : null);
   const unavailable = {status: "unavailable"};
   if (!recipient) return unavailable;
   const {bank, expectedName} = draft.payee;

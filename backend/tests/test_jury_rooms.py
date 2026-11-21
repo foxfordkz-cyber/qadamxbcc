@@ -59,6 +59,8 @@ async def test_private_rooms_only_start_by_same_origin_post_and_join_by_invitati
         assert (await alice.get("/health")).json()["status"] == "ok"
         welcome = await alice.get("/")
         assert welcome.status_code == 200
+        assert "/jury/start/history" not in welcome.text
+        assert (await alice.post("/jury/start/history", headers=ORIGIN)).status_code == 404
         assert "<details><summary>" in welcome.text
         assert all(
             f"SaqBol-{role}-2026" in welcome.text for role in ("Client", "Officer", "Platform")
@@ -170,6 +172,7 @@ async def test_slow_start_and_close_do_not_allocate_a_busy_slot() -> None:
 
 async def test_capacity_and_failed_entry_return_retry_with_no_slot_leak() -> None:
     stores = Stores()
+    history = Stores()
     attempts = 0
 
     @asynccontextmanager
@@ -184,24 +187,32 @@ async def test_capacity_and_failed_entry_return_retry_with_no_slot_leak() -> Non
     async def not_ready() -> bool:
         return False
 
-    app = create_jury_app(flaky, ready=not_ready)
+    app = create_jury_app(flaky, history_factory=history.factory, ready=not_ready)
     async with (
         app.router.lifespan_context(app),
         AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client,
     ):
         assert (await client.get("/health")).status_code == 503
         assert attempts == 0
+        assert 'action="/jury/start/history"' in (await client.get("/")).text
+        assert (await client.get("/jury/start/history")).status_code in {404, 405}
+        assert (await client.post("/jury/start/history")).status_code == 403
         failed = await client.post("/jury/start", headers=ORIGIN)
         assert failed.status_code == 503
-        for _ in range(MAX_ROOMS):
+        for i in range(MAX_ROOMS):
             client.cookies.clear()
-            assert (await client.post("/jury/start", headers=ORIGIN)).status_code == 303
+            path = "/jury/start/history" if i % 2 else "/jury/start"
+            assert (await client.post(path, headers=ORIGIN)).status_code == 303
+            assert 'action="/jury/start/history"' not in (await client.get("/")).text
+            assert (await client.post("/jury/start/history", headers=ORIGIN)).status_code == 303
         client.cookies.clear()
         full = await client.post("/jury/start", headers=ORIGIN)
         assert full.status_code == 503
         assert full.headers["retry-after"] == "60"
         assert "Бөлме" in full.text
-    assert stores.closed == list(range(1, MAX_ROOMS + 1))
+        assert (await client.post("/jury/start/history", headers=ORIGIN)).status_code == 503
+    assert history.started == list(range(2, MAX_ROOMS + 1, 2))
+    assert sorted(stores.closed + history.closed) == list(range(1, MAX_ROOMS + 1))
 
 
 async def test_failed_teardown_retires_its_slot() -> None:

@@ -93,7 +93,7 @@ class RoomPool:
             # An abandoned start request cannot cancel a pending storage cleanup.
             await asyncio.shield(asyncio.gather(*self.releasing))
 
-    async def create(self) -> str | None:
+    async def create(self, *, factory: Factory | None = None) -> str | None:
         if self.stopping:
             return None
         if not self.free:
@@ -104,7 +104,7 @@ class RoomPool:
         self.free.remove(slot)
         self.starting += 1
         try:
-            context = self.factory(slot)
+            context = (factory if factory is not None else self.factory)(slot)
             app = await context.__aenter__()
         except BaseException:
             # Failed context entry has completed its own startup cleanup. Each entry
@@ -129,7 +129,8 @@ border-radius:1.5rem;background:white}h1{font-size:1.6rem;line-height:1.2}button
 button{border:0;border-radius:.75rem;padding:.7rem 1rem;background:#00804c;color:white;
 cursor:pointer}a{color:#006b40}small{color:#475467}p{margin:1rem 0}
 details{margin-top:1.25rem}summary{cursor:pointer}dt{font-weight:600;margin-top:.75rem}
-dd{margin:0}code{overflow-wrap:anywhere}
+dd{margin:0}code{overflow-wrap:anywhere}.room-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.with-history{color:#006b40;background:white;border:1px solid #00804c}
 </style></head><body><main><small>Saq Bol × BCC</small>"""
 
 _PUBLIC_LOGINS = """<details><summary>Үш рөлге кіру / Вход под тремя ролями</summary>
@@ -146,6 +147,7 @@ def landing(
     *,
     key: str | None = None,
     contact_invite: str | None = None,
+    history_available: bool = False,
     message: str = "",
     status: int = 200,
 ) -> HTMLResponse:
@@ -160,6 +162,18 @@ def landing(
         "Через 30 минут бездействия данные комнаты удаляются.</p>"
     )
     submit = "Әмиянға оралу / Вернуться в кошелёк" if key else "Бөлме ашу / Открыть комнату"
+    history = ""
+    if history_available and not key:
+        history = (
+            '<form method="post" action="/jury/start/history">'
+            '<button class="with-history" type="submit">Тарихымен ашу / '
+            "Открыть с историей</button></form>"
+        )
+        intro += (
+            "<p>Дайын тарихта 40 оқу аударымы мен 10 іс бар. "
+            "<span lang=ru>В комнате с историей уже есть 40 учебных переводов и 10 дел SOC."
+            "</span></p>"
+        )
     shared = ""
     if key:
         shared = (
@@ -177,8 +191,11 @@ def landing(
             "Сенімді адамның шақыруы / Приглашение доверенному лицу</a>"
         )
     return HTMLResponse(
-        _HEAD + title + message + intro + '<form method="post" action="/jury/start">'
+        _HEAD + title + message + intro + '<div class="room-actions">'
+        '<form method="post" action="/jury/start">'
         f'<button type="submit">{submit}</button></form>'
+        + history
+        + "</div>"
         + _PUBLIC_LOGINS
         + shared
         + "</main></body></html>",
@@ -216,7 +233,10 @@ def enter(request: Request, key: str) -> Response:
 
 
 def create_jury_app(
-    factory: Factory, *, ready: Callable[[], Awaitable[bool]] | None = None
+    factory: Factory,
+    *,
+    history_factory: Factory | None = None,
+    ready: Callable[[], Awaitable[bool]] | None = None,
 ) -> FastAPI:
     pool = RoomPool(factory)
 
@@ -261,11 +281,12 @@ def create_jury_app(
         key = request.cookies.get(ROOM_COOKIE)
         with pool.borrow(key) as room:
             return landing(
-                key=key if room else None, contact_invite=room.contact_invite if room else None
+                key=key if room else None,
+                contact_invite=room.contact_invite if room else None,
+                history_available=history_factory is not None,
             )
 
-    @app.post("/jury/start")
-    async def start(request: Request) -> Response:
+    async def start_room(request: Request, room_factory: Factory) -> Response:
         if not same_origin(request):
             return JSONResponse(
                 {"detail": "same_origin_required"},
@@ -277,7 +298,7 @@ def create_jury_app(
             if room and current:
                 return enter(request, current)
         try:
-            key = await pool.create()
+            key = await pool.create(factory=room_factory)
         except Exception:
             log.error("Jury wallet startup failed")
             key = None
@@ -286,10 +307,21 @@ def create_jury_app(
                 message="<p>Бөлме әзірге қолжетімсіз. / "
                 "Комната пока недоступна. Попробуйте позже.</p>",
                 status=503,
+                history_available=history_factory is not None,
             )
             response.headers["Retry-After"] = "60"
             return response
         return enter(request, key)
+
+    @app.post("/jury/start")
+    async def start(request: Request) -> Response:
+        return await start_room(request, factory)
+
+    if history_factory is not None:
+
+        @app.post("/jury/start/history")
+        async def start_history(request: Request) -> Response:
+            return await start_room(request, history_factory)
 
     @app.get("/jury/join/{key}")
     async def join(key: str, request: Request) -> Response:
@@ -299,6 +331,7 @@ def create_jury_app(
                     message="<p>Бөлме жабылды немесе сілтеме қате. / "
                     "Комната закрыта или ссылка неверна.</p>",
                     status=404,
+                    history_available=history_factory is not None,
                 )
             return enter(request, key)
 

@@ -3,6 +3,7 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from math import fsum
 
 import fakeredis
 import pytest
@@ -24,6 +25,53 @@ from app.services.velocity import (
 )
 
 NOW = datetime.now(UTC).timestamp()
+
+
+@pytest.mark.parametrize("decode_responses", [False, True])
+async def test_nested_windows_match_independent_sums_at_every_boundary(
+    decode_responses: bool,
+) -> None:
+    redis = fakeredis.FakeAsyncRedis(decode_responses=decode_responses)
+    now = 100_000.5
+    key = f"{KEY_PREFIX}:settled:out:sender"
+    # Same counterparty across windows, tied timestamps on each edge, and a
+    # legacy tx:amount member. The historical reader ignores non-numeric amounts.
+    rows: list[tuple[str, float, str, float]] = [
+        ("legacy:0.01", 1, "legacy", 0.01),
+        ("current:recipient:0.02", 0, "recipient", 0.02),
+    ]
+    for span in (600, 1800, 3600, 86400):
+        for index, delta in enumerate((-0.25, 0.0, 0.0, 0.25)):
+            counterparty = ("recipient", "recurring", "tied", "recurring")[index]
+            value = ("99999999.99", "0.01", "0.02", "0.10")[index]
+            rows.append(
+                (
+                    f"t-{span}-{index}:{counterparty}:{value}",
+                    span + delta,
+                    counterparty,
+                    float(value),
+                )
+            )
+    try:
+        members = {member: now - age for member, age, _, _ in rows}
+        members["malformed:peer:none"] = now - 3
+        members["future:recipient:1000"] = now + 1
+        await redis.zadd(key, members)
+        snapshot = await VelocityCounters(redis).snapshot(
+            sender_id="sender", recipient_id="recipient", ts=now
+        )
+        for name, span in (("10m", 600), ("30m", 1800), ("1h", 3600), ("24h", 86400)):
+            included = [(party, amount) for _, age, party, amount in rows if age < span]
+            window = snapshot.settled_sender_out.windows[name]
+            assert window.count == len(included)
+            assert window.distinct == len({party for party, _ in included})
+            assert window.volume == fsum(amount for _, amount in included)
+        payee = [amount for _, age, party, amount in rows if age < 86400 and party == "recipient"]
+        assert snapshot.settled_payee.count == len(payee)
+        assert snapshot.settled_payee.total == fsum(payee)
+        assert snapshot.settled_payee.largest == max(payee)
+    finally:
+        await redis.aclose()
 
 
 @pytest.mark.parametrize(

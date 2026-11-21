@@ -28,11 +28,15 @@ DIRECTORY: Final[dict[Payee, tuple[UUID, str]]] = {
 RECIPIENTS = frozenset(phone for _, phone in DIRECTORY.values())
 
 
-class PayeeRequest(BaseModel):
+class PayeeLookup(BaseModel):
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
-    recipient: Payee
+    recipient: str
     bank: Bank
     expected_name: str = Field(default="", max_length=80, repr=False)
+
+
+class PayeeRequest(PayeeLookup):
+    recipient: Payee
 
 
 class PayeeResult(BaseModel):
@@ -60,6 +64,13 @@ def compare_name(expected: str, registered: str, display_name: str) -> Verdict:
     return "mismatch"
 
 
+def account_verdict(body: PayeeLookup, full_name: str, iban: str) -> tuple[Verdict, str | None]:
+    if body.bank != "bcc" or iban[4:7] != BCC_BANK_CODE or len(full_name.split()) < 2:
+        return "unavailable", None
+    display_name = mask_name(full_name)
+    return compare_name(body.expected_name, full_name, display_name), display_name
+
+
 @router.post("", response_model=PayeeResult)
 async def check_payee(body: PayeeRequest, session: SessionDep) -> PayeeResult:
     unavailable = PayeeResult(recipient=body.recipient, bank=body.bank, status="unavailable")
@@ -73,12 +84,12 @@ async def check_payee(body: PayeeRequest, session: SessionDep) -> PayeeResult:
             )
         )
     ).one_or_none()
-    if row is None or row.iban[4:7] != BCC_BANK_CODE or len(row.full_name.split()) < 2:
+    if row is None:
         return unavailable
-    display_name = mask_name(row.full_name)
+    verdict, display_name = account_verdict(body, row.full_name, row.iban)
     return PayeeResult(
         recipient=body.recipient,
         bank=body.bank,
-        status=compare_name(body.expected_name, row.full_name, display_name),
+        status=verdict,
         display_name=display_name,
     )

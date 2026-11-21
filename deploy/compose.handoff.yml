@@ -1,0 +1,23 @@
+# Use together with docker-compose.android.yml (relative paths from the repository root).
+name: qadam-handoff
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: qadam_handoff
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bcc -d qadam_handoff"]
+  gateway:
+    environment:
+      BCC_DATABASE_URL: postgresql+asyncpg://bcc:bcc@postgres:5432/qadam_handoff
+      BCC_INTEGRATIONS_TELEGRAM_MODE: fake
+      BCC_HANDOFF_DATASET: wallet-v1
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    ports: !override
+      - "127.0.0.1:18127:18001"
+    volumes: !override
+      - "./.local-checks/handoff-access:/mobile-access"
+      - "./backend/.qadam-web:/app/.qadam-web:ro"
+      - "./backend/scripts:/app/scripts:ro"
+      - "./backend/app/mobile_gateway:/app/app/mobile_gateway:ro"

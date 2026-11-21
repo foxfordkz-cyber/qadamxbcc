@@ -5,7 +5,12 @@ import os
 import secrets
 import subprocess
 from collections.abc import AsyncIterator, Callable, Iterator
-from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
+from contextlib import (
+    AbstractAsyncContextManager,
+    AsyncExitStack,
+    asynccontextmanager,
+    contextmanager,
+)
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -21,6 +26,7 @@ from app.db.base import Base
 from app.db.session import build_engine, build_session_factory
 from app.integrations.config import IntegrationSettings, get_integration_settings
 from app.mobile_gateway.config import MobileSettings
+from scripts.handoff_data import populate
 from scripts.seed_bcc import seed
 
 
@@ -36,8 +42,11 @@ class JuryStorage:
         self.active: set[int] = set()
         self.provisioning = asyncio.Semaphore(1)
 
+    def history_room(self, slot: int) -> AbstractAsyncContextManager[FastAPI]:
+        return self.room(slot, with_history=True)
+
     @asynccontextmanager
-    async def room(self, slot: int) -> AsyncIterator[FastAPI]:
+    async def room(self, slot: int, *, with_history: bool = False) -> AsyncIterator[FastAPI]:
         from app.mobile_gateway.app import create_mobile_app
         from app.mobile_gateway.jury_contact import install_jury_contact
 
@@ -85,6 +94,12 @@ class JuryStorage:
                         self.mobile, settings, resources, integration, browser_only=True
                     )
                     await install_jury_contact(app, sessions, integration, self.mobile.customer_id)
+                    if with_history:
+                        # Populate only this new private SQLite lease; the contact
+                        # already occupies its slot and startup will replay the graph.
+                        async with sessions() as session:
+                            await populate(session)
+                            await session.commit()
                     await stack.enter_async_context(app.router.lifespan_context(app))
                 yield app
         finally:
@@ -115,7 +130,7 @@ async def serve(directory: Path, socket: Path, mobile: MobileSettings) -> None:
         # Fail startup on broken credentials, DB, graph, model, or seed before offering a room.
         async with storage.room(1):
             pass
-        app = create_jury_app(storage.room, ready=ready)
+        app = create_jury_app(storage.room, history_factory=storage.history_room, ready=ready)
         await uvicorn.Server(
             uvicorn.Config(
                 app, host="0.0.0.0", port=int(os.environ.get("PORT", "8000")), access_log=False

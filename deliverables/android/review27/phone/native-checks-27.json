@@ -1,0 +1,22 @@
+{
+  "version": "2.7",
+  "apk_sha256": "ce81184ce739c745b33b646041fc365232797f5001462e3279a2dbe03ff730b8",
+  "device": "Honor VNE-LX1 Android 14",
+  "checked_at": "2026-11-21T07:14:27.299Z",
+  "checks": [
+    "Update installed without uninstall/data clear; original certificate retained",
+    "Real native RU/KK login screens",
+    "Entered login survives language switch",
+    "Real public HTTPS rejects a synthetic wrong password and retains login",
+    "Explicit offline home and 200% text without horizontal overflow",
+    "Android Back from offline scenario selector returns home",
+    "Background/reopen preserves explicit offline screen",
+    "Back closes sign-in keyboard; explicit offline mode returns to real sign-in"
+  ],
+  "not_verified": [
+    "Successful public client/admin login and linked transactions",
+    "Physical offline/503 recovery with native HTTP",
+    "Live Telegram"
+  ],
+  "emulator": "BLOCKED: Windows commit memory exhausted"
+}

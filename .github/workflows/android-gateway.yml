@@ -2,10 +2,10 @@ name: Android gateway E2E
 on:
   workflow_dispatch:
   pull_request:
-    paths: ["android-app/**", "backend/**", "docker-compose.android.yml", ".github/workflows/android-gateway.yml"]
+    paths: &gateway_paths ["android-app/**", "backend/**", "docker-compose.android.yml", "deploy/compose.handoff.yml", ".github/workflows/android-gateway.yml"]
   push:
     branches: [main]
-    paths: ["android-app/**", "backend/**", "docker-compose.android.yml", ".github/workflows/android-gateway.yml"]
+    paths: *gateway_paths
 permissions:
   contents: read
 jobs:
@@ -64,3 +64,30 @@ jobs:
         run: npm run test:ui -- tests/browser/roles-live.spec.mjs
       - if: always()
         run: docker compose -f docker-compose.android.yml down
+
+  handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      COMPOSE_PROJECT_NAME: qadam-handoff
+      COMPOSE_FILE: docker-compose.android.yml:deploy/compose.handoff.yml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: android-app/package-lock.json
+      - name: Build the wallet and start its isolated PostgreSQL database
+        run: |
+          npm ci --prefix android-app
+          npm run --prefix android-app web
+          docker compose up -d --build --wait --wait-timeout 240
+      - name: Verify preview, repeated import, balances and linked cases
+        run: docker compose exec -T gateway python -m scripts.check_handoff_data
+      - name: Verify the three role views against the populated ledger
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" .local-checks/handoff-access
+          node android-app/scripts/check-handoff.mjs
+      - if: always()
+        run: docker compose down

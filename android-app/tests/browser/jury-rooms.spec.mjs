@@ -15,10 +15,10 @@ function loopback() {
   return url.origin;
 }
 
-async function startRoom(page, origin) {
+async function startRoom(page, origin, route = "/jury/start") {
   await page.goto(origin);
-  const reply = page.waitForResponse(r => r.url() === origin + "/jury/start");
-  await page.locator("form[action='/jury/start'] [type=submit]").click();
+  const reply = page.waitForResponse(r => r.url() === origin + route);
+  await page.locator(`form[action="${route}"] [type=submit]`).click();
   expect((await reply).status()).toBe(303);
   await page.locator("#personal-login").waitFor();
   await page.goto(origin);
@@ -28,6 +28,43 @@ async function startRoom(page, origin) {
   await page.goto(origin + "/wallet/");
   return invitation.href;
 }
+
+test("a juror can select a saved recipient and an officer can inspect the same prepared case", async ({browser}) => {
+  test.skip(process.env.QADAM_JURY_E2E !== "1", "Requires an isolated jury-room gateway");
+  test.setTimeout(90_000);
+  const origin = loopback();
+  const readme = await readFile(new URL("../../../README.md", import.meta.url), "utf8");
+  const customerContext = await browser.newContext({serviceWorkers:"block"});
+  const officerContext = await browser.newContext({serviceWorkers:"block"});
+  try {
+    const page = await customerContext.newPage();
+    const invite = await startRoom(page, origin, "/jury/start/history");
+    const client = await enter(page, "client_demo", "client", readme);
+    const {recipients} = await request(client, "/account");
+    expect(recipients).toHaveLength(7);
+    const saved = recipients.find(contact => contact.payee_ref === "saved-1");
+    expect(saved).toBeDefined();
+    await page.locator(`[data-payee="${saved.phone}"]`).click();
+    await page.locator('[name="amount"]').fill("4050.25");
+    await page.locator("#transfer-form button").click();
+    await expect(page.locator("[data-payee-status=identified]")).toBeVisible();
+
+    const reports = await request(client, guardian + "/reports");
+    expect(reports).toHaveLength(4);
+    const officerPage = await officerContext.newPage();
+    await officerPage.goto(invite);
+    const officer = await enter(officerPage, "admin_demo", "admin", readme);
+    const cases = (await request(officer, "/wallet/cases")).items;
+    expect(cases).toHaveLength(10);
+    const linked = cases.find(item => item.report_id === reports[0].id);
+    expect(linked).toBeDefined();
+    await officerPage.locator('[data-nav="cases"]').click();
+    await officerPage.locator(`[data-case="${linked.id}"]`).click();
+    await expect(officerPage.locator(`[data-detail="${reports[0].transaction_id}"]`)).toBeVisible();
+  } finally {
+    await Promise.all([customerContext.close(), officerContext.close()]);
+  }
+});
 
 async function enter(page, login, expectedRole, readme) {
   // Exercise exactly the fixtures a reviewer sees in the Markdown table.

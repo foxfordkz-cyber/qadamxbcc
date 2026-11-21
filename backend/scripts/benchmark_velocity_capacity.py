@@ -55,6 +55,16 @@ async def benchmark(
             pipe.zadd(key, {f"{i}:party-{i}:100.00": now - 60 for i in range(history_rows)})
         await pipe.execute()
         velocity = VelocityCounters(redis, max_history_rows=history_rows)
+        reference = await velocity.snapshot(sender_id=sender, recipient_id=recipient, ts=now)
+        expected = {"count": history_rows, "distinct": history_rows, "volume": 100 * history_rows}
+        histories = reference.as_dict()
+        if len(histories) != 8 or any(
+            len(windows) != 4 or any(stat != expected for stat in windows.values())
+            for windows in histories.values()
+        ):
+            raise AssertionError(
+                "Full histories did not retain their counts, counterparties and amounts"
+            )
         full: list[float] = []
         overloaded: list[float] = []
         for index in range(samples + 10):
@@ -75,10 +85,13 @@ async def benchmark(
         return {
             "redis": "real" if redis_url else "fakeredis",
             "samples_per_case": samples,
+            "warmup_per_case": 10,
             "exact_rows_per_history": history_rows,
             "max_rows_transferred": 8 * (history_rows + 1),
-            "eight_full_histories_p95_ms": statistics.quantiles(full, n=20)[-1],
-            "overload_rejection_p95_ms": statistics.quantiles(overloaded, n=20)[-1],
+            "eight_full_histories_p95_ms": statistics.quantiles(full, n=20, method="inclusive")[-1],
+            "overload_rejection_p95_ms": statistics.quantiles(overloaded, n=20, method="inclusive")[
+                -1
+            ],
             "overload_rejections": len(overloaded),
         }
     finally:

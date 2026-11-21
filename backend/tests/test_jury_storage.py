@@ -206,3 +206,74 @@ async def test_room_contact_can_approve_only_its_own_request(
         assert (await client.delete(path, headers=access)).status_code == 200
         assert "Запросов пока нет" in (await contact.get(CONTACT_INBOX + "?lang=ru")).text
         assert (await contact.post(decision[1], headers=origin)).status_code == 404
+
+
+async def test_history_room_keeps_shared_baseline_and_isolates_its_case_catalog(
+    rooms: Path, connect: Callable[[int], Redis]
+) -> None:
+    from app.mobile_gateway.demo_catalog import SAVED_TRANSFERS
+    from app.mobile_gateway.jury_rooms import ROOM_COOKIE, create_jury_app
+    from scripts.seed_bcc import SENDER_ID
+
+    host = "https://jury.test"
+    origin = {"Origin": host}
+    storage = jury_storage(rooms, connect)
+    app = create_jury_app(storage.room, history_factory=storage.history_room)
+    transport = ASGITransport(app=app)
+    guardian = BASE + "/api/integrations/guardian"
+    cases_url = guardian + "/soc/cases"
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=transport, base_url=host) as history,
+        AsyncClient(transport=transport, base_url=host) as standard,
+    ):
+        assert (await history.post("/jury/start/history", headers=origin)).status_code == 303
+        assert (await standard.post("/jury/start", headers=origin)).status_code == 303
+        initial_key = history.cookies[ROOM_COOKIE]
+        for path in ("/jury/start/history", "/jury/start"):
+            assert (await history.post(path, headers=origin)).status_code == 303
+            assert history.cookies[ROOM_COOKIE] == initial_key
+        owner = await sign_in(history, "client_demo", "customer fixture")
+        soc = await sign_in(history, "admin_demo", "officer fixture")
+        other_owner = await sign_in(standard, "client_demo", "customer fixture")
+        other_soc = await sign_in(standard, "admin_demo", "officer fixture")
+        account = (await history.get(BASE + "/account", headers=owner)).json()
+        other_account = (await standard.get(BASE + "/account", headers=other_owner)).json()
+        assert len(account["recipients"]) == 7
+        assert {r["payee_ref"] for r in account["recipients"] if "payee_ref" in r} == set(
+            SAVED_TRANSFERS
+        )
+        assert len(other_account["recipients"]) == 3
+        assert account["balance"] == other_account["balance"]
+        assert account["telegram_mode"] == "fake"
+        assert (await standard.get(BASE + "/account", headers=owner)).status_code == 401
+        cases = (await history.get(cases_url, headers=soc)).json()["items"]
+        assert len(cases) == 10
+        assert (await standard.get(cases_url, headers=other_soc)).json()["items"] == []
+
+        first_transfer = str(SAVED_TRANSFERS["saved-1"])
+        reports = (await history.get(guardian + "/reports", headers=owner)).json()
+        answered = next(r for r in reports if r["transaction_id"] == first_transfer)
+        case = next(c for c in cases if c["report_id"] == answered["id"])
+        path = cases_url + "/" + case["id"]
+        assert (await history.get(path, headers=soc)).json()["report_id"] == answered["id"]
+        assert (await standard.get(path, headers=other_soc)).status_code == 404
+        events = (await history.get(path + "/history", headers=soc)).json()["items"]
+        assert {"REQUEST_INFORMATION", "INFORMATION_RECEIVED"} <= {e["code"] for e in events}
+        receipt = (
+            await history.get(BASE + "/api/transfers/" + first_transfer, headers=owner)
+        ).json()
+        graph = (
+            await history.get(BASE + f"/api/soc/graph/{SENDER_ID}?depth=1", headers=soc)
+        ).json()
+        assert any(
+            edge["source"] == str(SENDER_ID) and edge["target"] == receipt["recipient"]["id"]
+            for edge in graph["edges"]
+        )
+        config = BASE + "/protection/second-confirmation"
+        contacts = (await history.get(config, headers=owner)).json()["contacts"]
+        assert len(contacts) == 1
+        enabled = await history.post(
+            config, headers=owner, json={"action": "enable", "contact_id": contacts[0]["id"]}
+        )
+        assert enabled.status_code == 200, enabled.text

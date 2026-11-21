@@ -4,6 +4,7 @@ test("wallet card and chart remain usable at phone widths", async ({
   page,
 }) => {
   await page.goto("/");
+  await expect(page.locator("#personal-login [type=submit]")).toBeEnabled();
   for (const width of [320, 360, 412]) {
     await page.setViewportSize({ width, height: 720 });
     await page.evaluate(async () => {
@@ -100,6 +101,12 @@ test("sign-in can recover from a service outage without granting a role early", 
   });
   await page.addInitScript(() => localStorage.setItem("qadam.language", "ru"));
   await page.goto("https://wallet.test/");
+  await expect(page.locator("#personal-login [type=submit]")).toBeEnabled();
+  await page.locator("[name=login]").fill("sandbox_client");
+  await page.locator('[data-action="language"]').first().click();
+  await expect(page.locator("[name=login]")).toHaveValue("sandbox_client");
+  await page.locator('[data-action="language"]').first().click();
+  await expect(page.locator("[name=login]")).toHaveValue("sandbox_client");
   async function submit() {
     await page.locator("[name=login]").fill("sandbox_client");
     await page.locator("[name=password]").fill("synthetic fixture");

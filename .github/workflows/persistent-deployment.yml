@@ -1,0 +1,76 @@
+name: Persistent deployment
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &persistent_paths
+      - backend/Dockerfile.persistent
+      - .dockerignore
+      - deliverables/android/Saq-Bol-Android-2.7.apk
+      - deliverables/android/Saq-Bol-Android-2.7.json
+      - backend/scripts/start-persistent.sh
+      - deploy/render-persistent.yaml
+      - .github/workflows/persistent-deployment.yml
+      - backend/app/mobile_gateway/**
+      - backend/scripts/verify_persistent_release.py
+      - android-app/**
+  push:
+    branches: [main]
+    paths: *persistent_paths
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: qadam
+          POSTGRES_PASSWORD: synthetic-ci-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      redis:
+        image: valkey/valkey:8-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml jsonschema
+      - name: Validate against current Render schema
+        run: |
+          python - <<'PY'
+          import json, urllib.request, yaml, jsonschema
+          with urllib.request.urlopen("https://render.com/schema/render.yaml.json", timeout=30) as r:
+              schema = json.load(r)
+          with open("deploy/render-persistent.yaml") as f:
+              config = yaml.safe_load(f)
+          jsonschema.Draft7Validator(schema).validate(config)
+          PY
+      - name: Check entrypoint and reject temporary storage
+        run: |
+          sh -n backend/scripts/start-persistent.sh
+          if DATABASE_URL=sqlite:///tmp/demo.db sh backend/scripts/start-persistent.sh api; then
+            exit 1
+          fi
+      - name: Verify the released APK, signing certificate and original UI
+        run: |
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          test -x "$signer"
+          python android-app/scripts/verify-release.py --apksigner "$signer"
+      - name: Build persistent image
+        run: docker build -f backend/Dockerfile.persistent -t qadam-persistent .
+      - name: Check packaged application
+        run: |
+          docker run --rm qadam-persistent sh -c 'test -s .qadam-web/index.html && test -f alembic/versions/0013_staff_access.py && python -c "from app.mobile_gateway.app import factory"'
+      - name: Persistent storage and restart acceptance
+        env:
+          PERSISTENT_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+          PERSISTENT_REDIS_CONTAINER: ${{ job.services.redis.id }}
+        run: python backend/scripts/verify_persistent_release.py

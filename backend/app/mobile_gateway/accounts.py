@@ -4,16 +4,47 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy import func, select
 
 from app.api.deps import SessionDep
-from app.api.v1.payee_check import RECIPIENTS
+from app.api.v1.payee_check import PayeeLookup, PayeeRequest, account_verdict, check_payee
 from app.integrations.telegram.service import CONTACT_LIMIT
 from app.mobile_gateway.app import IdentityDep
+from app.mobile_gateway.demo_catalog import SAVED_TRANSFERS, saved_recipients, wallet_recipients
 from app.mobile_gateway.protection_models import PostCall
 from app.mobile_gateway.security_inbox import owner_inbox
 from app.mobile_gateway.wallet import balance
 from app.models import Account, RiskEvent, Transaction, TransactionStatus
 
 
+class SavedPayeeRequest(PayeeLookup):
+    recipient: Literal["saved-1", "saved-2", "saved-3", "saved-4"]
+
+
 def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
+    @app.post("/mobile/v1/api/payee-check")
+    async def mobile_payee_check(
+        body: PayeeRequest | SavedPayeeRequest, principal: IdentityDep, session: SessionDep
+    ) -> dict[str, Any]:
+        if principal.role != "client":
+            raise HTTPException(403, "mobile_role_forbidden")
+        if isinstance(body, PayeeRequest):
+            return (await check_payee(body, session)).model_dump()
+        account = await session.scalar(
+            saved_recipients(principal.subject).where(
+                Transaction.id == SAVED_TRANSFERS[body.recipient]
+            )
+        )
+        verdict, name = (
+            account_verdict(body, account.full_name, account.iban)
+            if account is not None
+            else ("unavailable", None)
+        )
+        return {
+            "recipient": body.recipient,
+            "bank": body.bank,
+            "status": verdict,
+            "display_name": name,
+            "source": "synthetic_directory",
+        }
+
     @app.get("/mobile/v1/account")
     async def account(principal: IdentityDep, session: SessionDep) -> dict[str, Any]:
         if principal.role != "client":
@@ -51,11 +82,7 @@ def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
             .order_by(Transaction.created_at.desc(), Transaction.id.desc())
             .limit(1)
         )
-        recipients = (
-            await session.scalars(
-                select(Account).where(Account.phone.in_(RECIPIENTS)).order_by(Account.full_name)
-            )
-        ).all()
+        recipients = await wallet_recipients(session, principal.subject)
         customer = await session.get(Account, principal.subject)
         if customer is None:
             raise HTTPException(404, "account_not_found")
@@ -71,7 +98,7 @@ def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
             "held": str(held or 0),
             "currency": "KZT",
             "active_pause": pause,
-            "recipients": [{"name": row.full_name, "phone": row.phone} for row in recipients],
+            "recipients": recipients,
         }
 
     @app.get("/mobile/v1/inbox")

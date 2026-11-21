@@ -1,4 +1,4 @@
-"""Redis sliding-window velocity counters (sorted sets, one round trip per evaluation).
+"""Redis sliding-window velocity counters with bounded reads of sorted sets.
 
 Attempts and settled funds use separate ZSETs. Attempt volume must never be used
 as evidence that a recipient has cashed out: held and blocked payments do not move money.
@@ -111,29 +111,28 @@ def _settled_payee(
 
 
 def _aggregate(rows: list[tuple[bytes | str, float]], now: float) -> FlowStats:
-    cutoffs = tuple(now - span for span in WINDOWS.values())
-    counts = [0] * len(cutoffs)
-    amounts: list[list[float]] = [[] for _ in cutoffs]
-    counterparties: list[set[str]] = [set() for _ in cutoffs]
-    for member, score in rows:
-        parts = _decode(member).split(":")
-        # legacy members "{tx}:{amount}" count each tx as its own counterparty
-        counterparty = parts[1] if len(parts) == 3 else parts[0]
-        try:
-            timestamp, amount = float(score), float(parts[-1])
-        except ValueError:
-            continue
-        for index, cutoff in enumerate(cutoffs):
-            if timestamp > cutoff:
-                counts[index] += 1
-                counterparties[index].add(counterparty)
-                amounts[index].append(amount)
-    return FlowStats(
-        windows={
-            name: WindowStat(counts[index], len(counterparties[index]), fsum(amounts[index]))
-            for index, name in enumerate(WINDOWS)
-        }
-    )
+    # Redis returns ascending scores. As each window widens, visit only the older
+    # rows it adds. Keep the left edge open, including when several scores tie there.
+    cursor = len(rows) - 1
+    amounts: list[float] = []
+    counterparties: set[str] = set()
+    windows: dict[str, WindowStat] = {}
+    for name, span in WINDOWS.items():
+        cutoff = now - span
+        while cursor >= 0 and rows[cursor][1] > cutoff:
+            member = rows[cursor][0]
+            cursor -= 1
+            parts = _decode(member).split(":")
+            try:
+                amount = float(parts[-1])
+            except ValueError:
+                continue
+            # Legacy "{tx}:{amount}" entries count the tx as its own counterparty.
+            counterparties.add(parts[1] if len(parts) == 3 else parts[0])
+            amounts.append(amount)
+        # Sum in the original Redis order to preserve historical rounding.
+        windows[name] = WindowStat(len(amounts), len(counterparties), fsum(reversed(amounts)))
+    return FlowStats(windows)
 
 
 def _write_attempt(

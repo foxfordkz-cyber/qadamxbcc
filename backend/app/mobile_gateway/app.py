@@ -18,7 +18,7 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
@@ -33,6 +33,7 @@ from app.integrations.config import IntegrationSettings
 from app.integrations.scam_check import EXPLANATIONS, GUIDANCE, LIMITATION, ScamCheckResult
 from app.main import create_app
 from app.mobile_gateway.config import MobileSettings
+from app.mobile_gateway.demo_catalog import allowed_recipient
 from app.mobile_gateway.staff_models import staff_status
 from app.models import Account, Transaction
 
@@ -43,7 +44,6 @@ CLIENT_PATHS = [
     ("GET", rf"transfers/{UUID_PATTERN}"),
     ("POST", rf"transfers/{UUID_PATTERN}/(?:resolve-cooling|cancel)"),
     ("POST", r"call-check"),
-    ("POST", r"payee-check"),
     ("GET", r"trusted-contacts"),
     ("POST", r"trusted-contacts"),
     ("DELETE", rf"trusted-contacts/{UUID_PATTERN}"),
@@ -239,10 +239,12 @@ def create_mobile_app(
     )
     from app.mobile_gateway.callbacks import install_callbacks
     from app.mobile_gateway.protection import install_protection
+    from app.mobile_gateway.readiness import install_readiness
     from app.mobile_gateway.staff import install_staff
     from app.mobile_gateway.technical_metrics import install_technical_metrics
     from app.mobile_gateway.wallet import install_wallet
 
+    install_readiness(app)
     install_wallet(app)
     install_staff(app, cfg)
     install_technical_metrics(app)
@@ -509,11 +511,13 @@ def create_mobile_app(
             if path == "transfers/evaluate" and body is not None:
                 if body.get("sender_id", str(principal.subject)) != str(principal.subject):
                     raise HTTPException(403, "mobile_owner_forbidden")
-                if cfg.auth_mode == "password":
-                    from app.api.v1.payee_check import RECIPIENTS
-
-                    if body.get("recipient_phone") not in RECIPIENTS or body.get("recipient_iban"):
-                        raise HTTPException(422, "mobile_recipient_unavailable")
+                if cfg.auth_mode == "password" and (
+                    body.get("recipient_iban")
+                    or not await allowed_recipient(
+                        session, principal.subject, body.get("recipient_phone")
+                    )
+                ):
+                    raise HTTPException(422, "mobile_recipient_unavailable")
                 body["sender_id"] = str(principal.subject)
                 # Replayed request IDs must also belong to this customer.
                 try:
@@ -565,6 +569,48 @@ def create_mobile_app(
 
     index = WEB_ASSETS / "index.html"
     if index.is_file():
+        release = WEB_ASSETS / "release.html"
+
+        def has_android_release() -> bool:
+            install = WEB_ASSETS / "install"
+            if browser_only or not (install / "index.html").is_file():
+                return False
+            try:
+                manifest = json.loads((install / "release.json").read_text(encoding="utf-8"))
+                name = manifest["apk"]
+                return (
+                    isinstance(name, str)
+                    and re.fullmatch(r"Saq-Bol-Android-\d+\.\d+(?:\.\d+)?\.apk", name) is not None
+                    and (install / name).is_file()
+                    and (install / name).stat().st_size == manifest["bytes"] > 0
+                )
+            except (OSError, ValueError, TypeError, KeyError):
+                return False
+
+        @app.get("/", include_in_schema=False)
+        async def release_home() -> Response:
+            if not release.is_file():
+                return RedirectResponse("/wallet/", status_code=307)
+            link = (
+                '<a class="secondary" href="/download/">Android APK</a>'
+                if has_android_release()
+                else ""
+            )
+            return HTMLResponse(
+                release.read_text(encoding="utf-8").replace("<!-- android-download -->", link)
+            )
+
+        @app.get("/soc/", include_in_schema=False)
+        async def soc_entry() -> RedirectResponse:
+            # The shared shell resolves the role from the authenticated server session.
+            return RedirectResponse("/wallet/", status_code=307)
+
+        @app.get("/download/", include_in_schema=False)
+        async def release_download() -> RedirectResponse:
+            if not has_android_release():
+                raise HTTPException(503, "release_artifact_not_published")
+            return RedirectResponse("/wallet/install/", status_code=307)
+
         if browser_only:
             # The downloadable team APK connects to a different service than a browser room.
             browser_shell = index.read_text(encoding="utf-8").replace(" data-install>", ">", 1)
