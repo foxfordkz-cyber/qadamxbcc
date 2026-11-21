@@ -8,7 +8,8 @@ async function offline(page, language = "ru") {
 }
 test("welcome exposes personal sign-in and explains unavailable deployment", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("h1")).toHaveText("Saq Bol × BCC");
+await expect(page.locator(".sign-heading")).toContainText("Saq Bol × BCC");
+  await expect(page.locator(".sign-heading h1")).toHaveText(/Кабинетке кіру|Вход в кабинет/);
   await page.locator('[name="login"]').fill("client_demo");
   await page.locator('[name="password"]').fill("example");
   await page.locator('[data-action="show-password"]').click();

@@ -1,0 +1,33 @@
+{
+  "width": 390,
+  "optionalAnalyticsDelayMs": 1200,
+  "results": [
+    {
+      "role": "client",
+      "signInMs": 2082,
+      "restoreMs": [
+        1367,
+        1940,
+        2453
+      ]
+    },
+    {
+      "role": "admin",
+      "signInMs": 1034,
+      "restoreMs": [
+        1278,
+        1943,
+        2377
+      ]
+    },
+    {
+      "role": "platform_admin",
+      "signInMs": 998,
+      "restoreMs": [
+        1151,
+        706,
+        1115
+      ]
+    }
+  ]
+}

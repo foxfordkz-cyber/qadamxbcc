@@ -4,29 +4,29 @@
   "results": [
     {
       "role": "client",
-      "signInMs": 2082,
+      "signInMs": 3120,
       "restoreMs": [
-        1367,
-        1940,
-        2453
+        1795,
+        1211,
+        1272
       ]
     },
     {
       "role": "admin",
-      "signInMs": 1034,
+      "signInMs": 1047,
       "restoreMs": [
-        1278,
-        1943,
-        2377
+        3031,
+        6133,
+        1257
       ]
     },
     {
       "role": "platform_admin",
-      "signInMs": 998,
+      "signInMs": 1443,
       "restoreMs": [
-        1151,
-        706,
-        1115
+        1582,
+        1493,
+        1897
       ]
     }
   ]
