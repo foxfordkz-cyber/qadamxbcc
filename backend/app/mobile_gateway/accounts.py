@@ -1,24 +1,19 @@
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import func, select
 
 from app.api.deps import SessionDep
 from app.api.v1.payee_check import RECIPIENTS
-from app.integrations.models import (
-    ContactNotification,
-    GuardianReport,
-    IntegrationAudit,
-    TrustedContact,
-)
 from app.integrations.telegram.service import CONTACT_LIMIT
 from app.mobile_gateway.app import IdentityDep
 from app.mobile_gateway.protection_models import PostCall
+from app.mobile_gateway.security_inbox import owner_inbox
 from app.mobile_gateway.wallet import balance
 from app.models import Account, RiskEvent, Transaction, TransactionStatus
 
 
-def install_accounts(app: FastAPI) -> None:
+def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
     @app.get("/mobile/v1/account")
     async def account(principal: IdentityDep, session: SessionDep) -> dict[str, Any]:
         if principal.role != "client":
@@ -80,60 +75,16 @@ def install_accounts(app: FastAPI) -> None:
         }
 
     @app.get("/mobile/v1/inbox")
-    async def inbox(principal: IdentityDep, session: SessionDep) -> dict[str, Any]:
+    async def inbox(
+        principal: IdentityDep, session: SessionDep, view: Literal["all", "actions"] = "all"
+    ) -> dict[str, Any]:
         if principal.role != "client":
             raise HTTPException(403, "client_required")
-        owner = principal.subject
-        events: list[dict[str, Any]] = []
-
-        def add(kind: str, obj: Any, status: str, when: Any) -> None:
-            events.append({"kind": kind, "object_id": str(obj), "state": status, "time": when})
-
-        pauses = (
-            await session.scalars(
-                select(Transaction)
-                .where(
-                    Transaction.sender_id == owner,
-                )
-                .order_by(Transaction.updated_at.desc())
-                .limit(30)
+        return {
+            "items": await owner_inbox(
+                session,
+                principal.subject,
+                case_updates=integrations_enabled,
+                actions_only=view == "actions",
             )
-        ).all()
-        for t in pauses:
-            add("transfer", t.id, t.status, t.resolved_at or t.created_at)
-        contacts = (
-            await session.scalars(
-                select(TrustedContact)
-                .where(TrustedContact.owner_id == owner)
-                .order_by(TrustedContact.created_at.desc())
-                .limit(30)
-            )
-        ).all()
-        for c in contacts:
-            add("contact", c.id, c.state, c.contact_consented_at or c.created_at)
-        reports = (
-            await session.scalars(
-                select(GuardianReport)
-                .where(GuardianReport.owner_id == owner)
-                .order_by(GuardianReport.created_at.desc())
-                .limit(30)
-            )
-        ).all()
-        for r in reports:
-            add("report", r.id, r.state, r.created_at)
-        rows = (
-            await session.execute(
-                select(IntegrationAudit, ContactNotification.transaction_id)
-                .join(ContactNotification, IntegrationAudit.resource_id == ContactNotification.id)
-                .where(
-                    IntegrationAudit.owner_id == owner,
-                    ContactNotification.owner_id == owner,
-                    IntegrationAudit.event.in_(["CONTACT_ACKNOWLEDGED", "SUSPICION_REPORTED"]),
-                )
-                .order_by(IntegrationAudit.created_at.desc())
-                .limit(30)
-            )
-        ).all()
-        for audit, tx in rows:
-            add("transfer", tx, audit.event, audit.created_at)
-        return {"items": sorted(events, key=lambda e: e["time"], reverse=True)[:30]}
+        }

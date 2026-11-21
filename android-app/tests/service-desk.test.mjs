@@ -14,6 +14,11 @@ test("case results distinguish the analyst's finding, live ledger state and next
   const rendered=desk().resolution(view);
   for(const text of ["case-123","Мошенничество подтверждено","13000.50 ₸","51000.00 ₸","отмените перевод",'data-detail="tx-10"']) assert.ok(rendered.includes(text));
   assert.match(desk(true).resolution(view),/Алаяқтық расталды/);
+  assert.match(rendered, /data-case-cancel="tx-10"/);
+  for (const [outcome, state] of [["confirmed_fraud", "approved"], ["confirmed_fraud", "cancelled"], ["legitimate_transfer", "cooling_off"], ["insufficient_evidence", "cooling_off"]]) {
+    const resolution = {...view.resolution, outcome, operation: {...view.resolution.operation, status: state}};
+    assert.doesNotMatch(desk().resolution({...view, resolution}), /data-case-cancel/);
+  }
   assert.equal(desk().resolution({...view,case_state:"IN_REVIEW"}),"");
   assert.equal(desk().closeCase({state:"CLOSED"}),"");
   assert.match(desk().closeCase({state:"IN_REVIEW"}),/value="insufficient_evidence"/);

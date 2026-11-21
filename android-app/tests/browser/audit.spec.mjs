@@ -10,7 +10,13 @@ async function enter(page,baseURL,fixture={}) {
     const path=u.pathname.slice(11);
     let status=200, json={};
     if(path==="auth/login")json={role:"client",subject:"audit-fixture",token:"fixture-session"};
-    else if(path==="inbox")json={items:fixture.messages || []};
+    else if(path==="inbox"){
+      fixture.inboxReads=(fixture.inboxReads||0)+1;
+      if (fixture.inboxGate) await fixture.inboxGate;
+      const actions = u.search === "?view=actions";
+      status = fixture.inboxStatus || 200;
+      json = {items: actions ? fixture.actions || [] : fixture.messages || []};
+    }
     else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",recipients:[{name:"Арман",phone:"+77010000002"}]};
     else if(path==="api/payee-check"){
       const body=route.request().postDataJSON();
@@ -34,7 +40,11 @@ async function enter(page,baseURL,fixture={}) {
       json = route.request().postDataJSON().language === "kk" ? {...kk, alternate:ru} : {...ru, alternate:kk};
     }
     else if(path.endsWith("/reports")&&route.request().method()==="POST"){fixture.sent=route.request().postDataJSON();status=fixture.reportStatus||200;json={id:ids[0]};}
-    else if(path.endsWith("/history")||path.endsWith("/information-requests"))json={items:[]};
+    else if(/^api\/integrations\/guardian\/reports\/[\da-f-]+$/.test(path))
+      json={id:path.split("/").at(-1),state:"SUBMITTED",description:"Сообщение клиента"};
+    else if(path.startsWith("api/integrations/guardian/reports/")&&path.endsWith("/information-requests"))
+      json=fixture.questions||[];
+    else if(path.endsWith("/history")||path.endsWith("/information-requests"))json=[];
     else if(path.endsWith("trusted-contacts"))json={contacts:[]};
     await route.fulfill({status,json});
   });
@@ -154,4 +164,79 @@ test("a new security event appears in the open inbox without a manual reload",as
   await expect(page.locator("h1")).toContainText("Сообщения безопасности");
   fixture.messages.push({kind:"transfer",object_id:ids[0],state:"cooling_off",time:"2026-11-20T10:00:00Z"});
   await expect(page.locator('[data-object-id="'+ids[0]+'"]')).toBeVisible({timeout:5500});
+});
+
+test("client can open pending questions, case updates and the exact family-approved transfer in kk and ru",async({page,baseURL})=>{
+  const reportClosed="cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const event=(kind,state,id)=>({kind,state,object_id:id,time:"2026-11-21T10:00:00Z"});
+  const messages=[
+    event("report","CASE_REVIEW_CLOSED",reportClosed),
+    event("transfer","FAMILY_APPROVAL_RECORDED",ids[1]),
+    event("report","CASE_INFORMATION_REQUIRED",ids[0]),
+    event("report","CASE_REVIEW_REOPENED",ids[0]),
+  ];
+  const fixture={messages,actions:[messages[2],messages[3],messages[0],messages[1]],questions:[{id:ids[1],answered:false,description_ru:"Уточните обстоятельства",description_kk:"Мән-жайды нақтылаңыз"}]};
+  await enter(page,baseURL,fixture);
+  const home=page.locator(".home-security");
+  const row=(panel,state)=>panel.locator('[data-inbox-state="'+state+'"]');
+  await expect(home.locator(".security-notice")).toHaveCount(3);
+  await expect(home.locator(".security-notice").first()).toContainText("Ответить на вопрос");
+  await expect(row(home,"CASE_REVIEW_REOPENED")).toHaveCount(0);
+  await row(home,"CASE_INFORMATION_REQUIRED").click();
+  await expect(page.locator("main")).toContainText(ids[0]);
+  await expect(page.locator("#request-answer")).toBeVisible();
+  await page.locator("[data-nav=home]").click();
+  await row(home,"CASE_REVIEW_CLOSED").click();
+  await expect(page.locator("main")).toContainText(reportClosed);
+  await page.locator("[data-nav=home]").click();
+  await home.locator("[data-action=inbox]").click();
+  const inbox=page.locator("main");
+  await expect(row(inbox,"CASE_REVIEW_REOPENED")).toContainText("Рассмотрение обращения возобновлено");
+  await expect(row(inbox,"FAMILY_APPROVAL_RECORDED")).toContainText("Проверить статус перевода");
+  await page.locator("[data-action=language]:visible").first().click();
+  await expect(row(inbox,"CASE_INFORMATION_REQUIRED")).toContainText("Сұраққа жауап беру");
+  await expect(row(inbox,"CASE_REVIEW_CLOSED")).toContainText("Қорытындыны көру");
+  await expect(row(inbox,"CASE_REVIEW_REOPENED")).toContainText("Өтініш қайта қаралуда");
+  await expect(row(inbox,"FAMILY_APPROVAL_RECORDED")).toContainText("Аударым күйін тексеру");
+  await row(inbox,"FAMILY_APPROVAL_RECORDED").click();
+  await expect(page.locator(".break-id")).toHaveText(ids[1]);
+});
+
+test("an unavailable or slow security inbox leaves the client wallet usable", async({page,baseURL})=>{
+  let release;
+  const fixture={inboxStatus:503,inboxGate:new Promise(resolve=>{release=resolve;})};
+  await enter(page,baseURL,fixture);
+  await expect(page.locator(".q-card")).toBeVisible();
+  await expect.poll(()=>fixture.inboxReads).toBe(1);
+  await page.locator("[data-nav=history]").click();
+  release();
+  await expect(page.locator("h1")).toContainText("Операции");
+  await expect(page.locator(".home-security")).toHaveCount(0);
+  await page.locator("[data-nav=home]").click();
+  await expect(page.locator(".home-security")).toContainText("Не удалось загрузить сообщения");
+  await expect(page.locator(".q-card")).toBeVisible();
+  await expect(page.locator("[data-action=transfer]")).toBeEnabled();
+});
+
+test("home refreshes security updates without frequent inbox reads or stale transfer shortcuts", async({page,baseURL})=>{
+  await page.clock.install();
+  const familyApproval = {kind:"transfer",state:"FAMILY_APPROVAL_RECORDED",object_id:ids[0],time:"2026-11-21T10:00:00Z"};
+  const fixture = {actions:[familyApproval], messages:[familyApproval]};
+  await enter(page,baseURL,fixture);
+  const home=page.locator(".home-security");
+  await expect(home.locator("[data-inbox-state=FAMILY_APPROVAL_RECORDED]")).toBeVisible();
+  await page.clock.fastForward(12000);
+  expect(fixture.inboxReads).toBe(1);
+  fixture.messages = Array.from({length:30},()=>({
+    kind:"transfer",state:"approved",object_id:ids[0],time:"2026-11-21T12:00:00Z",
+  }));
+  fixture.actions = Array.from({length:4},(_,index)=>({
+    kind:"report",state:"CASE_INFORMATION_REQUIRED",object_id:"cccccccc-cccc-4ccc-8ccc-ccccccccccc"+index,time:"2026-11-21T10:02:00Z",
+  }));
+  await page.clock.fastForward(25000);
+  await expect(home.locator("[data-inbox-state=CASE_INFORMATION_REQUIRED]:visible")).toHaveCount(3);
+  await home.locator(".more-security summary").click();
+  await expect(home.locator("[data-inbox-state=CASE_INFORMATION_REQUIRED]:visible")).toHaveCount(4);
+  await expect(home.locator("[data-inbox-state=FAMILY_APPROVAL_RECORDED]")).toHaveCount(0);
+  expect(fixture.inboxReads).toBe(2);
 });

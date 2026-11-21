@@ -201,6 +201,11 @@ async def test_second_confirmation_bound_to_exact_held_transfer(
             with pytest.raises(IntegrationError):
                 await service.callback(notice_id, chat_id, message, "approve")
     state = (await client.get(check, headers=auth)).json()["second_confirmation"]["state"]
+    home = "/mobile/v1/inbox?view=actions"
+    active_messages = (await client.get(home, headers=auth)).json()["items"]
+    assert [r["state"] for r in active_messages] == (
+        ["FAMILY_APPROVAL_RECORDED"] if outcome == "confirmed" else []
+    )
     packet = (await client.get(f"/mobile/v1/protection/{tid}/packet", headers=auth)).json()
     assert sum(event["kind"] == "family_approved" for event in packet["events"]) == 1
     assert state == ("unavailable" if outcome in ("changed", "revoked") else outcome)
@@ -215,6 +220,9 @@ async def test_second_confirmation_bound_to_exact_held_transfer(
     assert (await client.get(check, headers=auth)).json()["second_confirmation"][
         "state"
     ] == "closed"
+    assert (await client.get(home, headers=auth)).json()["items"] == []
+    inbox = (await client.get("/mobile/v1/inbox", headers=auth)).json()["items"]
+    assert sum(r["state"] == "FAMILY_APPROVAL_RECORDED" for r in inbox) == 1
 
 
 async def test_family_policy_preserves_small_known_and_pending_after_disable(

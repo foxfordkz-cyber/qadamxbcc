@@ -246,7 +246,7 @@ def create_mobile_app(
     install_wallet(app)
     install_staff(app, cfg)
     install_technical_metrics(app)
-    install_accounts(app)
+    install_accounts(app, integrations_enabled=core.state.integration_settings.enabled)
     install_protection(app, core.state.integration_settings)
     install_callbacks(app, cfg, core.state.integration_settings.enabled)
 

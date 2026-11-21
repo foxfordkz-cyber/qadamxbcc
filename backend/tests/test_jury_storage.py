@@ -187,6 +187,13 @@ async def test_room_contact_can_approve_only_its_own_request(
         assert (await unrelated.post(decision[1], headers=origin)).status_code == 403
         assert (await contact.post(decision[1])).status_code == 403
         assert (await contact.post(decision[1], headers=origin)).status_code == 303
+        assert (await contact.get(BASE + "/inbox")).status_code == 401
+        events = (await client.get(BASE + "/inbox", headers=access)).json()["items"]
+        confirmations = [item for item in events if item["state"] == "FAMILY_APPROVAL_RECORDED"]
+        assert len(confirmations) == 1
+        assert confirmations[0]["kind"] == "transfer"
+        assert confirmations[0]["object_id"] == held.json()["transaction_id"]
+        assert set(confirmations[0]) == {"kind", "object_id", "state", "time"}
         assert "Клиенттің шешімі күтілуде" in (await contact.get(CONTACT_INBOX)).text
         balance = (await client.get(BASE + "/account", headers=access)).json()
         assert balance["active_pause"] == held.json()["transaction_id"]

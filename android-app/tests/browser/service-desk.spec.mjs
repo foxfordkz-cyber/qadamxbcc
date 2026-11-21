@@ -120,3 +120,30 @@ test("saved answers survive navigation and delayed saving never releases a trans
   await expect(page.locator("h1")).toHaveText("Выполнен");
   expect(intents).toEqual([true,false]);
 });
+
+test("cancellation reviews the current receipt and reconciles a lost acknowledgement", async ({page,baseURL}) => {
+  const tx = {transaction_id:id, amount:"12500.25", status:"cooling_off", direction:"outgoing",
+    recipient:{display_name:"Алия", iban_masked:"KZ** 1234"}, created_at:new Date().toISOString(),
+    server_time:new Date().toISOString(), cooling_off_until:new Date(Date.now()+900000).toISOString()};
+  let writes=0;
+  await login(page,baseURL,"client",path=>{
+    if(path==="/account") return {json:{display_name:"Данияр",balance:"100000",recipients:[]}};
+    if(path==="/wallet/operations") return {json:{items:[tx]}};
+    if(path==="/wallet/analytics") return {json:{outgoing:"0"}};
+    if(path==="/api/transfers/"+id) return {json:tx};
+    if(path==="/api/transfers/"+id+"/cancel") {
+      writes++; tx.status="cancelled"; return {status:503,json:{}};
+    }
+    if(path==="/protection/"+id+"/check") return {json:{transaction_id:id}};
+    return {json:{items:[],contacts:[]}};
+  });
+  await page.locator(`[data-detail="${id}"]`).first().click();
+  await page.locator('[data-action="cancel-confirm"]').click();
+  const sheet=page.locator('[data-screen="confirmCancel"]');
+  await expect(sheet.locator(".receipt")).toContainText("Алия");
+  await expect(sheet.locator(".amount")).toHaveText("12 500,25 ₸");
+  expect(writes).toBe(0);
+  await sheet.locator(`[data-action="cancel-transfer"][data-transaction="${id}"]`).click();
+  await expect(page.locator("main h1")).toHaveText("Отменён");
+  expect(writes).toBe(1);
+});

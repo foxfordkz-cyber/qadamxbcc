@@ -449,6 +449,36 @@ label {
 .wallet-section .w-heading {
   margin: 0 0 6px;
 }
+.security-notice {
+  display: grid;
+  gap: 4px;
+}
+.security-notice strong {
+  font-size: 1rem;
+}
+.security-notice .notice-action {
+  color: var(--pine);
+  font-weight: 650;
+}
+.home-security .security-notice {
+  margin: 0;
+  padding: 10px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.home-security .security-notice + .security-notice {
+  border-top: 1px solid var(--line);
+}
+.home-security [data-inbox-state="CASE_INFORMATION_REQUIRED"] .notice-action {
+  color: #7c4b0f;
+}
+.more-security summary {
+  cursor: pointer;
+  color: var(--pine);
+  padding: 12px 0;
+  font-weight: 650;
+}
 .w-link,
 .w-heading button {
   display: inline-flex;
