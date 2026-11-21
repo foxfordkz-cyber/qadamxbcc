@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.db.base import utcnow
 from app.db.session import build_engine
+from app.integrations.audit import record
 from app.integrations.capabilities import Principal
 from app.integrations.cases import service
 from app.integrations.cases.models import CaseEvent, FraudCase
@@ -24,16 +25,17 @@ from app.integrations.cases.schemas import (
     AskInformation,
     Assign,
     Note,
+    State,
     Transition,
 )
-from app.integrations.guardian_reports import ReportRequest, create_report
+from app.integrations.guardian_reports import Category, ReportRequest, create_report
 from app.integrations.models import GuardianReport, TrustedContact
 from app.mobile_gateway.demo_catalog import PACK, key
 from app.models import Account, GraphEdge, Transaction, TransactionStatus
 from app.models.entities import EdgeType
 from scripts.seed_bcc import FRIEND_ID, HUB_ID, SENDER_ID, STRANGER_ID
 
-DESCRIPTIONS = (
+DESCRIPTIONS: tuple[tuple[Category, str], ...] = (
     ("impersonation", "Демо: звонивший представился сотрудником. Прошу проверить операцию."),
     ("safe_account", "Демо: попросили срочно перевести деньги на защищённый счёт."),
     ("remote_access", "Демо: собеседник предложил установить программу для помощи."),
@@ -41,14 +43,14 @@ DESCRIPTIONS = (
 )
 
 
-async def populate(db: AsyncSession) -> dict:
+async def populate(db: AsyncSession) -> dict[str, object]:
     first = await db.get(Transaction, key("out/0"))
     if first:
         return {
             "added": 0,
             "already_applied": True,
             "first_operation": str(first.id),
-            "anchor": first.created_at.isoformat(),
+            "anchor": (first.created_at + timedelta(hours=1)).isoformat(),
             "delta_by_account": {},
         }
     owner = await db.get(Account, SENDER_ID)
@@ -138,10 +140,13 @@ async def populate(db: AsyncSession) -> dict:
             ),
             key(f"report/{i}"),
         )
+        if i % 3 == 1:
+            report.state = "DEMO_ACKNOWLEDGED"
+            record(db, report.owner_id, report.id, report.id, "GUARDIAN_REPORT_DEMO_ACKNOWLEDGED")
         case = await service.open_case(db, report.id, soc, key(f"open/{i}"), report.content_hash)
         if i == 3:
             continue
-        mutations = [
+        mutations: list[Assign | Transition | Note | AskInformation] = [
             Assign(action="assign", expected_version=1, assignee="demo_analyst_a"),
             Transition(
                 action="transition", expected_version=2, state="IN_REVIEW", reason="review_started"
@@ -159,13 +164,13 @@ async def populate(db: AsyncSession) -> dict:
                 )
             )
         else:
-            state = "CLOSED" if i % 3 == 1 else "ESCALATED"
+            next_state: State = "CLOSED" if i % 3 == 1 else "ESCALATED"
             mutations.append(
                 Transition(
                     action="transition",
                     expected_version=4,
-                    state=state,
-                    reason="review_complete" if state == "CLOSED" else "needs_followup",
+                    state=next_state,
+                    reason="review_complete" if next_state == "CLOSED" else "needs_followup",
                 )
             )
         for step, action in enumerate(mutations):
@@ -177,6 +182,8 @@ async def populate(db: AsyncSession) -> dict:
                 )
             )
             row = await db.get(FraudCase, case.id)
+            if question is None or row is None:
+                raise RuntimeError("Missing fixture case or information request")
             await service.answer(
                 db,
                 row,
@@ -193,7 +200,7 @@ async def populate(db: AsyncSession) -> dict:
     )
     added_contacts = 0
     for i, state in enumerate(("CONTACT_PENDING_CONSENT", "CONTACT_REVOKED", "CONTACT_VERIFIED")):
-        if contact_count + added_contacts >= 3:
+        if (contact_count or 0) + added_contacts >= 3:
             break
         db.add(
             TrustedContact(
@@ -222,7 +229,7 @@ async def populate(db: AsyncSession) -> dict:
     }
 
 
-async def main(apply: bool) -> None:
+def target_database() -> str:
     cfg = get_settings()
     url = make_url(cfg.database_url)
     if not (
@@ -234,7 +241,12 @@ async def main(apply: bool) -> None:
         and url.database == "qadam_handoff"
     ):
         raise SystemExit("Expected private qadam-handoff Compose database and fake adapter")
-    engine = build_engine(cfg.database_url)
+    return cfg.database_url
+
+
+async def main(apply: bool) -> None:
+    database = target_database()
+    engine = build_engine(database)
     try:
         async with engine.connect() as conn:
             outer = await conn.begin()
@@ -259,7 +271,7 @@ async def main(apply: bool) -> None:
                     {
                         "dataset": PACK,
                         "applied": apply,
-                        "target": url.database,
+                        "target": make_url(database).database,
                         "before": baseline,
                         **plan,
                     }

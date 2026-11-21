@@ -22,11 +22,17 @@ async function signIn(name, field) {
   await page.locator("nav").waitFor();
   return {page,subject:session.subject};
 }
-async function api(actor, path, expected=200) {
-  const response=await actor.page.request.get(origin+"/mobile/v1"+path,{headers:{
-    "X-Qadam-Subject":actor.subject,"X-Qadam-Web":"1",Origin:origin}});
-  assert.equal(response.status(),expected,path);
-  return response.json();
+async function api({page, subject}, path, expected=200, method="GET") {
+  const reply = await page.evaluate(async ({subject, path, method}) => {
+    const headers = {"X-Qadam-Subject": subject, "X-Qadam-Web": "1"};
+    if (method === "POST") headers["Idempotency-Key"] = crypto.randomUUID();
+    const response = await fetch("/mobile/v1" + path, {
+      method, headers, credentials: "same-origin", redirect: "error",
+    });
+    return {status: response.status, data: await response.json()};
+  }, {subject, path, method});
+  assert.equal(reply.status, expected, path);
+  return reply.data;
 }
 async function screen(page,name,selector) {
   await page.locator(selector).first().waitFor();
@@ -58,7 +64,11 @@ try {
   const reports=await api(client,"/api/integrations/guardian/reports");
   const cases=await api(soc,"/wallet/cases");
   assert.ok(reports.length>=4 && cases.items.length>=10);
-  const report=reports.find(r=>r.transaction_id);
+  const report=reports.find(r=>r.transaction_id && r.state==="SUBMITTED") ??
+    reports.find(r=>r.transaction_id);
+  const reportPath = "/api/integrations/guardian/reports/" + report.id;
+  await api(soc, reportPath + "/acknowledge", 200, "POST");
+  assert.equal((await api(client, reportPath)).state, "DEMO_ACKNOWLEDGED");
   const linked=cases.items.find(c=>c.report_id===report.id);
   assert.ok(linked);
   const evidence=await api(soc,"/api/integrations/guardian/soc/cases/"+linked.id+"/evidence");
@@ -74,6 +84,7 @@ try {
   await screen(soc.page,"soc-feed","[data-detail]");
   await soc.page.locator("details summary").first().click();
   await soc.page.locator("details [data-graph]").first().click();
+  await soc.page.locator("#node-focus").selectOption({index: 1});
   await screen(soc.page,"soc-network","#graph-records [data-detail]");
   await soc.page.locator('[data-nav="cases"]').click();
   await screen(soc.page,"soc-cases","[data-case]");
