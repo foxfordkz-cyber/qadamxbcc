@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { AppConfig } from "./contracts";
 
 const ref = z.enum(["normal", "scam", "hub"]);
 const bank = z.enum(["bcc", "other"]);
@@ -22,6 +23,12 @@ export function recipientRef(type: "phone" | "card" | "iban", detail: string) {
   if (type === "iban") return null;
   const normalized = detail.replace(/[\s()-]/g, "");
   return ref.options.find(key => fixtures[key][type] === normalized) ?? null;
+}
+
+export function fixtureContactName(config: Pick<AppConfig, "mode" | "accountMode">, type: "phone" | "card" | "iban", detail: string) {
+  if (config.mode !== "demo" && config.accountMode !== "test") return null;
+  const key = recipientRef(type, detail);
+  return key ? fixtures[key].name : null;
 }
 
 const nameKey = (name: string) => name.normalize("NFC").toLowerCase().replace(/[.\s]+/g, " ").trim();

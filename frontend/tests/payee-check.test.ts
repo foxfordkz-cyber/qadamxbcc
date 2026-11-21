@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { NextRequest } from "next/server";
 import { POST } from "../src/app/api/v1/[...path]/route";
-import { demoPayee, payeeInput, payeeResult, recipientRef } from "../src/lib/payee-check";
+import { demoPayee, fixtureContactName, payeeInput, payeeResult, recipientRef } from "../src/lib/payee-check";
 import { validateApiResponse } from "../src/lib/contracts";
 
 test("only published phone and card fixtures can be mapped to a beneficiary", () => {
@@ -26,6 +26,14 @@ test("name comparison only reflects the selected test bank and masked beneficiar
   assert.equal(payeeResult.safeParse({...unavailable, display_name: "Данияр А."}).success, false);
   assert.equal(payeeResult.safeParse({...demoPayee(query), display_name: "Данияр Асылов"}).success, false);
   assert.throws(() => validateApiResponse("payee-check", {...unavailable, phone: "+77010005819"}));
+});
+
+test("wallet uses masked fixture names only for matching details in a training environment", () => {
+  assert.equal(fixtureContactName({mode: "live", accountMode: "test"}, "phone", "+7 (701) 000-00-02"), "Данияр А.");
+  assert.equal(fixtureContactName({mode: "demo"}, "card", "4400 0000 0000 0004"), "Марат Т.");
+  assert.equal(fixtureContactName({mode: "live", accountMode: "test"}, "phone", "+77010000099"), null);
+  assert.equal(fixtureContactName({mode: "live", accountMode: "pilot"}, "phone", "+77010000002"), null);
+  assert.equal(fixtureContactName({mode: "live"}, "card", "4400000000000004"), null);
 });
 
 test("live public demo only forwards fixture refs and rejects a different beneficiary's response", async t => {

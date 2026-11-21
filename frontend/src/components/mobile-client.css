@@ -34,18 +34,17 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .phone-frame .field-label, .phone-frame .field-heading > label { display: block; font-size: 14px; font-weight: 650; color: var(--ink); }
 .field-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .phone-frame .segmented button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
-.source-card { position: relative; display: flex; flex-direction: column; justify-content: space-between; aspect-ratio: 2; max-height: 190px; padding: 18px 20px; border-radius: 18px; background: #1D2939; color: #FFFFFF; box-shadow: 0 10px 24px -14px rgba(16, 24, 40, .7); overflow: hidden; }
-.source-card::after { content: ""; position: absolute; inset: auto -40px -70px auto; width: 190px; height: 190px; border-radius: 50%; border: 22px solid rgba(255, 255, 255, .05); pointer-events: none; }
-.source-top, .source-bottom { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.card-brand { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
-.card-kind { display: block; margin-top: 2px; font-size: 11px; color: #98A2B3; }
-.card-bank { font-size: 22px; font-weight: 800; letter-spacing: -.04em; color: var(--emerald); }
-.card-chip { width: 34px; height: 26px; border-radius: 6px; background: #D0D5DD; opacity: .85; }
-.card-number { flex: 1; font-size: 16px; letter-spacing: .12em; font-variant-numeric: tabular-nums; }
-.card-currency { font-size: 12px; font-weight: 650; color: #D0D5DD; }
-.source-balance { display: flex; align-items: baseline; gap: 6px; font-size: 13px; color: var(--muted); }
-.source-balance b { color: var(--ink); font-size: 15px; font-weight: 650; }
-.source-balance em { margin-left: auto; padding: 2px 8px; border-radius: 999px; background: var(--surface-3); color: var(--ink-3); font-size: 11px; font-style: normal; font-weight: 600; }
+.source-card { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; min-width: 0; color: var(--ink); }
+.card-thumbnail, .source-account-icon { display: grid; place-items: center; flex: none; width: 42px; height: 29px; border-radius: 6px; }
+.card-thumbnail { position: relative; isolation: isolate; overflow: hidden; background: #163e35; color: #c4f7d9; font-size: 23px; font-weight: 750; font-style: italic; line-height: 1; }
+.card-thumbnail::after { content: ""; position: absolute; inset: -16px -9px -17px 22px; z-index: -1; border: 6px solid #26725a; border-radius: 45%; transform: rotate(-24deg); }
+.source-account-icon { background: var(--emerald-soft); color: var(--emerald-ink); }
+.source-name, .source-balance { display: grid; gap: 2px; min-width: 0; }
+.card-brand { font-size: 15px; font-weight: 680; letter-spacing: -.015em; }
+.card-number, .source-balance small { color: var(--muted); font-size: 12px; line-height: 1.3; }
+.card-number { font-variant-numeric: tabular-nums; }
+.source-balance { margin-inline-start: auto; text-align: end; }
+.source-balance b { font-size: 16px; font-weight: 700; line-height: 1.25; white-space: nowrap; }
 .contact-list { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 4px; margin: 0 -4px; scrollbar-width: none; }
 .contact-list::-webkit-scrollbar { display: none; }
 .contact { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; width: 76px; padding: 6px 2px; border-radius: 14px; font-size: 12px; color: var(--ink-3); }
