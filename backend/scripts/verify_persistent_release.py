@@ -58,7 +58,16 @@ def expect_status(path: str, status: int, token: str = "", body: Any = None) -> 
 def worker_ready() -> None:
     for _ in range(30):
         checked = subprocess.run(
-            ["docker", "exec", WORKER, "python", "-m", "app.integrations.worker", "--health"],
+            [
+                "docker",
+                "exec",
+                WORKER,
+                "python",
+                "-c",
+                "import os,sys; from redis import Redis; "
+                "r=Redis.from_url(os.environ['BCC_REDIS_URL'],socket_timeout=2); "
+                "sys.exit(0 if r.get('bcc:integrations:worker:heartbeat') else 1)",
+            ],
             capture_output=True,
             timeout=10,
         )
