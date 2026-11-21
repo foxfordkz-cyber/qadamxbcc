@@ -17,7 +17,9 @@ COPY backend/scripts ./scripts
 COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./
 COPY --from=wallet /src/backend/.qadam-web ./.qadam-web
-RUN python -m scripts.train_fraud_model && useradd --create-home qadam
+RUN python -m scripts.train_fraud_model \
+    && chmod 0444 app/ml/fraud_model.joblib \
+    && useradd --create-home qadam
 USER qadam
 EXPOSE 10000
 CMD ["sh", "scripts/start-persistent.sh", "api"]
