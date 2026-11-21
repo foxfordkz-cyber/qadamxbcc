@@ -63,6 +63,16 @@ async function main() {
   await context.route('**/api/v1/**', async route => {
     const request = route.request(); const url = new URL(request.url()); const method = request.method();
     report.requests.push({ method, path: url.pathname, search: url.search });
+    if (method === 'POST' && url.pathname === '/api/v1/payee-check') {
+      const { recipient, bank, expected_name } = request.postDataJSON();
+      const directory = new Map([['normal', 'Данияр А.'], ['scam', 'Алексей К.'], ['hub', 'Марат Т.']]);
+      if (!directory.has(recipient) || !['bcc', 'other'].includes(bank) || expected_name !== '') {
+        return route.fulfill({ status: 422, json: { error: 'invalid' } });
+      }
+      // A directory read, even over POST, never creates or changes a transfer.
+      return route.fulfill({ json: { recipient, bank, source: 'synthetic_directory',
+        status: bank === 'bcc' ? 'identified' : 'unavailable', display_name: bank === 'bcc' ? directory.get(recipient) : null } });
+    }
     if (method === 'POST') report.mutations.push({ path: url.pathname, intercepted: true });
     if (url.pathname.endsWith('/transfers/evaluate') && method === 'POST') return route.fulfill({ json: evaluation(create(request.postDataJSON())) });
     const action = url.pathname.match(/\/transfers\/([0-9a-f-]+)\/(resolve-cooling|cancel|post-call)$/i);
