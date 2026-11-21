@@ -6,7 +6,7 @@ import { walletUI, icon, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
 import { shortcuts, familyView, checkView, packetContent, secondConfirmationView, secondSettingsView } from "./guardian.mjs";
 import { packetView } from "./packet.mjs";
-import { canConfirmPayee, checkPayee, payeeFields, payeeVerdict, phoneNumber } from "./payee-check.mjs";
+import { canConfirmPayee, checkPayee, needsCallAnswer, payeeFields, payeeVerdict, phoneNumber, submissionContext } from "./payee-check.mjs";
 import { readScreenshot } from "./screenshot.mjs";
 import * as identity from "./identity.mjs";
 import { PUBLIC_DEMO, openExternal } from "./native.mjs";
@@ -305,7 +305,7 @@ async function open(next, id, remember=true) {
         if (product && next === "home") account = await gateway.request("/account");
       }
     } else if(next==="analytics") data=await gateway.request("/wallet/analytics?days="+walletDays);
-    else if(next==="socAnalytics")data=await gateway.request("/wallet/soc?days="+socDays);
+    else if(next==="socAnalytics")data=await gateway.request("/wallet/soc?days="+socDays+"&include_policy=true");
     else if(next==="incoming")data=await gateway.request("/wallet/incoming/"+id);
     else if(product && next==="safety") [account,circle]=await Promise.all([gateway.request("/account"),api("trusted-contacts")]);
     else if (next === "family") {
@@ -325,7 +325,7 @@ async function open(next, id, remember=true) {
       account = await gateway.request("/account");
     } else if (product && next === "review" && draft?.payee) {
       const reviewed = draft;
-      const check = await checkPayee(reviewed, api, account?.recipients);
+      const check = await checkPayee(reviewed, api, account?.recipients, account?.supports_call_question);
       if (page === "review" && draft === reviewed) data = check;
     } else if (next === "detail") {
       accept(await api(`transfers/${selectedId}`));
@@ -538,11 +538,22 @@ async function back() {
   const previous = backStack.pop();
   await open(previous?.page || "home", previous?.id, false);
 }
+const callAnswers = {
+  on_call: ["Да, разговор ещё идёт", "Иә, әлі сөйлесіп жатырмын"],
+  after_call: ["Да, звонок уже закончился", "Иә, қоңырау аяқталды"],
+  no_request: ["Нет, меня не просили", "Жоқ, ешкім сұраған жоқ"],
+};
+function callQuestion() {
+  return `<fieldset class="call-question"><legend>${T("Вас по телефону попросили сделать именно этот перевод?", "Осы аударымды жасауды сізден телефон арқылы сұрады ма?")}</legend>
+    ${Object.entries(callAnswers).map(([value, labels]) => `<label class="tick-field"><input type="radio" name="call_pressure_answer" value="${value}" ${draft.callAnswer === value ? "checked" : ""}>${T(...labels)}</label>`).join("")}</fieldset>`;
+}
 function reviewView() {
-  const callRequest = draft.context.active_call ? "" : `<label class="tick-field"><input type="checkbox" name="payment_requested_after_call" ${draft.context.payment_requested_after_call ? "checked" : ""}>${T("В только что завершившемся звонке меня попросили сделать этот перевод","Жаңа ғана аяқталған қоңырауда менен осы аударымды жасауды сұрады")}</label>`;
+  const ask = needsCallAnswer(draft, data, account?.supports_call_question);
+  const callRequest = ask ? callQuestion() : draft.context.active_call ? "" : `<label class="tick-field"><input type="checkbox" name="payment_requested_after_call" ${draft.context.payment_requested_after_call ? "checked" : ""}>${T("В только что завершившемся звонке меня попросили сделать этот перевод","Жаңа ғана аяқталған қоңырауда менен осы аударымды жасауды сұрады")}</label>`;
   const checked = draft.payee ? payeeVerdict(data,draft.payee.bank,T,E) : "";
   const name = draft.payee ? data?.display_name : account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name;
-  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}${transferSteps(true)}<section class="paper transfer-review"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(name || draft.recipient_phone)}</h2>${name ? "<small>"+E(draft.recipient_phone)+"</small>" : ""}<div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p>${callRequest}</section>${checked}${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"),"primary",draft.payee && !canConfirmPayee(data) ? "disabled" : "")}`;
+  const disabled = (draft.payee && !canConfirmPayee(data)) || (ask && !draft.callAnswer);
+  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}${transferSteps(true)}<section class="paper transfer-review"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(name || draft.recipient_phone)}</h2>${name ? "<small>"+E(draft.recipient_phone)+"</small>" : ""}<div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p>${callRequest}</section>${checked}${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"),"primary",disabled ? "disabled" : "")}`;
 }
 const questions = [
   [
@@ -626,6 +637,15 @@ function moneyOutcome(state) {
     blocked:["Перевод остановлен. Деньги остались на счёте.","Аударым тоқтатылды. Ақша шотта қалды."]
   };
   return wording[state]?T(...wording[state]):"";
+}
+function officerCallEvidence(tx) {
+  const answer = tx.context?.call_pressure_answer;
+  const statement = Object.hasOwn(callAnswers, answer) ? T(...callAnswers[answer]) + " · " + when(tx.created_at)
+    : T("Ответ на вопрос не зарегистрирован", "Сұраққа жауап тіркелмеген");
+  const log = tx.bank_call_evidence;
+  return `<section class="paper"><h2>${T("Ответ клиента об этом переводе","Аударым туралы клиенттің жауабы")}</h2>
+    <p>${E(statement)}</p>${log ? `<p>${T("Журнал исходящих звонков банка","Банктің шығыс қоңыраулар журналы")} ·
+      ${log.outbound_call_listed ? T("Запись найдена","Жазба бар") : T("Запись не найдена","Жазба жоқ")} · ${when(log.checked_at)}</p>` : ""}</section>`;
 }
 function detailView() {
   if (!evaluation) return "";
@@ -917,7 +937,7 @@ const screens = {
   history: historyView,
   transfer: transferView,
   review: reviewView,
-  detail: detailView,
+  detail: () => detailView() + (evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation) : ""),
   questionnaire: questionnaireView,
   safety: safetyView,
   scan: scanView,
@@ -1444,19 +1464,21 @@ root.addEventListener("click", async (event) => {
   }
   if (act === "submit-transfer") {
     if (pending || !draft || (draft.payee && !canConfirmPayee(data))) return;
+    if (needsCallAnswer(draft, data, account?.supports_call_question) && !draft.callAnswer) return;
+    const context = submissionContext(draft, account?.supports_call_question);
     await perform(async () => {
       const { request_id: id } = await gateway.request("/requests", "POST", {});
       await savePending(id);
       mutationOutcome = true;
       const value = await api("transfers/evaluate", "POST", {
-        recipient_phone: draft.recipient_phone, amount: draft.amount, context: draft.context,
+        recipient_phone: draft.recipient_phone, amount: draft.amount, context,
         request_id: id,
         currency: "KZT",
       });
       accept(value);
       await savePending("");
       page = "detail"; backStack=[];
-      const guarded=product && draft.context?.active_call && value.status==="cooling_off";
+      const guarded=product && context.active_call && value.status==="cooling_off";
       draft = null;
       if (product && value.status==="cooling_off") {
         try { data=await gateway.request("/protection/"+selectedId+"/check"); if(guarded)page="guard"; }
@@ -1667,7 +1689,7 @@ root.addEventListener("submit", async (event) => {
       context: {
         active_call: fields.has("active_call"),
         from_deposit: fields.has("from_deposit"),
-        is_new_recipient: fields.has("is_new_recipient"),
+        ...(product && !presetMode ? {} : {is_new_recipient: fields.has("is_new_recipient")}),
       },
     };
     await open("review");
@@ -1789,6 +1811,12 @@ root.addEventListener("change", event => {
     if (event.target.checked) draft.context.payment_requested_after_call = true;
     else delete draft.context.payment_requested_after_call;
   }
+  if (page === "review" && draft && event.target.name === "call_pressure_answer" &&
+      Object.hasOwn(callAnswers, event.target.value) && needsCallAnswer(draft, data, account?.supports_call_question)) {
+    draft.callAnswer = event.target.value;
+    const confirm = root.querySelector('[data-action="submit-transfer"]');
+    if (confirm) confirm.disabled = false;
+  }
 });
 root.addEventListener("input", event => {
   if (event.target.matches('#personal-login [name="login"]')) loginName=event.target.value;
@@ -1867,7 +1895,7 @@ async function refreshVisible() {
     notifications:()=>g.api("trusted-contacts/transactions/"+id+"/notifications"),
     timeline:()=>g.api("integrations/soc/transactions/"+id+"/timeline?limit=50"),
     analytics:()=>g.request("/wallet/analytics?days="+walletDays),
-    socAnalytics:()=>g.request("/wallet/soc?days="+socDays)
+    socAnalytics:()=>g.request("/wallet/soc?days="+socDays+"&include_policy=true")
   };
   if(Object.hasOwn(reads,screen))read=async()=>{
     const rows=await reads[screen]();

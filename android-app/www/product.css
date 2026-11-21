@@ -14,3 +14,7 @@ button,.filter-row button,.inline-actions button,.text-button,.topbar button,.bo
 .password-field{display:flex;align-items:center;background:white;border:1px solid #cedcd3;border-radius:12px}.password-field input{border:0!important;flex:1}.password-field button{color:#005c3e;background:transparent;padding:0 .8rem} .entry{justify-content:flex-start}.entry .form-stack label{font-size:1rem}
 
 .graph .evidence-edge{stroke:#16764d;stroke-width:2.4}.graph .selected-edge{stroke:#853800;stroke-width:5}
+
+.call-question { min-inline-size: 0; margin: 1.25rem 0 0; padding: .75rem 1rem; border: 1px solid var(--line); border-radius: 16px; }
+.call-question legend { padding: 0 .3rem; font-weight: 650; }
+.call-question label { min-height: 44px; }

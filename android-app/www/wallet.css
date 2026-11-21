@@ -1169,6 +1169,7 @@ input:focus-visible {
 .desk-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .desk-table :is(th,td) { padding: .4rem .15rem; text-align: end; border-bottom: 1px solid var(--line); }
 .desk-table th:first-child { text-align: start; }
+.policy-table { min-width: 28rem; }
 .desk-callback .inline-actions { flex-wrap: wrap; margin-top: 1rem; }
 @media(max-width:879px) {
   [data-actor="platform_admin"] .connected-nav { grid-template-columns: repeat(3,minmax(0,1fr)); }

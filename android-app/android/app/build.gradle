@@ -1,8 +1,12 @@
 apply plugin: 'com.android.application'
 
 def usbRehearsal = System.getenv('QADAM_USB_REHEARSAL') == '1'
+def websiteApk = System.getenv('QADAM_WEBSITE_APK') == '1'
 def configuredOrigin = (System.getenv('QADAM_API_ORIGIN') ?: '').trim()
 def apiOrigin = configuredOrigin ?: 'https://saq-bol-mobile.onrender.com'
+if (websiteApk && (usbRehearsal || apiOrigin != 'https://saq-bol-mobile.onrender.com')) {
+    throw new GradleException("Website downloads must use the team mobile service")
+}
 if (apiOrigin && !(apiOrigin ==~ /https:\/\/[a-zA-Z0-9.-]+/)) {
     throw new GradleException("Set a canonical HTTPS mobile API origin")
 }
@@ -14,8 +18,9 @@ android {
         applicationId "kz.qadamx.bccshield"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 10
+        versionCode 11
         versionName "2.7"
+        manifestPlaceholders = [appLabel: "@string/app_name", activityLabel: "@string/title_activity_main"]
         resValue "string", "qadam_api_origin", apiOrigin
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -26,7 +31,12 @@ android {
     }
     buildTypes {
         debug {
-            applicationIdSuffix ".demo"
+            applicationIdSuffix(websiteApk ? ".website" : ".demo")
+            if (websiteApk) {
+                debuggable false
+                resValue "string", "website_app_name", "Saq Bol × BCC · 2.7"
+                manifestPlaceholders = [appLabel: "@string/website_app_name", activityLabel: "@string/website_app_name"]
+            }
             if (usbRehearsal && !configuredOrigin) {
                 resValue "string", "qadam_api_origin", "http://127.0.0.1:18001"
             }
