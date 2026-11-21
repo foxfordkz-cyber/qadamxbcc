@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 /** Measure the encoded container and align both subtitle tracks to its first captured frame. */
 export async function verifyDemoFilm(directory, ffmpeg = process.env.FFMPEG_EXECUTABLE || "ffmpeg") {
   const manifest = JSON.parse(await readFile(path.join(directory, "manifest.json"), "utf8"));
-  const video = path.join(directory, "BCC-Shield-demo.webm");
+  const video = path.join(directory, "Saq-Bol-demo.webm");
   const sha256 = createHash("sha256").update(await readFile(video)).digest("hex");
   assert.equal(sha256, manifest.sha256, "The video must match the completed browser run");
   const scratch = await mkdtemp(path.join(os.tmpdir(), "saqbol-film-"));
@@ -49,7 +49,7 @@ export async function verifyDemoFilm(directory, ffmpeg = process.env.FFMPEG_EXEC
       assert.ok(c[lang].trim() && begin < end && end <= duration);
       return [i + 1, stamp(begin) + " --> " + stamp(end), c[lang], ""].join("\n");
     });
-    await writeFile(path.join(directory, "BCC-Shield-demo." + lang + ".srt"), cues.join("\n"), "utf8");
+    await writeFile(path.join(directory, "Saq-Bol-demo." + lang + ".srt"), cues.join("\n"), "utf8");
   }
   const verification = { verified_at: new Date().toISOString(), container_duration_seconds: duration,
     scenario_duration_seconds: manifest.duration_seconds, width: 1920, height: 1080, fps: 25,

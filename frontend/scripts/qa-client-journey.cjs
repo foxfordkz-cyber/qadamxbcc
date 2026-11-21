@@ -57,10 +57,23 @@ async function exercise(browser, origin, language) {
     const leaked = [];
     page.on("request", request => { if ((request.postData() || "").includes(text) || request.url().includes(encodeURIComponent(text))) leaked.push(request.url()); });
     await page.locator("textarea").fill(text);
-    await page.locator(".mobile-tool form button").click();
+    await page.locator("form").filter({ has: page.locator("#message-check-text") }).getByRole("button").click();
     await page.locator(".safety-result li").first().waitFor();
     assert.equal(await page.locator("textarea").inputValue(), "");
     assert.deepEqual(leaked, []);
+    const linkCheck = page.locator(".bank-link-check");
+    await linkCheck.locator("summary").click();
+    const linkInput = linkCheck.getByRole("textbox");
+    const linkRequests = [];
+    page.on("request", req => {
+      if ([req.url(), req.postData() || ""].some(part => part.includes("example.invalid") || part.includes("local-only-check"))) linkRequests.push(req.method());
+    });
+    await linkInput.fill("https://bcc.kz.example.invalid/path?code=local-only-check");
+    await linkCheck.getByRole("button").click();
+    assert.equal(await linkCheck.locator('[data-outcome="external"] bdi').innerText(), "bcc.kz.example.invalid");
+    assert.equal(await linkInput.inputValue(), "");
+    assert.doesNotMatch(await linkCheck.innerText(), /local-only-check/);
+    assert.deepEqual(linkRequests, []);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await context.setOffline(true);
     await page.locator(".phone-alert.warning").waitFor();

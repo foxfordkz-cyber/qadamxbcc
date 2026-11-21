@@ -63,6 +63,16 @@ async function main() {
   await context.route('**/api/v1/**', async route => {
     const request = route.request(); const url = new URL(request.url()); const method = request.method();
     report.requests.push({ method, path: url.pathname, search: url.search });
+    if (method === 'POST' && url.pathname === '/api/v1/payee-check') {
+      const { recipient, bank, expected_name } = request.postDataJSON();
+      const directory = new Map([['normal', 'Данияр А.'], ['scam', 'Алексей К.'], ['hub', 'Марат Т.']]);
+      if (!directory.has(recipient) || !['bcc', 'other'].includes(bank) || expected_name !== '') {
+        return route.fulfill({ status: 422, json: { error: 'invalid' } });
+      }
+      // A directory read, even over POST, never creates or changes a transfer.
+      return route.fulfill({ json: { recipient, bank, source: 'synthetic_directory',
+        status: bank === 'bcc' ? 'identified' : 'unavailable', display_name: bank === 'bcc' ? directory.get(recipient) : null } });
+    }
     if (method === 'POST') report.mutations.push({ path: url.pathname, intercepted: true });
     if (url.pathname.endsWith('/transfers/evaluate') && method === 'POST') return route.fulfill({ json: evaluation(create(request.postDataJSON())) });
     const action = url.pathname.match(/\/transfers\/([0-9a-f-]+)\/(resolve-cooling|cancel|post-call)$/i);
@@ -163,10 +173,12 @@ async function main() {
     await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
     // SSR starts in Kazakh; the locale effect confirms hydration before clicking presets.
     await page.waitForFunction(() => document.documentElement.lang === 'ru');
+    check('public_jury_entry_ru', await page.getByRole('link', { name: 'Вход для жюри', exact: true }).getAttribute('href') === 'https://saq-bol-jury.onrender.com/');
     await preset('normal'); await page.locator('.phone-receipt .badge.approved').waitFor();
     const normalId = await page.locator('.phone-receipt').getAttribute('data-transaction-id');
     check('normal_preset_approved_receipt_inside_phone', await page.locator('.phone-frame .phone-receipt').isVisible() && records.get(normalId)?.status === 'approved');
     await page.evaluate(() => { window.__qaNoReload = 'retained'; }); await language('kk');
+    check('public_jury_entry_kk', await page.getByRole('link', { name: 'Қазылар кабинеті', exact: true }).getAttribute('href') === 'https://saq-bol-jury.onrender.com/');
     check('receipt_language_switch_keeps_transaction_without_reload', await page.locator('.phone-receipt').getAttribute('data-transaction-id') === normalId && await page.evaluate(() => window.__qaNoReload) === 'retained');
     check('receipt_kazakh_status', (await page.locator('.phone-receipt').innerText()).includes('Мақұлданды'));
     await language('ru');

@@ -154,6 +154,7 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 | `POST` | `/api/v1/transfers/{transaction_id}/resolve-cooling` | `X-BCC-API-Key` | `ResolveCoolingRequest` | `TransferEvaluateResponse` | 200, 422 |
 | `POST` | `/api/v1/transfers/{transaction_id}/cancel` | `X-BCC-API-Key` | `CancelTransferRequest` | `TransferEvaluateResponse` | 200, 422 |
 | `POST` | `/api/v1/transfers/{transaction_id}/post-call` | `X-BCC-API-Key` | `PostCallRequest` | `TransferEvaluateResponse` | 200, 422 |
+| `POST` | `/api/v1/payee-check` | `X-BCC-API-Key` | `PayeeRequest` | `PayeeResult` | 200, 422 |
 
 ### linked returns
 

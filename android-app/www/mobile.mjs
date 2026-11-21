@@ -1,5 +1,5 @@
 import {revealChartSelection,stepChart} from "./spending-chart.mjs";
-import {walletUI,icon as walletIcon} from "./wallet.mjs";
+import {walletUI,icon as walletIcon,formatTenge as money} from "./wallet.mjs";
 import {offlineWallet} from "./offline-wallet.mjs";
 import {ledgerTime,ledgerInstant} from "./wallet-date.mjs";
 import { COPY } from "./copy.mjs";
@@ -65,8 +65,6 @@ const paths = {
 };
 const icon = (name) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] ?? paths.shield}</svg>`;
-const money = (amount) =>
-  `${new Intl.NumberFormat(state.language === "kk" ? "kk-KZ" : "ru-RU").format(amount)} ₸`;
 const date = (timestamp) =>
   new Intl.DateTimeFormat(state.language === "kk" ? "kk-KZ" : "ru-RU", {
     day: "numeric",

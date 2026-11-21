@@ -7,10 +7,19 @@ on:
       - "README.md"
       - "docker-compose.jury.yml"
       - "backend/Dockerfile.mobile-free*"
+      - "backend/pyproject.toml"
+      - "backend/uv.lock"
       - "backend/scripts/mobile_ephemeral.py"
       - "backend/scripts/jury_wallet.py"
       - "backend/app/mobile_gateway/jury_rooms.py"
       - "backend/app/mobile_gateway/passwords.py"
+      - "android-app/package*.json"
+      - "android-app/scripts/build-wallet.mjs"
+      - "android-app/scripts/stage-installer.mjs"
+      - "android-app/tests/stage-installer.test.mjs"
+      - "deliverables/android/Saq-Bol-Android-*.apk"
+      - "deliverables/android/Saq-Bol-Android-*.apk.sha256"
+      - "deliverables/android/Saq-Bol-Android-*.json"
       - "android-app/tests/browser/roles-live.spec.mjs"
       - "android-app/tests/browser/jury-rooms.spec.mjs"
       - ".github/workflows/jury-wallet.yml"
@@ -32,6 +41,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: android-app/package-lock.json
+      - name: Verify release staging and rejection of inconsistent artifacts
+        run: node --test android-app/tests/stage-installer.test.mjs
       - name: Check the public credentials and loopback entry point
         env:
           QADAM_ACCESS_FILE: ${{ runner.temp }}/jury-wallet.json
@@ -61,6 +72,15 @@ jobs:
           PY
       - name: Start the jury wallet
         run: docker compose -f docker-compose.jury.yml up -d --build --wait --wait-timeout 180
+      - name: Download the active APK from the standard wallet
+        run: |
+          version=$(node -p "require('./android-app/package.json').version.replace(/\.0$/, '')")
+          apk="Saq-Bol-Android-$version.apk"
+          install="http://127.0.0.1:18002/wallet/install"
+          curl -fsS "$install/" -o "$RUNNER_TEMP/install.html"
+          grep -Fq "href=\"$apk\"" "$RUNNER_TEMP/install.html"
+          curl -fsS "$install/$apk" -o "$RUNNER_TEMP/$apk"
+          cmp "deliverables/android/$apk" "$RUNNER_TEMP/$apk"
       - run: npm ci
         working-directory: android-app
       - name: Sign in as all three roles and verify the case workflow

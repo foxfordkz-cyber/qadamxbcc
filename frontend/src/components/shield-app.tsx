@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import Link from "next/link";
 import connectedWallet from "@/lib/connected-wallet.json";
-import { Activity, ArrowRight, CircleHelp, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
+import { Activity, ArrowRight, CircleHelp, LogIn, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
 import { api, ApiError, transferSchema, type AbandonResult, type Answers, type AppConfig, type CallCheck, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { reconcileTraffic, type TrafficRecord } from "@/lib/traffic";
 import type { FeedItem } from "@/lib/contracts";
@@ -88,7 +88,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     }, Math.max(0, submissionRetryAt - Date.now()));
     return () => clearTimeout(timer);
   }, [submissionRetryAt]);
-  const [callVerdict, setCallVerdict] = useState<CallCheck | null>(null);
+  const [callVerdict, setCallVerdict] = useState<CallCheck | "unavailable" | null>(null);
   const [modal, setModal] = useState(false);
   const [coolingDrafts, setCoolingDrafts] = useState<Record<string, Partial<Answers>>>({});
   const [revision, setRevision] = useState(0);
@@ -334,10 +334,13 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const languageSwitch = <div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>;
   const showWallet = config.demoActionsEnabled !== false && (!STATIC_DEMO || process.env.NEXT_PUBLIC_BCC_PAGES_WALLET === "1");
   const walletLink = showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("connectedWallet")}<ArrowRight size={15} aria-hidden="true" /></a>;
+  const juryEntry = config.demoActionsEnabled !== false && config.accountMode !== "pilot" && (
+    <a className="jury-entry" href={connectedWallet.juryUrl}><LogIn size={17} aria-hidden="true" />{t("juryLogin")}</a>
+  );
   if (layout === "officer") return <>
     <header className="topbar"><div className="topbar-inner"><div className="brand">
       <span className="brand-mark"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("officerWorkspace")}</small></div>
-    </div>{languageSwitch}</div></header>
+    </div>{juryEntry}{languageSwitch}</div></header>
     <main className="shell">
       {showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("staffWalletLogin")}<ArrowRight size={15} aria-hidden="true" /></a>}
       <SocDashboard privateStoryAccess={config.privateStoryAccess} liveLedger={config.mode === "live" && !STATIC_DEMO} readOnly={config.publicSocReadOnly} initialSelection={null} revision={revision} evaluations={evaluations} traffic={traffic}
@@ -349,7 +352,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   if (layout === "phone") return <>
     <header className="topbar mobile-topbar"><div className="topbar-inner">
       <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span><div><strong>saq<span> bol × BCC</span></strong></div></div>
-      {languageSwitch}
+      {juryEntry}{languageSwitch}
     </div></header>
     <main className="mobile-shell">
       {walletLink}
@@ -362,7 +365,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   return <>
     <header className="topbar"><div className="topbar-inner">
       <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("prototypeIdentity")}</small></div></div>
-      <div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span>{languageSwitch}</div>
+      {juryEntry}<div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span>{languageSwitch}</div>
     </div></header>
     <main className="shell">
       <section className="demo-bar" aria-label={t("presets")}>

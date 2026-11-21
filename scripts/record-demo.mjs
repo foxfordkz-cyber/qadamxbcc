@@ -208,7 +208,7 @@ try {
   } else {
     check(duration >= 150 && duration <= 180, "film duration fits the 2.5–3 minute target");
     await context.close();
-    const videoPath = path.join(output, "BCC-Shield-demo.webm");
+    const videoPath = path.join(output, "Saq-Bol-demo.webm");
     await video.saveAs(videoPath);
     await video.delete();
     const sha256 = createHash("sha256").update(await readFile(videoPath)).digest("hex");

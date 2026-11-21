@@ -56,6 +56,29 @@ jobs:
           uv run --no-sync python -m scripts.verify_merged_migrations
           uv run --no-sync python -m scripts.verify_case_migrations
           uv run --no-sync pytest --junitxml=../.local-checks/backend-postgres.xml -ra tests/integrations tests/test_postgres_concurrency.py tests/test_recipient_flag_postgres.py tests/test_active_hold_postgres.py tests/test_postgres_linked_returns.py
+      - name: Measure bounded velocity snapshots with real Redis
+        working-directory: backend
+        run: |
+          uv run --no-sync python -m scripts.benchmark_velocity_capacity --redis-url redis://localhost:6379/14 > ../.local-checks/velocity-capacity.json
+          uv run --no-sync python -m scripts.benchmark_velocity_capacity --redis-url redis://localhost:6379/14 --parser python > ../.local-checks/velocity-capacity-python.json
+          {
+            for report in ../.local-checks/velocity-capacity{,-python}.json; do
+              echo "### $(basename "$report")"
+              echo '```json'
+              cat "$report"
+              echo '```'
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Measure warmed antifraud scoring with real Redis
+        working-directory: backend
+        run: |
+          uv run --no-sync python -m scripts.benchmark_antifraud --samples 500 --redis-url redis://localhost:6379/13 > ../.local-checks/scoring-latency.json
+          {
+            echo '### Warmed scoring with short transfer histories'
+            echo '```json'
+            cat ../.local-checks/scoring-latency.json
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Count unique backend cases without double-counting reruns
         run: |
           python - <<'PY'
@@ -81,6 +104,9 @@ jobs:
           path: |
             .local-checks/backend-*.xml
             .local-checks/backend-unique.json
+            .local-checks/velocity-capacity.json
+            .local-checks/velocity-capacity-python.json
+            .local-checks/scoring-latency.json
           include-hidden-files: true
           retention-days: 7
   compose-demo:

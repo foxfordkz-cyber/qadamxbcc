@@ -193,7 +193,7 @@ async function build(lang) {
   pic(s, "mobile-trusted-suspicion", 10.25, 1.75, { h: 5.0 });
   s.addNotes(`${P("ask")[lang].note}\n\n${P("pilot")[lang].note}`);
 
-  const file = path.join(OUT, `BCC-Shield-pitch-${lang}.pptx`);
+  const file = path.join(OUT, `Saq-Bol-pitch-${lang}.pptx`);
   await pres.writeFile({ fileName: file });
   await applyTheme(file, THEME);
   console.log("wrote", file);

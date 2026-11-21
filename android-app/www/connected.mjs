@@ -2,10 +2,11 @@ import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
-import { walletUI, icon } from "./wallet.mjs";
+import { walletUI, icon, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
-import { shortcuts, familyView, checkView, packetContent } from "./guardian.mjs";
+import { shortcuts, familyView, checkView, packetContent, secondConfirmationView, secondSettingsView } from "./guardian.mjs";
 import { packetView } from "./packet.mjs";
+import { canConfirmPayee, checkPayee, payeeFields, payeeVerdict, phoneNumber } from "./payee-check.mjs";
 import { readScreenshot } from "./screenshot.mjs";
 import * as identity from "./identity.mjs";
 import { PUBLIC_DEMO, openExternal } from "./native.mjs";
@@ -17,6 +18,7 @@ const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""}
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
 let callbackView=null, queueSnapshot=null, callbackAttempt=null;
 let awaitingReplyCount=0, nextCallbackCheck=0;
+let homeNotices=[], homeInboxUnavailable=false, nextHomeInboxRead=0;
 let walletDays=7,socDays=7,selectedDay=null,caseFilter="",caseOffset=0,backStack=[];
 let lastRead=null;
 let viewRevision=0, loginName="", projector=false;
@@ -104,6 +106,7 @@ function clearVisible() {
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
   callbackView=queueSnapshot=callbackAttempt=null;
   awaitingReplyCount=nextCallbackCheck=0;
+  homeNotices=[];homeInboxUnavailable=false;nextHomeInboxRead=0;
   gateway = null; step = offset = 0; pending = ownerScope = query = filter = "";
   answers = {}; caseNetwork = caseTransaction = null; caseEvents = []; casePageCursor = null; reportTx = null; expiryChecked = null; page = "login"; presetMode = false;
 }
@@ -165,8 +168,6 @@ const statuses = {
 };
 const productStatuses={approved:["Выполнен","Орындалды"],cooling_off:["На проверке","Тексерілуде"],blocked:["Отклонён","Қабылданбады"],cancelled:["Отменён","Тоқтатылды"]};
 const status = (value) => product && productStatuses[value] ? T(...productStatuses[value]) : (statuses[value] ? T(...statuses[value]) : value);
-const amount = (value) =>
-  `${new Intl.NumberFormat(lang === "ru" ? "ru-RU" : "kk-KZ").format(Number(value) || 0)} ₸`;
 const when = ledgerTime;
 const button = (action, label, style = "primary", attributes = "") =>
   `<button class="${style}" data-action="${action}" ${attributes} ${loading ? "disabled" : ""}>${E(label)}<span aria-hidden="true">→</span></button>`;
@@ -256,7 +257,7 @@ function accept(value) {
 let workspaceRead=null;
 async function readWorkspace(next) {
   const g=gateway, revision=++viewRevision;
-  const state={pending:new Set(),failed:new Set()};
+  const state={pending:new Set(),updatedAt:null};
   workspaceRead=state;
   const current=()=>gateway===g && revision===viewRevision && page===next;
   const panels = [];
@@ -265,10 +266,9 @@ async function readWorkspace(next) {
     panels.push(async()=>{
       try {
         const value=await request();
-        if(current())accept(value);
+        if(current()){accept(value);state.updatedAt=new Date();}
       } catch(e) {
         if(current()) {
-          state.failed.add(name);
           error=errText(e.status);
         }
       } finally {
@@ -302,12 +302,13 @@ async function open(next, id, remember=true) {
   if (gateway?.role==="platform_admin" && !["home","staff","settings","login"].includes(next)) next="home";
   if (next==="staff" && gateway?.role!=="platform_admin") return;
   if (next==="callbacks" && gateway?.role!=="client") return;
+  if (next==="confirmCancel" && (gateway?.role!=="client" || !id)) return;
   if(product && remember && page!==next && page!=="login") {
     if(["home","history","analytics","settings","cases","safety","socAnalytics","staff"].includes(next))backStack=[];
     else backStack.push({page,id:page==="case"||page==="reportDetail"?data?.id:selectedId});
   }
   if (webWallet && remember && page!=="login" && next!==page) {
-    const key = next==="detail" ? "operation" : next==="reportDetail" ? "report" : null;
+    const key = next==="detail" || next==="confirmCancel" ? "operation" : next==="reportDetail" ? "report" : null;
     const url=new URL(location.pathname,location.origin);
     if(key && id)url.searchParams.set(key,id);
     history.pushState({wallet:true,page:next,id:id||null,scope:ownerScope,depth:(history.state?.depth||0)+1}, "", url);
@@ -315,11 +316,15 @@ async function open(next, id, remember=true) {
   const samePage=page===next;
   workspaceRead=null;
   lastRead={page:next,id};
+  if (next==="confirmCancel") evaluation = null;
   page = next;
   if(!samePage || !["home","cases","staff"].includes(next))data=null;
   if(next==="home" && !samePage)summary=null;
   callbackView=queueSnapshot=null;
-  if (next==="home") awaitingReplyCount=nextCallbackCheck=0;
+  if (next==="home") {
+    awaitingReplyCount=nextCallbackCheck=nextHomeInboxRead=0;
+    homeNotices=[];homeInboxUnavailable=false;
+  }
   error = "";
   scanResult = null;
   if (id && !["graph","case","reportDetail","incoming"].includes(next)) selectedId = id;
@@ -329,7 +334,9 @@ async function open(next, id, remember=true) {
   }
   if(product && (next==="home" || next==="staff" || next==="cases" && gateway.role==="admin")) {
     window.scrollTo(0,0);
-    await readWorkspace(next);
+    const ready=readWorkspace(next);
+    if(next==="home" && gateway?.role==="client") void refreshHomeInbox();
+    await ready;
     return;
   }
   await perform(async () => {
@@ -354,15 +361,33 @@ async function open(next, id, remember=true) {
     else if(next==="socAnalytics")data=await gateway.request("/wallet/soc?days="+socDays);
     else if(next==="incoming")data=await gateway.request("/wallet/incoming/"+id);
     else if(product && next==="safety") [account,circle]=await Promise.all([gateway.request("/account"),api("trusted-contacts")]);
-    else if (next === "family") data = await gateway.request("/protection/family");
+    else if (next === "family") {
+      const [family, second] = await Promise.all([
+        gateway.request("/protection/family"),
+        gateway.request("/protection/second-confirmation").catch(error => {
+          if (error.status === 404) return null;
+          throw error;
+        }),
+      ]);
+      data = {...family, second};
+    }
     else if (next === "guard" || next === "packet") {
       data = await gateway.request("/protection/"+selectedId+(next === "guard"?"/check":"/packet"));
       guardReceived=Date.now();
     } else if (product && next === "transfer") {
       account = await gateway.request("/account");
+    } else if (product && next === "review" && draft?.payee) {
+      const reviewed = draft;
+      const check = await checkPayee(reviewed, api, account?.recipients);
+      if (page === "review" && draft === reviewed) data = check;
     } else if (next === "detail") {
       accept(await api(`transfers/${selectedId}`));
       if(product && gateway.role==="client" && evaluation.status==="cooling_off") data=await gateway.request("/protection/"+selectedId+"/check");
+    } else if (next === "confirmCancel") {
+      const current = await api(`transfers/${id}`);
+      if (current.transaction_id !== id) throw new Error("transaction_mismatch");
+      accept(current);
+      if (current.status !== "cooling_off") page = "detail";
     } else if (next === "graph") data = await api(`soc/graph/${id}?depth=2`);
     else if (next === "timeline")
       data = await api(
@@ -412,6 +437,7 @@ async function open(next, id, remember=true) {
       );
   });
   window.scrollTo(0, 0);
+  if (next==="home" && product && gateway?.role==="client") void refreshHomeInbox();
 }
 async function readCallback(session,path) {
   try {return await session.request(path);}
@@ -467,8 +493,11 @@ function feedParticipants(items) {
   return '<details class="paper"><summary>'+T("Клиенты в этой ленте", "Осы тізімдегі клиенттер")+
     ' · '+people.size+'</summary><div class="action-list">'+links+'</div></details>';
 }
+function balanceHidden() {
+  return getLocal("qadam.mask."+ownerScope,"0")==="1";
+}
 function historyView() {
-  if(product && gateway.role==="client")return page==="history"?wallet.history(data,ledgerFilter):wallet.home(account,data,summary,getLocal("qadam.mask."+ownerScope,"0")==="1",pending);
+  if(product && gateway.role==="client")return page==="history"?wallet.history(data,ledgerFilter):wallet.home(account,data,summary,balanceHidden(),pending);
   if(product && gateway.role==="admin")return wallet.soc(summary)+feedParticipants(data?.items)+title(T("Лента операций","Операциялар тізімі"))+
     '<div class="filter-row">'+["","approved","cooling_off","blocked","cancelled"].map(k=>'<button data-filter="'+k+'" aria-pressed="'+(k===filter)+'">'+(k?E(status(k)):T("Все","Барлығы"))+'</button>').join("")+'</div><form id="search-form"><input name="q" maxlength="128" value="'+E(query)+'" aria-label="'+T("Имя или ID","Аты немесе ID")+'" placeholder="'+T("Имя или ID","Аты немесе ID")+'"></form>'+transactionRows(data?.items,true)+(offset?button("prev",T("Назад","Артқа"),"secondary"):"")+(data?.pagination?.has_more?button("next",T("Ещё","Тағы"),"secondary"):"");
   const admin = gateway.role === "admin",
@@ -520,9 +549,12 @@ function transferSteps(review=false) {
 function transferView() {
   if (pending)
     return `${title(T("Сначала проверь предыдущий запрос", "Алдыңғы сұрауды тексер"))}${button("recover", T("Проверить статус", "Күйін тексеру"))}${button("abandon", T("Безопасно закрыть запрос", "Сұрауды қауіпсіз жабу"), "secondary")}`;
-  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + transferSteps() + `<div class="from-account">${icon("outgoing")}<span><small>${T("Со счёта","Шоттан")}</small><strong>Saq Bol × BCC · •••• ${E(account?.card_last4)}</strong><small>${T("Остаток на счёте", "Шоттағы қалдық")} · ${account ? amount(account.balance) : "—"}</small></span></div><section class="paper transfer-sheet"><form id="transfer-form" class="form-stack">
+  const hidden = balanceHidden();
+  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + transferSteps() + `<div class="from-account">${icon("outgoing")}<span><small>${T("Со счёта","Шоттан")}</small><strong>Saq Bol × BCC · •••• ${hidden ? "••••" : E(account?.card_last4)}</strong><small>${T("Остаток на счёте", "Шоттағы қалдық")} · ${hidden ? "•••••• ₸" : account ? amount(account.balance) : "—"}</small></span></div><section class="paper transfer-sheet"><form id="transfer-form" class="form-stack">
     <label>${T("Учебный получатель","Оқу аударымын алушы")}<select required name="recipient_phone"><option value="">${T("Выбери получателя","Алушыны таңда")}</option>
-    ${(account?.recipients ?? []).map(r => `<option value="${E(r.phone)}" ${draft?.recipient_phone === r.phone ? "selected" : ""}>${E(r.name)}</option>`).join("")}</select></label>
+    ${(account?.recipients ?? []).map(r => `<option value="${E(r.phone)}" ${!draft?.payee?.manual && draft?.recipient_phone === r.phone ? "selected" : ""}>${E(r.name)}</option>`).join("")}
+    <option value="manual" ${draft?.payee?.manual ? "selected" : ""}>${T("Ввести номер телефона", "Телефон нөмірін енгізу")}</option></select></label>
+    ${payeeFields(draft,T,E)}
     ${input("amount",T("Сумма, ₸","Сома, ₸"), draft?.amount ?? "", "number", 'required min="0.01" max="999999999" step="0.01" inputmode="decimal"')}
     <label class="tick-field"><input type="checkbox" name="active_call" ${draft?.context?.active_call ? "checked" : ""}>${T("Меня просят перевести во время звонка","Қоңырау кезінде аударуды сұрады")}</label>
     <button class="primary">${T("Проверить реквизиты","Деректемелерді тексеру")}</button></form></section>${button("presets",T("Демонстрационные сценарии","Демонстрациялық сценарийлер"),"secondary")}`;
@@ -568,7 +600,9 @@ async function back() {
 }
 function reviewView() {
   const callRequest = draft.context.active_call ? "" : `<label class="tick-field"><input type="checkbox" name="payment_requested_after_call" ${draft.context.payment_requested_after_call ? "checked" : ""}>${T("В только что завершившемся звонке меня попросили сделать этот перевод","Жаңа ғана аяқталған қоңырауда менен осы аударымды жасауды сұрады")}</label>`;
-  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}${transferSteps(true)}<section class="paper transfer-review"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name ?? draft.recipient_phone)}</h2><small>${E(draft.recipient_phone)}</small><div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p>${callRequest}</section>${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"))}`;
+  const checked = draft.payee ? payeeVerdict(data,draft.payee.bank,T,E) : "";
+  const name = draft.payee ? data?.display_name : account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name;
+  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}${transferSteps(true)}<section class="paper transfer-review"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(name || draft.recipient_phone)}</h2>${name ? "<small>"+E(draft.recipient_phone)+"</small>" : ""}<div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p>${callRequest}</section>${checked}${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"),"primary",draft.payee && !canConfirmPayee(data) ? "disabled" : "")}`;
 }
 const questions = [
   [
@@ -597,10 +631,52 @@ const questions = [
     "Алушыны жеке танисың ба?",
   ],
 ];
+function savedAnswers(tx) {
+  const saved = tx?.verification_answers;
+  return questions.every(([key]) => typeof saved?.[key] === "boolean") ? saved : null;
+}
+function validClock(tx) {
+  return Number.isFinite(Date.parse(tx?.cooling_off_until)) && Number.isFinite(Date.parse(tx?.server_time));
+}
+function readyToConfirm(tx) {
+  return tx?.status === "cooling_off" && validClock(tx) && remainingSeconds(tx, receivedAt) === 0;
+}
+function familyCheck(tx) {
+  return product && data?.transaction_id === tx.transaction_id ? data.second_confirmation : null;
+}
+let editingQuestion = false;
 function questionnaireView() {
-  if (step === questions.length)
-    return `${title(T("Проверь ответы", "Жауаптарды тексер"))}<section class="paper">${questions.map(([key, ru, kk]) => `<div class="reason"><h3>${T(ru, kk)}</h3><p>${answers[key] ? T("Да", "Иә") : T("Нет", "Жоқ")}</p></div>`).join("")}</section><p class="callout">${T("Сервер сохранит ответы. До окончания Cooling-Off операция не будет разрешена даже при чистых ответах.", "Сервер жауаптарды сақтайды. Қауіпті жауаптар болмаса да, Cooling-Off аяқталмай аударымға рұқсат берілмейді.")}</p>${button("submit-answers", T("Подтвердить ответы", "Жауаптарды растау"))}`;
+  if (step === questions.length) {
+    const tx = evaluation;
+    const family = familyCheck(tx);
+    const expired = readyToConfirm(tx);
+    const ready = expired && (!family || family.state === "confirmed");
+    const unchanged = questions.every(([key]) => tx.verification_answers?.[key] === answers[key]);
+    return title(T("Проверьте ответы", "Жауаптарыңызды тексеріңіз")) +
+      `<section class="paper receipt"><strong class="amount">${amount(tx.amount)}</strong><p>${E(tx.recipient.display_name)} · ${E(tx.recipient.iban_masked)}</p><div class="timer" role="timer" id="countdown" data-expired="${expired}">${timerText()}</div></section>` +
+      (family ? secondConfirmationView(family,T,when) + (unchanged ? button("refresh-detail",T("Обновить статус проверки","Тексеру күйін жаңарту"),"secondary") : "") : "") +
+      `<section class="paper">${questions.map(([key, ru, kk], index) => `<div class="reason"><h3>${T(ru, kk)}</h3><strong>${answers[key] ? T("Да", "Иә") : T("Нет", "Жоқ")}</strong> ${button("edit-answer", T("Изменить ответ", "Жауапты өзгерту"), "secondary", `data-index="${index}"`)}</div>`).join("")}</section>` +
+      `<p class="callout">${ready ? T("Пауза завершена. После вашего подтверждения сервер ещё раз проверит перевод.", "Кідіріс аяқталды. Растағаннан кейін сервер аударымды қайта тексереді.") :
+        unchanged && expired ? T("Ответы сохранены. Для подтверждения перевода требуется согласие доверенного контакта.", "Жауаптар сақталды. Аударымды растау үшін сенімді адамның келісімі қажет.") :
+        unchanged ? T("Ответы сохранены. По окончании паузы вернитесь сюда для подтверждения.", "Жауаптар сақталды. Кідіріс аяқталған соң растау үшін осында оралыңыз.") :
+        T("Сохраните ответы. Средства останутся на счёте до отдельного подтверждения перевода.", "Жауаптарды сақтаңыз. Аударымды бөлек растағанша ақша шотта қалады.")}</p>` +
+      (ready ? button("release-transfer", T("Подтвердить перевод", "Аударымды растау")) : button("submit-answers", T("Сохранить ответы", "Жауаптарды сақтау"), "primary", unchanged ? "disabled" : "")) +
+      button("cancel-confirm", T("Отменить перевод", "Аударымды тоқтату"), "secondary");
+  }
   return `${title(T("Проверка во время паузы", "Үзіліс кезіндегі тексеру"))}<div class="progress">${questions.map((_, i) => `<span class="${i <= step ? "filled" : ""}"></span>`).join("")}</div><span class="eyebrow">${step + 1} / 5</span><div class="question-card"><h2>${T(questions[step][1], questions[step][2])}</h2></div><div class="answer-grid">${button("answer-yes", T("Да", "Иә"))}${button("answer-no", T("Нет", "Жоқ"), "secondary")}</div>`;
+}
+function coolingReceipt(tx, admin) {
+  const saved = savedAnswers(tx);
+  const family = familyCheck(tx);
+  const canConfirm = readyToConfirm(tx) && (!family || family.state === "confirmed");
+  const reviewLabel = saved
+    ? canConfirm ? T("Перейти к подтверждению", "Растауға өту") : T("Проверить и изменить ответы", "Жауаптарды тексеру және өзгерту")
+    : T("Пройти опрос", "Сауалнамадан өту");
+  const coSign = family && !admin ? secondConfirmationView(family, T, when) : "";
+  return `<section class="paper hold-card"><div class="pause-clock"><span class="eyebrow">${T("Время на проверку", "Тексеру уақыты")}</span><h2>${T("Защитная пауза", "Қорғаныс кідірісі")}</h2><div class="timer" id="countdown" role="timer">${timerText()}</div></div>
+    <div class="pause-next"><p>${T("По истечении таймера деньги останутся на счёте. Для перевода потребуется ваше подтверждение.", "Таймер аяқталғанда ақша шотта қалады. Аудару үшін сіздің растауыңыз қажет.")}</p>
+    ${saved && !admin ? `<details><summary>${T("Сохранённые ответы", "Сақталған жауаптар")}</summary>${questions.map(([key, ru, kk]) => `<p>${T(ru,kk)} <strong>${saved[key] ? T("Да","Иә") : T("Нет","Жоқ")}</strong></p>`).join("")}</details>` : ""}
+    ${coSign}${admin ? "" : `<div class="inline-actions">${button("questionnaire",reviewLabel)}${button("cancel-confirm",T("Отменить перевод","Аударымды тоқтату"),"secondary")}</div>`}</div></section>`;
 }
 function moneyOutcome(state) {
   const wording={
@@ -619,14 +695,14 @@ function detailView() {
     contributors = tx.ml_contributors ?? [];
   if(product && !admin) {
     const held=tx.status==="cooling_off";
-    const hold=held?'<section class="paper hold-card"><div class="pause-clock"><span class="eyebrow">'+T("Время на проверку","Тексеру уақыты")+'</span><h2>'+T("Защитная пауза","Қорғаныс кідірісі")+'</h2><div class="timer" id="countdown">'+timerText()+'</div></div><div class="pause-next"><p>'+T("По окончании паузы решение обновит сервер.","Кідіріс аяқталған соң шешімді сервер жаңартады.")+'</p><div class="inline-actions">'+button("questionnaire",T("Пройти опрос","Сауалнамадан өту"))+button("cancel-confirm",T("Отменить перевод","Аударымды тоқтату"),"secondary")+'</div></div></section>':"";
+    const hold=held?coolingReceipt(tx, admin):"";
     const contact=held?'<section class="paper"><h2>'+T("Доверенный контакт в Telegram","Telegram-дағы сенімді адам")+'</h2><p>'+(!data||data.transaction_id!==tx.transaction_id?T("Обновите статус для проверки доставки.","Жеткізу күйін жаңартыңыз."):data.contact_state?E(label(data.contact_state)):T("Уведомление для этой операции пока не зарегистрировано.","Бұл операцияның хабарламасы әлі тіркелмеген."))+'</p>'+button("notifications",T("История уведомлений","Хабарлама тарихы"),"secondary")+'</section>':"";
     return title(status(tx.status),tx[lang==="ru"?"headline_ru":"headline_kk"])+
       '<section class="paper receipt"><div class="amount">'+amount(tx.amount)+'</div><strong>'+E(tx.recipient?.display_name)+'</strong><p>'+E(tx.recipient?.iban_masked)+'</p>'+wallet.badge(tx.status)+'<p class="funds-outcome">'+E(moneyOutcome(tx.status))+'</p></section>'+hold+
       (reasons.length?'<section class="paper"><h2>'+T("Что учла проверка","Тексеруде ескерілген белгілер")+'</h2>'+reasons.map(r=>'<p>'+E(r[lang==="ru"?"reason_ru":"reason_kk"])+'</p>').join("")+'</section>':"")+contact+
       '<p class="break-id">'+E(tx.transaction_id)+'</p>'+button("refresh-detail",T("Обновить статус","Күйін жаңарту"),"secondary");
   }
-  return `${title(status(tx.status), tx[lang === "ru" ? "headline_ru" : "headline_kk"])}<section class="paper"><div class="amount">${amount(tx.amount)}</div><p>${E(tx.recipient?.display_name)} · ${E(tx.recipient?.iban_masked)}</p><div class="risk-meter"><progress max="100" value="${Number(tx.risk_score)}" aria-label="${T("Оценка риска", "Тәуекел бағасы")}"></progress></div><div class="analysis-grid"><dl><dt>${T("Риск", "Тәуекел")}</dt><dd>${Number(tx.risk_score)} / 100</dd></dl><dl><dt>ML</dt><dd>${tx.ml_score == null ? "—" : Number(tx.ml_score).toFixed(1)} / 100</dd></dl></div><p class="fine">${T("Это оценки модели, не вероятность доказанного мошенничества.", "Бұл модель бағасы, дәлелденген алаяқтық ықтималдығы емес.")}</p></section>${tx.status === "cooling_off" ? `<section class="paper hold-card"><h2>${T("Cooling-Off · пауза", "Cooling-Off · үзіліс")}</h2><div class="timer" id="countdown">${timerText()}</div><p>${T("Время берётся с сервера. Истечение таймера само по себе не отправляет перевод.", "Уақыт серверден алынады. Таймердің бітуі аударымды автоматты жібермейді.")}</p>${!admin ? `<div class="inline-actions">${button("questionnaire", T("Пройти опрос", "Сауалнамадан өту"), "secondary")}${button("cancel-confirm", T("Отменить", "Тоқтату"), "secondary")}</div>` : ""}</section>` : ""}<section class="paper"><h2>${T("Почему такое решение", "Шешім себептері")}</h2>${reasons.length ? reasons.map((r) => `<div class="reason"><h3>${E(r[lang === "ru" ? "reason_ru" : "reason_kk"])}</h3><p>${E(r.layer)} · ${E(r.code)} · ${Number(r.score_delta) >= 0 ? "+" : ""}${Number(r.score_delta)}</p></div>`).join("") : `<p>${T("Дополнительные правила не сработали.", "Қосымша ережелер іске қосылған жоқ.")}</p>`}</section><section class="paper"><h2>${T("Как объясняет модель", "Модель түсіндірмесі")}</h2><p class="fine">${E(tx.ml_model_version)} · ${E(tx.ml_explanation_method)}</p>${contributors
+  return `${title(status(tx.status), tx[lang === "ru" ? "headline_ru" : "headline_kk"])}<section class="paper"><div class="amount">${amount(tx.amount)}</div><p>${E(tx.recipient?.display_name)} · ${E(tx.recipient?.iban_masked)}</p><div class="risk-meter"><progress max="100" value="${Number(tx.risk_score)}" aria-label="${T("Оценка риска", "Тәуекел бағасы")}"></progress></div><div class="analysis-grid"><dl><dt>${T("Риск", "Тәуекел")}</dt><dd>${Number(tx.risk_score)} / 100</dd></dl><dl><dt>ML</dt><dd>${tx.ml_score == null ? "—" : Number(tx.ml_score).toFixed(1)} / 100</dd></dl></div><p class="fine">${T("Это оценки модели, не вероятность доказанного мошенничества.", "Бұл модель бағасы, дәлелденген алаяқтық ықтималдығы емес.")}</p></section>${tx.status === "cooling_off" ? coolingReceipt(tx, admin) : ""}<section class="paper"><h2>${T("Почему такое решение", "Шешім себептері")}</h2>${reasons.length ? reasons.map((r) => `<div class="reason"><h3>${E(r[lang === "ru" ? "reason_ru" : "reason_kk"])}</h3><p>${E(r.layer)} · ${E(r.code)} · ${Number(r.score_delta) >= 0 ? "+" : ""}${Number(r.score_delta)}</p></div>`).join("") : `<p>${T("Дополнительные правила не сработали.", "Қосымша ережелер іске қосылған жоқ.")}</p>`}</section><section class="paper"><h2>${T("Как объясняет модель", "Модель түсіндірмесі")}</h2><p class="fine">${E(tx.ml_model_version)} · ${E(tx.ml_explanation_method)}</p>${contributors
     .slice(0, 8)
     .map(
       (c) =>
@@ -637,6 +713,7 @@ function detailView() {
     )}</section>${admin ? `<div class="action-list"><button data-graph="${E(tx.recipient.id)}">${T("Связи получателя и дроп-сеть", "Алушының байланыстары және дроп-желі")}</button><button data-action="timeline">${T("Хронология операции","Операция хронологиясы")}</button><button data-action="enrichment">${T("Проверки и уведомления", "Тексерулер мен хабарламалар")}</button></div>` : button("notifications", T("Уведомления контакту", "Сенімді адамға хабарламалар"), "secondary")}<p class="break-id">${E(tx.transaction_id)}</p>${button("refresh-detail", T("Обновить статус", "Күйін жаңарту"), "secondary")}`;
 }
 function timerText() {
+  if (!validClock(evaluation)) return "—";
   const s = remainingSeconds(evaluation, receivedAt);
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
@@ -708,6 +785,10 @@ function reportsView() {
   return `${title(T("Обращения", "Өтініштер"))}${!data?.length ? `<p class="empty">${T("Обращений нет", "Өтініштер жоқ")}</p>` : data.map((r) => `<section class="paper"><span class="status-pill">${E(label(r.state))}</span><p>${E(r.description)}</p><p class="fine">${E(label(r.category))} · ${when(r.created_at)}</p><small>${E(r.id)}</small><button class="text-button" data-object="report" data-object-id="${E(r.id)}">${T("Открыть квитанцию","Түбіртекті ашу")}</button>${gateway.role === "admin" ? `<div class="inline-actions"><button data-ack="${E(r.id)}">${T("Отметить", "Белгілеу")}</button><button data-open-case="${E(r.id)}">${T("Открыть дело", "Іс ашу")}</button></div>` : ""}</section>`).join("")}${button("reports", T("Обновить", "Жаңарту"), "secondary")}`;
 }
 const labels = {
+  CASE_INFORMATION_REQUIRED:["Сотрудник запросил сведения по обращению","Қызметкер өтініш бойынша қосымша мәлімет сұрады"],
+  CASE_REVIEW_CLOSED:["Рассмотрение обращения завершено","Өтінішті қарау аяқталды"],
+  CASE_REVIEW_REOPENED:["Рассмотрение обращения возобновлено","Өтініш қайта қаралуда"],
+  FAMILY_APPROVAL_RECORDED:["Доверенный человек подтвердил сумму и получателя","Сенімді адам сома мен алушыны растады"],
   database:["База данных","Дерекқор"], redis:["Redis","Redis"], worker:["Обработчик уведомлений","Хабарламаларды өңдеу қызметі"],
   telegram:["Telegram","Telegram"], gateway:["Учебный реестр","Оқу тізілімі"],
   core:["Платёжное ядро","Төлем жүйесі"], contact:["Доверенный контакт","Сенімді адам"], orchestration:["Обработка запроса","Сұрауды өңдеу"],
@@ -728,8 +809,59 @@ const labels = {
   safe_account:["Безопасный счёт","Қауіпсіз шот"],remote_access:["Удалённый доступ","Қашықтан кіру"],other:["Другое","Басқа"]
 };
 const label = key => labels[key] ? T(...labels[key]) : T("Статус уточняется","Күйі нақтылануда");
+const inboxActions = {
+  CASE_INFORMATION_REQUIRED: ["report", "Ответить на вопрос", "Сұраққа жауап беру"],
+  CASE_REVIEW_CLOSED: ["report", "Посмотреть заключение", "Қорытындыны көру"],
+  CASE_REVIEW_REOPENED: ["report", "Открыть обращение", "Өтінішті ашу"],
+  FAMILY_APPROVAL_RECORDED: ["transfer", "Проверить статус перевода", "Аударым күйін тексеру"],
+};
+function inboxRow(event) {
+  const action=Object.hasOwn(inboxActions,event.state) ? inboxActions[event.state] : null;
+  const text=Object.hasOwn(statuses,event.state) ? status(event.state) : label(event.state);
+  const cta=action?.[0]===event.kind ? '<span class="notice-action">'+T(action[1],action[2])+'</span>' : "";
+  const reference=cta ? T(event.kind==="report" ? "Обращение" : "Перевод", event.kind==="report" ? "Өтініш" : "Аударым")+
+    " · "+String(event.object_id).slice(-8)+" · " : "";
+  return `<button class="live-row security-notice" data-inbox-state="${E(event.state)}" data-object="${E(event.kind)}" data-object-id="${E(event.object_id)}">
+    <strong>${E(text)}</strong><small>${E(reference+when(event.time))}</small>${cta}</button>`;
+}
+function homeInboxView(expanded) {
+  if (!homeInboxUnavailable && !homeNotices.length) return "";
+  const heading=T("Сообщения безопасности","Қауіпсіздік хабарламалары");
+  const more = homeNotices.slice(3);
+  const overflow = more.length ? `<details class="more-security" ${expanded ? "open" : ""}>
+    <summary>${T("Ещё сообщения","Қалған хабарламалар")} · ${more.length}</summary>${more.map(inboxRow).join("")}</details>` : "";
+  return `<section class="wallet-section home-security" aria-label="${heading}"><div class="w-heading">
+    <h2>${heading}</h2><button data-action="inbox">${T("Все сообщения","Барлық хабарлама")}</button></div>
+    ${homeInboxUnavailable ? '<p>'+T("Не удалось загрузить сообщения.","Хабарламаларды жүктеу мүмкін болмады.")+'</p>' : homeNotices.slice(0,3).map(inboxRow).join("")+overflow}</section>`;
+}
+async function refreshHomeInbox() {
+  if (page!=="home" || loading || document.hidden || Date.now()<nextHomeInboxRead || gateway?.role!=="client") return;
+  const session=gateway, revision=viewRevision;
+  const current=()=>gateway===session && viewRevision===revision && page==="home";
+  nextHomeInboxRead=Date.now()+30000;
+  let notices=[], unavailable=false;
+  try {
+    const response = await session.request("/inbox?view=actions");
+    const seen = new Set();
+    for (const event of response.items) {
+      const key = event.kind + "/" + event.object_id;
+      if (seen.has(key) || inboxActions[event.state]?.[0] !== event.kind) continue;
+      seen.add(key);
+      notices.push(event);
+    }
+  } catch(e) {
+    if (!current()) return;
+    if (e.status===401) {
+      clearVisible();await identity.write("session",null);error=errText(401);render();return;
+    }
+    unavailable=true;
+    if(e.status===429) nextHomeInboxRead=Date.now()+Math.max(30,Number(e.retryAfter)||60)*1000;
+  }
+  if (!current() || homeInboxUnavailable===unavailable && JSON.stringify(homeNotices)===JSON.stringify(notices)) return;
+  homeNotices=notices;homeInboxUnavailable=unavailable;render();
+}
 function contactsView() {
-  return `${title(T("Круг доверия", "Сенім шеңбері"), T("Контакт может сообщить о подозрении, но не одобрить перевод. Приглашение не означает согласие.", "Сенімді адам күдік туралы хабарлай алады, бірақ аударымды мақұлдай алмайды. Шақыру келісім болып саналмайды."))}<section class="paper">${(data?.contacts ?? []).map((c) => `<div class="contact"><strong>${E(c.alias || T("Контакт", "Контакт"))}</strong><p>${E(label(c.state))}</p><small>${E(c.language === "kk" ? "Қазақша" : "Русский")}</small>${c.state !== "CONTACT_REVOKED" ? `<button class="text-button" data-revoke="${E(c.id)}">${T("Отозвать согласие", "Келісімді қайтарып алу")}</button>` : ""}</div>`).join("") || `<p>${T("Контакты не подключены.", "Контактілер қосылмаған.")}</p>`}</section><p class="callout">${account?.telegram_mode === "test" ? T("Уведомления отправляются согласившимся участникам теста в Telegram.", "Telegram хабарламалары келісім берген сынақ қатысушыларына жіберіледі.") : T("Учебная доставка сохраняет уведомления на сервере.", "Оқу режимінде хабарламалар серверде сақталады.")}</p>${button("invite-confirm", T("Пригласить близкого", "Жақын адамды шақыру"), "secondary")}`;
+  return `${title(T("Круг доверия", "Сенім шеңбері"), T("Близкий может сообщить о подозрении. Для подтверждения крупных переводов выберите его в настройках семейной защиты после того, как он примет приглашение.", "Жақыныңыз күдік туралы хабарлай алады. Ірі аударымдарды растау үшін, ол шақыруды қабылдаған соң оны отбасылық қорғау баптауларынан таңдаңыз."))}<section class="paper">${(data?.contacts ?? []).map((c) => `<div class="contact"><strong>${E(c.alias || T("Контакт", "Контакт"))}</strong><p>${E(label(c.state))}</p><small>${E(c.language === "kk" ? "Қазақша" : "Русский")}</small>${c.state !== "CONTACT_REVOKED" ? `<button class="text-button" data-revoke="${E(c.id)}">${T("Отозвать согласие", "Келісімді қайтарып алу")}</button>` : ""}</div>`).join("") || `<p>${T("Контакты не подключены.", "Контактілер қосылмаған.")}</p>`}</section><p class="callout">${account?.telegram_mode === "test" ? T("Уведомления отправляются согласившимся участникам теста в Telegram.", "Telegram хабарламалары келісім берген сынақ қатысушыларына жіберіледі.") : T("Учебная доставка сохраняет уведомления на сервере.", "Оқу режимінде хабарламалар серверде сақталады.")}</p>${button("invite-confirm", T("Пригласить близкого", "Жақын адамды шақыру"), "secondary")}`;
 }
 function graphView(graph=data, compact=false) {
   const nodes = graph?.nodes ?? [],
@@ -765,7 +897,7 @@ function casesView() {
 }
 function caseView() {
   return data
-    ? `${title(T("Работа с делом", "Іспен жұмыс"))}<section class="paper case-summary"><small>SOC · ${when(data.created_at)}</small><h2>${E(label(data.category))}</h2><p>${caseState(data.state)} · v${Number(data.version)}</p><p class="fine">${E(data.assignee ?? T("Не назначено", "Тағайындалмаған"))}</p><p class="break-id">${E(data.id)}</p></section>${data.state === "NEW" ? button("case-review", T("Взять в рассмотрение", "Қарауға алу")) : ""}${data.state === "IN_REVIEW" ? button("case-resolve", T("Завершить демо-разбор", "Демо-тексеруді аяқтау")) : ""}<p class="fine">${T("Действия фиксируются в журнале. Это не решение банка.", "Әрекеттер журналда сақталады. Бұл банк шешімі емес.")}</p>`
+    ? `${title(T("Работа с делом", "Іспен жұмыс"))}<section class="paper case-summary"><small>SOC · ${when(data.created_at)}</small><h2>${E(label(data.category))}</h2><p>${caseState(data.state)} · v${Number(data.version)}</p><p class="fine">${E(data.assignee ?? T("Не назначено", "Тағайындалмаған"))}</p><p class="break-id">${E(data.id)}</p></section>${data.state === "NEW" ? button("case-review", T("Взять в рассмотрение", "Қарауға алу")) : ""}${desk.closeCase(data)}<p class="fine">${T("Действия фиксируются в журнале. Это не решение банка.", "Әрекеттер журналда сақталады. Бұл банк шешімі емес.")}</p>`
     : "";
 }
 function enrichmentView() {
@@ -808,14 +940,32 @@ function sampleView() {
   );
 }
 const wallet=walletUI({T,E,amount,when,button,status});
-const desk=serviceDesk({T,E,when,title,button});
+const desk=serviceDesk({T,E,when,title,button,amount,status});
+function callLogView() {
+  const heading = title(T("Банк мне звонит?", "Банк маған қоңырау шалып жатыр ма?"));
+  const intro = '<p class="callout">' + T("Сверьте звонок с учебным журналом исходящих звонков.", "Қоңырауды оқу стендінің шығыс қоңыраулар журналымен салыстырыңыз.") + '</p>';
+  const check = button("check-call", T("Проверить тестовый журнал", "Тест журналын тексеру"));
+  let result = "";
+  if (data && typeof data.verified === "boolean") {
+    const state = data.verified ? T("В журнале есть исходящий звонок", "Журналда шығыс қоңырауы бар") : T("В журнале нет исходящего звонка", "Журналда шығыс қоңырауы жоқ");
+    result = '<section class="paper" role="status"><strong>' + state + '</strong>';
+    if (data.verified && data.employee_name) result += '<p>' + T("Сотрудник в записи", "Журналдағы қызметкер") + ' · ' + E(data.employee_name) + '</p>';
+    if (data.verified && data.started_at) result += '<p>' + T("Начало звонка", "Қоңырау басталған уақыт") + ' · ' + E(when(data.started_at)) + '</p>';
+    if (data.checked_at) result += '<p>' + T("Время проверки", "Тексеру уақыты") + ' · ' + E(when(data.checked_at)) + '</p>';
+    result += '</section>';
+  } else if (failureState) {
+    result = '<p role="status">' + T("Журнал недоступен. Проверить звонок пока не удалось.", "Журнал қолжетімсіз. Қоңырауды тексеру әзірге мүмкін болмады.") + '</p>';
+  }
+  return heading + intro + check + result + '<section class="paper"><p>' + T("Если просят перевести деньги на «безопасный счёт», завершите разговор и сами позвоните в банк.", "Ақшаны «қауіпсіз шотқа» аударуды сұраса, әңгімені аяқтап, банкке өзіңіз қоңырау шалыңыз.") + '</p><a class="text-button" href="tel:505">' + T("Позвонить в BCC · 505", "BCC-ге қоңырау шалу · 505") + '</a></section>';
+}
+
 const screens = {
   staff:()=>desk.staff(data),
   callbacks:()=>desk.callbacks(data),
   analytics:()=>wallet.analytics(data,selectedDay),
   socAnalytics:()=>wallet.soc(data,true),
   incoming:()=>data?'<h1>'+T("Входящий перевод","Кіріс аударым")+'</h1><section class="paper"><h2>+'+amount(data.amount)+'</h2><p>'+E(data.counterparty)+'</p>'+wallet.badge(data.status)+'<p>'+when(data.created_at)+'</p><small>'+E(data.transaction_id)+'</small></section>':"",
-  family: () => familyView(data,T,button,when),
+  family: () => familyView(data,T,button,when) + secondSettingsView(data?.second,T,button,when,amount,E,webWallet),
   guard: () => checkView(data,T,button,when,label),
   packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Сохранить PDF","PDF сақтау")) : "",
   sample: sampleView,
@@ -823,7 +973,7 @@ const screens = {
   home: ()=>gateway?.role==="platform_admin" ? desk.metrics(data) : historyView(),
   inbox: () => title(T("Сообщения безопасности","Қауіпсіздік хабарламалары")) +
     (gateway?.role==="client" ? button("callbacks",T("Запросы на связь","Хабарласу сұраулары"),"secondary") : "")+
-    ((data?.items ?? []).map(e => `<button class="live-row" data-object="${E(e.kind)}" data-object-id="${E(e.object_id)}"><strong>${E(e.state === "cooling_off" ? status(e.state) : label(e.state))}</strong><small>${when(e.time)}</small></button>`).join("") || T("Пока нет сообщений","Әзірге хабарлама жоқ")),
+    ((data?.items ?? []).map(inboxRow).join("") || (error || loading ? "" : T("Пока нет сообщений","Әзірге хабарлама жоқ"))),
   reportDetail: () => title(T("Квитанция обращения","Өтініш түбіртегі")) + (data ? `<section class="paper"><strong>${E(label(data.state))}</strong><p>${E(data.description)}</p><small>${E(data.id)} · ${when(data.created_at)}</small></section>` : ""),
   history: historyView,
   transfer: transferView,
@@ -843,16 +993,21 @@ const screens = {
   enrichment: enrichmentView,
   gateway: gatewayView,
   settings: settingsView,
-  call: () =>
-    `${title(T("Банк мне звонит?", "Банк маған қоңырау шалып жатыр ма?"))}<p class="callout">${T("Ответ только из тестового журнала нашего стенда. Это не проверка настоящего звонка банка.", "Жауап тек стендтің тест журналынан алынады. Бұл банктің нақты қоңырауын тексеру емес.")}</p>${button("check-call", T("Проверить тестовый журнал", "Тест журналын тексеру"))}${data ? `<section class="paper"><p>${E(data[lang === "ru" ? "message_ru" : "message_kk"])}</p></section>` : ""}`,
+  call: callLogView,
   notifications: () =>
     `${title(T("Уведомления", "Хабарламалар"))}<section class="paper">${data?.length ? data.map((n) => `<p>${E(label(n.state))} · ${when(n.expires_at)}</p>`).join("") : T("По этому переводу пока нет уведомлений.", "Бұл аударым бойынша әзірге хабарлама жоқ.")}</section>`,
   confirmCancel: () =>
-    `${title(T("Отменить перевод?", "Аударым тоқтатылсын ба?"))}<p class="callout">${T("Отмена тестовой операции необратима. Администратор не может отправить её за тебя.", "Тест әрекетін тоқтату қайтарылмайды. Әкімші оны сенің атыңнан жібере алмайды.")}</p>${button("cancel-transfer", T("Да, отменить", "Иә, тоқтату"))}${button("refresh-detail", T("Вернуться", "Қайту"), "secondary")}`,
+    title(T("Отменить перевод?", "Аударым тоқтатылсын ба?")) +
+      (evaluation?.transaction_id === selectedId && evaluation?.status === "cooling_off"
+        ? `<section class="paper receipt"><strong class="amount">${amount(evaluation.amount)}</strong><p>${E(evaluation.recipient.display_name)} · ${E(evaluation.recipient.iban_masked)}</p></section>` +
+          `<p class="callout">${T("После отмены деньги останутся на счёте. Для нового перевода потребуется отдельное поручение.", "Аударым тоқтатылғаннан кейін ақша шотта қалады. Қайта аудару үшін жаңа аударым жасау керек.")}</p>` +
+          button("cancel-transfer", T("Да, отменить", "Иә, тоқтату"), "primary", `data-transaction="${E(selectedId)}"`) : "") +
+      button("refresh-detail", T("Вернуться к переводу", "Аударымға оралу"), "secondary"),
   invite: () =>
     `${title(T("Тестовое приглашение", "Тест шақыруы"))}<p class="callout">${T("Создайте приглашение для близкого. Уведомления доступны только после его личного согласия.", "Жақын адамыңызға шақыру жасаңыз. Хабарламалар оның жеке келісімінен кейін ғана қолжетімді.")}</p>${button("create-invite", T("Подтверждаю", "Растаймын"))}`,
 };
 function render() {
+  const homeNoticesExpanded = page === "home" && root.querySelector(".more-security")?.open;
   document.documentElement.lang = lang;
   root.classList.toggle("projector",projector && gateway?.role==="admin");
   root.dataset.screen=page;root.dataset.actor=gateway?.role||"guest";
@@ -888,6 +1043,14 @@ function render() {
         if(workspaceRead.pending.has(part))root.querySelector('[data-action="'+action+'"]')?.setAttribute("hidden","");
       }
     }
+    if(workspaceRead?.updatedAt && !workspaceRead.pending.size) {
+      const meta=document.createElement("small");
+      meta.className="sync-note";
+      meta.textContent=T("Данные получены","Деректер алынды")+" · "+workspaceRead.updatedAt.toLocaleTimeString(lang==="ru"?"ru-RU":"kk-KZ");
+      root.querySelector("main").append(meta);
+    }
+    if (gateway?.role==="client" && page==="home")
+      root.querySelector(".wallet-overview")?.insertAdjacentHTML("afterend",homeInboxView(homeNoticesExpanded));
     if (gateway?.role==="client" && page==="home" && awaitingReplyCount>0)
       root.querySelector("main").insertAdjacentHTML("afterbegin",button("callbacks",
         T("Отдел антифрода ждёт ответа","Антифрод бөлімі жауап күтуде")+" · "+awaitingReplyCount,"secondary"));
@@ -943,7 +1106,7 @@ function render() {
       if(data.transaction_id) root.querySelector("main").insertAdjacentHTML("beforeend",
         '<button class="linked-receipt" data-detail="'+E(data.transaction_id)+'"><span>'+T("Связанная квитанция","Байланысты түбіртек")+'</span><small>'+E(data.transaction_id)+'</small></button>');
       const log=reportHistory.map(e=>'<p>'+E(label(e.event))+' · '+when(e.created_at)+'</p>').join("");
-      if (gateway.role==="client") root.querySelector("main").insertAdjacentHTML("beforeend",desk.reportCallback(callbackView));
+      if (gateway.role==="client") root.querySelector("main").insertAdjacentHTML("beforeend",desk.resolution(callbackView)+desk.reportCallback(callbackView));
       root.querySelector("main").insertAdjacentHTML("beforeend",'<section class="paper"><h2>'+T("История обращения","Өтініш тарихы")+'</h2>'+log+'</section>'+
         requests.map(r=>'<section class="paper"><h3>'+E(r[lang==="ru"?"description_ru":"description_kk"])+'</h3>'+(r.answered?T("Ответ получен","Жауап алынды"):'<form class="form-stack" id="request-answer" data-id="'+E(r.id)+'"><label>'+T("Ответ для демо-SOC","Демо-SOC үшін жауап")+'<textarea name="body" minlength="10" maxlength="500" required></textarea></label><button>'+T("Отправить ответ","Жауапты жіберу")+'</button></form>')+'</section>').join(""));
     }
@@ -1007,11 +1170,11 @@ function render() {
       root.querySelector("main .paper")?.after(panel);
     }
     if (page === "case" && data) root.querySelector("main").insertAdjacentHTML("beforeend",
-      `<section class="paper case-rail"><h2>${T("История дела","Іс тарихы")}</h2>${caseEvents.map(e => `<p>${E(e[lang === "ru" ? "description_ru" : "description_kk"])} · ${when(e.timestamp)}</p>`).join("")}</section>
-      <form id="case-note" class="form-stack paper"><label>${T("Заметка аналитика","Талдаушы жазбасы")}<textarea name="note" required minlength="10" maxlength="500"></textarea></label><button>${T("Сохранить","Сақтау")}</button></form>` +
+      `<section class="paper case-rail"><h2>${T("История дела","Іс тарихы")}</h2>${caseEvents.map(e => `<p>${E(e[lang === "ru" ? "description_ru" : "description_kk"])} · ${when(e.timestamp)} ${desk.outcomeLabel(e.reason)}</p>`).join("")}</section>` +
+      (!["RESOLVED","CLOSED"].includes(data.state) ? `<form id="case-note" class="form-stack paper"><label>${T("Заметка аналитика","Талдаушы жазбасы")}<textarea name="note" required minlength="10" maxlength="500"></textarea></label><button>${T("Сохранить","Сақтау")}</button></form>` : "") +
       (caseEvidence?.transaction_id?'<button class="secondary" data-detail="'+E(caseEvidence.transaction_id)+'">'+T("Связанная операция","Байланысты операция")+'</button>':"") +
       (data.source==="owner_demo" && ["IN_REVIEW","ESCALATED"].includes(data.state)?button("case-information",T("Спросить, что требовал звонящий","Қоңырау шалушының талабын сұрау"),"secondary"):"") +
-      (data.assignee!=="demo_analyst_a" ? button("case-assign",T("Назначить на себя","Өзіме тағайындау"),"secondary") : "")+desk.officerCallback(data,callbackView));
+      (data.assignee!=="demo_analyst_a" && !["RESOLVED","CLOSED"].includes(data.state) ? button("case-assign",T("Назначить на себя","Өзіме тағайындау"),"secondary") : "")+desk.officerCallback(data,callbackView));
     if (page === "detail" && gateway?.role === "client" && evaluation) {
       root.querySelector(".paper")?.insertAdjacentHTML("afterbegin", `<small>${accountLabel()}</small>`);
       root.querySelector("main").insertAdjacentHTML("beforeend",
@@ -1085,6 +1248,15 @@ root.addEventListener("click", async (event) => {
   }
   if (b.dataset.detail) {
     await open("detail", b.dataset.detail);
+    return;
+  }
+  if (b.dataset.caseCancel) {
+    const verdict = callbackView?.resolution;
+    if (page === "reportDetail" && gateway?.role === "client" && callbackView?.case_state === "CLOSED" &&
+        verdict?.outcome === "confirmed_fraud" && verdict.operation?.status === "cooling_off" &&
+        verdict.operation.transaction_id === b.dataset.caseCancel) {
+      await open("confirmCancel", verdict.operation.transaction_id);
+    }
     return;
   }
   if (b.dataset.graph) {
@@ -1189,7 +1361,15 @@ root.addEventListener("click", async (event) => {
   if (product && ["family","guard","packet"].includes(act)) { await open(act); return; }
   if (act === "call-transfer") { presetMode=false; draft={context:{active_call:true}}; await open("transfer"); return; }
   if (act === "family-on" || act === "family-off") {
-    await perform(async()=>{data=await gateway.request("/protection/family","POST",{action:act==="family-on"?"enable":"disable"});}); return;
+    await perform(async()=>{data={...data,...await gateway.request("/protection/family","POST",{action:act==="family-on"?"enable":"disable"})};}); return;
+  }
+  if ((act === "second-on" || act === "second-off") && page === "family" && gateway?.role === "client") {
+    const contact = data?.second?.contact_id || root.querySelector('[name="approval-contact"]')?.value;
+    const body = act === "second-on" ? {action:"enable",contact_id:contact} : {action:"disable"};
+    await perform(async()=>{
+      data = {...data, second:await gateway.request("/protection/second-confirmation","POST",body)};
+    });
+    return;
   }
   if (act === "guard-refresh") { await open("guard"); return; }
   if (["call-end","choice","pressure","notify-family"].includes(act)) {
@@ -1319,7 +1499,7 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "refresh-detail") {
-    await open("detail");
+    await open("detail", selectedId);
     return;
   }
   if (act === "transfer") {
@@ -1347,13 +1527,13 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "submit-transfer") {
-    if (pending || !draft) return;
+    if (pending || !draft || (draft.payee && !canConfirmPayee(data))) return;
     await perform(async () => {
       const { request_id: id } = await gateway.request("/requests", "POST", {});
       await savePending(id);
       mutationOutcome = true;
       const value = await api("transfers/evaluate", "POST", {
-        ...draft,
+        recipient_phone: draft.recipient_phone, amount: draft.amount, context: draft.context,
         request_id: id,
         currency: "KZT",
       });
@@ -1395,25 +1575,41 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "questionnaire") {
-    answers = {};
-    step = 0;
+    if (evaluation?.status !== "cooling_off" || gateway?.role !== "client") return;
+    const saved = savedAnswers(evaluation);
+    answers = {...saved};
+    step = saved ? questions.length : 0;
+    editingQuestion = false;
     page = "questionnaire";
+    render();
+    return;
+  }
+  if (act === "edit-answer" && page === "questionnaire") {
+    const index = Number(b.dataset.index);
+    if (!Number.isInteger(index) || index < 0 || index >= questions.length) return;
+    editingQuestion = true;
+    step = index;
     render();
     return;
   }
   if (act === "answer-yes" || act === "answer-no") {
     if (step < questions.length) {
       answers[questions[step][0]] = act === "answer-yes";
-      step++;
+      step = editingQuestion ? questions.length : step + 1;
+      editingQuestion = false;
       render();
     }
     return;
   }
-  if (act === "submit-answers") {
+  if (act === "submit-answers" || act === "release-transfer") {
+    if (page !== "questionnaire" || gateway?.role !== "client" || evaluation?.transaction_id !== selectedId ||
+        !questions.every(([key]) => typeof answers[key] === "boolean") ||
+        (act === "release-transfer" && !readyToConfirm(evaluation))) return;
     await perform(async () => {
       accept(
         await api(`transfers/${selectedId}/resolve-cooling`, "POST", {
           answers,
+          save_only: act === "submit-answers",
         }),
       );
       page = "detail";
@@ -1424,18 +1620,34 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "cancel-confirm") {
-    page = "confirmCancel";
-    render();
+    await open("confirmCancel", selectedId);
     return;
   }
   if (act === "cancel-transfer") {
+    const id = b.dataset.transaction;
+    if (page !== "confirmCancel" || gateway?.role !== "client" || !id ||
+        id !== selectedId || id !== evaluation?.transaction_id || evaluation.status !== "cooling_off") return;
     await perform(async () => {
-      accept(await api(`transfers/${selectedId}/cancel`, "POST", {}));
+      let updated;
+      try {
+        updated = await api(`transfers/${id}/cancel`, "POST", {});
+      } catch (failure) {
+        if (failure.status !== 409 && failure.status !== 0 && !(failure.status >= 500)) throw failure;
+        evaluation = null;
+        updated = await api(`transfers/${id}`);
+        if (updated.transaction_id === id && updated.status === "cooling_off") {
+          accept(updated);
+          throw failure;
+        }
+      }
+      if (updated.transaction_id !== id) throw new Error("transaction_mismatch");
+      accept(updated);
       page = "detail";
     });
     return;
   }
   if (act === "check-call") {
+    data = null;
     await perform(async () => {
       data = await api("call-check", "POST", {});
     });
@@ -1458,7 +1670,7 @@ root.addEventListener("click", async (event) => {
     if (!error) await open("contacts");
     return;
   }
-  if (["case-review","case-resolve","case-assign","case-information"].includes(act)) {
+  if (["case-review","case-assign","case-information"].includes(act)) {
     const current = data;
     await perform(async () => {
       data = await api(
@@ -1468,8 +1680,8 @@ root.addEventListener("click", async (event) => {
           ...(act==="case-information"?{action:"request_information",question:"caller_request"}:act === "case-assign" ? {action:"assign",assignee:"demo_analyst_a"} : {
           action: "transition",
           expected_version: current.version,
-          state: act === "case-review" ? "IN_REVIEW" : "RESOLVED",
-          reason: act === "case-review" ? "review_started" : "review_complete"}),
+          state: "IN_REVIEW",
+          reason: "review_started"}),
           expected_version: current.version,
         },
         crypto.randomUUID(),
@@ -1533,9 +1745,11 @@ root.addEventListener("submit", async (event) => {
     return;
   }
   if (form.id === "transfer-form") {
+    const manual = fields.get("recipient_phone") === "manual";
     draft = {
-      recipient_phone: String(fields.get("recipient_phone")),
+      recipient_phone: phoneNumber(String(fields.get(manual ? "manual_phone" : "recipient_phone"))),
       amount: String(fields.get("amount")),
+      ...(product && !presetMode ? {payee: {manual, bank: String(fields.get("payee_bank")), expectedName: String(fields.get("payee_name") || "").trim()}} : {}),
       context: {
         active_call: fields.has("active_call"),
         from_deposit: fields.has("from_deposit"),
@@ -1549,6 +1763,16 @@ root.addEventListener("submit", async (event) => {
     const id = data.id;
     await perform(() => api("integrations/guardian/soc/cases/"+id+"/actions","POST",{action:"note",body:fields.get("note"),expected_version:data.version},crypto.randomUUID()));
     if (!error) await open("case",id);
+    return;
+  }
+  if (form.id === "case-close" && page === "case" && gateway?.role === "admin") {
+    const current = data;
+    const reason = String(fields.get("outcome") ?? "");
+    if (!desk.outcomeLabel(reason)) return;
+    await perform(() => api("integrations/guardian/soc/cases/"+current.id+"/actions","POST",{
+      action:"transition", state:"CLOSED", reason, expected_version:current.version,
+    },crypto.randomUUID()));
+    if (!error) await open("case",current.id,false);
     return;
   }
   if (form.id === "search-form") {
@@ -1619,8 +1843,11 @@ setInterval(() => {
   const timer = document.querySelector("#countdown");
   if (timer) {
     timer.textContent = timerText();
-    if (product && timer.textContent === "00:00" && expiryChecked !== selectedId && !loading) {
-      expiryChecked = selectedId; void open("detail",selectedId);
+    if (timer.textContent === "00:00" && !loading) {
+      if (page === "questionnaire" && step === questions.length && timer.dataset.expired === "false") render();
+      if (product && page === "detail" && expiryChecked !== selectedId) {
+        expiryChecked = selectedId; void open("detail",selectedId,false);
+      }
     }
   }
 }, 1000);
@@ -1641,6 +1868,17 @@ async function restoreSession() {
 if (product) void restoreSession();
 root.addEventListener("change", event => {
   if (event.target.name === "remember") rememberLogin=event.target.checked;
+  if (page === "transfer" && event.target.name === "recipient_phone") {
+    const manualField = root.querySelector("[data-manual-phone]");
+    if (manualField) {
+      const manual = event.target.value === "manual";
+      const phone = manualField.querySelector("input");
+      manualField.hidden = !manual;
+      phone.disabled = !manual;
+      phone.required = manual;
+      if (manual) phone.focus();
+    }
+  }
   if (page === "review" && draft && event.target.name === "payment_requested_after_call") {
     if (event.target.checked) draft.context.payment_requested_after_call = true;
     else delete draft.context.payment_requested_after_call;
@@ -1666,7 +1904,7 @@ async function refreshVisible() {
   const editing=()=>{
     const search=root.querySelector("#search-form input");
     return document.activeElement?.matches("input,textarea,select") ||
-      Array.from(root.querySelectorAll("#case-note textarea,#request-answer textarea")).some(field=>field.value) ||
+      Array.from(root.querySelectorAll("#case-note textarea,#case-close select,#request-answer textarea")).some(field=>field.value) ||
       (search && search.value!==query);
   };
   if (editing() || workspaceRead?.pending.size) return;
@@ -1677,6 +1915,7 @@ async function refreshVisible() {
   for(const [key,value] of Object.entries(ledgerFilter))if(value)params.set(key,value);
   let read;
   if(screen==="home" && g.role==="client")read=async()=>{
+    void refreshHomeInbox();
     const [a,l]=await Promise.all([g.request("/account"),g.request("/wallet/operations?limit=3")]);
     if (!here()) return;
     const ledgerChanged=!same(a,account)||!same(l,data);

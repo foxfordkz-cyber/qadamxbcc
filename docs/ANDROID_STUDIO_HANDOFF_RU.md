@@ -1,6 +1,6 @@
 # Открытие Qadam Shield 2.7 в Android Studio
 
-Исходники версии 2.7 (versionCode 10, пакет debug `kz.qadamx.bccshield.demo`) передаются в [ветке mobile/android-studio-handoff](https://github.com/foxfordkz-cyber/qadamxbcc/tree/mobile/android-studio-handoff). Основа — линия установленного на Honor релиза и аудит входа `6f65754`. Ветка сохраняет историю разработки. На saq-bol-mobile работает серверная ревизия `2ffc009`.
+Ветка `main` содержит текущий кошелёк и учебный набор PostgreSQL. Подписанный [APK 2.7 для Honor](../deliverables/android/Saq-Bol-Android-2.7.apk) собран из ревизии `daea694` и подключается к командному сервису `saq-bol-mobile`. Его версия, адрес API и отпечаток сертификата записаны в [паспорте APK](../deliverables/android/Saq-Bol-Android-2.7.json). Новые функции веб-кошелька доступны при сборке из текущего `main`.
 
 ## Подготовка на Windows
 
@@ -9,7 +9,7 @@
 В PowerShell из родительской папки:
 
 ```powershell
-git clone --branch mobile/android-studio-handoff https://github.com/foxfordkz-cyber/qadamxbcc.git
+git clone --branch main https://github.com/foxfordkz-cyber/qadamxbcc.git
 cd qadamxbcc
 npm.cmd --prefix android-app ci
 npm.cmd --prefix android-app run web

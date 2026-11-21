@@ -2,7 +2,7 @@
 
 Единый источник текстов: `frontend/src/content/pitch.json`. Его используют экран
 `/pitch` и две редактируемые презентации по восемь слайдов:
-`deliverables/BCC-Shield-ru.pptx` и `deliverables/BCC-Shield-kk.pptx`.
+`deliverables/Saq-Bol-ru.pptx` и `deliverables/Saq-Bol-kk.pptx`.
 `deliverables/pitch-manifest.json` связывает SHA-256 нормализованного исходного JSON
 с SHA-256 обоих проверенных файлов, чтобы обнаружить устаревшую презентацию после
 правки текстов. Поле `sourceHashEncoding` задаёт алгоритм: разобрать исходный текст

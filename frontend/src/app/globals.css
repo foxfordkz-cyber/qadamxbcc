@@ -125,6 +125,8 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .brand strong span { font-weight: 400; color: var(--ink-3); }
 .brand small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .header-right { display: flex; align-items: center; gap: 16px; }
+.jury-entry { margin-inline-start: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 16px; background: var(--emerald-dark); color: white; border-radius: var(--r-md); font-size: 14px; font-weight: 650; }
+.jury-entry:hover { background: var(--emerald-ink); }
 .mode { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 999px; background: var(--surface-3); color: var(--ink-3); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .mode .live-dot { width: 6px; height: 6px; }
 .shell { max-width: 1880px; margin: 0 auto; padding: 24px 32px 0; }
@@ -494,6 +496,9 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
   .threshold-strip .target { margin-left: 0; }
 }
 @media (max-width: 600px) {
+  .topbar-inner:has(> .jury-entry) { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .topbar-inner > .jury-entry { grid-row: 2; grid-column: 1 / -1; margin: 0; }
+  .topbar-inner:has(> .jury-entry) > :last-child { grid-row: 1; grid-column: 2; }
   body { font-size: 14px; }
   .topbar-inner { padding: 10px 16px; gap: 10px; }
   .brand-mark { width: 36px; height: 36px; }

@@ -45,13 +45,14 @@ async def test_readiness_is_bounded_cached_and_recovers(dependency: str) -> None
         assert session.execute.await_count == 2
 
 
+@pytest.mark.parametrize("browser_only", [False, True])
 async def test_public_release_routes_do_not_publish_missing_apk_or_grant_soc(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    browser_only: bool,
 ) -> None:
     monkeypatch.setattr("app.mobile_gateway.app.WEB_ASSETS", tmp_path)
     (tmp_path / "index.html").write_text("test wallet", encoding="utf-8")
-    (tmp_path / "release.html").write_text("synthetic release", encoding="utf-8")
     app = create_mobile_app(
         MobileSettings(
             enabled=True,
@@ -59,8 +60,11 @@ async def test_public_release_routes_do_not_publish_missing_apk_or_grant_soc(
             admin_code=SecretStr("synthetic-admin-code-0987654321XYZ"),
         ),
         Settings(database_url="sqlite+aiosqlite:///:memory:"),
+        browser_only=browser_only,
     )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        assert (await client.get("/")).headers["location"] == "/wallet/"
+        (tmp_path / "release.html").write_text("synthetic release<!-- android-download -->")
         assert (await client.get("/")).text == "synthetic release"
         assert (await client.get("/wallet/")).text == "test wallet"
         soc = await client.get("/soc/")
@@ -70,5 +74,14 @@ async def test_public_release_routes_do_not_publish_missing_apk_or_grant_soc(
         assert (await client.get("/download/")).status_code == 503
         install = tmp_path / "install"
         install.mkdir()
-        (install / "release.json").write_text("{}", encoding="utf-8")
-        assert (await client.get("/download/")).headers["location"] == "/wallet/install/"
+        (install / "release.json").write_text('{"apk":"Saq-Bol-Android-2.7.apk","bytes":1}')
+        (install / "index.html").write_text("installer")
+        assert (await client.get("/download/")).status_code == 503
+        (install / "Saq-Bol-Android-2.7.apk").write_bytes(b"x")
+        download = await client.get("/download/")
+        if browser_only:
+            assert download.status_code == 503
+            assert "/download/" not in (await client.get("/")).text
+        else:
+            assert download.headers["location"] == "/wallet/install/"
+            assert 'href="/download/"' in (await client.get("/")).text

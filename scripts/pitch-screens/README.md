@@ -1,6 +1,6 @@
 # Питч на 10 слайдов со скриншотами
 
-`deliverables/BCC-Shield-pitch-ru.pptx` и `BCC-Shield-pitch-kk.pptx` — питч, где каждый слайд построен на настоящих экранах продукта (телефон, анкета удержания, доверенное лицо, SOC, граф, QR для жюри). Восьмислайдовые `BCC-Shield-ru/kk.pptx` из `build-pitch.mjs` не тронуты: там экономика и справедливость.
+`deliverables/Saq-Bol-pitch-ru.pptx` и `Saq-Bol-pitch-kk.pptx` — питч, где каждый слайд построен на настоящих экранах продукта (телефон, анкета удержания, доверенное лицо, SOC, граф, QR для жюри). Восьмислайдовые `Saq-Bol-ru/kk.pptx` из `build-pitch.mjs` не тронуты: там экономика и справедливость.
 
 Тексты берутся из `frontend/src/content/pitch.json` (problem, decisions, pipeline, proof, pilot, ask) и из словаря в `build.js`; заметки докладчика — в каждом слайде.
 
@@ -15,6 +15,6 @@
 
 ## HTML-нұсқа (қазақша, анимациямен)
 
-`deliverables/BCC-Shield-pitch-kk.html` — бір файл, суреттер ішінде (WebP), интернетсіз ашылады. Басқару: ← → / бос орын / свайп / басу, F — толық экран, N — баяндамашы жазбалары. Әр слайдтың өз өтуі бар (zoom, slide, rise, flip), элементтер кезекпен шығады. Жүйеде «азырақ қозғалыс» қосулы болса, анимациялар өшеді.
+`deliverables/Saq-Bol-pitch-kk.html` — бір файл, суреттер ішінде (WebP), интернетсіз ашылады. Басқару: ← → / бос орын / свайп / басу, F — толық экран, N — баяндамашы жазбалары. Әр слайдтың өз өтуі бар (zoom, slide, rise, flip), элементтер кезекпен шығады. Жүйеде «азырақ қозғалыс» қосулы болса, анимациялар өшеді.
 
-Пересборка: `prep.py`-дан кейін суреттерді WebP-ке айналдырып `/tmp/deckbuild/web`-ке салыңыз, содан соң `python3 html_build.py frontend/src/content/pitch.json deliverables/BCC-Shield-pitch-kk.html` (`template.html` жанында болуы керек).
+Пересборка: `prep.py`-дан кейін суреттерді WebP-ке айналдырып `/tmp/deckbuild/web`-ке салыңыз, содан соң `python3 html_build.py frontend/src/content/pitch.json deliverables/Saq-Bol-pitch-kk.html` (`template.html` жанында болуы керек).

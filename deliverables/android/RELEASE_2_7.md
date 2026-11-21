@@ -2,9 +2,11 @@
 
 Date: 21 November 2026, Asia/Qyzylorda. Review branch: feature/bekzat-persistent-release, PR #27. No main merge or paid infrastructure creation.
 
+Subsequent checks on the same Honor confirmed all three role logins and restored the client session after relaunch. The packaged 2.7 installer targets the team mobile service. CI verifies its signature, SHA-256 and UI files against the source revision in its manifest. The current web wallet and the fresh Android build from `main` have separate browser and build checks. [Login recovery evidence](../../deploy/LOGIN_RECOVERY_AUDIT_2026_11_21.md)
+
 ## Artifact and installed build
 
-Saq-Bol-Android-2.7.apk is version 2.7 / code 10, package kz.qadamx.bccshield.demo. Exact digest, source commit, API origin and certificate are recorded in Saq-Bol-Android-2.7.json. The final APK was built with local Gradle assembleDebug/lintDebug and the existing Android test identity. All 28 packaged top-level HTML/CSS/MJS/SVG files were compared byte-for-byte (normalized checkout line endings) with source daea694. The same check now gates the persistent Docker build, so a stale APK cannot silently accompany a newer web UI.
+Saq-Bol-Android-2.7.apk is version 2.7 / code 10, package kz.qadamx.bccshield.demo. Exact digest, source commit, API origin and certificate are recorded in Saq-Bol-Android-2.7.json. The final APK was built with local Gradle assembleDebug/lintDebug and the existing Android test identity. All 28 packaged top-level HTML/CSS/MJS/SVG files were compared byte-for-byte (normalized checkout line endings) with source daea694.
 
 Honor VNE-LX1 accepted the update over 2.5/code 8 without uninstalling or clearing application data. The application started. It contacted the configured public HTTPS service through the phone's normal network and displayed the server's invalid-credentials result for the previous locally stored client_demo account. No adb reverse, API proxy or local gateway substituted for this request. USB forwarding was used only to automate the application's WebView debugger.
 

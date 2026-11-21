@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from redis.exceptions import RedisError
 
 from app.api.deps import SessionDep, get_resources
 from app.core.config import Settings
@@ -22,8 +23,8 @@ router = APIRouter(prefix="/call-check", tags=["call-check"])
 ResourcesDep = Annotated[Resources, Depends(get_resources)]
 
 _NOT_CALLING = (
-    "Банк сізге қазір қоңырау шалып жатқан жоқ. Тұтқаны қойыңыз: бұл алаяқтар болуы мүмкін.",
-    "Банк вам сейчас НЕ звонит. Положите трубку: это могут быть мошенники.",
+    "Журналда сізге шалынған белсенді шығыс қоңырау табылмады.",
+    "В журнале нет активного исходящего звонка на ваш номер.",
 )
 
 
@@ -38,10 +39,13 @@ async def check_call(
 ) -> CallCheckResponse:
     """Answer from the bank's own log; never from what the caller says."""
     await _require_customer(session, body.customer_id)
-    result = await CallCheckService(resources.redis).check(body.customer_id)
+    try:
+        result = await CallCheckService(resources.redis).check(body.customer_id)
+    except RedisError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "call_log_unavailable") from exc
     if result.verified:
-        kk = f"Иә, бұл банк қызметкері: {result.employee_name}, {result.department}."
-        ru = f"Да, это сотрудник банка: {result.employee_name}, {result.department}."
+        kk = f"Журналда шығыс қоңырауы тіркелген. Қызметкер: {result.employee_name}."
+        ru = f"В журнале есть исходящий звонок. Сотрудник в записи: {result.employee_name}."
     else:
         kk, ru = _NOT_CALLING
     return CallCheckResponse(
@@ -50,6 +54,7 @@ async def check_call(
         employee_name=result.employee_name,
         department=result.department,
         checked_at=datetime.fromisoformat(result.checked_at),
+        started_at=datetime.fromisoformat(result.started_at) if result.started_at else None,
         message_kk=kk,
         message_ru=ru,
     )

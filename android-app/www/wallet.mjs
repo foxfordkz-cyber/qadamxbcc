@@ -1,5 +1,15 @@
 import { ledgerInstant, shortDate } from "./wallet-date.mjs";
 import { cashPlot } from "./spending-chart.mjs";
+
+// WebViews can lack Kazakh ICU data and silently fall back to English punctuation.
+export function formatTenge(value) {
+  if (value == null || value === "" || !Number.isFinite(Number(value))) return "— ₸";
+  const [whole, fraction] = Number(value).toFixed(2).split(".");
+  const groups = whole.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+  const tiyn = fraction.replace(/0+$/, "");
+  return `${groups}${tiyn ? "," + tiyn : ""} ₸`;
+}
+
 // Shared product views. Every amount passed here comes from the mobile gateway.
 const paths = {
   transfer: "M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4",

@@ -6,12 +6,12 @@
   "decks": [
     {
       "language": "ru",
-      "file": "BCC-Shield-ru.pptx",
+      "file": "Saq-Bol-ru.pptx",
       "sha256": "4b048e5c2a6c03d569c9421c57827ce7039c000d00014a31d08cffd3af488bdd"
     },
     {
       "language": "kk",
-      "file": "BCC-Shield-kk.pptx",
+      "file": "Saq-Bol-kk.pptx",
       "sha256": "309e104a007ef996ba958e8cc80619929c608e462481c3d8468b703505872077"
     }
   ]

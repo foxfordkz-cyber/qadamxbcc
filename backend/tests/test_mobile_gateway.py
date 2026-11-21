@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -81,6 +81,48 @@ async def test_role_chosen_by_secret_not_request(mobile_world: tuple[AsyncClient
         response = await client.get("/mobile/v1/session", headers=headers)
         assert response.json()["role"] == role
         assert response.headers["cache-control"] == "no-store"
+
+
+async def test_payee_check_uses_scoped_directory_and_minimal_response(
+    mobile_world: tuple[AsyncClient, Any], session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    client, _ = mobile_world
+    path = "/mobile/v1/api/payee-check"
+    body = {"recipient": "normal", "bank": "bcc", "expected_name": ""}
+    assert (await client.post(path, json=body)).status_code == 401
+    for role_code in (ADMIN_CODE, PLATFORM_CODE):
+        assert (
+            await client.post(path, json=body, headers=await login(client, role_code))
+        ).status_code == 403
+    auth = await login(client)
+    async with session_factory() as session:
+        recipient = await session.get(Account, OTHER)
+        assert recipient
+        recipient.full_name = "Данияр Асылов"
+        await session.commit()
+    for expected, status in [
+        ("", "identified"),
+        ("данияр асылов", "match"),
+        ("Данияр А.", "close"),
+        ("Марат", "mismatch"),
+    ]:
+        reply = await client.post(path, json={**body, "expected_name": expected}, headers=auth)
+        assert reply.status_code == 200
+        assert reply.json() == {
+            "recipient": "normal",
+            "bank": "bcc",
+            "source": "synthetic_directory",
+            "status": status,
+            "display_name": "Данияр А.",
+        }
+    for change in ({"bank": "other"}, {"recipient": "hub"}):
+        reply = (await client.post(path, json={**body, **change}, headers=auth)).json()
+        assert reply["status"] == "unavailable"
+        assert reply["display_name"] is None
+    assert (
+        await client.post(path, json={**body, "recipient": "+77010000001"}, headers=auth)
+    ).status_code == 422
+    assert (await client.get("/mobile/v1/transfers", headers=auth)).json()["items"] == []
 
 
 @pytest.mark.parametrize(
@@ -555,6 +597,38 @@ async def test_family_switch_delay_independent_of_contact(
     ).status_code == 409
 
 
+async def test_family_shutdown_can_be_cancelled_and_rescheduled_for_a_full_day(
+    mobile_world: tuple[AsyncClient, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.mobile_gateway import protection
+
+    client, _ = mobile_world
+    auth = await login(client)
+    base = "/mobile/v1/protection/family"
+    now = utcnow()
+    monkeypatch.setattr(protection, "utcnow", lambda: now)
+    assert (await client.post(base, headers=auth, json={"action": "enable"})).status_code == 200
+    first = await client.post(base, headers=auth, json={"action": "disable"})
+    original_deadline = datetime.fromisoformat(first.json()["disable_at"])
+    assert original_deadline == now + timedelta(hours=24)
+
+    now = original_deadline - timedelta(seconds=1)
+    cancelled = await client.post(base, headers=auth, json={"action": "enable"})
+    assert cancelled.json()["disable_at"] is None
+    now = original_deadline + timedelta(seconds=1)
+    after_original_deadline = (await client.get(base, headers=auth)).json()
+    assert after_original_deadline["enabled"] is True
+    assert after_original_deadline["disable_at"] is None
+
+    second = await client.post(base, headers=auth, json={"action": "disable"})
+    new_deadline = datetime.fromisoformat(second.json()["disable_at"])
+    assert new_deadline == now + timedelta(hours=24)
+    now = new_deadline - timedelta(seconds=1)
+    assert (await client.get(base, headers=auth)).json()["enabled"] is True
+    now = new_deadline
+    assert (await client.get(base, headers=auth)).json()["enabled"] is False
+
+
 async def test_protection_requires_owner(
     mobile_world: tuple[AsyncClient, Any], session_factory: async_sessionmaker[AsyncSession]
 ) -> None:
@@ -673,6 +747,83 @@ async def test_family_one_recipient_actual_callback(
     assert (await client.get(case_url, headers=staff)).json()["state"] == "NEW"
     evidence = (await client.get(case_url + "/evidence", headers=staff)).json()
     assert evidence["transaction_id"] == txid
+
+
+@pytest.mark.parametrize(
+    ("states", "revoked_contact", "expected"),
+    [
+        (
+            ("CONTACT_ACKNOWLEDGED", "SUSPICION_REPORTED", "NOTIFICATION_SENT"),
+            1,
+            "SUSPICION_REPORTED",
+        ),
+        (
+            ("NOTIFICATION_SENT", "CONTACT_ACKNOWLEDGED", "NOTIFICATION_QUEUED"),
+            None,
+            "CONTACT_ACKNOWLEDGED",
+        ),
+        (
+            ("NOTIFICATION_SENT", "DELIVERY_FAILED", "NOTIFICATION_QUEUED"),
+            None,
+            "NOTIFICATION_QUEUED",
+        ),
+        (
+            ("NOTIFICATION_SENT", "NOTIFICATION_QUEUED", "NOTIFICATION_SENT"),
+            None,
+            "NOTIFICATION_SENT",
+        ),
+        (
+            ("NOTIFICATION_SENT", "NOTIFICATION_QUEUED", "NOTIFICATION_SENT"),
+            2,
+            "NOTIFICATION_QUEUED",
+        ),
+    ],
+)
+async def test_family_receipt_summarizes_all_contacts(
+    mobile_world: tuple[AsyncClient, Any],
+    session_factory: async_sessionmaker[AsyncSession],
+    states: tuple[str, str, str],
+    revoked_contact: int | None,
+    expected: str,
+) -> None:
+    from app.integrations.models import ContactNotification, TrustedContact
+
+    client, _ = mobile_world
+    auth = await login(client)
+    txid = await call_tx(client, auth)
+    now = utcnow()
+    async with session_factory() as db:
+        for index, state in enumerate(states):
+            contact = TrustedContact(
+                owner_id=OWNER,
+                language="ru",
+                state="CONTACT_REVOKED" if index == revoked_contact else "CONTACT_VERIFIED",
+                contact_consented_at=now,
+                invitation_expires_at=now + timedelta(hours=1),
+            )
+            db.add(contact)
+            await db.flush()
+            db.add(
+                ContactNotification(
+                    owner_id=OWNER,
+                    contact_id=contact.id,
+                    transaction_id=uuid.UUID(txid),
+                    state=state,
+                    created_at=now - timedelta(seconds=3 - index),
+                    expires_at=now + timedelta(seconds=-1 if index == 0 else 300),
+                )
+            )
+        await db.commit()
+
+    path = f"/mobile/v1/protection/{txid}"
+    check = (await client.get(path + "/check", headers=auth)).json()
+    packet = (await client.get(path + "/packet", headers=auth)).json()
+    assert check["contact_state"] == packet["contact_state"] == expected
+    assert check["answer"] is None
+    assert packet["status"] == "cooling_off"
+    queued = [e for e in packet["events"] if e["kind"] == "contact_queued"]
+    assert len(queued) == 1
+    assert datetime.fromisoformat(queued[0]["at"]) == now - timedelta(seconds=3)
 
 
 async def test_wallet_amounts_history_and_role_boundaries(

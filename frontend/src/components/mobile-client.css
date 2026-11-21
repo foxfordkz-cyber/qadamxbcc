@@ -274,11 +274,6 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .call-check-cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--emerald); background: var(--emerald-soft); color: var(--emerald-ink); font-weight: 650; font-size: 14px; cursor: pointer; }
 .call-check-cta:disabled { opacity: .6; cursor: default; }
 .call-check-cta:focus-visible { outline: none; box-shadow: var(--focus); }
-.call-check-result { display: flex; gap: 10px; padding: 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; }
-.call-check-result svg { flex-shrink: 0; margin-top: 1px; }
-.call-check-result strong { display: block; font-size: 14px; }
-.call-check-result.verified { background: var(--emerald-soft); border: 1px solid var(--emerald-line); color: var(--emerald-ink); }
-.call-check-result.denied { background: var(--red-soft); border: 1px solid var(--red-line); color: var(--red-ink); }
 .call-check-note { margin-top: 4px; font-weight: 600; }
 .call-check-sim { margin-top: 4px; font-size: 12px; opacity: .8; }
 .bank-call-demo { display: inline-flex; align-items: center; gap: 8px; width: 100%; justify-content: center; }

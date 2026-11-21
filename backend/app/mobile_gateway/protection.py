@@ -7,19 +7,23 @@ from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import case, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import EngineDep, SessionDep
 from app.db.base import utcnow
+from app.db.locks import serialize_sender, serialized_identity
 from app.integrations.config import IntegrationSettings
 from app.integrations.errors import IntegrationError
 from app.integrations.models import ContactNotification, GuardianReport, TrustedContact
+from app.integrations.telegram.schemas import ContactState, NotificationState
 from app.integrations.telegram.service import TrustedContactService
 from app.mobile_gateway.app import Identity, IdentityDep
 from app.mobile_gateway.protection_models import FamilyShield, PostCall
 from app.models import Account, RiskEvent, Transaction, TransactionStatus
+from app.models.family_approval import FamilyApproval, FamilyApprovalPolicy
 from app.schemas.transfers import PostCallRequest
+from app.services import family_approval
 from app.services.transfers import ConflictError, TransferService
 
 QUIET = timedelta(minutes=5)
@@ -34,6 +38,10 @@ class Answer(BaseModel):
 class Change(BaseModel):
     model_config = ConfigDict(extra="forbid")
     action: Literal["enable", "disable"]
+
+
+class ApprovalChange(Change):
+    contact_id: UUID | None = None
 
 
 def client(principal: Identity) -> UUID:
@@ -95,16 +103,44 @@ def call_state(tx: Transaction, row: CallCheck | None, now: datetime) -> str:
     return "ready" if row.ended_at + QUIET <= now else "waiting"
 
 
-async def receipt(db: AsyncSession, tx: Transaction) -> ContactNotification | None:
-    return await db.scalar(
-        select(ContactNotification)
+@dataclass
+class ContactReceipt:
+    state: str
+    first_queued_at: datetime
+
+
+async def receipt(db: AsyncSession, tx: Transaction) -> ContactReceipt | None:
+    notice = ContactNotification
+    # A recorded reply remains significant after the response window closes.
+    waiting = notice.state.in_([NotificationState.QUEUED, NotificationState.SENT])
+    state = case(
+        (waiting & (TrustedContact.state == ContactState.REVOKED), NotificationState.REVOKED.value),
+        (waiting & (notice.expires_at <= utcnow()), NotificationState.EXPIRED.value),
+        else_=notice.state,
+    )
+    priority = case(
+        {
+            NotificationState.SUSPICION: 0,
+            NotificationState.ACKNOWLEDGED: 1,
+            NotificationState.SENT: 2,
+            NotificationState.QUEUED: 3,
+        },
+        value=state,
+        else_=4,
+    )
+    rows = await db.execute(
+        select(state, func.min(notice.created_at).over())
+        .select_from(notice)
+        .join(TrustedContact, TrustedContact.id == notice.contact_id)
         .where(
-            ContactNotification.transaction_id == tx.id,
-            ContactNotification.owner_id == tx.sender_id,
+            notice.transaction_id == tx.id,
+            notice.owner_id == tx.sender_id,
         )
-        .order_by(ContactNotification.created_at, ContactNotification.id)
+        .order_by(priority, notice.created_at.desc(), notice.id)
         .limit(1)
     )
+    row = rows.first()
+    return ContactReceipt(row[0], row[1]) if row is not None else None
 
 
 async def snapshot(db: AsyncSession, tx: Transaction) -> dict[str, Any]:
@@ -112,6 +148,12 @@ async def snapshot(db: AsyncSession, tx: Transaction) -> dict[str, Any]:
     row = await recorded_call(db, tx.id)
     notice = await receipt(db, tx)
     policy = await db.get(FamilyShield, tx.sender_id)
+    required = any(
+        r.get("code") == family_approval.REQUIRED
+        for r in (tx.evaluation_snapshot or {}).get("reasons", [])
+    )
+    state, expires_at = await family_approval.approval_state(db, tx, now, required=required)
+    second = None if state == "none" else {"state": state, "expires_at": expires_at}
     return {
         "transaction_id": tx.id,
         "state": call_state(tx, row, now),
@@ -120,11 +162,82 @@ async def snapshot(db: AsyncSession, tx: Transaction) -> dict[str, Any]:
         "answer": row.answer if row else None,
         "contact_state": notice.state if notice else None,
         "family_enabled": enabled(policy, now),
+        "second_confirmation": second,
     }
 
 
 def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
     base = "/mobile/v1/protection"
+
+    def eligible(contact: TrustedContact, owner: UUID) -> bool:
+        chat = contact.telegram_chat_id
+        if not (chat and chat.isdecimal()):
+            return False
+        return (
+            contact.owner_id == owner
+            and contact.state == "CONTACT_VERIFIED"
+            and contact.contact_consented_at is not None
+            and contact.notifications_enabled
+            and settings.approval_chat_allowed(owner, int(chat))
+        )
+
+    @app.get(base + "/second-confirmation")
+    async def second_confirmation(principal: IdentityDep, session: SessionDep) -> dict[str, Any]:
+        owner = client(principal)
+        policy = await session.get(FamilyApprovalPolicy, owner)
+        contacts = await session.scalars(
+            select(TrustedContact)
+            .where(TrustedContact.owner_id == owner, TrustedContact.state == "CONTACT_VERIFIED")
+            .order_by(TrustedContact.created_at, TrustedContact.id)
+        )
+        active = family_approval.active(policy, utcnow())
+        return {
+            "threshold_kzt": str(family_approval.MIN_AMOUNT),
+            "owner_channel_ready": (
+                settings.telegram_mode != "test" or owner in settings.family_owner_chats
+            ),
+            "channel": (
+                "jury"
+                if getattr(app.state, "jury_contact_available", False)
+                else "telegram"
+                if settings.telegram_mode == "test"
+                else "simulation"
+            ),
+            "contact_id": policy.contact_id if active and policy else None,
+            "disable_at": policy.disable_at if active and policy else None,
+            "contacts": [{"id": c.id, "alias": c.alias} for c in contacts if eligible(c, owner)],
+        }
+
+    @app.post(base + "/second-confirmation")
+    async def set_approval(
+        body: ApprovalChange, principal: IdentityDep, session: SessionDep
+    ) -> dict[str, Any]:
+        owner = client(principal)
+        async with serialized_identity(session, owner):
+            await serialize_sender(session, owner)
+            policy = await session.get(FamilyApprovalPolicy, owner)
+            now = utcnow()
+            if body.action == "enable":
+                if body.contact_id is None:
+                    raise HTTPException(422, "contact_required")
+                if (
+                    policy
+                    and family_approval.active(policy, now)
+                    and body.contact_id != policy.contact_id
+                ):
+                    raise HTTPException(409, "approval_contact_already_selected")
+                contact = await session.get(TrustedContact, body.contact_id, with_for_update=True)
+                if not contact or not eligible(contact, owner):
+                    raise HTTPException(409, "eligible_contact_required")
+                if policy is None:
+                    session.add(FamilyApprovalPolicy(owner_id=owner, contact_id=contact.id))
+                else:
+                    policy.contact_id = contact.id
+                    policy.disable_at = None
+            elif policy and policy.disable_at is None:
+                policy.disable_at = now + GRACE
+            await session.commit()
+        return await second_confirmation(principal, session)
 
     @app.get(base + "/family")
     async def family(principal: IdentityDep, session: SessionDep) -> dict[str, Any]:
@@ -199,7 +312,15 @@ def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
             raise HTTPException(409, "family_disabled")
         if not settings.enabled or settings.telegram_mode == "disabled":
             raise HTTPException(503, "contact_channel_unavailable")
-        if not await receipt(session, tx):
+        already_requested = await session.scalar(
+            select(
+                exists().where(
+                    ContactNotification.transaction_id == tx.id,
+                    ContactNotification.owner_id == owner,
+                )
+            )
+        )
+        if not already_requested:
             contact = await session.scalar(
                 select(TrustedContact)
                 .where(
@@ -236,7 +357,12 @@ def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
             if row.answered_at and row.answer:
                 items.append((row.answered_at, row.answer))
         if notice:
-            items.append((notice.created_at, "contact_queued"))
+            items.append((notice.first_queued_at, "contact_queued"))
+            approved_at = await session.scalar(
+                select(FamilyApproval.approved_at).where(FamilyApproval.transaction_id == tx.id)
+            )
+            if approved_at:
+                items.append((approved_at, "family_approved"))
         reports = await session.scalars(
             select(GuardianReport.created_at)
             .where(GuardianReport.owner_id == tx.sender_id, GuardianReport.transaction_id == tx.id)

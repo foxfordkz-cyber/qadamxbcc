@@ -16,6 +16,7 @@ from app.api.v1 import (
     call_check,
     external_checks,
     integrations,
+    payee_check,
     returns,
     scam_guide,
     soc,
@@ -129,6 +130,8 @@ def create_app(settings: Settings | None = None, resources: Resources | None = N
     api.include_router(returns.router, dependencies=[Depends(require_transfer_access)])
     api.include_router(returns.soc_router, dependencies=[Depends(require_soc_access)])
     api.include_router(call_check.router, dependencies=[Depends(require_transfer_access)])
+    if cfg.environment != "pilot":
+        api.include_router(payee_check.router, dependencies=[Depends(require_transfer_access)])
     api.include_router(scam_guide.router, dependencies=[Depends(require_transfer_access)])
     api.include_router(soc.router, dependencies=[Depends(require_soc_access)])
     api.include_router(trusted_contacts.router)

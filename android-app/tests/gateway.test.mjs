@@ -52,6 +52,22 @@ test("unknown delivery is surfaced once without automatic retry", async () => {
   );
   assert.equal(count, 1);
 });
+test("the wallet accepts the inbox and its actions view on web and native sessions", async () => {
+  for (const webSession of [false, true]) {
+    const queries = [];
+    const gateway = new Gateway("http://localhost:18001", async url => {
+      queries.push(new URL(url).search);
+      return new Response('{"items":[]}');
+    });
+    gateway.webSession = webSession;
+    await gateway.request("/inbox");
+    await gateway.request("/inbox?view=actions");
+    for (const path of ["/inbox?view=Actions", "/inbox?view=all", "/inbox?view=actions&limit=1", "/inbox/admin"]) {
+      await assert.rejects(gateway.request(path), /invalid_path/);
+    }
+    assert.deepEqual(queries, ["", "?view=actions"]);
+  }
+});
 test("cold starts extend only the sign-in request deadline", async () => {
   const timeouts = [];
   const g = new Gateway("http://localhost:18001", async (_url, _options, timeoutMs) => {

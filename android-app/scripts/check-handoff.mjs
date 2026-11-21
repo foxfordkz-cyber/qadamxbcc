@@ -23,8 +23,8 @@ async function signIn(name, field) {
   await page.locator("nav").waitFor();
   return {page,subject:session.subject};
 }
-async function api({page, subject}, path, expected=200, method="GET") {
-  const reply = await page.evaluate(async ({subject, path, method}) => {
+async function api({page, subject}, path, expected=200, method="GET", payload={}) {
+  const reply = await page.evaluate(async ({subject, path, method, payload}) => {
     const headers = {"X-Qadam-Subject": subject, "X-Qadam-Web": "1"};
     if (method === "POST") {
       headers["Idempotency-Key"] = crypto.randomUUID();
@@ -32,10 +32,10 @@ async function api({page, subject}, path, expected=200, method="GET") {
     }
     const response = await fetch("/mobile/v1" + path, {
       method, headers, credentials: "same-origin", redirect: "error",
-      body: method === "POST" ? "{}" : undefined,
+      body: method === "POST" ? JSON.stringify(payload) : undefined,
     });
     return {status: response.status, data: await response.json()};
-  }, {subject, path, method});
+  }, {subject, path, method, payload});
   assert.equal(reply.status, expected, path);
   return reply.data;
 }
@@ -54,6 +54,16 @@ try {
   await api(client,"/wallet/cases",403);
   const account=await api(client,"/account");
   assert.equal(account.recipients.length,7);
+  const saved = account.recipients.filter(contact => /^saved-[1-4]$/.test(contact.payee_ref));
+  assert.equal(new Set(saved.map(contact => contact.payee_ref)).size, 4);
+  for (const contact of saved) {
+    const result = await api(client, "/api/payee-check", 200, "POST", {
+      recipient: contact.payee_ref, bank: "bcc",
+    });
+    assert.equal(result.status, "identified");
+    assert.equal(result.recipient, contact.payee_ref);
+    assert.ok(result.display_name);
+  }
   for(const days of [7,30,90]) {
     const stats=await api(client,"/wallet/analytics?days="+days);
     let rows=[],more=true;

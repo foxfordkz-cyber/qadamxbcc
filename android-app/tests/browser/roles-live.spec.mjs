@@ -111,6 +111,35 @@ test("three personal accounts share a protected case and separate operational me
       expect((await api(client, "/api/transfers/" + transfer.transaction_id)).status).toBe("cooling_off");
     });
 
+    await test.step("Officer closes a case and its owner receives the finding alongside the held funds", async () => {
+      await officer.page.locator('[data-action="case-review"]').click();
+      const close = officer.page.locator("#case-close");
+      await close.locator("select").selectOption("confirmed_fraud");
+      await close.locator("button").click();
+      await expect(close).toHaveCount(0);
+      await client.page.bringToFront();
+      await client.page.locator('[data-nav="home"]').click();
+      await client.page.locator(`[data-inbox-state="CASE_REVIEW_CLOSED"][data-object-id="${report.id}"]`).click();
+      const receipt = client.page.locator(".desk-resolution");
+      await expect(receipt).toContainText(caseFile.id);
+      await expect(receipt).toContainText(/Мошенничество подтверждено|Алаяқтық расталды/);
+      const disputed = receipt.locator("p").filter({hasText: /Сумма перевода по делу|Іске қатысты аударым сомасы/});
+      await expect(disputed.locator("strong")).toHaveText("900 000 ₸");
+      await expect(receipt).toContainText(/На проверке|Тексерілуде/);
+      const view = await api(client, "/reports/" + report.id + "/callback");
+      expect(view.resolution.operation).toMatchObject({transaction_id: transfer.transaction_id, amount:"900000.00", status:"cooling_off"});
+      expect(view.resolution.balance).toBe((await api(client, "/account")).balance);
+      await receipt.locator(`[data-case-cancel="${transfer.transaction_id}"]`).click();
+      const review = client.page.locator('[data-screen="confirmCancel"]');
+      await expect(review.locator(".receipt .amount")).toHaveText("900 000 ₸");
+      const operation = "/api/transfers/" + transfer.transaction_id;
+      expect((await api(client, operation)).status).toBe("cooling_off");
+      await review.locator('[data-action="cancel-transfer"]').click();
+      await expect(client.page.locator('[data-screen="detail"] .receipt')).toContainText(/Отменён|Тоқтатылды|Бас тартылды/);
+      expect((await api(client, operation)).status).toBe("cancelled");
+      expect((await api(client, "/account")).balance).toBe(view.resolution.balance);
+    });
+
     await test.step("Technical dashboard reflects the evaluation and enforces distinct permissions", async () => {
       await platform.page.bringToFront();
       await platform.page.locator('[data-nav="home"]').click();

@@ -22,4 +22,5 @@ async def process_update(service: TrustedContactService, update: SimulatedUpdate
     notification = await service.callback(
         resource_id, update.chat_id, update.message_id, update.kind
     )
-    return UpdateOut(resource_id=notification.id, state=notification.state)
+    state = "FAMILY_APPROVAL_RECORDED" if update.kind == "approve" else notification.state
+    return UpdateOut(resource_id=notification.id, state=state)

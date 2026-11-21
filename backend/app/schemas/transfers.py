@@ -169,6 +169,7 @@ class ResolveCoolingRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     answers: CoolingQuestionnaire
+    save_only: bool = Field(default=False, strict=True)
 
 
 class ResolveCoolingResponse(TransferEvaluateResponse):

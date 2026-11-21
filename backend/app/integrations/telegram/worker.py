@@ -18,6 +18,7 @@ from app.integrations.config import IntegrationSettings, get_integration_setting
 from app.integrations.models import ContactNotification, TrustedContact
 from app.integrations.telegram.adapter import (
     AiogramTelegramAdapter,
+    ApprovalAdapter,
     RejectedDeliveryError,
     TelegramAdapter,
 )
@@ -25,8 +26,55 @@ from app.integrations.telegram.fake_adapter import FakeTelegramAdapter
 from app.integrations.telegram.schemas import ContactState, NotificationState
 from app.integrations.telegram.templates import ALERTS
 from app.models import Transaction, TransactionStatus
+from app.models.family_approval import FamilyApproval
+from app.services.explain import fmt_tenge
+from app.services.family_approval import matches_terms
 
 MAX_ATTEMPTS = 3
+
+
+async def send_notice(
+    adapter: TelegramAdapter,
+    cfg: IntegrationSettings,
+    row: ContactNotification,
+    tx: Transaction,
+    contact: TrustedContact,
+    approval: FamilyApproval | None,
+) -> str:
+    assert contact.telegram_chat_id
+    lang = contact.language
+    deadline = row.expires_at.strftime("%Y-%m-%d %H:%M UTC")
+    if approval and row.contact_id == approval.contact_id:
+        if not isinstance(adapter, ApprovalAdapter):
+            raise ValueError("Adapter does not support transfer approval")
+        if not (
+            contact.contact_consented_at
+            and contact.owner_id == row.owner_id == tx.sender_id
+            and cfg.approval_chat_allowed(tx.sender_id, int(contact.telegram_chat_id))
+            and matches_terms(approval, tx)
+        ):
+            raise ValueError("Approval details changed")
+        amount = fmt_tenge(float(approval.amount), with_tiyn=True)
+        text = (
+            f"Saq Bol · Учебный перевод\n{amount} ₸ → {approval.recipient_label}\n"
+            f"Сверьте сумму и получателя с близким. Подтвердите только этот перевод до {deadline}. "
+            "После паузы владелец счёта отдельно подтвердит отправку."
+            if lang == "ru"
+            else f"Saq Bol · Оқу аударымы\n{amount} ₸ → {approval.recipient_label}\n"
+            "Сома мен алушыны жақыныңызбен тексеріңіз. "
+            f"Тек осы аударымды {deadline} дейін растаңыз. "
+            "Кідірістен кейін шот иесі жіберуді өзі растайды."
+        )
+        return await adapter.send_approval(int(contact.telegram_chat_id), text, row.id, lang)
+    text = ALERTS[lang]
+    if tx.active_call:
+        text += (
+            " Клиент отметил, что во время запроса шёл звонок."
+            if lang == "ru"
+            else " Клиент сұрау кезінде қоңырау болғанын белгіледі."
+        )
+    text += ("\nАктуально до: " if lang == "ru" else "\nМерзімі: ") + deadline
+    return await adapter.send(int(contact.telegram_chat_id), text, row.id, lang)
 
 
 async def deliver_one(
@@ -106,26 +154,10 @@ async def _deliver(
         elif row.expires_at <= utcnow() or tx is None or tx.status != TransactionStatus.COOLING_OFF:
             row.state = NotificationState.EXPIRED
         else:
+            approval = await session.get(FamilyApproval, tx.id)
             try:
                 async with asyncio.timeout(cfg.adapter_timeout_seconds):
-                    row.message_id = await adapter.send(
-                        int(contact.telegram_chat_id),
-                        ALERTS[contact.language]
-                        + (
-                            (
-                                " Клиент отметил, что во время запроса шёл звонок."
-                                if contact.language == "ru"
-                                else " Клиент сұрау кезінде қоңырау болғанын белгіледі."
-                            )
-                            if tx is not None and tx.active_call
-                            else ""
-                        )
-                        + "\n"
-                        + ("Актуально до: " if contact.language == "ru" else "Мерзімі: ")
-                        + row.expires_at.strftime("%Y-%m-%d %H:%M UTC"),
-                        row.id,
-                        contact.language,
-                    )
+                    row.message_id = await send_notice(adapter, cfg, row, tx, contact, approval)
                     row.state = NotificationState.SENT
             except RejectedDeliveryError as exc:
                 # A persisted explicit rejection is the ONLY retryable outcome.

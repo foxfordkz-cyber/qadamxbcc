@@ -5,7 +5,7 @@ import logging
 import secrets
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager, contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from posixpath import normpath
 from time import monotonic
 
@@ -17,6 +17,8 @@ from app.mobile_gateway.app import WEB_COOKIE
 
 Factory = Callable[[int], AbstractAsyncContextManager[ASGIApp]]
 ROOM_COOKIE = "__Host-saq-jury"
+CONTACT_COOKIE = "__Host-saq-jury-contact"
+CONTACT_INBOX = "/jury/contact/inbox"
 IDLE_SECONDS = 30 * 60
 MAX_ROOMS = 8
 log = logging.getLogger(__name__)
@@ -29,6 +31,8 @@ class Room:
     context: AbstractAsyncContextManager[ASGIApp]
     last_used: float
     active: int = 0
+    contact_invite: str = field(default_factory=lambda: secrets.token_urlsafe(32))
+    contact_session: str = field(default_factory=lambda: secrets.token_urlsafe(32))
 
 
 class RoomPool:
@@ -89,7 +93,7 @@ class RoomPool:
             # An abandoned start request cannot cancel a pending storage cleanup.
             await asyncio.shield(asyncio.gather(*self.releasing))
 
-    async def create(self) -> str | None:
+    async def create(self, *, factory: Factory | None = None) -> str | None:
         if self.stopping:
             return None
         if not self.free:
@@ -100,7 +104,7 @@ class RoomPool:
         self.free.remove(slot)
         self.starting += 1
         try:
-            context = self.factory(slot)
+            context = (factory if factory is not None else self.factory)(slot)
             app = await context.__aenter__()
         except BaseException:
             # Failed context entry has completed its own startup cleanup. Each entry
@@ -125,7 +129,8 @@ border-radius:1.5rem;background:white}h1{font-size:1.6rem;line-height:1.2}button
 button{border:0;border-radius:.75rem;padding:.7rem 1rem;background:#00804c;color:white;
 cursor:pointer}a{color:#006b40}small{color:#475467}p{margin:1rem 0}
 details{margin-top:1.25rem}summary{cursor:pointer}dt{font-weight:600;margin-top:.75rem}
-dd{margin:0}code{overflow-wrap:anywhere}
+dd{margin:0}code{overflow-wrap:anywhere}.room-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.with-history{color:#006b40;background:white;border:1px solid #00804c}
 </style></head><body><main><small>Saq Bol × BCC</small>"""
 
 _PUBLIC_LOGINS = """<details><summary>Үш рөлге кіру / Вход под тремя ролями</summary>
@@ -138,7 +143,14 @@ _PUBLIC_LOGINS = """<details><summary>Үш рөлге кіру / Вход под
 </dl></details>"""
 
 
-def landing(*, key: str | None = None, message: str = "", status: int = 200) -> HTMLResponse:
+def landing(
+    *,
+    key: str | None = None,
+    contact_invite: str | None = None,
+    history_available: bool = False,
+    message: str = "",
+    status: int = 200,
+) -> HTMLResponse:
     # All markup consists of fixed bilingual copy and a server-generated URL-safe key.
     title = "<h1>Қазылар алқасының әмияны<br><span lang=ru>Кошелёк жюри</span></h1>"
     intro = (
@@ -150,6 +162,18 @@ def landing(*, key: str | None = None, message: str = "", status: int = 200) -> 
         "Через 30 минут бездействия данные комнаты удаляются.</p>"
     )
     submit = "Әмиянға оралу / Вернуться в кошелёк" if key else "Бөлме ашу / Открыть комнату"
+    history = ""
+    if history_available and not key:
+        history = (
+            '<form method="post" action="/jury/start/history">'
+            '<button class="with-history" type="submit">Тарихымен ашу / '
+            "Открыть с историей</button></form>"
+        )
+        intro += (
+            "<p>Дайын тарихта 40 оқу аударымы мен 10 іс бар. "
+            "<span lang=ru>В комнате с историей уже есть 40 учебных переводов и 10 дел SOC."
+            "</span></p>"
+        )
     shared = ""
     if key:
         shared = (
@@ -158,9 +182,20 @@ def landing(*, key: str | None = None, message: str = "", status: int = 200) -> 
             "профиле браузера. По этой ссылке доступны учебные данные вашей комнаты.</p>"
             f'<p><a href="/jury/join/{key}">Бөлме сілтемесі / Ссылка на вашу комнату</a></p>'
         )
+    if contact_invite:
+        shared += (
+            "<p>Сенімді адамның шақыруын басқа браузерге көшіріңіз. "
+            "Скопируйте приглашение в отдельный профиль браузера. В нём близкий "
+            "увидит сумму, получателя и срок только своих учебных запросов.</p>"
+            f'<a href="/jury/invite-contact/{contact_invite}">'
+            "Сенімді адамның шақыруы / Приглашение доверенному лицу</a>"
+        )
     return HTMLResponse(
-        _HEAD + title + message + intro + '<form method="post" action="/jury/start">'
+        _HEAD + title + message + intro + '<div class="room-actions">'
+        '<form method="post" action="/jury/start">'
         f'<button type="submit">{submit}</button></form>'
+        + history
+        + "</div>"
         + _PUBLIC_LOGINS
         + shared
         + "</main></body></html>",
@@ -183,6 +218,12 @@ def redirect(path: str) -> RedirectResponse:
     )
 
 
+def same_origin(request: Request) -> bool:
+    local = request.url.hostname in ("localhost", "127.0.0.1") and request.url.scheme == "http"
+    scheme = "http" if local else "https"
+    return request.headers.get("origin") == f"{scheme}://{request.url.netloc}"
+
+
 def enter(request: Request, key: str) -> Response:
     response = redirect("/wallet/")
     if request.cookies.get(ROOM_COOKIE) != key:
@@ -192,7 +233,10 @@ def enter(request: Request, key: str) -> Response:
 
 
 def create_jury_app(
-    factory: Factory, *, ready: Callable[[], Awaitable[bool]] | None = None
+    factory: Factory,
+    *,
+    history_factory: Factory | None = None,
+    ready: Callable[[], Awaitable[bool]] | None = None,
 ) -> FastAPI:
     pool = RoomPool(factory)
 
@@ -236,16 +280,14 @@ def create_jury_app(
     async def home(request: Request) -> HTMLResponse:
         key = request.cookies.get(ROOM_COOKIE)
         with pool.borrow(key) as room:
-            return landing(key=key if room else None)
+            return landing(
+                key=key if room else None,
+                contact_invite=room.contact_invite if room else None,
+                history_available=history_factory is not None,
+            )
 
-    @app.post("/jury/start")
-    async def start(request: Request) -> Response:
-        scheme = (
-            "http"
-            if request.url.hostname in ("localhost", "127.0.0.1") and request.url.scheme == "http"
-            else "https"
-        )
-        if request.headers.get("origin") != f"{scheme}://{request.url.netloc}":
+    async def start_room(request: Request, room_factory: Factory) -> Response:
+        if not same_origin(request):
             return JSONResponse(
                 {"detail": "same_origin_required"},
                 status_code=403,
@@ -256,7 +298,7 @@ def create_jury_app(
             if room and current:
                 return enter(request, current)
         try:
-            key = await pool.create()
+            key = await pool.create(factory=room_factory)
         except Exception:
             log.error("Jury wallet startup failed")
             key = None
@@ -265,10 +307,21 @@ def create_jury_app(
                 message="<p>Бөлме әзірге қолжетімсіз. / "
                 "Комната пока недоступна. Попробуйте позже.</p>",
                 status=503,
+                history_available=history_factory is not None,
             )
             response.headers["Retry-After"] = "60"
             return response
         return enter(request, key)
+
+    @app.post("/jury/start")
+    async def start(request: Request) -> Response:
+        return await start_room(request, factory)
+
+    if history_factory is not None:
+
+        @app.post("/jury/start/history")
+        async def start_history(request: Request) -> Response:
+            return await start_room(request, history_factory)
 
     @app.get("/jury/join/{key}")
     async def join(key: str, request: Request) -> Response:
@@ -278,14 +331,64 @@ def create_jury_app(
                     message="<p>Бөлме жабылды немесе сілтеме қате. / "
                     "Комната закрыта или ссылка неверна.</p>",
                     status=404,
+                    history_available=history_factory is not None,
                 )
             return enter(request, key)
+
+    @app.get("/jury/invite-contact/{invite}")
+    async def join_contact(invite: str, request: Request) -> Response:
+        if request.cookies.get(ROOM_COOKIE) or request.cookies.get(WEB_COOKIE):
+            return landing(
+                message="<p>Жеке браузер профилін ашыңыз. / "
+                "Откройте приглашение в отдельном профиле браузера.</p>",
+                status=409,
+            )
+        for key, candidate in pool.rooms.items():
+            if candidate.contact_invite == invite:
+                with pool.borrow(key) as room:
+                    if room:
+                        response = redirect(CONTACT_INBOX)
+                        response.set_cookie(
+                            CONTACT_COOKIE,
+                            room.contact_session,
+                            secure=True,
+                            httponly=True,
+                            samesite="strict",
+                        )
+                        return response
+        return landing(
+            message="<p>Шақырудың мерзімі өтті. / Срок приглашения истёк.</p>", status=404
+        )
 
     async def dispatch(scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "websocket":
             await send({"type": "websocket.close", "code": 1008})
             return
         path = normpath(scope["path"])
+        request = Request(scope)
+        if path == CONTACT_INBOX or path.startswith(CONTACT_INBOX + "/"):
+            session = request.cookies.get(CONTACT_COOKIE)
+            key = next((k for k, r in pool.rooms.items() if r.contact_session == session), None)
+            with pool.borrow(key) as room:
+                if (
+                    room is None
+                    or request.cookies.get(ROOM_COOKIE)
+                    or request.cookies.get(WEB_COOKIE)
+                ):
+                    await JSONResponse({"detail": "contact_invitation_required"}, 403)(
+                        scope, receive, send
+                    )
+                elif request.method == "POST" and not same_origin(request):
+                    await JSONResponse({"detail": "same_origin_required"}, 403)(
+                        scope, receive, send
+                    )
+                else:
+                    contact_scope = {
+                        **scope,
+                        "state": {**scope.get("state", {}), "jury_contact": True},
+                    }
+                    await room.app(contact_scope, receive, send)
+            return
         is_wallet = path == "/wallet" or path.startswith("/wallet/")
         is_api = path == "/mobile/v1" or path.startswith("/mobile/v1/")
         if (
@@ -295,7 +398,6 @@ def create_jury_app(
         ):
             await JSONResponse({"detail": "not_found"}, status_code=404)(scope, receive, send)
             return
-        request = Request(scope)
         with pool.borrow(request.cookies.get(ROOM_COOKIE)) as room:
             if room:
                 await room.app(scope, receive, send)

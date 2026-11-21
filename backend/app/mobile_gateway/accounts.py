@@ -1,42 +1,50 @@
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from sqlalchemy import func, select
 
 from app.api.deps import SessionDep
-from app.integrations.models import (
-    ContactNotification,
-    GuardianReport,
-    IntegrationAudit,
-    TrustedContact,
-)
+from app.api.v1.payee_check import PayeeLookup, PayeeRequest, account_verdict, check_payee
 from app.integrations.telegram.service import CONTACT_LIMIT
 from app.mobile_gateway.app import IdentityDep
+from app.mobile_gateway.demo_catalog import SAVED_TRANSFERS, saved_recipients, wallet_recipients
 from app.mobile_gateway.protection_models import PostCall
+from app.mobile_gateway.security_inbox import owner_inbox
 from app.mobile_gateway.wallet import balance
 from app.models import Account, RiskEvent, Transaction, TransactionStatus
 
-RECIPIENTS = {"+77010000002", "+77010000003", "+77010000004"}
+
+class SavedPayeeRequest(PayeeLookup):
+    recipient: Literal["saved-1", "saved-2", "saved-3", "saved-4"]
 
 
-async def wallet_recipients(session: SessionDep, owner_id: Any) -> list[Account]:
-    from app.mobile_gateway.demo_catalog import key
-
-    extra = select(Transaction.recipient_id).where(
-        Transaction.id.in_([key(f"out/{i}") for i in range(4)]),
-        Transaction.sender_id == owner_id,
-        Transaction.status == TransactionStatus.APPROVED,
-    )
-    return list(
-        await session.scalars(
-            select(Account)
-            .where(Account.phone.in_(RECIPIENTS) | Account.id.in_(extra))
-            .order_by(Account.full_name)
+def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
+    @app.post("/mobile/v1/api/payee-check")
+    async def mobile_payee_check(
+        body: PayeeRequest | SavedPayeeRequest, principal: IdentityDep, session: SessionDep
+    ) -> dict[str, Any]:
+        if principal.role != "client":
+            raise HTTPException(403, "mobile_role_forbidden")
+        if isinstance(body, PayeeRequest):
+            return (await check_payee(body, session)).model_dump()
+        account = await session.scalar(
+            saved_recipients(principal.subject).where(
+                Transaction.id == SAVED_TRANSFERS[body.recipient]
+            )
         )
-    )
+        verdict, name = (
+            account_verdict(body, account.full_name, account.iban)
+            if account is not None
+            else ("unavailable", None)
+        )
+        return {
+            "recipient": body.recipient,
+            "bank": body.bank,
+            "status": verdict,
+            "display_name": name,
+            "source": "synthetic_directory",
+        }
 
-
-def install_accounts(app: FastAPI) -> None:
     @app.get("/mobile/v1/account")
     async def account(principal: IdentityDep, session: SessionDep) -> dict[str, Any]:
         if principal.role != "client":
@@ -90,64 +98,20 @@ def install_accounts(app: FastAPI) -> None:
             "held": str(held or 0),
             "currency": "KZT",
             "active_pause": pause,
-            "recipients": [{"name": row.full_name, "phone": row.phone} for row in recipients],
+            "recipients": recipients,
         }
 
     @app.get("/mobile/v1/inbox")
-    async def inbox(principal: IdentityDep, session: SessionDep) -> dict[str, Any]:
+    async def inbox(
+        principal: IdentityDep, session: SessionDep, view: Literal["all", "actions"] = "all"
+    ) -> dict[str, Any]:
         if principal.role != "client":
             raise HTTPException(403, "client_required")
-        owner = principal.subject
-        events: list[dict[str, Any]] = []
-
-        def add(kind: str, obj: Any, status: str, when: Any) -> None:
-            events.append({"kind": kind, "object_id": str(obj), "state": status, "time": when})
-
-        pauses = (
-            await session.scalars(
-                select(Transaction)
-                .where(
-                    Transaction.sender_id == owner,
-                )
-                .order_by(Transaction.updated_at.desc())
-                .limit(30)
+        return {
+            "items": await owner_inbox(
+                session,
+                principal.subject,
+                case_updates=integrations_enabled,
+                actions_only=view == "actions",
             )
-        ).all()
-        for t in pauses:
-            add("transfer", t.id, t.status, t.resolved_at or t.created_at)
-        contacts = (
-            await session.scalars(
-                select(TrustedContact)
-                .where(TrustedContact.owner_id == owner)
-                .order_by(TrustedContact.created_at.desc())
-                .limit(30)
-            )
-        ).all()
-        for c in contacts:
-            add("contact", c.id, c.state, c.contact_consented_at or c.created_at)
-        reports = (
-            await session.scalars(
-                select(GuardianReport)
-                .where(GuardianReport.owner_id == owner)
-                .order_by(GuardianReport.created_at.desc())
-                .limit(30)
-            )
-        ).all()
-        for r in reports:
-            add("report", r.id, r.state, r.created_at)
-        rows = (
-            await session.execute(
-                select(IntegrationAudit, ContactNotification.transaction_id)
-                .join(ContactNotification, IntegrationAudit.resource_id == ContactNotification.id)
-                .where(
-                    IntegrationAudit.owner_id == owner,
-                    ContactNotification.owner_id == owner,
-                    IntegrationAudit.event.in_(["CONTACT_ACKNOWLEDGED", "SUSPICION_REPORTED"]),
-                )
-                .order_by(IntegrationAudit.created_at.desc())
-                .limit(30)
-            )
-        ).all()
-        for audit, tx in rows:
-            add("transfer", tx, audit.event, audit.created_at)
-        return {"items": sorted(events, key=lambda e: e["time"], reverse=True)[:30]}
+        }

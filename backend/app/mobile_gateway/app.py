@@ -33,6 +33,7 @@ from app.integrations.config import IntegrationSettings
 from app.integrations.scam_check import EXPLANATIONS, GUIDANCE, LIMITATION, ScamCheckResult
 from app.main import create_app
 from app.mobile_gateway.config import MobileSettings
+from app.mobile_gateway.demo_catalog import allowed_recipient
 from app.mobile_gateway.staff_models import staff_status
 from app.models import Account, Transaction
 
@@ -247,7 +248,7 @@ def create_mobile_app(
     install_wallet(app)
     install_staff(app, cfg)
     install_technical_metrics(app)
-    install_accounts(app)
+    install_accounts(app, integrations_enabled=core.state.integration_settings.enabled)
     install_protection(app, core.state.integration_settings)
     install_callbacks(app, cfg, core.state.integration_settings.enabled)
 
@@ -510,17 +511,13 @@ def create_mobile_app(
             if path == "transfers/evaluate" and body is not None:
                 if body.get("sender_id", str(principal.subject)) != str(principal.subject):
                     raise HTTPException(403, "mobile_owner_forbidden")
-                if cfg.auth_mode == "password":
-                    from app.mobile_gateway.accounts import RECIPIENTS, wallet_recipients
-
-                    allowed = RECIPIENTS
-                    if body.get("recipient_phone") not in allowed:
-                        allowed = {
-                            item.phone
-                            for item in await wallet_recipients(session, principal.subject)
-                        }
-                    if body.get("recipient_phone") not in allowed or body.get("recipient_iban"):
-                        raise HTTPException(422, "mobile_recipient_unavailable")
+                if cfg.auth_mode == "password" and (
+                    body.get("recipient_iban")
+                    or not await allowed_recipient(
+                        session, principal.subject, body.get("recipient_phone")
+                    )
+                ):
+                    raise HTTPException(422, "mobile_recipient_unavailable")
                 body["sender_id"] = str(principal.subject)
                 # Replayed request IDs must also belong to this customer.
                 try:
@@ -572,10 +569,36 @@ def create_mobile_app(
 
     index = WEB_ASSETS / "index.html"
     if index.is_file():
+        release = WEB_ASSETS / "release.html"
+
+        def has_android_release() -> bool:
+            install = WEB_ASSETS / "install"
+            if browser_only or not (install / "index.html").is_file():
+                return False
+            try:
+                manifest = json.loads((install / "release.json").read_text(encoding="utf-8"))
+                name = manifest["apk"]
+                return (
+                    isinstance(name, str)
+                    and re.fullmatch(r"Saq-Bol-Android-\d+\.\d+(?:\.\d+)?\.apk", name) is not None
+                    and (install / name).is_file()
+                    and (install / name).stat().st_size == manifest["bytes"] > 0
+                )
+            except (OSError, ValueError, TypeError, KeyError):
+                return False
 
         @app.get("/", include_in_schema=False)
-        async def release_home() -> HTMLResponse:
-            return HTMLResponse((WEB_ASSETS / "release.html").read_text(encoding="utf-8"))
+        async def release_home() -> Response:
+            if not release.is_file():
+                return RedirectResponse("/wallet/", status_code=307)
+            link = (
+                '<a class="secondary" href="/download/">Android APK</a>'
+                if has_android_release()
+                else ""
+            )
+            return HTMLResponse(
+                release.read_text(encoding="utf-8").replace("<!-- android-download -->", link)
+            )
 
         @app.get("/soc/", include_in_schema=False)
         async def soc_entry() -> RedirectResponse:
@@ -584,7 +607,7 @@ def create_mobile_app(
 
         @app.get("/download/", include_in_schema=False)
         async def release_download() -> RedirectResponse:
-            if browser_only or not (WEB_ASSETS / "install" / "release.json").is_file():
+            if not has_android_release():
                 raise HTTPException(503, "release_artifact_not_published")
             return RedirectResponse("/wallet/install/", status_code=307)
 

@@ -1,8 +1,11 @@
 name: Persistent deployment
 on:
+  workflow_dispatch:
   pull_request:
-    paths:
+    paths: &persistent_paths
       - backend/Dockerfile.persistent
+      - backend/pyproject.toml
+      - backend/uv.lock
       - .dockerignore
       - deliverables/android/Saq-Bol-Android-2.7.apk
       - deliverables/android/Saq-Bol-Android-2.7.json
@@ -12,6 +15,9 @@ on:
       - backend/app/mobile_gateway/**
       - backend/scripts/verify_persistent_release.py
       - android-app/**
+  push:
+    branches: [main]
+    paths: *persistent_paths
 permissions:
   contents: read
 jobs:
@@ -33,6 +39,8 @@ jobs:
         ports: ["6379:6379"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -53,26 +61,13 @@ jobs:
           if DATABASE_URL=sqlite:///tmp/demo.db sh backend/scripts/start-persistent.sh api; then
             exit 1
           fi
-      - name: Verify signed APK contains the same UI as the web source
+      - name: Verify the released APK, signing certificate and original UI
         run: |
-          python - <<'PY'
-          import hashlib, json, zipfile
-          from pathlib import Path
-          root = Path('deliverables/android')
-          record = json.loads((root / 'Saq-Bol-Android-2.7.json').read_text())
-          apk = root / 'Saq-Bol-Android-2.7.apk'
-          assert hashlib.sha256(apk.read_bytes()).hexdigest() == record['apk_sha256']
-          count = 0
-          with zipfile.ZipFile(apk) as archive:
-              for source in Path('android-app/www').iterdir():
-                  if source.suffix not in {'.mjs', '.css', '.html', '.svg'}:
-                      continue
-                  packed = archive.read('assets/public/' + source.name).replace(b'\r\n', b'\n')
-                  assert packed == source.read_bytes().replace(b'\r\n', b'\n'), source.name
-                  count += 1
-          assert count > 0
-          print(f'PASS: APK digest and {count} shared UI assets match')
-          PY
+          signer="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          if [ ! -x "$signer" ]; then
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;36.0.0'
+          fi
+          python android-app/scripts/verify-release.py --apksigner "$signer"
       - name: Build persistent image
         run: docker build -f backend/Dockerfile.persistent -t qadam-persistent .
       - name: Check packaged application

@@ -71,6 +71,36 @@ async def act(client: AsyncClient, cid: str, officer: dict[str, str], **fields: 
     return int(value.json()["version"])
 
 
+@pytest.mark.parametrize(
+    "outcome", ["confirmed_fraud", "legitimate_transfer", "insufficient_evidence"]
+)
+async def test_owner_reads_current_case_outcome_and_ledger(
+    mobile_world: tuple[AsyncClient, Any], outcome: str
+) -> None:
+    client, _ = mobile_world
+    owner, officer, rid, cid, tx = await opened(client)
+    path = BASE + f"/reports/{rid}/callback"
+    await act(client, cid, officer, action="transition", state="IN_REVIEW", reason="review_started")
+    await act(client, cid, officer, action="transition", state="CLOSED", reason=outcome)
+    view = (await client.get(path, headers=owner)).json()
+    assert view["case_id"] == cid
+    resolution = view["resolution"]
+    assert resolution["outcome"] == outcome
+    assert resolution["closed_at"]
+    assert resolution["operation"] == {
+        "transaction_id": tx,
+        "amount": "900000.00",
+        "currency": "KZT",
+        "status": "cooling_off",
+    }
+    account = (await client.get(BASE + "/account", headers=owner)).json()
+    assert resolution["balance"] == account["balance"]
+    await act(client, cid, officer, action="transition", state="IN_REVIEW", reason="reopened")
+    assert "resolution" not in (await client.get(path, headers=owner)).json()
+    await act(client, cid, officer, action="transition", state="CLOSED", reason="duplicate")
+    assert (await client.get(path, headers=owner)).json()["resolution"]["outcome"] is None
+
+
 @pytest.mark.parametrize(("from_client", "answer"), [(True, "accepted"), (False, "declined")])
 async def test_case_callback_lifecycle(
     mobile_world: tuple[AsyncClient, Any],

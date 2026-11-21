@@ -3,12 +3,15 @@
 import uuid
 
 import fakeredis
+import pytest
 from httpx import ASGITransport, AsyncClient
+from redis.exceptions import ConnectionError as RedisConnectionError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
 from app.core.resources import Resources
 from app.main import create_app
+from app.services.call_check import CallCheckService
 from tests import test_api
 from tests.test_api import API, CLEAN, World
 
@@ -26,7 +29,8 @@ async def _check(world: World, customer: str) -> dict[str, object]:
 async def test_bank_is_not_calling_raises_risk_on_the_transfer(world: World) -> None:
     check = await _check(world, "victim")
     assert check["verified"] is False
-    assert "НЕ звонит" in str(check["message_ru"])
+    assert "В журнале нет" in str(check["message_ru"])
+    assert check["started_at"] is None
     assert check["simulated_log"] is True
 
     data = await world.evaluate(
@@ -40,7 +44,21 @@ async def test_bank_is_not_calling_raises_risk_on_the_transfer(world: World) -> 
     assert data["status"] == "cooling_off"
     assert data["context"]["bank_call_check_id"] == check["check_id"]
     denied = next(r for r in data["reasons"] if r["code"] == "BANK_CALL_DENIED")
-    assert "журналу банка" in denied["reason_ru"]
+    assert "в журнале банка" in denied["reason_ru"]
+
+
+async def test_unavailable_log_does_not_report_a_negative_match(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def unavailable(self: CallCheckService, customer_id: uuid.UUID) -> None:
+        raise RedisConnectionError("unavailable")
+
+    monkeypatch.setattr(CallCheckService, "check", unavailable)
+    response = await world.client.post(
+        f"{API}/call-check", json={"customer_id": world.id("victim")}
+    )
+    assert response.status_code == 503
+    assert response.json()["detail"] == "call_log_unavailable"
 
 
 async def test_same_transfer_without_the_check_has_no_bank_reason(world: World) -> None:
@@ -56,7 +74,10 @@ async def test_real_bank_call_is_confirmed_and_never_lowers_risk(world: World) -
     check = await _check(world, "dana")
     assert check["verified"] is True
     assert check["employee_name"] == "Асем Нурланова"
-    assert "сотрудник банка" in str(check["message_ru"])
+    assert "В журнале есть исходящий звонок" in str(check["message_ru"])
+    assert isinstance(check["started_at"], str)
+    assert isinstance(check["checked_at"], str)
+    assert check["started_at"] <= check["checked_at"]
 
     data = await world.evaluate(
         "dana",

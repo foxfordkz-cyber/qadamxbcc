@@ -26,13 +26,14 @@ test("presets remain deterministic on repeated use and retain both translations"
 test("questionnaire blocks red flags immediately, holds clean answers until expiry, and replays identical decisions", () => {
   const risky = run("scam");
   const riskyAnswers = { ...clean, asked_to_move_to_safe_account: true };
-  assert.equal(resolveDemo(risky.transaction_id, riskyAnswers).status, "blocked");
+  assert.equal(resolveDemo(risky.transaction_id, riskyAnswers, Date.now(), false, true).status, "blocked");
   assert.equal(resolveDemo(risky.transaction_id, riskyAnswers).status, "blocked");
   assert.throws(() => resolveDemo(risky.transaction_id, clean), (e: unknown) => e instanceof DemoError && e.status === 409);
   const safe = run("scam");
   assert.equal(resolveDemo(safe.transaction_id, clean).status, "cooling_off");
   assert.deepEqual(detailDemo(safe.transaction_id).verification_answers, clean);
   assert.equal(resolveDemo(safe.transaction_id, clean, Date.parse(safe.cooling_off_until!) - 1).status, "cooling_off");
+  assert.equal(resolveDemo(safe.transaction_id, clean, Date.parse(safe.cooling_off_until!) + 1, false, true).status, "cooling_off");
   assert.equal(detailDemo(safe.transaction_id, Date.parse(safe.cooling_off_until!) + 1).status, "cooling_off", "timer expiry alone never releases money");
   assert.equal(resolveDemo(safe.transaction_id, clean, Date.parse(safe.cooling_off_until!)).status, "approved");
   assert.equal(feedDemo().items.find(r => r.transaction_id === safe.transaction_id)?.status, "approved");
