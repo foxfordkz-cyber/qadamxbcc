@@ -98,6 +98,13 @@ async def test_active_rooms_and_reused_slot_isolate_sessions_sql_and_risk_state(
             customer = await sign_in(http, "client_demo", "customer fixture")
             officer = await sign_in(http, "admin_demo", "officer fixture")
             platform = await sign_in(http, "platform_demo", "platform fixture")
+            path = BASE + "/wallet/soc?days=7&include_policy=true"
+            for role in (customer, platform):
+                assert (await http.get(path, headers=role)).status_code == 403
+            review = (await http.get(path, headers=officer)).json()["policy_comparison"]
+            assert [row["threshold"] for row in review["policies"]] == [None, 25, 30, 35, 40]
+            overview = (await http.get(BASE + "/wallet/soc?days=7", headers=officer)).json()
+            assert "policy_comparison" not in overview
             staff = (await http.get(BASE + "/admin/staff", headers=platform)).json()["items"][0]
             change = await http.patch(
                 BASE + "/admin/staff/" + staff["subject"],
@@ -250,6 +257,17 @@ async def test_history_room_keeps_shared_baseline_and_isolates_its_case_catalog(
         cases = (await history.get(cases_url, headers=soc)).json()["items"]
         assert len(cases) == 10
         assert (await standard.get(cases_url, headers=other_soc)).json()["items"] == []
+        policy_path = BASE + "/wallet/soc?days=7&include_policy=true"
+        review = (await history.get(policy_path, headers=soc)).json()["policy_comparison"]
+        assert review["fraud_labelled"] == review["legitimate_labelled"] == 1
+        assert review["label_coverage"] == 2 / review["evaluated"]
+        assert review["evaluated"] >= 2
+        assert any(row["missed_fraud"] == 0 for row in review["policies"])
+        assert any(row["false_per_1000_legitimate"] == 1000 for row in review["policies"])
+        other_review = (await standard.get(policy_path, headers=other_soc)).json()[
+            "policy_comparison"
+        ]
+        assert other_review["fraud_labelled"] == other_review["legitimate_labelled"] == 0
 
         first_transfer = str(SAVED_TRANSFERS["saved-1"])
         reports = (await history.get(guardian + "/reports", headers=owner)).json()

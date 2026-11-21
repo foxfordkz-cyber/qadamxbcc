@@ -102,3 +102,5 @@
 @media (max-width: 720px) { .soc-cases-workspace { padding: 17px; } .soc-cases-heading { flex-wrap: wrap; gap: 13px; } .soc-cases-heading h2 { font-size: 21px; } .soc-case-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .soc-case-kpis > div { padding: 13px; } .soc-cases-layout { grid-template-columns: 1fr; } .soc-cases-list { padding-right: 0; border-right: 0; } .soc-case-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .soc-case-rows { max-height: 360px; } .soc-case-detail { padding: 23px 0 0; margin-top: 23px; border-top: 1px solid var(--line); } .soc-case-detail-heading { flex-wrap: wrap; } .soc-case-composer { padding: 14px; } }
 @media (max-width: 390px) { .soc-case-filters, .soc-case-meta { grid-template-columns: 1fr; } .soc-case-kpis span { font-size: 10px; } .soc-case-kpis strong { font-size: 25px; } }
 @media (prefers-reduced-motion: reduce) { .soc-case-row { transition: none; } }
+.policy-scroll { max-width: 100%; overflow-x: auto; }
+.policy-scroll table { min-width: 32rem; }

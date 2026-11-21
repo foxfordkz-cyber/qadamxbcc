@@ -88,6 +88,10 @@ async def test_real_bank_call_is_confirmed_and_never_lowers_risk(world: World) -
     codes = {r["code"] for r in data["reasons"]}
     assert "BANK_CALL_DENIED" not in codes
     assert "ACTIVE_CALL" in codes
+    assert data["bank_call_evidence"] == {
+        "outbound_call_listed": True,
+        "checked_at": check["checked_at"],
+    }
 
 
 async def test_a_check_cannot_be_reused_by_another_customer(world: World) -> None:
@@ -99,6 +103,7 @@ async def test_a_check_cannot_be_reused_by_another_customer(world: World) -> Non
         context={"active_call": True, "bank_call_check_id": check["check_id"]},
     )
     assert "BANK_CALL_DENIED" not in {r["code"] for r in data["reasons"]}
+    assert "bank_call_evidence" not in data
 
 
 async def test_unknown_check_and_unknown_customer(world: World) -> None:

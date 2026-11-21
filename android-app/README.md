@@ -1,4 +1,8 @@
-# Saq Bol × BCC · Android 2.6
+# Saq Bol × BCC · Android
+
+Android 2.7 жинағы, оның SHA-256 мәні және команданың орнату беті [Android нұсқаулығында](../docs/ANDROID.md). Сборка Android 2.7, её контрольная сумма и ссылка на установку с телефона приведены в [инструкции Android](../docs/ANDROID.md).
+
+Для сборки сайта установите `QADAM_WEBSITE_APK=1` перед запуском `assembleDebug`. Получится пакет `kz.qadamx.bccshield.website` с отключённой отладкой для командного HTTPS-сервера. Перед публикацией проверьте подпись, SHA-256 и исходную ревизию командой `python android-app/scripts/verify-release.py --apksigner <путь-к-apksigner>` из корня репозитория.
 
 ## Қазақша
 

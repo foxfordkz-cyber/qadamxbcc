@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import Link from "next/link";
 import connectedWallet from "@/lib/connected-wallet.json";
-import { Activity, ArrowRight, CircleHelp, LogIn, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
+import { Activity, ArrowRight, CircleHelp, Download, LogIn, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
 import { api, ApiError, transferSchema, type AbandonResult, type Answers, type AppConfig, type CallCheck, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { reconcileTraffic, type TrafficRecord } from "@/lib/traffic";
 import type { FeedItem } from "@/lib/contracts";
@@ -26,6 +26,7 @@ import { mobileRecovery } from "@/lib/mobile-recovery";
 import { resetStaticDemo } from "@/lib/static-api";
 import type { RecoveryRecord } from "@/lib/recovery";
 import { readAppTab, saveAppTab, type AppTab } from "@/lib/app-tab-session";
+import { CollectionComparison, CollectionReplayInspector } from "./collection-comparison";
 
 const STATIC_DEMO = process.env.NEXT_PUBLIC_BCC_STATIC === "1";
 
@@ -333,7 +334,11 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     }} onClose={() => setModal(false)} onResolved={resolved} />;
   const languageSwitch = <div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>;
   const showWallet = config.demoActionsEnabled !== false && (!STATIC_DEMO || process.env.NEXT_PUBLIC_BCC_PAGES_WALLET === "1");
+  const showCollectionReplay = config.demoActionsEnabled !== false && config.accountMode !== "pilot";
   const walletLink = showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("connectedWallet")}<ArrowRight size={15} aria-hidden="true" /></a>;
+  const androidDownload = config.demoActionsEnabled !== false && config.accountMode !== "pilot" && (
+    <a className="pitch-link" href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/downloads/Saq-Bol-Android-2.7.apk`} download="Saq-Bol-Android-2.7.apk"><Download size={16} aria-hidden="true" />{t("downloadAndroid")}</a>
+  );
   const juryEntry = config.demoActionsEnabled !== false && config.accountMode !== "pilot" && (
     <a className="jury-entry" href={connectedWallet.juryUrl}><LogIn size={17} aria-hidden="true" />{t("juryLogin")}</a>
   );
@@ -343,6 +348,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     </div>{juryEntry}{languageSwitch}</div></header>
     <main className="shell">
       {showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("staffWalletLogin")}<ArrowRight size={15} aria-hidden="true" /></a>}
+      {showCollectionReplay && <Suspense fallback={null}><CollectionReplayInspector /></Suspense>}
       <SocDashboard privateStoryAccess={config.privateStoryAccess} liveLedger={config.mode === "live" && !STATIC_DEMO} readOnly={config.publicSocReadOnly} initialSelection={null} revision={revision} evaluations={evaluations} traffic={traffic}
       onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} busy={busy} />
       <footer className="page-footer"><Link href="/">{t("bothWorkspaces")}</Link><span>{t(config.accountMode === "test" ? "testDataScope" : "prototypeIdentity")}</span></footer>
@@ -355,7 +361,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       {juryEntry}{languageSwitch}
     </div></header>
     <main className="mobile-shell">
-      {walletLink}
+      <div className="wallet-links">{walletLink}{androidDownload}</div>
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
       <TransferPhone bare config={config} form={form} setForm={setForm} recipientType={recipientType} setRecipientType={setRecipientType} busy={busy} blocked={hasUnknown} submissionPaused={!!submissionRetryAt} completed={completedIdentity === identity} error={error} sensor={sensor} onSubmit={duress => void evaluate(form, undefined, undefined, duress)} result={result} amount={resultAmount} onReview={() => result && void review(result.transaction_id)} onReviewReturn={id => void review(id)} onNewTransfer={freshTransfer} />
@@ -372,9 +378,10 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
         <div className="demo-bar-label"><CircleHelp size={16} aria-hidden="true" /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "demoScenarios")}</span></div>
         <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map(key => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || !!submissionRetryAt || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
         {STATIC_DEMO && <button type="button" className="demo-reset" disabled={busy} onClick={() => { if (window.confirm(t("resetDemoConfirm"))) { resetStaticDemo(); window.location.reload(); } }}>{t("resetDemo")}</button>}
-        {walletLink}
+        <div className="wallet-links">{walletLink}{androidDownload}</div>
         {config.demoActionsEnabled !== false && <Link href="/pitch" className="pitch-link">{t("pitchLink")}<ArrowRight size={15} aria-hidden="true" /></Link>}
       </section>
+      {showCollectionReplay && <CollectionComparison />}
       <RecoveryPanel records={recovery.records} persisted={recovery.persisted} busy={busy} refreshing={checkingRecovery} onReview={id => void review(id)} onAbandon={id => void abandon(id)} onRefresh={() => void reconcilePending()} />
       {hasUnknown && <div className="pending-panel"><p role="status">{t("recoveryRequired")}</p>{unknown && attempt.current && <button className="secondary" disabled={busy} onClick={() => { if (attempt.current && !lock.current) void execute(attempt.current); }}>{t("retryTransfer")}</button>}</div>}
       {error && tab === "soc" && <p className="error" role="alert">{t(error)}</p>}

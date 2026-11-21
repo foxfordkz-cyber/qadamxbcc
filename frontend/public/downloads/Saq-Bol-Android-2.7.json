@@ -1,0 +1,9 @@
+{
+  "version": "2.7",
+  "versionCode": 11,
+  "package": "kz.qadamx.bccshield.website",
+  "apk_sha256": "47f72cefa05ee1b9b68cfb4fbd0f69d23a9683fcc09ad36187acccf05562faf2",
+  "apk_source_commit": "e0fff965368ed1b82c6a3f841047df56da2ccc2e",
+  "certificate_sha256": "9b1f9012a2e6d8b26f8d68110eeb171d69844e94181aa38bea6133e34c3af00f",
+  "api_origin": "https://saq-bol-mobile.onrender.com"
+}

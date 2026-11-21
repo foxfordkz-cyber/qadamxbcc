@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models import TransactionStatus
 from app.schemas.transfers import (
+    BankCallEvidence,
     CoolingQuestionnaire,
     MLContributorOut,
     RiskReasonOut,
@@ -71,6 +72,9 @@ class FeedItem(BaseModel):
     resolved_at: datetime | None
     reasons: list[RiskReasonOut]
     context: TransferContextIn
+    bank_call_evidence: BankCallEvidence | None = Field(
+        None, exclude_if=lambda value: value is None
+    )
     verification_answers: CoolingQuestionnaire | None = None
     ml_score: float | None = None
     ml_base_score: float | None = None

@@ -125,6 +125,45 @@ async def test_payee_check_uses_scoped_directory_and_minimal_response(
     assert (await client.get("/mobile/v1/transfers", headers=auth)).json()["items"] == []
 
 
+async def test_call_question_previews_without_submitting_and_persists_customer_answer(
+    mobile_world: tuple[AsyncClient, Any],
+) -> None:
+    client, _ = mobile_world
+    auth = await login(client)
+    lookup = "/mobile/v1/api/payee-check"
+    query = {"recipient": "normal", "bank": "bcc"}
+    assert (await client.post(lookup, headers=auth, json=query | {"review_amount": "1000"})).json()[
+        "ask_about_call"
+    ] is False
+    for _i in range(2):
+        review = await client.post(lookup, headers=auth, json=query | {"review_amount": "40000"})
+        assert review.json()["ask_about_call"] is True, review.text
+    assert (await client.get("/mobile/v1/transfers", headers=auth)).json()["items"] == []
+    path = "/mobile/v1/api/transfers/evaluate"
+    draft = {
+        "request_id": str(uuid.uuid4()),
+        "recipient_phone": "+77010000002",
+        "amount": "40000",
+        "context": {"call_pressure_answer": "on_call"},
+    }
+    first = await client.post(path, headers=auth, json=draft)
+    assert first.status_code == 200, first.text
+    tx = first.json()
+    assert tx["status"] == "cooling_off"
+    assert tx["context"]["active_call"] is True
+    assert tx["context"]["call_pressure_answer"] == "on_call"
+    assert (await client.post(path, headers=auth, json=draft)).json() == tx
+    assert (
+        await client.post(
+            path, headers=auth, json=draft | {"context": {"call_pressure_answer": "no_request"}}
+        )
+    ).status_code == 409
+    staff = await login(client, ADMIN_CODE)
+    detail = await client.get(f"/mobile/v1/api/transfers/{tx['transaction_id']}", headers=staff)
+    assert detail.json()["context"]["call_pressure_answer"] == "on_call"
+    assert detail.json()["created_at"] == tx["created_at"]
+
+
 @pytest.mark.parametrize(
     "path",
     [

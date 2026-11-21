@@ -80,12 +80,14 @@ class CallCheckService:
         )
         return result
 
-    async def denied_for(self, check_id: uuid.UUID | None, customer_id: uuid.UUID) -> bool:
-        """True only for a live check by this customer where the bank was not calling."""
+    async def result_for(
+        self, check_id: uuid.UUID | None, customer_id: uuid.UUID
+    ) -> CallCheck | None:
+        """Only return a live bank-log check belonging to this customer."""
         if check_id is None:
-            return False
+            return None
         raw = await self._redis.get(_CHECK_KEY.format(check=check_id))
         if not raw:
-            return False
+            return None
         stored = CallCheck(**json.loads(raw))
-        return stored.customer_id == str(customer_id) and not stored.verified
+        return stored if stored.customer_id == str(customer_id) else None

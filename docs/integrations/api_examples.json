@@ -841,7 +841,11 @@
         "baseline_detected": 0,
         "candidate_detected": 0,
         "baseline_false_interventions": 0,
-        "candidate_false_interventions": 0
+        "candidate_false_interventions": 0,
+        "first_sample_at": null,
+        "last_sample_at": null,
+        "label_coverage": null,
+        "policies": []
       },
       "demonstration_only": true
     }

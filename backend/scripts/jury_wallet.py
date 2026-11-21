@@ -98,7 +98,7 @@ class JuryStorage:
                         # Populate only this new private SQLite lease; the contact
                         # already occupies its slot and startup will replay the graph.
                         async with sessions() as session:
-                            await populate(session)
+                            await populate(session, review_engine=resources.engine)
                             await session.commit()
                     await stack.enter_async_context(app.router.lifespan_context(app))
                 yield app

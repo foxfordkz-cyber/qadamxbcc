@@ -7,6 +7,7 @@ import os
 from collections import Counter
 from datetime import timedelta
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import func, select, text
@@ -33,7 +34,10 @@ from app.integrations.models import GuardianReport, TrustedContact
 from app.mobile_gateway.demo_catalog import PACK, key
 from app.models import Account, GraphEdge, Transaction, TransactionStatus
 from app.models.entities import EdgeType
-from scripts.seed_bcc import FRIEND_ID, HUB_ID, SENDER_ID, STRANGER_ID
+from app.schemas.transfers import TransferContextIn
+from app.services.antifraud import AntifraudEngine, TransferContext
+from app.services.transfers import TransferService
+from scripts.seed_bcc import FRIEND_ID, HUB_ID, SENDER_ID, STRANGER_ID, _risk_events
 
 DESCRIPTIONS: tuple[tuple[Category, str], ...] = (
     ("impersonation", "Демо: звонивший представился сотрудником. Прошу проверить операцию."),
@@ -43,7 +47,56 @@ DESCRIPTIONS: tuple[tuple[Category, str], ...] = (
 )
 
 
-async def populate(db: AsyncSession) -> dict[str, object]:
+# These three closed investigations have independently authored teaching outcomes.
+# All risk scores are computed when the history room is created.
+REVIEW_OUTCOMES: dict[int, Literal["confirmed_fraud", "legitimate_transfer"]] = {
+    1: "confirmed_fraud",
+    4: "legitimate_transfer",
+    7: "legitimate_transfer",
+}
+
+
+async def record_history_evaluation(
+    engine: AntifraudEngine, index: int, tx: Transaction, sender: Account, recipient: Account
+) -> None:
+    context = TransferContextIn(
+        active_call=index == 1,
+        from_deposit=index == 4,
+        is_new_recipient=index == 4,
+    )
+    evaluation = await engine.evaluate(
+        TransferContext(
+            tx_id=str(tx.id),
+            sender_id=str(sender.id),
+            recipient_id=str(recipient.id),
+            amount=float(tx.amount),
+            sender_avg_amount=float(sender.avg_tx_amount),
+            device_id=sender.device_id,
+            occurred_at=tx.created_at,
+            active_call=context.active_call,
+            from_deposit=context.from_deposit,
+            is_new_recipient=context.is_new_recipient,
+        ),
+        record_attempt=False,
+    )
+    if evaluation.decision != TransactionStatus.APPROVED:
+        raise ValueError("The archived posted transfer no longer matches its original approval")
+    tx.context_snapshot = context.model_dump(mode="json")
+    tx.active_call = context.active_call
+    tx.from_deposit = context.from_deposit
+    tx.is_new_device = False
+    tx.is_new_recipient = evaluation.is_new_recipient
+    tx.risk_score = evaluation.score
+    tx.latency_ms = evaluation.latency_ms
+    tx.risk_events = _risk_events(evaluation, tx.created_at)
+    tx.evaluation_snapshot = TransferService.evaluation_response(
+        tx, evaluation, recipient
+    ).model_dump(mode="json")
+
+
+async def populate(
+    db: AsyncSession, *, review_engine: AntifraudEngine | None = None
+) -> dict[str, object]:
     first = await db.get(Transaction, key("out/0"))
     if first:
         return {
@@ -78,6 +131,9 @@ async def populate(db: AsyncSession) -> dict[str, object]:
             days=(0, 1, 2, 3, 4, 5, 6, 8, 10, 14, 17, 21, 25, 29, 33, 41, 52, 60, 72, 86)[i],
             hours=1,
         )
+        if review_engine is not None and i in REVIEW_OUTCOMES:
+            # Fix the local time of these examples at noon in Kazakhstan.
+            at = at.replace(hour=7, minute=0, second=0)
         group = []
         for direction, sender, recipient in (("out", owner, peer), ("in", peer, owner)):
             when = at + timedelta(minutes=int(direction == "in"))
@@ -92,6 +148,12 @@ async def populate(db: AsyncSession) -> dict[str, object]:
                 updated_at=when,
                 resolved_at=when,
             )
+            if (
+                review_engine is not None
+                and i in REVIEW_OUTCOMES
+                and direction == ("out" if i < 4 else "in")
+            ):
+                await record_history_evaluation(review_engine, i, tx, sender, recipient)
             db.add(tx)
             group.append(tx)
             deltas[str(sender.id)] -= int(amount)
@@ -129,6 +191,11 @@ async def populate(db: AsyncSession) -> dict[str, object]:
     for i in range(10):
         tx = pairs[i][int(i >= 4)]
         category, description = DESCRIPTIONS[i % 4]
+        if review_engine is not None and i == 4:
+            category, description = (
+                "other",
+                "Демо: клиент сам перевёл деньги с депозита новому получателю.",
+            )
         report = await create_report(
             db,
             tx.sender_id,
@@ -170,7 +237,13 @@ async def populate(db: AsyncSession) -> dict[str, object]:
                     action="transition",
                     expected_version=4,
                     state=next_state,
-                    reason="review_complete" if next_state == "CLOSED" else "needs_followup",
+                    reason=(
+                        REVIEW_OUTCOMES[i]
+                        if review_engine is not None and i in REVIEW_OUTCOMES
+                        else "review_complete"
+                        if next_state == "CLOSED"
+                        else "needs_followup"
+                    ),
                 )
             )
         for step, action in enumerate(mutations):
