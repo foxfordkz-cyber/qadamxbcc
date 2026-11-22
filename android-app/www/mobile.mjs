@@ -1,3 +1,4 @@
+import { hasOwn, last, requestId } from "./compat.mjs";
 import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import {walletUI,icon as walletIcon,formatTenge as money} from "./wallet.mjs";
 import {offlineWallet} from "./offline-wallet.mjs";
@@ -223,7 +224,7 @@ app.addEventListener("click", async (event) => {
   if(button.dataset.chartDay){selection=offlineWallet(state).analytics(days).series.findIndex(d=>d.day===button.dataset.chartDay);render();return;}
   if(button.dataset.drillDay||button.hasAttribute("data-drill-status")){
     const stats=offlineWallet(state).analytics(days);
-    historyFilter={q:"",status:button.dataset.drillStatus||"",direction:"",days:"",day:button.dataset.drillDay||stats.from,through:button.dataset.through||stats.series.at(-1).day};
+    historyFilter={q:"",status:button.dataset.drillStatus||"",direction:"",days:"",day:button.dataset.drillDay||stats.from,through:button.dataset.through||last(stats.series).day};
     navigate("history");return;
   }
   if(button.dataset.action==="clear-period"){historyFilter={q:"",status:"",direction:"",days:"",day:"",through:""};render();return;}
@@ -234,7 +235,7 @@ app.addEventListener("click", async (event) => {
     navigate(button.dataset.route);
     return;
   }
-  if (button.dataset.preset && Object.hasOwn(PRESETS, button.dataset.preset)) {
+  if (button.dataset.preset && hasOwn(PRESETS, button.dataset.preset)) {
     preset = button.dataset.preset;
     render();
     return;
@@ -262,7 +263,7 @@ app.addEventListener("click", async (event) => {
       navigate("transfer");
       break;
     case "review":
-      draftId = crypto.randomUUID();
+      draftId = requestId();
       navigate("review");
       break;
     case "confirm":

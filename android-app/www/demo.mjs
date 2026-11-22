@@ -1,3 +1,4 @@
+import { hasOwn } from "./compat.mjs";
 // Explicit, deterministic presentation fixtures. This is NOT the bank risk engine.
 export const STORAGE_KEY = "qadam.android.demo.v1";
 export const PRESETS = Object.freeze({
@@ -23,7 +24,7 @@ export function restore(raw) {
           t &&
           typeof t.id === "string" &&
           /^[a-zA-Z0-9-]{1,64}$/.test(t.id) &&
-          Object.hasOwn(PRESETS, t.preset) &&
+          hasOwn(PRESETS, t.preset) &&
           states.has(t.status) &&
           Number.isFinite(t.createdAt) &&
           t.createdAt > 0 &&
@@ -51,7 +52,7 @@ export function restore(raw) {
 }
 export function addTransfer(state, preset, id, now = Date.now()) {
   if (
-    !Object.hasOwn(PRESETS, preset) ||
+    !hasOwn(PRESETS, preset) ||
     !/^[a-zA-Z0-9-]{1,64}$/.test(id) ||
     !Number.isFinite(now) ||
     now <= 0
