@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ArrowUpRight, Download } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
+import { LanguageSwitch } from "@/components/language-switch";
 import { LocaleProvider, useLocale } from "@/lib/i18n";
 import release from "../../../../public/downloads/current.json";
 import team from "../../../../public/downloads/team.json";
@@ -9,16 +10,13 @@ import team from "../../../../public/downloads/team.json";
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 function Installer() {
-  const { lang, setLang, t } = useLocale();
+  const { lang } = useLocale();
   const kk = lang === "kk";
   const size = (release.bytes / 1048576).toFixed(1).replace(".", ",");
   return <main className="installer">
     <header className="installer-nav">
       <a href={base + "/"} className="installer-back"><ArrowLeft aria-hidden size={18} />{kk ? "Басты бет" : "На главную"}</a>
-      <div className="language" role="group" aria-label={t("language")}>
-        <button type="button" aria-pressed={kk} onClick={() => setLang("kk")}>ҚАЗ</button>
-        <button type="button" aria-pressed={!kk} onClick={() => setLang("ru")}>РУС</button>
-      </div>
+      <LanguageSwitch />
     </header>
     <section className="installer-card">
       <div className="installer-main">

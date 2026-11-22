@@ -57,6 +57,14 @@ const mf = new Miniflare(await convertV4MiniflareOptions({
   },
 }));
 const fetch = (pathname, options) => mf.dispatchFetch(origin + pathname, options);
+function checkInitialLanguageSwitch(html) {
+  const group = html.match(/<div\b[^>]*class="language"[^>]*>[\s\S]*?<\/div>/)?.[0] ?? "";
+  assert.match(group, /aria-busy="true"/);
+  for (const label of ["ҚАЗ", "РУС"]) {
+    // The visible controls must wait for hydration before accepting the first press.
+    assert.match(group, new RegExp(`<button\\b[^>]*\\bdisabled(?:=""|(?=[\\s>]))[^>]*>${label}</button>`));
+  }
+}
 try {
   await checkPrivateCircle();
   for (const pathname of ["/", "/mobile", "/soc", "/pitch"]) {
@@ -66,6 +74,7 @@ try {
     assert.ok(html.includes("Saq Bol"), pathname);
     if (pathname !== "/pitch") {
       const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
+      checkInitialLanguageSwitch(header);
       assert.match(header, /<img\b[^>]*src="\/saq-bol-mark\.svg"/, pathname);
       assert.match(header, /<a\b[^>]*href="https:\/\/saq-bol-jury\.onrender\.com\/"[^>]*>[\s\S]*?Қазылар кабинеті<\/a>/, pathname);
       assert.ok(html.includes('href="https://saq-bol-mobile.onrender.com/wallet/"'), pathname);
@@ -89,6 +98,7 @@ try {
   const apk = await fetch(apkPath);
   assert.equal(apk.status, 200, "Android installer must be available without a login");
   const installerHtml = await (await fetch("/download/android")).text();
+  checkInitialLanguageSwitch(installerHtml);
   assert.ok(installerHtml.includes(apkPath));
   const team = await (await fetch("/downloads/team.json")).json();
   assert.equal(team.package, "kz.qadamx.bccshield.demo");
