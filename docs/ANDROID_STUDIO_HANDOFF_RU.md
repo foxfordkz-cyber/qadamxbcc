@@ -1,6 +1,6 @@
-# Открытие Qadam Shield 2.7 в Android Studio
+# Открытие Saq Bol × BCC (Qadam Shield) 2.8 в Android Studio
 
-Ветка `main` содержит текущий кошелёк и учебный набор PostgreSQL. Подписанный [APK 2.7 для Honor](../deliverables/android/Saq-Bol-Android-2.7.apk) собран из ревизии `daea694` и подключается к командному сервису `saq-bol-mobile`. Его версия, адрес API и отпечаток сертификата записаны в [паспорте APK](../deliverables/android/Saq-Bol-Android-2.7.json). Новые функции веб-кошелька доступны при сборке из текущего `main`.
+Ветка `mobile/android-studio-handoff` содержит мобильный проект и общие исходники веб-кабинета. Для передачи команде используйте [отчёт по сборке 2.8](WORKSPACE_28_ACCEPTANCE_RU.md).
 
 ## Подготовка на Windows
 
@@ -9,7 +9,7 @@
 В PowerShell из родительской папки:
 
 ```powershell
-git clone --branch main https://github.com/foxfordkz-cyber/qadamxbcc.git
+git clone --branch mobile/android-studio-handoff https://github.com/foxfordkz-cyber/qadamxbcc.git
 cd qadamxbcc
 npm.cmd --prefix android-app ci
 npm.cmd --prefix android-app run web
@@ -20,7 +20,7 @@ npm.cmd --prefix android-app run sync
 
 ```powershell
 cd android-app/android
-.\gradlew.bat assembleDebug
+.\gradlew.bat assembleDebug assembleShowcase
 cd ../..
 ```
 
@@ -28,9 +28,7 @@ APK лежит в `android-app/android/app/build/outputs/apk/debug/app-debug.apk
 
 ### Проверенная сборка
 
-На Windows в отдельном checkout выполнены `npm ci`, подготовка web-версии, `cap sync android` и `gradlew.bat --offline --max-workers=1 assembleDebug`. Отработали 183 задачи Gradle. В APK сверены все 28 отслеживаемых файлов из `android-app/www`. Использованы Node 24.21.0, npm 11.19.0, Capacitor Core/CLI 8.6.2 и SDK 36. Debug APK 2.7 установлен с сохранением данных на Honor VNE-LX1. Android подтвердил холодный старт главной Activity. APK обращается к публичному мобильному API. Скриншоты заполненной репетиции сделаны в браузере отдельного локального стенда.
-
-В этой сборке Gradle запускался через комплектный JBR 25.0.3 из `C:\Program Files\Android\Android Studio\jbr`. Пути к SDK и JDK на машине Айданы задаются локально.
+Сборка 2.8 имеет versionCode 11 и package `kz.qadamx.bccshield.demo`. Проверенная цепочка на Windows использует JDK 21, SDK 36, Gradle Wrapper и npm ci. Вариант для демонстрации лежит в `app/build/outputs/apk/showcase/app-showcase.apk` относительно Android-проекта. Он отключает отладку и сохраняет подпись существующего учебного ключа на машине сборки. Debug APK другого разработчика может иметь другую подпись. Для обновления телефонов используйте переданный готовый APK.
 
 ## Где лежит приложение
 

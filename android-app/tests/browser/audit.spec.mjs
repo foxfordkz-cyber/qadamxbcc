@@ -73,7 +73,7 @@ test("dashboard hierarchy, hidden amounts and RU/KK fit phone and desktop at lar
   await expect(page.locator(".week-summary strong")).toHaveText("•••••• ₸");
   await expect(page.locator(".q-balance strong")).toHaveText("•••••• ₸");
   await page.locator("[data-action=language]:visible").first().click();
-  await expect(page.locator(".transfer-primary")).toContainText("Ақша аудару");
+await expect(page.locator(".transfer-primary")).toHaveAccessibleName("Аудару");
   await page.setViewportSize({width:360,height:900});
   await page.screenshot({path:info.outputPath("home-kk-360.png"),fullPage:true});
   await page.locator(".transfer-primary").click();

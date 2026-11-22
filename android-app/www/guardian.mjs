@@ -85,9 +85,17 @@ export function secondConfirmationView(approval, T, when) {
     T(...(statuses[approval.state] || statuses.unavailable)) + validUntil + '</p></div>';
 }
 export function packetContent(d,T,when,status) {
-  const heading=T("Материалы по операции","Операция құжаттары");
+  const heading=T("Qadam Shield · Пакет инцидента","Qadam Shield · Оқиға құжаттары");
   const lines=[heading, d.transaction_id, when(d.created_at)+" · "+new Intl.NumberFormat(undefined,{maximumFractionDigits:2}).format(Number(d.amount))+" "+d.currency+" · "+status(d.status),
     T("Хронология","Оқиғалар реті"),...d.events.map(e=>when(e.at)+" — "+T(...eventNames[e.kind])),
+    ...(d.recipient_reference ? [T("Получатель","Алушы")+" · •••• "+d.recipient_reference] : []),
+    ...(d.reports ?? []).map(r => T("Обращение","Өтініш")+" "+r.id+" · "+r.state),
+    ...(d.soc_messages ?? []).map(m => when(m.at)+" · "+({
+      CASE_INFORMATION_REQUIRED:T("SOC запросил информацию","SOC ақпарат сұрады"),
+      CASE_REVIEW_CLOSED:T("SOC закрыл проверку","SOC тексеруді жапты"),
+      CASE_REVIEW_REOPENED:T("SOC возобновил проверку","SOC тексеруді қайта ашты")
+    }[m.kind] ?? T("Обновление SOC","SOC жаңартуы"))),
+    ...(d.generated_at ? [T("Сформирован","Қалыптастырылған уақыты")+" · "+when(d.generated_at)] : []),
     T("Черновик заявления","Өтініш жобасы"),T("Прошу проверить обстоятельства учебной операции с указанным номером. Моё описание разговора и сведения о потерях я добавлю самостоятельно.","Көрсетілген нөмірлі оқу операциясының мән-жайын тексеруді сұраймын. Әңгіме сипаттамасы мен шығын туралы мәліметтерді өзім қосамын."),
     T("Синтетические данные. Заявление никуда не отправлено.","Жасанды деректер. Өтініш ешқайда жіберілген жоқ.")];
   return lines;

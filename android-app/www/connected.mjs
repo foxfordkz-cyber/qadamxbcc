@@ -1,3 +1,4 @@
+import { caseEvidenceView, caseLedgerView } from "./case-evidence.mjs";
 import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
@@ -12,6 +13,8 @@ import * as identity from "./identity.mjs";
 import { PUBLIC_DEMO, openExternal } from "./native.mjs";
 const product = document.documentElement.hasAttribute("data-product");
 let initializingAccount = product;
+let rememberLogin = true, restoreFailed = false;
+let receiptPacket = null;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
 const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""});
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
@@ -62,6 +65,13 @@ async function savePending(id) {
 async function loadOwner(g, subject) {
   loginName="";
   gateway = g;
+  g.onExpired = () => {
+    if (gateway !== g) return;
+    clearVisible();
+    void identity.write("session", null).catch(() => {});
+    error = errText(401);
+    render();
+  };
   ownerScope = await identity.scopeKey(g.origin, subject);
   const durable = product ? await identity.read("pending." + ownerScope) : null;
   pending = durable?.id ?? getLocal(pendingKey(), "");
@@ -93,7 +103,7 @@ function clearVisible() {
   viewRevision++;nextPoll=0;projector=false;loginName="";
   if(webWallet)history.replaceState({wallet:true},"",location.pathname);
   scanText=""; reportChoice=false; drafts=readDrafts(null);
-  lastRead=null;
+  workspaceRead=null; lastRead=null;
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
   callbackView=queueSnapshot=callbackAttempt=null;
@@ -246,6 +256,48 @@ function accept(value) {
   selectedId = value.transaction_id;
   receivedAt = Date.now();
 }
+let workspaceRead=null;
+async function readWorkspace(next) {
+  const g=gateway, revision=++viewRevision;
+  const state={pending:new Set(),updatedAt:null};
+  workspaceRead=state;
+  const current=()=>gateway===g && revision===viewRevision && page===next;
+  const panels = [];
+  const panel=(name,request,accept)=>{
+    state.pending.add(name);
+    panels.push(async()=>{
+      try {
+        const value=await request();
+        if(current()){accept(value);state.updatedAt=new Date();}
+      } catch(e) {
+        if(current()) {
+          error=errText(e.status);
+        }
+      } finally {
+        state.pending.delete(name);
+        if(current())render();
+      }
+    });
+  };
+  if(next==="home" && g.role==="client") {
+    panel("account",()=>g.request("/account"),v=>{account=v});
+    panel("ledger",()=>g.request("/wallet/operations?limit=3"),v=>{data=v});
+    panel("summary",()=>g.request("/wallet/analytics?days=7"),v=>{summary=v});
+  } else if(next==="home" && g.role==="admin") {
+    panel("summary",()=>g.request("/wallet/soc?days="+socDays),v=>{summary=v});
+    const params=new URLSearchParams({offset:String(offset),limit:"20"});
+    if(filter)params.set("status",filter);
+    if(query)params.set("q",query);
+    panel("feed",()=>g.api("soc/feed?"+params),v=>{data=v});
+  } else if(next==="cases") {
+    panel("cases",()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),v=>{data=v});
+    panel("queue",()=>g.api("integrations/guardian/soc/cases/analytics"),v=>{queueSnapshot=v});
+  } else {
+    panel(next,()=>g.request(next==="staff"?"/admin/staff":"/admin/metrics"),v=>{data=v});
+  }
+  render();
+  await Promise.all(panels.map(load=>load()));
+}
 async function open(next, id, remember=true) {
   if (loading) return;
   if (!gateway?.token && next !== "login") return;
@@ -263,10 +315,14 @@ async function open(next, id, remember=true) {
     if(key && id)url.searchParams.set(key,id);
     history.pushState({wallet:true,page:next,id:id||null,scope:ownerScope,depth:(history.state?.depth||0)+1}, "", url);
   }
+  const samePage=page===next;
+  workspaceRead=null;
+  receiptPacket=null;
   lastRead={page:next,id};
   if (next==="confirmCancel") evaluation = null;
   page = next;
-  data = null;
+  if(!samePage || !["home","cases","staff"].includes(next))data=null;
+  if(next==="home" && !samePage)summary=null;
   callbackView=queueSnapshot=null;
   if (next==="home") {
     awaitingReplyCount=nextCallbackCheck=nextHomeInboxRead=0;
@@ -279,22 +335,22 @@ async function open(next, id, remember=true) {
     answers = {};
     step = 0;
   }
+  if(product && (next==="home" || next==="staff" || next==="cases" && gateway.role==="admin")) {
+    window.scrollTo(0,0);
+    const ready=readWorkspace(next);
+    if(next==="home" && gateway?.role==="client") void refreshHomeInbox();
+    await ready;
+    return;
+  }
   await perform(async () => {
     if (next==="home" && gateway.role==="platform_admin") data=await gateway.request("/admin/metrics");
     else if (next==="staff") data=await gateway.request("/admin/staff");
     else if (next==="callbacks") data=await gateway.request("/callbacks");
     else if (next === "home" || next === "history") {
       if(product && gateway.role==="client") {
-        if(next==="home"){
-          const results=await Promise.allSettled([gateway.request("/account"),gateway.request("/wallet/operations?limit=3"),gateway.request("/wallet/analytics?days=7")]);
-          const authFailure=results.find(r=>r.status==="rejected" && r.reason?.status===401);
-          if(authFailure)throw authFailure.reason;
-          [account,data,summary]=results.map(r=>r.status==="fulfilled"?r.value:null);
-        }else{
-          const params=new URLSearchParams({offset:String(offset),limit:"20"});
-          for(const [k,v] of Object.entries(ledgerFilter))if(v)params.set(k,v);
-          data=await gateway.request("/wallet/operations?"+params);
-        }
+        const params=new URLSearchParams({offset:String(offset),limit:"20"});
+        for(const [k,v] of Object.entries(ledgerFilter))if(v)params.set(k,v);
+        data=await gateway.request("/wallet/operations?"+params);
       }else if (gateway.role === "admin") {
         if(product)summary=await gateway.request("/wallet/soc?days="+socDays);
         data = await api(
@@ -328,7 +384,18 @@ async function open(next, id, remember=true) {
       const check = await checkPayee(reviewed, api, account?.recipients, account?.supports_call_question);
       if (page === "review" && draft === reviewed) data = check;
     } else if (next === "detail") {
-      accept(await api(`transfers/${selectedId}`));
+      const g = gateway, id = selectedId, rev = viewRevision;
+      const current = () => gateway === g && page === "detail" && selectedId === id && viewRevision === rev;
+      const detail = await g.api("transfers/"+id);
+      if (!current()) return;
+      accept(detail);
+      if (product && g.role === "client") {
+        void g.request("/protection/"+id+"/packet").then(packet => {
+          if (current() && packet.transaction_id === id) { receiptPacket=packet; render(); }
+        }).catch(() => {
+          if (current()) {receiptPacket={unavailable:true}; render();}
+        });
+      }
       if(product && gateway.role==="client" && evaluation.status==="cooling_off") data=await gateway.request("/protection/"+selectedId+"/check");
     } else if (next === "confirmCancel") {
       const current = await api(`transfers/${id}`);
@@ -360,15 +427,28 @@ async function open(next, id, remember=true) {
       );
     else if (next === "case") {
       caseEvidence=null;caseEvents=[];caseTransaction=null;caseNetwork=null;
-      data = await api(`integrations/guardian/soc/cases/${id}`);
-      caseEvents = (await api(`integrations/guardian/soc/cases/${id}/history`)).items;
+      const g=gateway, rev=viewRevision;
+      const current=()=>gateway===g && g.role==="admin" && viewRevision===rev && page==="case" && lastRead?.id===id;
+      const record=await g.api(`integrations/guardian/soc/cases/${id}`);
+      if(!current() || record.id!==id)return;
+      data=record;
+      render();
+      const path="integrations/guardian/soc/cases/"+id;
+      const [historyRows,evidence,callback]=await Promise.all([
+        g.api(path+"/history"), product ? g.api(path+"/evidence") : null,
+        product && record.source==="owner_demo" ? readCallback(g,"/cases/"+id+"/callback") : null
+      ]);
+      if(!current() || (evidence?.case_id && evidence.case_id!==id))return;
+      caseEvents=historyRows.items;
       if(product){
-        caseEvidence=await api(`integrations/guardian/soc/cases/${id}/evidence`);
-        if (data.source==="owner_demo") callbackView=await readCallback(gateway,"/cases/"+id+"/callback");
+        caseEvidence=evidence;callbackView=callback;
         if(caseEvidence?.transaction_id){
           try{
-            caseTransaction=await api("transfers/"+caseEvidence.transaction_id);
-            caseNetwork=await api("soc/graph/"+caseTransaction.recipient.id+"?depth=1");
+            const tx=await g.api("transfers/"+evidence.transaction_id);
+            if(!current() || tx.transaction_id!==evidence.transaction_id)return;
+            caseTransaction=tx;
+            const graph=await g.api("soc/graph/"+tx.recipient.id+"?depth=1");
+            if(current())caseNetwork=graph;
           }catch(e){if(e.status===401)throw e;}
         }
       }
@@ -401,11 +481,13 @@ async function readReport(session,id) {
   return Promise.all([session.api(path),session.api(path+"/history"),questions,callback]);
 }
 function loginView() {
-  if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><h1>Saq Bol × BCC</h1><p>${T("Переводы под защитой","Қорғалған аударымдар")}</p><div class="sign-promise">${icon("safety")}<span>${T("Ваши деньги. Ваше решение.", "Сіздің ақшаңыз. Сіздің шешіміңіз.")}</span></div></div><p class="sign-intro">${T("Войдите в свой учебный аккаунт.","Оқу аккаунтыңызға кіріңіз.")}</p>
+  if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><div><small>Saq Bol × BCC</small><h1>${T("Вход в кабинет","Кабинетке кіру")}</h1></div></div>
+    ${restoreFailed ? button("restore-access",T("Восстановить сессию","Сессияны қалпына келтіру"),"secondary") : ""}
     <form id="personal-login" class="form-stack">
     ${input("login",T("Логин","Логин"),loginName, "text",'autocomplete="username" required maxlength="64" autocapitalize="none" spellcheck="false"')}
     <label>${T("Пароль","Құпиясөз")}<span class="password-field"><input type="password" name="password" required minlength="1" maxlength="128" autocomplete="current-password">
     <button type="button" data-action="show-password" aria-pressed="false">${T("Показать","Көрсету")}</button></span></label>
+    <label class="remember-choice"><input type="checkbox" name="remember" ${rememberLogin?"checked":""}><span>${T("Запомнить меня","Мені есте сақтау")}</span></label>
     <button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти","Кіру")}</button></form>
     ${webWallet && document.documentElement.hasAttribute("data-install")?'<a class="install-link" href="install/">'+T("Установить на Android","Android жүйесіне орнату")+'</a>':""}<div class="sign-footer">${button("web-client",T("Открыть веб-клиент","Веб-клиентті ашу"),"text-button")}${button("offline",T("Офлайн-обзор","Офлайн шолу"),"text-button")}</div></section>`;
   return `${title(T("Всё начинается с тебя", "Бәрі сенен басталады"), T("Выбери свою роль и войди на тестовый стенд.", "Рөліңді таңдап, тест стендіне кір."))}<div class="role-choice"><button data-role="client" aria-pressed="${chosenRole === "client"}">${T("Клиент", "Клиент")}<small>${T("Свои переводы и защита", "Өз аударымдарың мен қорғаныс")}</small></button><button data-role="admin" aria-pressed="${chosenRole === "admin"}">${T("Сотрудник SOC", "SOC қызметкері")}<small>${T("Мониторинг и расследования", "Мониторинг пен тексеру")}</small></button><button data-role="platform_admin" aria-pressed="${chosenRole === "platform_admin"}">${T("Администратор платформы","Платформа әкімшісі")}<small>${T("Доступ сотрудников и нагрузка","Қызметкерлер рұқсаты мен жүктеме")}</small></button></div><section class="paper login-card"><form id="login-form" class="form-stack" autocomplete="off">${input("origin", T("Адрес тестового сервера", "Тест серверінің мекенжайы"), loginOrigin, "text", 'required inputmode="url" placeholder="127.0.0.1:18001"')}${input("code", T("Код доступа твоей роли", "Өз рөліңнің кіру коды"), "", "password", 'required minlength="24" maxlength="128" autocomplete="off" spellcheck="false"')}<button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти", "Кіру")} →</button></form><p class="fine">${T("Код выдаёт владелец тестового стенда. Роль проверяет сервер. Это отдельный тестовый код, не пароль банка.", "Кодты тест стендінің иесі береді. Рөлді сервер тексереді. Бұл банк құпиясөзі емес, бөлек тест коды.")}</p></section>${button("offline", T("Попробовать без сервера", "Серверсіз байқап көру"), "secondary")}`;
@@ -515,7 +597,7 @@ function transferView() {
     ${payeeFields(draft,T,E)}
     ${input("amount",T("Сумма, ₸","Сома, ₸"), draft?.amount ?? "", "number", 'required min="0.01" max="999999999" step="0.01" inputmode="decimal"')}
     <div class="amount-choices" role="group" aria-label="${T("Выбрать сумму перевода", "Аударым сомасын таңдау")}">${[5000, 10000, 25000].map(value => `<input type="button" data-quick-amount="${value}" value="${amount(value)}">`).join("")}</div>
-    <label class="tick-field"><input type="checkbox" name="active_call" ${draft?.context?.active_call ? "checked" : ""}>${T("Меня просят перевести во время звонка","Қоңырау кезінде аударуды сұрады")}</label>
+    <label class="tick-field"><input type="checkbox" name="active_call" ${draft?.context?.active_call ? "checked" : ""}>${T("Мне сейчас по телефону говорят перевести деньги","Маған телефон арқылы ақша аударуды айтып жатыр")}</label><small class="fine">${T("Отметка будет сохранена для этого перевода.","Бұл белгі осы аударымға сақталады.")}</small>
     <button class="primary">${T("Проверить реквизиты","Деректемелерді тексеру")}</button></form></section>${button("presets",T("Демонстрационные сценарии","Демонстрациялық сценарийлер"),"secondary")}`;
   const value = draft ?? presetValues.normal;
   return `${title(T("Новый тестовый перевод", "Жаңа тест аударымы"), T("Сумму и признаки анализирует сервер: ML, частота операций и связи получателя.", "Сома мен белгілерді сервер талдайды: ML, әрекет жиілігі және алушы байланыстары."))}<div class="filter-row">${Object.keys(
@@ -676,9 +758,15 @@ function detailView() {
     const held=tx.status==="cooling_off";
     const hold=held?coolingReceipt(tx, admin):"";
     const contact=held?'<section class="paper"><h2>'+T("Доверенный контакт в Telegram","Telegram-дағы сенімді адам")+'</h2><p>'+(!data||data.transaction_id!==tx.transaction_id?T("Обновите статус для проверки доставки.","Жеткізу күйін жаңартыңыз."):data.contact_state?E(label(data.contact_state)):T("Уведомление для этой операции пока не зарегистрировано.","Бұл операцияның хабарламасы әлі тіркелмеген."))+'</p>'+button("notifications",T("История уведомлений","Хабарлама тарихы"),"secondary")+'</section>':"";
+    const serviceState = receiptPacket?.unavailable ? T("Не удалось загрузить сведения об обращении.","Өтініш дерегін жүктеу мүмкін болмады.")
+      : !receiptPacket ? T("Запрашиваем сведения об обращении…","Өтініш дерегі жүктелуде…")
+      : !Array.isArray(receiptPacket.reports) ? T("Стенд не передал статус обращения.","Стенд өтініш күйін жібермеді.")
+      : receiptPacket.reports.length ? receiptPacket.reports.map(r=>r.id+" · "+label(r.state)).join(", ")
+      : T("Связанных обращений нет.","Байланысты өтініш жоқ.");
+    const service = '<section class="paper"><h2>'+T("Обращение в SOC","SOC-қа өтініш")+'</h2><p>'+E(serviceState)+'</p></section>';
     return title(status(tx.status),tx[lang==="ru"?"headline_ru":"headline_kk"])+
-      `<section class="paper receipt"><div class="receipt-status">${wallet.badge(tx.status)}</div><div class="amount">${amount(tx.amount)}</div><dl class="receipt-party"><dt>${T("Получатель", "Алушы")}</dt><dd><strong>${E(tx.recipient?.display_name)}</strong><span>${E(tx.recipient?.iban_masked)}</span></dd></dl><p class="funds-outcome">${E(moneyOutcome(tx.status))}</p></section>`+hold+
-      (reasons.length?'<section class="paper"><h2>'+T("Что учла проверка","Тексеруде ескерілген белгілер")+'</h2>'+reasons.map(r=>'<p>'+E(r[lang==="ru"?"reason_ru":"reason_kk"])+'</p>').join("")+'</section>':"")+contact+
+      `<section class="paper receipt"><div class="receipt-status">${wallet.badge(tx.status)}</div><div class="amount">${amount(tx.amount)}</div><dl class="receipt-party"><dt>${T("Создан","Жасалған уақыты")}</dt><dd>${E(when(tx.created_at))}</dd><dt>${T("Получатель", "Алушы")}</dt><dd><strong>${E(tx.recipient?.display_name)}</strong><span>${E(tx.recipient?.iban_masked)}</span></dd></dl><p class="funds-outcome"><strong>${T("Состояние денег","Қаражат күйі")}</strong><br>${E(moneyOutcome(tx.status))}</p></section>`+hold+
+      (reasons.length?'<section class="paper"><h2>'+T("Что учла проверка","Тексеруде ескерілген белгілер")+'</h2>'+reasons.map(r=>'<p>'+E(r[lang==="ru"?"reason_ru":"reason_kk"])+'</p>').join("")+'</section>':"")+contact+service+
       '<p class="break-id">'+E(tx.transaction_id)+'</p>'+button("refresh-detail",T("Обновить статус","Күйін жаңарту"),"secondary");
   }
   return `${title(status(tx.status), tx[lang === "ru" ? "headline_ru" : "headline_kk"])}<section class="paper"><div class="amount">${amount(tx.amount)}</div><p>${E(tx.recipient?.display_name)} · ${E(tx.recipient?.iban_masked)}</p><div class="risk-meter"><progress max="100" value="${Number(tx.risk_score)}" aria-label="${T("Оценка риска", "Тәуекел бағасы")}"></progress></div><div class="analysis-grid"><dl><dt>${T("Риск", "Тәуекел")}</dt><dd>${Number(tx.risk_score)} / 100</dd></dl><dl><dt>ML</dt><dd>${tx.ml_score == null ? "—" : Number(tx.ml_score).toFixed(1)} / 100</dd></dl></div><p class="fine">${T("Это оценки модели, не вероятность доказанного мошенничества.", "Бұл модель бағасы, дәлелденген алаяқтық ықтималдығы емес.")}</p></section>${tx.status === "cooling_off" ? coolingReceipt(tx, admin) : ""}<section class="paper"><h2>${T("Почему такое решение", "Шешім себептері")}</h2>${reasons.length ? reasons.map((r) => `<div class="reason"><h3>${E(r[lang === "ru" ? "reason_ru" : "reason_kk"])}</h3><p>${E(r.layer)} · ${E(r.code)} · ${Number(r.score_delta) >= 0 ? "+" : ""}${Number(r.score_delta)}</p></div>`).join("") : `<p>${T("Дополнительные правила не сработали.", "Қосымша ережелер іске қосылған жоқ.")}</p>`}</section><section class="paper"><h2>${T("Как объясняет модель", "Модель түсіндірмесі")}</h2><p class="fine">${E(tx.ml_model_version)} · ${E(tx.ml_explanation_method)}</p>${contributors
@@ -900,7 +988,8 @@ function roleTitle() {
   return E(account?.display_name || T("Клиент","Клиент"));
 }
 function settingsView() {
-  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.7 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
+  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.9 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
+    button("remember-settings",gateway.remember ? T("Сохранённый вход включён · Изменить","Сақталған кіру қосулы · Өзгерту") : T("Сохранённый вход выключен · Изменить","Сақталған кіру өшірулі · Өзгерту"),"secondary") +
     button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
     (gateway.role === "client" ? button("contacts",T("Мои согласия","Келісімдерім"),"secondary")+button("open-guardian",T("Открыть Telegram-бот","Telegram-ботты ашу"),"secondary") : "") + button("logout",T("Выйти","Шығу"));
   return `${title(T("Профиль доступа", "Кіру профилі"))}<section class="paper"><h2>${roleTitle()}</h2><p>${T("Роль назначена сервером. Сессия действует 30 минут, затем нужен повторный вход.", "Рөлді сервер тағайындады. Сессия 30 минутқа жарамды, содан кейін қайта кіру қажет.")}</p><p class="fine">${E(gateway.origin)}</p></section>${button("logout", T("Выйти из аккаунта", "Аккаунттан шығу"), "secondary")}`;
@@ -954,7 +1043,7 @@ const screens = {
   incoming:()=>data?'<h1>'+T("Входящий перевод","Кіріс аударым")+'</h1><section class="paper"><h2>+'+amount(data.amount)+'</h2><p>'+E(data.counterparty)+'</p>'+wallet.badge(data.status)+'<p>'+when(data.created_at)+'</p><small>'+E(data.transaction_id)+'</small></section>':"",
   family: () => familyView(data,T,button,when) + secondSettingsView(data?.second,T,button,when,amount,E,webWallet),
   guard: () => checkView(data,T,button,when,label),
-  packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Сохранить PDF","PDF сақтау")) : "",
+  packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Скачать пакет инцидента · PDF","Оқиға құжаттарын жүктеу · PDF")) : "",
   sample: sampleView,
   login: loginView,
   home: ()=>gateway?.role==="platform_admin" ? desk.metrics(data) : historyView(),
@@ -1021,6 +1110,21 @@ function render() {
     ({detail:"history",incoming:"history",callbacks:"safety",contacts:"safety",scan:"safety",call:"safety",family:"safety",guard:"safety",report:"safety",reports:"safety",reportDetail:"safety",invite:"safety",questionnaire:"history",confirmCancel:"history"}[page]||"home"));
   root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>saq bol</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && page === "settings" ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${page === "login" ? T("Подключаемся. Первый вход после перерыва может занять до двух минут.", "Қосылып жатырмыз. Үзілістен кейінгі алғашқы кіру екі минутқа дейін созылуы мүмкін.") : T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
   if (product) {
+    if(workspaceRead?.pending.size && ["home","staff","cases"].includes(page)) {
+      const marker=document.createElement("p");
+      marker.className="sync-note";marker.setAttribute("role","status");
+      marker.textContent=T("Обновляем данные…","Деректер жаңартылуда…");
+      root.querySelector("main").append(marker);
+      for(const [part,action] of [["summary","retry-summary"],["account","retry-home"]]){
+        if(workspaceRead.pending.has(part))root.querySelector('[data-action="'+action+'"]')?.setAttribute("hidden","");
+      }
+    }
+    if(workspaceRead?.updatedAt && !workspaceRead.pending.size) {
+      const meta=document.createElement("small");
+      meta.className="sync-note";
+      meta.textContent=T("Данные получены","Деректер алынды")+" · "+workspaceRead.updatedAt.toLocaleTimeString(lang==="ru"?"ru-RU":"kk-KZ");
+      root.querySelector("main").append(meta);
+    }
     if (gateway?.role==="client" && page==="home")
       root.querySelector(".wallet-overview")?.insertAdjacentHTML("afterend",homeInboxView(homeNoticesExpanded));
     if (gateway?.role==="client" && page==="home" && awaitingReplyCount>0)
@@ -1075,6 +1179,8 @@ function render() {
       }
     }
     if(page==="reportDetail" && data) {
+      if(data.transaction_id) root.querySelector("main").insertAdjacentHTML("beforeend",
+        '<button class="linked-receipt" data-detail="'+E(data.transaction_id)+'"><span>'+T("Связанная квитанция","Байланысты түбіртек")+'</span><small>'+E(data.transaction_id)+'</small></button>');
       const log=reportHistory.map(e=>'<p>'+E(label(e.event))+' · '+when(e.created_at)+'</p>').join("");
       if (gateway.role==="client") root.querySelector("main").insertAdjacentHTML("beforeend",desk.resolution(callbackView)+desk.reportCallback(callbackView));
       root.querySelector("main").insertAdjacentHTML("beforeend",'<section class="paper"><h2>'+T("История обращения","Өтініш тарихы")+'</h2>'+log+'</section>'+
@@ -1131,10 +1237,12 @@ function render() {
         root.querySelector("#edge-detail").textContent = edge ? (edge.data.edge_type==="transfer" ? T("Переводы","Аударымдар") : T("Общее устройство","Ортақ құрылғы"))+" · "+edge.data.tx_count : "";
       };
     }
-    if(page==="case" && caseTransaction){
+    if(page==="case" && gateway?.role==="admin" && data?.id && caseTransaction && caseTransaction.transaction_id===caseEvidence?.transaction_id){
       const panel=document.createElement("section");
       panel.className="paper case-investigation";
       panel.innerHTML='<div><h2>'+T("Операция по делу","Іске қатысты операция")+'</h2><strong class="amount">'+amount(caseTransaction.amount)+'</strong><p>'+E(caseTransaction.recipient.display_name)+'</p>'+wallet.badge(caseTransaction.status)+'<p>'+E(moneyOutcome(caseTransaction.status))+'</p></div>'+
+        caseEvidenceView(caseTransaction,T,E,when)+
+        caseLedgerView(caseEvidence.recipient_ledger,T,E,when)+
         (caseNetwork?'<div>'+graphView(caseNetwork,true)+'<button class="secondary" data-graph="'+E(caseTransaction.recipient.id)+'">'+T("Исследовать связи","Байланыстарды зерттеу")+'</button></div>':"");
       root.querySelector("main .paper")?.after(panel);
     }
@@ -1452,7 +1560,12 @@ root.addEventListener("click", async (event) => {
     } else location.assign("index.html?offline=1");
     return;
   }
-  if (act === "logout") {
+  if (act === "restore-access") { await restoreSession(); return; }
+  if (act === "remember-settings") {
+    if (!window.confirm(T("Войти заново и изменить сохранение входа?", "Қайта кіріп, кіруді сақтау параметрін өзгерту керек пе?"))) return;
+    rememberLogin = !gateway.remember;
+  }
+  if (act === "logout" || act === "remember-settings") {
     await perform(async () => {
       try { await gateway.logout(); } finally {
         if (product) await identity.write("session", null);
@@ -1679,7 +1792,9 @@ root.addEventListener("submit", async (event) => {
     try {
       let result;
       await perform(async () => {
-        result=await identity.signIn(String(fields.get("login")).trim(),String(fields.get("password")));
+        rememberLogin=fields.has("remember");
+        restoreFailed=false;
+        result=await identity.signIn(String(fields.get("login")).trim(),String(fields.get("password")),rememberLogin);
       });
       if(result)await loadOwner(result.gateway,result.subject);
     } finally {initializingAccount=false;render();}
@@ -1819,13 +1934,21 @@ setInterval(() => {
 }, 1000);
 render();
 
-if (product) identity.initialize(loadOwner, e => {
+async function restoreSession() {
+  initializingAccount=true;
+  restoreFailed=false;
+  render();
+  return identity.initialize(loadOwner, e => {
+  restoreFailed=e.status!==401 && e.status!==403;
   error = e.status === 499 ? T("Вход отменён.","Кіру тоқтатылды.") : e.status === 401 ?
     T("Войди заново, чтобы продолжить.","Жалғастыру үшін қайта кір.") : T("Сервис входа недоступен. Попробуй позже.","Кіру қызметі қолжетімсіз. Кейін қайтала.");
   render();
 }).catch(() => { error = T("Защищённое хранилище недоступно.","Қорғалған қойма қолжетімсіз."); render(); }).finally(() => { initializingAccount=false;render(); });
 
+}
+if (product) void restoreSession();
 root.addEventListener("change", event => {
+  if (event.target.name === "remember") rememberLogin=event.target.checked;
   if (page === "transfer" && event.target.name === "recipient_phone") {
     const manualField = root.querySelector("[data-manual-phone]");
     if (manualField) {
@@ -1871,7 +1994,7 @@ async function refreshVisible() {
       Array.from(root.querySelectorAll("#case-note textarea,#case-close select,#request-answer textarea")).some(field=>field.value) ||
       (search && search.value!==query);
   };
-  if (editing()) return;
+  if (editing() || workspaceRead?.pending.size) return;
   const g=gateway, rev=viewRevision, screen=page, id=selectedId;
   const here=()=>g===gateway && rev===viewRevision && page===screen && id===selectedId && !loading && !document.hidden && !editing();
   const same=(a,b)=>JSON.stringify(a,(k,v)=>["server_time","as_of"].includes(k)?undefined:v)===JSON.stringify(b,(k,v)=>["server_time","as_of"].includes(k)?undefined:v);

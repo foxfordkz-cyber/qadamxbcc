@@ -138,10 +138,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
     return (
       greet +
       '<div class="wallet-dashboard"><div class="wallet-overview"><div class="wallet-account">'+card(a, hidden) +
-      `<button class="transfer-primary" data-action="transfer">${icon("transfer")}<span>${T("Перевести деньги", "Ақша аудару")}</span>${icon("arrow")}</button>` +
-      '<div class="wallet-quick">' +
-      links +
-      "</div>" +
+      '<div class="action-dock"><button class="transfer-primary" data-action="transfer">'+icon("transfer")+'<span>'+T("Перевести","Аудару")+'</span></button><div class="wallet-quick">'+links+'</div></div>' +
       (pending
         ? button(
             "recover",
@@ -157,15 +154,11 @@ export function walletUI({ T, E, amount, when, button, status }) {
       '<p>'+T("Если торопят с переводом — сделайте паузу. Проверьте сообщение или обратитесь к близкому.", "Аударымға асықтырса — кідіріңіз. Хабарламаны тексеріңіз немесе жақыныңызға хабарласыңыз.")+'</p>'+little("safety", T("Открыть защиту", "Қорғанысты ашу"))+'</section>'+
       (stats ? `<button class="week-summary" data-action="analytics"><span>${T("Расходы за неделю", "Апталық шығыс")}<strong>${hidden ? "•••••• ₸" : amount(stats.outgoing)}</strong></span>${icon("analytics")}${icon("arrow")}</button>`
         : button("retry-summary",T("Сводка недоступна · Повторить","Жиынтық қолжетімсіз · Қайталау"),"secondary"))+
-      '</aside></div><div class="wallet-activity"><section class="wallet-section wallet-recipients">'+
-      heading(T("Кому переведём?", "Кімге аударамыз?")) +
-      (people ? '<div class="people">'+people+'</div>' : '<p class="empty">'+T("Учебные получатели пока не добавлены.", "Оқу алушылары әзірге қосылмаған.")+'</p>') +
-      '</section><section class="wallet-section wallet-recent">' +
-      heading(
-        T("Последние операции", "Соңғы операциялар"),
-        little("history", T("Все", "Барлығы")),
-      ) +
-      (ledger ? rows(ledger.items.slice(0, 3)) : button("retry-home",T("История недоступна · Повторить","Тарих қолжетімсіз · Қайталау"),"secondary")) +
+      '</aside></div><div class="wallet-activity"><section class="wallet-section wallet-recent">' +
+      heading(T("Последние операции","Соңғы операциялар"),little("history",T("Все","Барлығы"))) +
+      (ledger ? rows(ledger.items.slice(0,3)) : button("retry-home",T("Обновить историю","Тарихты жаңарту"),"secondary")) +
+      '</section><section class="wallet-section wallet-recipients">'+heading(T("Получатели","Алушылар")) +
+      (people ? '<div class="people">'+people+'</div>' : '<p class="empty">'+T("Учебные получатели пока не добавлены.","Оқу алушылары әзірге қосылмаған.")+'</p>') +
       "</section></div></div>"
     );
   }

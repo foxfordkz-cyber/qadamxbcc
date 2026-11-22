@@ -4,7 +4,7 @@ import { readFile, mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const origin = "http://127.0.0.1:18127";
-const output = new URL("../../docs/handoff-evidence/", import.meta.url);
+const output = new URL(process.argv.includes("--workspace28") ? "../../docs/workspace-28/after/flow/" : "../../docs/handoff-evidence/", import.meta.url);
 const access = JSON.parse(await readFile(new URL("../../.local-checks/handoff-access/access.json", import.meta.url)));
 await mkdir(output, {recursive:true});
 const browser = await chromium.launch({channel:process.env.PLAYWRIGHT_CHANNEL || "chrome"});
@@ -50,6 +50,8 @@ try {
   const platform=await signIn("platform_demo","platform_admin");
   await api(platform,"/admin/staff");
   await screen(platform.page,"platform-metrics",'[data-nav="staff"]');
+  await platform.page.locator('[data-nav="staff"]').click();
+  await screen(platform.page,"platform-staff","[data-staff]");
   await platform.page.close();
   await api(client,"/wallet/cases",403);
   const account=await api(client,"/account");

@@ -58,10 +58,20 @@ export class Gateway {
       /^https:\/\/[a-z0-9.-]+$/i.test(origin) ? origin : gatewayOrigin(origin);
     if (!this.origin) throw new Error("invalid_origin");
     this.fetcher = fetcher;
+    this.pendingReads = new Map();
     this.token = null;
     this.role = null;
   }
-  async request(path, method = "GET", body, idempotencyKey) {
+  request(path, method = "GET", body, idempotencyKey) {
+    if (method !== "GET" || !this.token) return this.send(path, method, body, idempotencyKey);
+    const key = JSON.stringify([path, this.subject, this.role, this.token]);
+    if (!this.pendingReads.has(key)) {
+      const request = this.send(path, method).finally(() => this.pendingReads.delete(key));
+      this.pendingReads.set(key, request);
+    }
+    return this.pendingReads.get(key);
+  }
+  async send(path, method, body, idempotencyKey) {
     const inboxPath = path === "/inbox" || path === "/inbox?view=actions";
     if (
       (!inboxPath && !/^\/(?:sessions?$|auth\/login$|account$|requests$|wallet\/|protection\/|transfers(?:\?|$)|api\/|admin\/(?:metrics|staff(?:\/[\da-f-]{36})?)$|callbacks(?:\/[\da-f-]{36}\/answer)?$|(?:cases|reports)\/[\da-f-]{36}\/callback$)/i.test(path)) ||
@@ -71,10 +81,12 @@ export class Gateway {
     const headers = { "Content-Type": "application/json" };
     if (this.webSession) {
       headers["X-Qadam-Web"] = "1";
+      if (path === "/auth/login") headers["X-Qadam-Remember"] = this.remember === false ? "0" : "1";
       if (this.subject) headers["X-Qadam-Subject"] = this.subject;
     } else if (this.token) headers.Authorization = `Bearer ${this.token}`;
     if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
     const timeoutMs = path === "/auth/login" || path === "/sessions" ? 120000 : 20000;
+    const sentToken = this.token;
     let response;
     try {
       response = await this.fetcher(`${this.origin}/mobile/v1${path}`, {
@@ -90,9 +102,10 @@ export class Gateway {
       throw new GatewayError(0);
     } // Never replay a mutation with an unknown outcome.
     if (!response.ok) {
-      if (response.status === 401) {
+      if (response.status === 401 && this.token === sentToken) {
         this.token = null;
         this.role = null;
+        if (sentToken) this.onExpired?.();
       }
       throw new GatewayError(
         response.status,

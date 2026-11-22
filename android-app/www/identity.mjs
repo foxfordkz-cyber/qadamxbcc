@@ -8,11 +8,16 @@ const utf8 = new TextEncoder();
 const web = !native && typeof document !== "undefined" && document.documentElement.hasAttribute("data-web-wallet");
 const fallback = new Map(); // Browser preview has no durable secret storage.
 export const read = async slot => {
+  if (slot === "session" && web) {
+    const stored = sessionStorage.getItem("qadam.session") || localStorage.getItem("qadam.session");
+    return stored ? JSON.parse(stored) : null;
+  }
   const value = native ? (await vault.read({slot})).value : web ? sessionStorage.getItem("qadam."+slot) : fallback.get(slot);
   return value ? JSON.parse(value) : null;
 };
 export const write = async (slot, value) => {
   const record = value == null ? null : JSON.stringify(value);
+  if (slot === "session" && web && value == null) localStorage.removeItem("qadam.session");
   if (native) await vault.put({slot, value:record});
   else if (web) {
     if (record === null) sessionStorage.removeItem("qadam."+slot);
@@ -41,13 +46,20 @@ async function getGateway() {
   gateway.webSession=web;
   return gateway;
 }
-export async function signIn(login, password) {
+export async function signIn(login, password, remember = true) {
   const gateway = await getGateway();
+  gateway.remember = remember;
   const result = await gateway.request("/auth/login","POST",{login,password});
   if (!isWalletRole(result.role) || (!web && typeof result.token !== "string") ||
       typeof result.subject !== "string") throw new GatewayError(502);
   gateway.role = result.role; gateway.token = web ? "cookie" : result.token; gateway.subject=result.subject;
-  await write("session",web ? {origin,subject:result.subject} : {origin,token:result.token});
+  await write("session", null);
+  if (web) {
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem("qadam.session", JSON.stringify({origin, subject: result.subject, remember}));
+  } else if (remember) {
+    await write("session", {origin, token: result.token, remember: true});
+  }
   gateway.ephemeralStore = result.ephemeral_store === true;
   return {gateway,subject:result.subject};
 }
@@ -60,11 +72,13 @@ export async function initialize(onLogin,onFailure) {
     gateway.token = web ? "cookie" : saved.token; gateway.subject=saved.subject;
     const user = await gateway.request("/session");
     if (!isWalletRole(user.role) || typeof user.subject !== "string") throw new GatewayError(502);
+    if (web && saved.subject !== user.subject) throw new GatewayError(401);
+    gateway.remember = saved.remember ?? true;
     gateway.role = user.role;
     gateway.ephemeralStore = user.ephemeral_store === true;
     await onLogin(gateway,user.subject);
   } catch(e) {
-    if (e.status === 401) await write("session",null);
+    if (e.status === 401 || e.status === 403) await write("session",null);
     onFailure(e);
   }
 }

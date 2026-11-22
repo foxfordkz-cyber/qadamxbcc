@@ -148,7 +148,9 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
     amount(selected.outgoing) +
     "</span>" +
     icon("arrow") +
-    "</button>"
+    '</button><details class="ledger-values"><summary>'+T("Значения по периодам","Кезеңдер бойынша мәндер")+'</summary><table class="desk-table"><thead><tr><th>'+T("Даты","Күндер")+'</th><th>'+T("Приход, ₸","Кіріс, ₸")+'</th><th>'+T("Расход, ₸","Шығыс, ₸")+'</th></tr></thead><tbody>'+
+    groups.map(g=>'<tr><td><button data-drill-day="'+E(g.from)+'" data-through="'+E(g.to)+'">'+E(shortDate(g.from))+(g.to===g.from?'':' – '+E(shortDate(g.to)))+'</button></td><td>'+amount(g.incoming)+'</td><td>'+amount(g.outgoing)+'</td></tr>').join('')+
+    '</tbody></table></details>'
   );
 }
 

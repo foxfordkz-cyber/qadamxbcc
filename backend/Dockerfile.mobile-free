@@ -6,7 +6,7 @@ RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY android-app/www ./www
 COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs android-app/scripts/stage-installer.mjs ./scripts/
 ARG APK_API_ORIGIN=https://saq-bol-mobile.onrender.com
-RUN --mount=type=bind,source=deliverables/android,target=/releases \
+RUN --mount=type=bind,source=frontend/public/downloads,target=/releases \
     node scripts/stage-installer.mjs package.json /releases ../backend/.qadam-web/install "$APK_API_ORIGIN"
 RUN npm run web && test -s ../backend/.qadam-web/install/index.html
 

@@ -43,6 +43,7 @@ export function serviceDesk({ T, E, when, title, button, amount, status }) {
     declined: T("Клиент отказался", "Клиент бас тартты"),
     expired: T("Срок запроса истёк", "Сұрау мерзімі аяқталды"),
   })[state] ?? T("Обновите статус", "Күйін жаңартыңыз");
+  const unavailable=()=>'<section class="paper contract-error"><p>'+T("Данные раздела недоступны. Обновите их с сервера.","Бөлім деректері қолжетімсіз. Серверден жаңартыңыз.")+'</p>'+button("refresh",T("Обновить","Жаңарту"),"secondary")+'</section>';
   const caption = () => T("Учебный запрос отдела антифрода по проверке перевода. Реальные звонки на стенде не совершаются.",
     "Аударымды тексеруге қатысты антифрод бөлімінің оқу сұрауы. Стендтен нақты қоңырау шалынбайды.");
   const caseLabel = () => T("Дело", "Іс");
@@ -60,7 +61,7 @@ export function serviceDesk({ T, E, when, title, button, amount, status }) {
   }
   function callbacks(data) {
     const heading = title(T("Связь с сотрудником","Қызметкермен байланыс"));
-    if (!Array.isArray(data?.items)) return heading;
+    if (!Array.isArray(data?.items)) return heading+unavailable();
     return heading+(data.items.length ? data.items.map(r=>callbackCard(r,true)).join("") :
       '<p class="empty">'+T("Запросов на связь пока нет. Вы можете попросить о звонке из своего открытого дела.",
         "Әзірге хабарласу сұраулары жоқ. Ашық ісіңіз бойынша қоңырау сұрай аласыз.")+'</p>')+
@@ -94,7 +95,7 @@ export function serviceDesk({ T, E, when, title, button, amount, status }) {
   function metrics(v) {
     const heading=title(T("Нагрузка API","API жүктемесі"),T("Попытки проверки перевода в подключённом кошельке, включая повторные запросы.",
       "Қосылған әмияндағы аударымды тексеру әрекеттері. Қайталанған сұраулар да саналады."));
-    if (v?.scope!=="wallet_transfer_api" || !Array.isArray(v.buckets)) return heading;
+    if (v?.scope!=="wallet_transfer_api" || !Array.isArray(v.buckets)) return heading+unavailable();
     const p95=v.p95_overflow ? T("Более 30 с","30 с артық") : Number.isFinite(v.p95_upper_ms) ?
       "≤ "+E(v.p95_upper_ms)+" "+T("мс","мс") : "—";
     const metric=(label,value)=>'<div><dt>'+label+'</dt><dd>'+value+'</dd></div>';
@@ -118,7 +119,7 @@ export function serviceDesk({ T, E, when, title, button, amount, status }) {
   }
   function staff(v) {
     const heading=title(T("Доступ сотрудников","Қызметкерлердің рұқсаты"));
-    if (!Array.isArray(v?.items)) return heading;
+    if (!Array.isArray(v?.items)) return heading+unavailable();
     const enabledText=value=>value?T("Доступ открыт","Рұқсат берілген"):T("Доступ приостановлен","Рұқсат тоқтатылған");
     return heading+v.items.map(s=>'<section class="paper"><small>'+T("Сотрудник SOC","SOC қызметкері")+'</small><h2>'+E(s.login)+'</h2><p>'+
       enabledText(s.enabled)+'</p><button class="secondary" data-staff="'+E(s.subject)+'">'+(s.enabled?T("Приостановить доступ","Рұқсатты тоқтату"):

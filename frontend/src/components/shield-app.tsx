@@ -2,8 +2,9 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import Link from "next/link";
+import { AndroidDownload } from "./android-download";
 import connectedWallet from "@/lib/connected-wallet.json";
-import { Activity, ArrowRight, CircleHelp, Download, LogIn, Network, PhoneCall, Smartphone } from "lucide-react";
+import { Activity, ArrowRight, CircleHelp, LogIn, Network, PhoneCall, Smartphone } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { api, ApiError, transferSchema, type AbandonResult, type Answers, type AppConfig, type CallCheck, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { reconcileTraffic, type TrafficRecord } from "@/lib/traffic";
@@ -338,7 +339,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const showCollectionReplay = config.demoActionsEnabled !== false && config.accountMode !== "pilot";
   const walletLink = showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("connectedWallet")}<ArrowRight size={15} aria-hidden="true" /></a>;
   const androidDownload = config.demoActionsEnabled !== false && config.accountMode !== "pilot" && (
-    <a className="pitch-link" href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/downloads/Saq-Bol-Android-2.7.apk`} download="Saq-Bol-Android-2.7.apk"><Download size={16} aria-hidden="true" />{t("downloadAndroid")}</a>
+    <AndroidDownload kk={lang === "kk"} />
   );
   const juryEntry = config.demoActionsEnabled !== false && config.accountMode !== "pilot" && (
     <a className="jury-entry" href={connectedWallet.juryUrl}><LogIn size={17} aria-hidden="true" />{t("juryLogin")}</a>

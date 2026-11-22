@@ -15,6 +15,7 @@ on:
       - .github/workflows/persistent-deployment.yml
       - backend/app/mobile_gateway/**
       - backend/scripts/verify_persistent_release.py
+      - backend/scripts/rehearse_release_storage.py
       - android-app/**
   push:
     branches: [main]
@@ -22,6 +23,15 @@ on:
 permissions:
   contents: read
 jobs:
+  restore-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Restore a synthetic bank database and verify two API restarts
+        working-directory: backend
+        run: uv run --frozen --python 3.12 python -m scripts.rehearse_release_storage
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 20

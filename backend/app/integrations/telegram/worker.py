@@ -146,6 +146,7 @@ async def _deliver(
             contact is None
             or contact.state != ContactState.VERIFIED
             or not contact.telegram_chat_id
+            or contact.contact_consented_at is None
         ):
             row.state = NotificationState.REVOKED
         elif not contact.notifications_enabled:

@@ -185,10 +185,11 @@ def main() -> None:
                 "worker",
             )
             worker_ready()
-            docker("restart", CONTAINER)
-            ready()
-            assert request("/mobile/v1/account", token) == account
-            assert request("/mobile/v1/wallet/operations", token) == operations
+            for _ in range(2):
+                docker("restart", CONTAINER)
+                ready()
+                assert request("/mobile/v1/account", token) == account
+                assert request("/mobile/v1/wallet/operations", token) == operations
             replay = request("/mobile/v1/api/transfers/evaluate", token, normal["body"])
             assert replay["transaction_id"] == normal["result"]["transaction_id"]
             assert request("/mobile/v1/account", token) == account

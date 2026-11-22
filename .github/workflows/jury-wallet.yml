@@ -16,6 +16,7 @@ on:
       - "android-app/package*.json"
       - "android-app/scripts/build-wallet.mjs"
       - "android-app/scripts/stage-installer.mjs"
+      - "frontend/public/downloads/**"
       - "android-app/tests/stage-installer.test.mjs"
       - "deliverables/android/Saq-Bol-Android-*.apk"
       - "deliverables/android/Saq-Bol-Android-*.apk.sha256"
@@ -80,7 +81,8 @@ jobs:
           curl -fsS "$install/" -o "$RUNNER_TEMP/install.html"
           grep -Fq "href=\"$apk\"" "$RUNNER_TEMP/install.html"
           curl -fsS "$install/$apk" -o "$RUNNER_TEMP/$apk"
-          cmp "deliverables/android/$apk" "$RUNNER_TEMP/$apk"
+          canonical=$(node -p "'frontend/public' + require('./frontend/public/downloads/team.json').url")
+          cmp "$canonical" "$RUNNER_TEMP/$apk"
       - run: npm ci
         working-directory: android-app
       - name: Sign in as all three roles and verify the case workflow

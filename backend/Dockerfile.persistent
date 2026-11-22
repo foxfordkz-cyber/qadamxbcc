@@ -3,9 +3,8 @@ WORKDIR /src/android-app
 COPY android-app/package*.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY android-app/www ./www
-COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs ./scripts/
-COPY deliverables/android/Saq-Bol-Android-2.7.apk /src/backend/.qadam-web/install/Saq-Bol-Android-2.7.apk
-COPY deliverables/android/Saq-Bol-Android-2.7.json /src/backend/.qadam-web/install/Saq-Bol-Android-2.7.json
+COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs android-app/scripts/stage-installer.mjs ./scripts/
+RUN --mount=type=bind,source=frontend/public/downloads,target=/releases node scripts/stage-installer.mjs package.json /releases ../backend/.qadam-web/install https://saq-bol-mobile.onrender.com
 RUN npm run web
 
 FROM python:3.12-slim
