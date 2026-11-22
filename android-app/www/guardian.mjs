@@ -86,8 +86,8 @@ export function secondConfirmationView(approval, T, when) {
 }
 export function packetContent(d,T,when,status) {
   const heading=T("Qadam Shield · Пакет инцидента","Qadam Shield · Оқиға құжаттары");
-  const lines=[heading, d.transaction_id, when(d.created_at)+" · "+new Intl.NumberFormat(undefined,{maximumFractionDigits:2}).format(Number(d.amount))+" "+d.currency+" · "+status(d.status),
-    T("Хронология","Оқиғалар реті"),...d.events.map(e=>when(e.at)+" — "+T(...eventNames[e.kind])),
+  const lines=[heading, d.transaction_id, when(d.created_at)+" · "+new Intl.NumberFormat(undefined,{maximumFractionDigits:2}).format(Number(d.amount))+" "+(d.currency==="KZT"?"₸ (KZT)":d.currency)+" · "+status(d.status),
+    T("Хронология","Оқиғалар реті"),...d.events.map(e=>when(e.at)+" — "+T(...(eventNames[e.kind] ?? ["Обновление проверки","Тексеру жаңартылды"]))),
     ...(d.recipient_reference ? [T("Получатель","Алушы")+" · •••• "+d.recipient_reference] : []),
     ...(d.reports ?? []).map(r => T("Обращение","Өтініш")+" "+r.id+" · "+r.state),
     ...(d.soc_messages ?? []).map(m => when(m.at)+" · "+({
@@ -97,6 +97,6 @@ export function packetContent(d,T,when,status) {
     }[m.kind] ?? T("Обновление SOC","SOC жаңартуы"))),
     ...(d.generated_at ? [T("Сформирован","Қалыптастырылған уақыты")+" · "+when(d.generated_at)] : []),
     T("Черновик заявления","Өтініш жобасы"),T("Прошу проверить обстоятельства учебной операции с указанным номером. Моё описание разговора и сведения о потерях я добавлю самостоятельно.","Көрсетілген нөмірлі оқу операциясының мән-жайын тексеруді сұраймын. Әңгіме сипаттамасы мен шығын туралы мәліметтерді өзім қосамын."),
-    T("Синтетические данные. Заявление никуда не отправлено.","Жасанды деректер. Өтініш ешқайда жіберілген жоқ.")];
+    T("Учебный документ. При подозрении на обман завершите разговор и свяжитесь с банком по номеру из приложения. Черновик остаётся у вас.","Оқу құжаты. Алаяқтыққа күмәндансаңыз, әңгімені аяқтап, қолданбадағы нөмір арқылы банкке хабарласыңыз. Жоба өзіңізде қалады.")];
   return lines;
 }

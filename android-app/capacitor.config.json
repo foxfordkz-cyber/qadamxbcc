@@ -14,7 +14,7 @@
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 0,
-      "backgroundColor": "#171b35",
+      "backgroundColor": "#00644B",
       "showSpinner": false
     },
     "SystemBars": {

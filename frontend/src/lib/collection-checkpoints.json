@@ -4,6 +4,7 @@
   "checkpoints": [
     {
       "time": "14:00",
+      "evaluated_at": "2026-11-20T14:00:01+05:00",
       "a": {
         "senders": 1,
         "received": 15000,
@@ -23,6 +24,7 @@
     },
     {
       "time": "14:05",
+      "evaluated_at": "2026-11-20T14:05:01+05:00",
       "a": {
         "senders": 6,
         "received": 90000,
@@ -74,6 +76,7 @@
     },
     {
       "time": "14:11",
+      "evaluated_at": "2026-11-20T14:11:01+05:00",
       "a": {
         "senders": 12,
         "received": 180000,
@@ -125,6 +128,7 @@
     },
     {
       "time": "14:14",
+      "evaluated_at": "2026-11-20T14:14:01+05:00",
       "a": {
         "senders": 12,
         "received": 180000,
@@ -184,5 +188,186 @@
         ]
       }
     }
-  ]
+  ],
+  "ledger": {
+    "a": [
+      {
+        "tx_id": "in-0",
+        "occurred_at": "2026-11-20T14:00:00+05:00",
+        "sender": "payer-0",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-1",
+        "occurred_at": "2026-11-20T14:01:00+05:00",
+        "sender": "payer-1",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-2",
+        "occurred_at": "2026-11-20T14:02:00+05:00",
+        "sender": "payer-2",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-3",
+        "occurred_at": "2026-11-20T14:03:00+05:00",
+        "sender": "payer-3",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-4",
+        "occurred_at": "2026-11-20T14:04:00+05:00",
+        "sender": "payer-4",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-5",
+        "occurred_at": "2026-11-20T14:05:00+05:00",
+        "sender": "payer-5",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-6",
+        "occurred_at": "2026-11-20T14:06:00+05:00",
+        "sender": "payer-6",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-7",
+        "occurred_at": "2026-11-20T14:07:00+05:00",
+        "sender": "payer-7",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-8",
+        "occurred_at": "2026-11-20T14:08:00+05:00",
+        "sender": "payer-8",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-9",
+        "occurred_at": "2026-11-20T14:09:00+05:00",
+        "sender": "payer-9",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-10",
+        "occurred_at": "2026-11-20T14:10:00+05:00",
+        "sender": "payer-10",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-11",
+        "occurred_at": "2026-11-20T14:11:00+05:00",
+        "sender": "payer-11",
+        "recipient": "recipient",
+        "amount": 15000
+      }
+    ],
+    "b": [
+      {
+        "tx_id": "in-0",
+        "occurred_at": "2026-11-20T14:00:00+05:00",
+        "sender": "payer-0",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-1",
+        "occurred_at": "2026-11-20T14:01:00+05:00",
+        "sender": "payer-1",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-2",
+        "occurred_at": "2026-11-20T14:02:00+05:00",
+        "sender": "payer-2",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-3",
+        "occurred_at": "2026-11-20T14:03:00+05:00",
+        "sender": "payer-3",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-4",
+        "occurred_at": "2026-11-20T14:04:00+05:00",
+        "sender": "payer-4",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-5",
+        "occurred_at": "2026-11-20T14:05:00+05:00",
+        "sender": "payer-5",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-6",
+        "occurred_at": "2026-11-20T14:06:00+05:00",
+        "sender": "payer-6",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-7",
+        "occurred_at": "2026-11-20T14:07:00+05:00",
+        "sender": "payer-7",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-8",
+        "occurred_at": "2026-11-20T14:08:00+05:00",
+        "sender": "payer-8",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-9",
+        "occurred_at": "2026-11-20T14:09:00+05:00",
+        "sender": "payer-9",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-10",
+        "occurred_at": "2026-11-20T14:10:00+05:00",
+        "sender": "payer-10",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "in-11",
+        "occurred_at": "2026-11-20T14:11:00+05:00",
+        "sender": "payer-11",
+        "recipient": "recipient",
+        "amount": 15000
+      },
+      {
+        "tx_id": "out",
+        "occurred_at": "2026-11-20T14:14:00+05:00",
+        "sender": "recipient",
+        "recipient": "next",
+        "amount": 150000
+      }
+    ]
+  }
 }

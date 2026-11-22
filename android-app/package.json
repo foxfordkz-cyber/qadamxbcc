@@ -4,6 +4,7 @@
   "private": true,
   "description": "Saq Bol × BCC Android: synthetic client and SOC accounts",
   "scripts": {
+    "brand": "node scripts/generate-brand.mjs",
     "web": "npm run vendor && node scripts/build-wallet.mjs",
     "vendor": "node scripts/vendor.mjs",
     "sync": "npm run vendor && cap sync android",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@capacitor/assets": "^4.0.0",
     "@capacitor/cli": "^8.6.2",
-    "@playwright/test": "^1.58.2"
+    "@playwright/test": "^1.58.2",
+    "sharp": "^0.35.5"
   }
 }

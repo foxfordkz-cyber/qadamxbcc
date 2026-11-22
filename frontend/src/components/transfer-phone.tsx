@@ -1,5 +1,7 @@
 "use client";
 
+import { BrandMark } from "./brand-mark";
+
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { AlertTriangle, ArrowLeft, ArrowLeftRight, BatteryFull, Check, ChevronDown, ChevronRight, Clock3, House, Landmark, LoaderCircle, LockKeyhole, Users, PhoneCall, ScanText, ShieldCheck, ShieldX, Signal, SlidersHorizontal, Smartphone, Wifi, XCircle } from "lucide-react";
 import { api, type AppConfig, type CallCheck, type Evaluation, type PresetForm } from "@/lib/contracts";
@@ -171,7 +173,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const hasDemoSource = (config.mode === "demo" || config.accountMode === "test") && form.sender.trim() === ids.sender;
   const sourceName = hasDemoSource ? "#картакарта" : m("senderAccount");
   const sourceCard = <div className="source-card">
-    <span className={hasDemoSource ? "card-thumbnail" : "source-account-icon"} aria-hidden="true">{hasDemoSource ? "#" : <Landmark size={20} />}</span>
+    <span className={hasDemoSource ? "card-thumbnail" : "source-account-icon"} aria-hidden="true">{hasDemoSource ? <BrandMark size={17} className="card-mark" /> : <Landmark size={20} />}</span>
     <div className="source-name"><b className="card-brand">{sourceName}</b>{hasDemoSource && <small className="card-number">•••• 4821</small>}</div>
     <div className="source-balance">{hasDemoSource
       ? <><b className="tabular-nums">{money(DEMO_BALANCE, lang)}</b><small>{m("demoBalance")}</small></>
