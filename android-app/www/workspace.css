@@ -43,3 +43,9 @@ html[data-product] body {background:#f1f5f2;color:var(--ink)}
 #app .q-card .card-foot span {
   color: #e2f4ee;
 }
+.wallet-start-help { max-width: 28rem; margin: 3rem auto; padding: 1.5rem; background: white; border-radius: 20px; color: #101828; animation: wallet-help-appear .15s ease-out 1s backwards; }
+.wallet-start-help p { margin: .75rem 0; line-height: 1.5; }
+.wallet-start-help a { display: inline-block; padding: .75rem 0; color: #006943; font-weight: 650; }
+.browser-start-help, html[data-web-wallet] .native-start-help { display: none; }
+html[data-web-wallet] .browser-start-help { display: block; }
+@keyframes wallet-help-appear { from { opacity: 0; } to { opacity: 1; } }

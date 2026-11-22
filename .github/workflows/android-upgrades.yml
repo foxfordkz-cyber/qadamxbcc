@@ -17,6 +17,14 @@ permissions:
 
 jobs:
   upgrade:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 35
+            options: ''
+          - api: 30
+            options: --legacy-system-image
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -26,7 +34,7 @@ jobs:
       - name: Start Android and exercise both signed release channels
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
-          api-level: 30
+          api-level: ${{ matrix.api }}
           target: google_apis
           arch: x86_64
           profile: pixel_2
@@ -34,9 +42,10 @@ jobs:
           ram-size: 2048M
           disk-size: 2048M
           emulator-boot-timeout: 600
-          script: python android-app/scripts/test-install-upgrades.py --serial emulator-5554 --evidence-dir "$RUNNER_TEMP/apk-evidence"
+          script: python android-app/scripts/test-install-upgrades.py --serial emulator-5554 --evidence-dir "$RUNNER_TEMP/apk-evidence" ${{ matrix.options }}
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: android-release-login-screens
-          path: ${{ runner.temp }}/apk-evidence/*-login.png
+          name: android-release-api-${{ matrix.api }}-screens
+          path: ${{ runner.temp }}/apk-evidence/
           if-no-files-found: error

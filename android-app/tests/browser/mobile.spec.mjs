@@ -6,6 +6,16 @@ async function offline(page, language = "ru") {
   await page.locator(`[data-lang="${language}"]`).click();
   await page.locator('.bottom-nav [data-route="home"]').click();
 }
+test("an older WebView can open the same team account in a browser", async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(AbortSignal, "timeout", {value: undefined}));
+  await page.goto("/");
+  const help = page.locator(".native-start-help");
+  await expect(help.locator('[lang="kk"]')).toContainText("Android System WebView");
+  await expect(help.locator('[lang="ru"]')).toContainText("Android System WebView");
+  await expect(help.locator("a")).toBeVisible();
+  await expect(help.locator("a")).toHaveAttribute("href", "https://saq-bol-mobile.onrender.com/wallet/");
+  await expect(page.locator("#personal-login")).toHaveCount(0);
+});
 test("welcome exposes personal sign-in and explains unavailable deployment", async ({ page }) => {
   await page.goto("/");
 await expect(page.locator(".sign-heading")).toContainText("Saq Bol × BCC");

@@ -17,6 +17,8 @@ def main():
     args = argparse.ArgumentParser(description=__doc__)
     args.add_argument("--serial", required=True)
     args.add_argument("--evidence-dir", type=Path, required=True)
+    args.add_argument("--legacy-system-image", action="store_true",
+                      help="Record the factory WebView on the Android 11 image and test package upgrades.")
     options = args.parse_args()
     serial = options.serial
     options.evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -57,23 +59,58 @@ def main():
             if hashlib.sha256(pulled.read_bytes()).hexdigest() != record["apk_sha256"]:
                 raise ValueError(f"Installed bytes differ from the {channel} release")
         launch(package)
-        for _ in range(20):
-            adb("shell", "uiautomator", "dump", "/sdcard/window.xml")
-            tree = ElementTree.fromstring(adb("exec-out", "cat", "/sdcard/window.xml"))
+        login_visible = False
+        fallback_visible = False
+        for _ in range(3 if legacy_webview else 20):
+            dump = adb("shell", "uiautomator", "dump", "/sdcard/window.xml")
+            if "dumped" not in dump.lower():
+                time.sleep(2)
+                continue
+            layout = adb("exec-out", "cat", "/sdcard/window.xml")
+            (options.evidence_dir / f"{channel}-screen.xml").write_text(layout, encoding="utf-8")
+            tree = ElementTree.fromstring(layout)
             if any(node.get("class") == "android.widget.EditText" and node.get("package") == package
                    for node in tree.iter("node")):
-                png = subprocess.check_output(["adb", "-s", serial, "exec-out", "screencap", "-p"], timeout=30)
-                if not png.startswith(b"\x89PNG\r\n\x1a\n"):
-                    raise ValueError("Expected a PNG screenshot")
-                (options.evidence_dir / f"{channel}-login.png").write_bytes(png)
+                login_visible = True
                 break
+            if legacy_webview and channel == "website":
+                fallback_visible = any(
+                    "Android System WebView" in (node.get("text", "") + node.get("content-desc", ""))
+                    for node in tree.iter("node") if node.get("package") == package
+                )
+                if fallback_visible:
+                    break
             time.sleep(2)
         else:
-            raise ValueError(f"The login form did not appear in {package}")
+            screenshot(channel + ("-legacy-webview" if legacy_webview else "-unexpected"))
+            if not legacy_webview or channel == "website":
+                raise ValueError(f"The login form did not appear in {package}")
+            print(f"{channel}: login form unavailable in factory WebView {major}.", flush=True)
+        if login_visible:
+            screenshot(channel + "-login")
+        elif fallback_visible:
+            screenshot(channel + "-update-webview")
+            print(f"{channel}: WebView update instructions visible on version {major}.", flush=True)
         # This package was installed above on a fresh, dedicated CI emulator.
         if adb("uninstall", package) != "Success":
             raise ValueError(f"Could not prepare {package} for the upgrade test")
 
+    def screenshot(name):
+        png = subprocess.check_output(["adb", "-s", serial, "exec-out", "screencap", "-p"], timeout=30)
+        if not png.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise ValueError("Expected a PNG screenshot")
+        (options.evidence_dir / f"{name}.png").write_bytes(png)
+
+    provider = adb("shell", "dumpsys", "webviewupdate")
+    print(provider, flush=True)
+    package_info = re.search(r"Current WebView package \(name, version\):\s*\([^,]+,\s*(\d+)\.", provider)
+    if not package_info:
+        raise ValueError("Could not read the active WebView provider")
+    major = int(package_info[1])
+    legacy_webview = options.legacy_system_image and major < 103
+    if major < 103 and not legacy_webview:
+        raise ValueError(f"The wallet HTTP client requires WebView 103+, found {major}")
+    adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
     adb("shell", "wm", "dismiss-keyguard")
     for channel, manifest, archive in [
         ("website", "current.json", DOWNLOADS / "Saq-Bol-Android-2.7.apk"),
