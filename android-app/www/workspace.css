@@ -34,3 +34,12 @@ html[data-product] body {background:#f1f5f2;color:var(--ink)}
 #app .case-reasoning summary{cursor:pointer;font-weight:650}
 @media(min-width:880px){#app .wallet-activity{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}}
 @media(max-width:415px){#app .action-dock button span{font-size:.78rem}#app .desk-table{font-size:.84rem}}
+#app .q-card .account-heading h2,
+#app .q-card .q-balance strong,
+#app .q-card .card-foot b {
+  color: #fff;
+}
+#app .q-card .q-balance small,
+#app .q-card .card-foot span {
+  color: #e2f4ee;
+}
