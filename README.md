@@ -19,6 +19,8 @@ Saq Bol — независимый прототип для кейса Bank Cente
 
 [Кері қоңырау / Обратный звонок клиенту](docs/screenshots/readme/wallet-case-callback.png) · [Әкімші кабинеті / Кабинет администратора](docs/screenshots/readme/wallet-platform-traffic.png) · [Экрандар галереясы / Галерея экранов](docs/PRODUCT_GUIDE.md#screens)
 
+[Android орнату беті және QR / Страница установки Android и QR](docs/screenshots/readme/android-install-ru.png)
+
 <a name="jury"></a>
 
 ## Әмиянға кіру / Вход в кошелёк
