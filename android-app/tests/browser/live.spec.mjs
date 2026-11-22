@@ -1,5 +1,7 @@
 // Synthetic local/CI gateway only. Secrets are read in process, never logged/traced.
-import { test, expect } from "@playwright/test";
+import { test, expect as baseExpect } from "@playwright/test";
+// The live path includes HTTP, PostgreSQL and the real scoring engine.
+const expect = baseExpect.configure({ timeout: 20000 });
 import { readFile } from "node:fs/promises";
 test.use({ trace: "off", screenshot: "off" });
 test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle", async ({
@@ -15,6 +17,7 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
   );
   const origin = process.env.QADAM_GATEWAY ?? "http://127.0.0.1:18001";
   const errors = [];
+  let blockedTransfer;
   page.on("pageerror", (e) => errors.push(e.message));
   async function login(role) {
     await page.goto("/dev/connected.html");
@@ -35,8 +38,13 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
     await page.locator('[data-action="transfer"]').click();
     await page.locator(`[data-preset="${preset}"]`).click();
     await page.locator('#transfer-form button[type="submit"]').click();
-    await page.locator('[data-action="submit-transfer"]').click();
+    const [evaluated] = await Promise.all([
+      page.waitForResponse(r => r.request().method() === "POST" && new URL(r.url()).pathname.endsWith("/transfers/evaluate")),
+      page.locator('[data-action="submit-transfer"]').click(),
+    ]);
+    expect(evaluated.ok()).toBe(true);
     await expect(page.locator('[data-action="refresh-detail"]')).toBeVisible();
+    return (await evaluated.json()).transaction_id;
   }
   await test.step("Client login and ordinary transfer", async () => {
     await login("client");
@@ -69,7 +77,8 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
     await expect(page.locator("h1")).toHaveText("Отменено");
   });
   await test.step("Hub blocks through the existing graph engine", async () => {
-    await submit("hub");
+    blockedTransfer = await submit("hub");
+    expect(blockedTransfer).toMatch(/^[a-f0-9-]{36}$/i);
     await expect(page.locator("h1")).toHaveText("Отклонено");
   });
   await test.step("Private Scam Check, mock lookup and report", async () => {
@@ -114,7 +123,7 @@ test("real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle"
       fullPage: true,
     });
     await page.locator('[data-filter="blocked"]').click();
-    await page.locator("[data-detail]").first().click();
+    await page.locator(`[data-detail="${blockedTransfer}"]`).click();
     await expect(page.locator('[data-action="cancel-confirm"]')).toHaveCount(0);
     await page.locator("[data-graph]").click();
     await expect(page.locator(".graph circle").first()).toBeVisible();
