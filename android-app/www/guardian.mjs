@@ -1,3 +1,9 @@
+// Public bot address from the team's Telegram setup. A bot visit never links an account.
+export function guardianBot(username) {
+  return typeof username === "string" && /^[A-Za-z][A-Za-z0-9_]{3,28}bot$/i.test(username)
+    ? username : "bekzat_bcc_shield_test_bot";
+}
+
 export const eventNames = {
   evaluated:["Запрос проверен","Сұрау тексерілді"], call_marked:["Клиент отметил звонок","Клиент қоңырауды белгіледі"],
   pause_started:["Началась защитная пауза","Қорғаныс кідірісі басталды"], resolved:["Обновлён итог операции","Операция нәтижесі жаңартылды"],

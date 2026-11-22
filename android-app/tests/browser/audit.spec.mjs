@@ -99,6 +99,21 @@ test("summary failure leaves the card and ledger available and supports retry",a
   fixture.analytics=200;await page.locator("[data-action=retry-summary]").click();
   await expect(page.locator("[data-action=retry-summary]")).toHaveCount(0);
 });
+test("the wallet opens the team Telegram bot and honors reduced motion", async ({page,baseURL}) => {
+  await page.setViewportSize({width:360,height:800});
+  await page.emulateMedia({reducedMotion:"reduce"});
+  await enter(page,baseURL);
+  const seal=page.locator(".foil-shield");
+  await expect(seal).toBeVisible();
+  await expect(seal).toHaveCSS("animation-name","none");
+  const [sealBox,balanceBox]=await Promise.all([seal.boundingBox(),page.locator(".q-balance").boundingBox()]);
+  expect(sealBox.y).toBeGreaterThanOrEqual(balanceBox.y+balanceBox.height);
+  await page.evaluate(()=>{window.open=url=>{document.documentElement.dataset.openedBot=String(url);return null;};});
+  await page.locator('[data-action="open-guardian"]').first().click();
+  await expect(page.locator("html")).toHaveAttribute("data-opened-bot","https://t.me/bekzat_bcc_shield_test_bot");
+  await expect(page.locator(".q-card")).toBeVisible();
+});
+
 test("profile shortcut returns to the wallet and a quick amount survives a language switch", async ({page,baseURL}) => {
   const fixture = {};
   await enter(page,baseURL,fixture);

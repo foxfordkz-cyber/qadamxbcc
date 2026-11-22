@@ -1,6 +1,7 @@
 import { last } from "./compat.mjs";
 import { ledgerInstant, shortDate } from "./wallet-date.mjs";
 import { cashPlot } from "./spending-chart.mjs";
+import { guardianBot } from "./guardian.mjs";
 
 // WebViews can lack Kazakh ICU data and silently fall back to English punctuation.
 export function formatTenge(value) {
@@ -108,7 +109,8 @@ export function walletUI({ T, E, amount, when, button, status }) {
   function card(a, hidden) {
     return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance" aria-pressed="${hidden}" aria-label="${T("Скрыть или показать баланс", "Балансты жасыру немесе көрсету")}">${icon("eye")}</button></div>
       <div class="q-balance"><small>${T("Баланс учебной карты", "Оқу картасының балансы")}</small><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong></div>
-      <div class="card-foot">${cardThumbnail}<div><b>${T("Карта Saq Bol", "Saq Bol картасы")}</b><span>•••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</span></div></div></article>`;
+      <div class="card-foot">${cardThumbnail}<div><b>${T("Карта Saq Bol", "Saq Bol картасы")}</b><span>•••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</span></div>
+        <span class="foil-emblem" aria-hidden="true"><span class="foil-orbit"></span><span class="foil-shield"><img src="mark.svg" alt=""></span></span></div></article>`;
   }
   function home(a, ledger, stats, hidden, pending, offline=false) {
     if (!a) return button("retry-home", T("Счёт недоступен · Повторить","Шот қолжетімсіз · Қайталау"),"secondary") + (ledger ? rows(ledger.items) : "");
@@ -353,6 +355,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
       <p class="hint">${T("По дате создания с", "Жасалған күні бойынша")}&nbsp;${E(d.from)} · UTC+5</p>`;
   }
   function telegram(a, contacts) {
+    const bot = guardianBot(a?.guardian_username);
     const verified = (contacts?.contacts || []).filter(
       (c) => c.state === "CONTACT_VERIFIED",
     ).length;
@@ -363,7 +366,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
     return `<section class="telegram-panel"><div class="guardian-ident"><i>${icon("guardian")}</i><div><small>${T("Доверенный контакт", "Сенімді контакт")}</small><h2>${T("Защита в Telegram","Telegram арқылы қорғау")}</h2></div></div>
       <p>${T("Контакт может попросить вас перезвонить или сообщить о подозрении.", "Контакт сізден қайта қоңырау шалуды сұрай алады немесе күдікті хабарлай алады.")}</p>
       <div class="guardian-count"><span>${T("Согласие получено", "Келісім берілді")}</span><b>${contacts ? verified : "—"} / ${a?.contact_limit ?? "—"}</b></div>
-      <div class="guardian-links">${a?.guardian_username ? button("open-guardian", T("Открыть Telegram", "Telegram ашу")) : ""}${button("contacts", T("Доверенный круг", "Сенімді адамдар"), "secondary")}</div><small>${a && !a.guardian_username ? T("Адрес бота на стенде не настроен.", "Стендте боттың мекенжайы бапталмаған.") : channel}</small></section>`;
+      <div class="guardian-links"><a class="guardian-bot-link" data-guardian-bot="${bot}" href="https://t.me/${bot}" target="_blank" rel="noopener noreferrer">${icon("guardian")}${T("Открыть Telegram-бота", "Telegram-ботты ашу")}</a>${button("contacts", T("Доверенный круг", "Сенімді адамдар"), "secondary")}</div><small>${channel}</small></section>`;
   }
   return { home, history, analytics, soc, telegram, rows, badge, periods };
 }

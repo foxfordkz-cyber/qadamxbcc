@@ -49,3 +49,90 @@ html[data-product] body {background:#f1f5f2;color:var(--ink)}
 .browser-start-help, html[data-web-wallet] .native-start-help { display: none; }
 html[data-web-wallet] .browser-start-help { display: block; }
 @keyframes wallet-help-appear { from { opacity: 0; } to { opacity: 1; } }
+
+/* An embossed security seal on the training card. The foil uses only local assets. */
+#app .q-card {
+  background:
+    radial-gradient(ellipse at 103% 112%, #419678 0, transparent 48%),
+    linear-gradient(118deg, #102f38 2%, #0c514b 65%, #19695b);
+}
+.foil-emblem {
+  position: relative;
+  flex: 0 0 clamp(60px, 18vw, 100px);
+  height: 54px;
+  margin-inline-start: auto;
+  display: grid;
+  place-items: center;
+  perspective: 240px;
+  pointer-events: none;
+}
+.foil-orbit, .foil-orbit::before, .foil-orbit::after {
+  position: absolute;
+  width: 94%;
+  height: 76%;
+  border: 1px solid rgba(185, 244, 208, .43);
+  border-radius: 50%;
+  transform: rotate(-22deg);
+}
+.foil-orbit::before, .foil-orbit::after {
+  content: "";
+  inset: 8% 3%;
+  border-color: rgba(218, 244, 211, .23);
+  transform: rotate(9deg);
+}
+.foil-orbit::after { transform: rotate(-12deg); }
+.foil-shield {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 50px;
+  transform: rotateY(-16deg) rotateZ(5deg);
+  clip-path: polygon(50% 0, 95% 15%, 91% 58%, 78% 77%, 50% 100%, 22% 77%, 9% 58%, 5% 15%);
+  background: linear-gradient(132deg, #fff5bf, #92cbb3 30%, #e4f4bc 47%, #64a88e 53%, #184e4b 87%);
+}
+.foil-shield::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  clip-path: inherit;
+  background: linear-gradient(142deg, #b6e6c2, #3a8773 42%, #134c4a 75%);
+}
+.foil-shield img {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+.foil-shield::after {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  background: linear-gradient(115deg, transparent 34%, rgba(255,255,226,.65) 49%, transparent 62%);
+  transform: translateX(90%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .foil-shield { animation: shield-settle 1.25s ease-out both; }
+  .foil-shield::after { animation: foil-light 1.4s ease-out both; }
+  @keyframes shield-settle {
+    from { transform: rotateY(-62deg) rotateZ(-8deg); }
+    to { transform: rotateY(-16deg) rotateZ(5deg); }
+  }
+  @keyframes foil-light { from { transform: translateX(-90%); } to { transform: translateX(90%); } }
+}
+.guardian-bot-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  padding: .7rem 1rem;
+  min-height: 48px;
+  border-radius: 14px;
+  background: #075d45;
+  color: white;
+  text-decoration: none;
+  font-weight: 650;
+  text-align: center;
+}
+.guardian-bot-link svg { width: 20px; height: 20px; flex: none; }
+.guardian-bot-link:focus-visible { outline: 3px solid #cae786; outline-offset: 2px; }
