@@ -4,12 +4,59 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Clock3, GitCompareArrows } from "lucide-react";
-import { accounts, collectionReplay, readReplaySelection, type ReplayAccount, type ReplaySnapshot } from "@/lib/collection-replay";
+import { accounts, collectionReplay, readReplaySelection, replayPostings, type ReplayAccount, type ReplayPosting, type ReplaySnapshot } from "@/lib/collection-replay";
 import { money, useLocale } from "@/lib/i18n";
 import { Badge } from "./risk";
 import styles from "./collection-comparison.module.css";
 
 const last = collectionReplay.checkpoints.length - 1;
+
+function PostingList({ rows }: { rows: ReplayPosting[] }) {
+  const { lang } = useLocale();
+  const kk = lang === "kk";
+  return <ol className={styles.ledger}>
+    {rows.map(row => {
+      const incoming = row.recipient === "recipient";
+      const direction = incoming ? (kk ? "Кімнен" : "От кого") : (kk ? "Кімге" : "Кому");
+      return <li key={row.tx_id}>
+        <time dateTime={row.occurred_at}>{row.occurred_at.slice(11, 16)}</time>
+        <div><span>{direction} · <bdi>{incoming ? row.sender : row.recipient}</bdi></span><small>ID · {row.tx_id}</small></div>
+        <strong>{incoming ? "+" : "−"}{money(row.amount, lang)}</strong>
+      </li>;
+    })}
+  </ol>;
+}
+
+function ReplayEvidence({ account, snapshot, index }: {
+  account: ReplayAccount; snapshot: ReplaySnapshot; index: number;
+}) {
+  const { lang } = useLocale();
+  const kk = lang === "kk";
+  const at = collectionReplay.checkpoints[index].evaluated_at;
+  // The replay already records Almaty local time with its UTC offset.
+  const date = at.slice(0, 10).split("-").reverse().join(".");
+  return <section className={styles.evidence}>
+    <h3>{kk ? "Шешімнің себептері" : "Основания решения"}</h3>
+    {snapshot.signals.length > 0 && <p>{kk ? "Себепті ашып, оған қатысты оқу аударымдарын қараңыз. Ең соңғы операция жоғарыда көрсетілген." :
+      "Раскройте причину, чтобы увидеть связанные учебные переводы. Самая поздняя операция указана первой."}</p>}
+    <small>{date} · {kk ? "Алматы уақыты" : "Время Алматы"}</small>
+    {snapshot.signals.map(signal => {
+      const rows = replayPostings(account, at, signal.code);
+      if (!rows?.length) return <p className={styles.modelReason} key={signal.code}>{signal[lang]}</p>;
+      return <details key={signal.code} className={styles.source}>
+        <summary>{signal[lang]}</summary>
+        <PostingList rows={rows} />
+      </details>;
+    })}
+    {!snapshot.signals.length && <>
+      <p>{kk ? "Осы сәтте тәуекел белгісі анықталмады." : "На этот момент признаков риска не обнаружено."}</p>
+      <details className={styles.source}>
+        <summary>{kk ? "Осы сәтке дейінгі аударымдар" : "Переводы к моменту оценки"}</summary>
+        <PostingList rows={replayPostings(account, at) ?? []} />
+      </details>
+    </>}
+  </section>;
+}
 
 function SnapshotCard({ account, snapshot, index, inspect = false }: {
   account: ReplayAccount; snapshot: ReplaySnapshot; index: number; inspect?: boolean;
@@ -25,11 +72,8 @@ function SnapshotCard({ account, snapshot, index, inspect = false }: {
       <div><dt>{kk ? "Әрі қарай аударылды" : "Переведено дальше"}</dt><dd>{money(snapshot.forwarded, lang)}</dd></div>
       <div><dt>{kk ? "Келесі аударым тәуекелі" : "Риск следующего перевода"}</dt><dd>{snapshot.score} / 100</dd></div>
     </dl>
-    {inspect ? <>
-      <h3>{kk ? "Шешімнің себептері" : "Основания решения"}</h3>
-      {snapshot.signals.length ? <ul className={styles.reasons}>{snapshot.signals.map(signal => <li key={signal.code}>{signal[lang]}</li>)}</ul>
-        : <p>{kk ? "Осы сәтте тәуекел белгісі анықталмады." : "На этот момент признаков риска не обнаружено."}</p>}
-    </> : <Link className={styles.link} href={{ pathname: "/soc", query: { comparison: `${account}-${index + 1}` }, hash: "collection-inspector" }}>
+    {inspect ? <ReplayEvidence account={account} snapshot={snapshot} index={index} /> :
+      <Link className={styles.link} href={{ pathname: "/soc", query: { comparison: `${account}-${index + 1}` }, hash: "collection-inspector" }}>
       {kk ? "Шешімді SOC панелінде ашу" : "Разобрать решение в SOC"}<ArrowRight size={15} aria-hidden="true" />
     </Link>}
   </article>;
@@ -75,7 +119,7 @@ export function CollectionReplayInspector() {
     <h2 id="collection-inspector-title">{kk ? "Оқу операциясын талдау" : "Разбор учебной операции"}</h2>
     <p>{kk ? `${checkpoint.time} · Келесі ${amount} аударымның бағасы. Есеп осы сәтке дейінгі операциялар бойынша жасалды.` :
       `${checkpoint.time} · Оценка следующего перевода на ${amount} по истории, известной к этому моменту.`}</p>
-    <SnapshotCard account={account} snapshot={checkpoint[account]} index={index} inspect />
+    <SnapshotCard key={`${account}-${index}`} account={account} snapshot={checkpoint[account]} index={index} inspect />
     <small>{kk ? "Есептеу моделі" : "Модель расчёта"} · {collectionReplay.model}</small>
   </section>;
 }

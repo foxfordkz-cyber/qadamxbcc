@@ -20,6 +20,7 @@ OUTPUT = Path(__file__).resolve().parents[2] / "frontend/src/lib/collection-chec
 START = datetime(2026, 11, 20, 9, 0, tzinfo=UTC)
 PAYMENT = 15_000
 CHECKPOINTS = (0, 5, 11, 14)
+LOCAL_ZONE = ZoneInfo("Asia/Almaty")
 
 
 @dataclass(frozen=True)
@@ -42,8 +43,18 @@ class Snapshot:
 @dataclass(frozen=True)
 class Checkpoint:
     time: str
+    evaluated_at: str
     a: Snapshot
     b: Snapshot
+
+
+@dataclass(frozen=True)
+class Posting:
+    tx_id: str
+    occurred_at: str
+    sender: str
+    recipient: str
+    amount: int
 
 
 @dataclass(frozen=True)
@@ -51,9 +62,10 @@ class Replay:
     model: str
     payment: int
     checkpoints: list[Checkpoint]
+    ledger: dict[str, list[Posting]]
 
 
-async def history(forwards_funds: bool) -> list[Snapshot]:
+async def history(forwards_funds: bool) -> tuple[list[Snapshot], list[Posting]]:
     """Each history starts empty. Only already posted events enter its projections."""
     async with FakeAsyncRedis() as redis:
         engine = AntifraudEngine(redis, GraphStore())
@@ -67,6 +79,7 @@ async def history(forwards_funds: bool) -> list[Snapshot]:
             occurred_at=START,
         )
         observations = []
+        ledger = []
         for minute in range(CHECKPOINTS[-1] + 1):
             at = START + timedelta(minutes=minute)
             posting = None
@@ -93,6 +106,15 @@ async def history(forwards_funds: bool) -> list[Snapshot]:
                 )
                 await engine.record_settled(posting)
                 engine.apply_transfer(posting)
+                ledger.append(
+                    Posting(
+                        posting.tx_id,
+                        posting.occurred_at.astimezone(LOCAL_ZONE).isoformat(),
+                        posting.sender_id,
+                        posting.recipient_id,
+                        int(posting.amount),
+                    )
+                )
             if minute in CHECKPOINTS:
                 # Evaluate the same prospective payment just after this checkpoint. It never
                 # settles and contributes neither an attempt nor an edge to later checkpoints.
@@ -110,17 +132,19 @@ async def history(forwards_funds: bool) -> list[Snapshot]:
                         [Signal(r.code, r.reason_kk, r.reason_ru) for r in risk.reasons],
                     )
                 )
-        return observations
+        return observations, ledger
 
 
 async def replay() -> Replay:
-    a, b = await history(False), await history(True)
-    local = ZoneInfo("Asia/Almaty")
-    checkpoints = [
-        Checkpoint((START + timedelta(minutes=m)).astimezone(local).strftime("%H:%M"), a[i], b[i])
-        for i, m in enumerate(CHECKPOINTS)
-    ]
-    return Replay(MODEL_VERSION, PAYMENT, checkpoints)
+    a, a_ledger = await history(False)
+    b, b_ledger = await history(True)
+    checkpoints = []
+    for i, minute in enumerate(CHECKPOINTS):
+        evaluated_at = (START + timedelta(minutes=minute, seconds=1)).astimezone(LOCAL_ZONE)
+        checkpoints.append(
+            Checkpoint(evaluated_at.strftime("%H:%M"), evaluated_at.isoformat(), a[i], b[i])
+        )
+    return Replay(MODEL_VERSION, PAYMENT, checkpoints, {"a": a_ledger, "b": b_ledger})
 
 
 if __name__ == "__main__":

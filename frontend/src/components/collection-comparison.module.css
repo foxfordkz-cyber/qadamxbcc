@@ -42,7 +42,21 @@
 .facts dd { margin: 0; font-weight: 650; }
 .link { width: fit-content; margin-top: 12px; color: var(--emerald-ink); font-weight: 650; }
 .inspector { display: grid; gap: 10px; scroll-margin-top: 84px; }
-.reasons { list-style: disc; padding-inline-start: 20px; margin: 6px 0 0; }
+.evidence { border-top: 1px solid var(--line); padding-top: 12px; }
+.evidence > p, .evidence > small, .ledger small, .ledger time { color: var(--muted); }
+.evidence > small { display: block; margin: 4px 0 10px; }
+.source { border-top: 1px solid var(--line); }
+.source summary { padding: 12px 0; cursor: pointer; font-weight: 600; }
+.source summary::marker { color: var(--emerald-ink); }
+.source summary:focus-visible { outline: 2px solid var(--emerald-ink); outline-offset: 2px; }
+.ledger { list-style: none; padding: 0 10px; margin: 0 0 12px; border-radius: 12px; background: var(--surface); }
+.ledger li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 8px 0; font-variant-numeric: tabular-nums; }
+.ledger li + li { border-top: 1px solid var(--line); }
+.ledger time, .ledger small { font-size: .813rem; }
+.ledger small { display: block; }
+.ledger li > div { overflow-wrap: anywhere; }
+.ledger strong { text-align: end; }
+.modelReason { padding-block: 10px; border-top: 1px solid var(--line); }
 @media (max-width: 660px) {
   .pair { grid-template-columns: 1fr; }
   .controls { gap: 8px; }
