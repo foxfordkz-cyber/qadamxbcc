@@ -2,7 +2,15 @@
 
 Для команды и QR предусмотрен URL https://saq-bol-bcc.zerdeliportald.workers.dev/download/android/. Доступность страницы на публичном домене фиксируется в FINAL_ACCEPTANCE_RU.md. Страница и обе точки входа сайта читают frontend/public/downloads/current.json при сборке. Файл публикуется вместе с сайтом по пути, содержащему часть SHA-256. Смена версии требует выпуска сайта одним набором статических файлов. Для отката восстановить предыдущий deployment Cloudflare целиком.
 
-У Honor 2.8 установлен kz.qadamx.bccshield.demo, код 11, минимальный API 24. Публичный APK 2.7 имел отдельный суффикс .website и код 12 из сборки с QADAM_WEBSITE_APK. Архивная сборка .demo 2.7 имела код 10. Каноническая 2.9 использует .demo, код 14 и showcase с отключённой отладкой. Debug имеет отдельный .dev. Сертификат принятой учебной сборки находится в паспорте. Для повторной сборки showcase требуется тот же локальный ключ подписи.
+Проверка `aapt dump badging`, `aapt dump --values resources` и `apksigner verify --print-certs` дала следующие результаты. Во всех трёх APK минимальный Android API равен 24, отладка приложения отключена, мобильный origin равен `https://saq-bol-mobile.onrender.com`.
+
+| Файл | Идентификатор Android | Код | SHA-256 сертификата подписи |
+|---|---|---|---|
+| 2.7 с сайта | `kz.qadamx.bccshield.website` | 12 | `9b1f9012a2e6d8b26f8d68110eeb171d69844e94181aa38bea6133e34c3af00f` |
+| 2.8 для Honor | `kz.qadamx.bccshield.demo` | 11 | `0dd732df01a3c1d98ec7b2ebfbd448b7d783080bfc784845676df8eb10aad0ab` |
+| 2.9 showcase | `kz.qadamx.bccshield.demo` | 15 | `0dd732df01a3c1d98ec7b2ebfbd448b7d783080bfc784845676df8eb10aad0ab` |
+
+Публичная 2.7 собиралась с флагом `QADAM_WEBSITE_APK`. Архивная 2.7 с суффиксом `.demo` имела код 10. Для повторной сборки showcase требуется тот же локальный ключ подписи. Debug 2.9 устанавливается как отдельное приложение `kz.qadamx.bccshield.dev`. Контрольные суммы самих установочных файлов приведены в [акте приёмки](FINAL_ACCEPTANCE_RU.md).
 
 Сборка из копии исходной ревизии под JDK 21:
 
