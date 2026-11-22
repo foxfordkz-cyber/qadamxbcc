@@ -1,0 +1,47 @@
+name: Android release upgrades
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &paths
+      - frontend/public/downloads/**
+      - deliverables/android/Saq-Bol-Android-2.7.apk
+      - android-app/scripts/test-install-upgrades.py
+      - .github/workflows/android-upgrades.yml
+  push:
+    branches: [main]
+    paths: *paths
+
+permissions:
+  contents: read
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install archived and current APKs on a fresh Android emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_cli="$ANDROID_HOME/cmdline-tools/latest/bin"
+          system_image="system-images;android-30;google_apis;x86_64"
+          sudo setfacl -m "u:$(id -un):rw" /dev/kvm
+          "$sdk_cli/sdkmanager" "$system_image"
+          "$sdk_cli/avdmanager" create avd --name ReleaseUpgrade --package "$system_image" --device pixel_2 --force <<< no
+          "$ANDROID_HOME/emulator/emulator" -avd ReleaseUpgrade -port 5554 -accel on -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          timeout 180 adb -s emulator-5554 wait-for-device
+          for attempt in {1..90}; do
+            kill -0 "$emulator_pid" || { tail -40 "$RUNNER_TEMP/emulator.log"; exit 1; }
+            if [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" == "1" ]]; then
+              python android-app/scripts/test-install-upgrades.py --serial emulator-5554
+              exit 0
+            fi
+            sleep 3
+          done
+          tail -40 "$RUNNER_TEMP/emulator.log"
+          exit 1
