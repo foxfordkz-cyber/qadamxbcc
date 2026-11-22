@@ -16,6 +16,8 @@ on:
       - backend/app/mobile_gateway/**
       - backend/scripts/verify_persistent_release.py
       - backend/scripts/rehearse_release_storage.py
+      - backend/scripts/import_mobile_snapshot.py
+      - backend/tests/test_mobile_snapshot_import.py
       - android-app/**
   push:
     branches: [main]

@@ -359,7 +359,7 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
         {readAt && <p className="soc-case-scope">{c("latest")}: {date(readAt)} · UTC+5</p>}
         <div className="case-export"><button type="button" className="secondary case-export-download" aria-describedby="case-export-hint" disabled={busy || unresolved || throttled || exporting || detailLoading || !!detailError} onClick={() => void downloadExport()}>{exporting ? <LoaderCircle size={15} className="animate-spin" /> : <Download size={15} />}{c("exportCase")}</button><p id="case-export-hint" className="soc-case-scope">{c("exportHint")}</p></div>
         {evidence.data?.transaction_id ? <button type="button" className="soc-case-transfer" onClick={() => transactionCallback.current?.(evidence.data!.transaction_id)}>{c("relatedTransfer")}<code>{evidence.data.transaction_id}</code><ArrowRight size={15} /></button> : !evidence.loading && !evidence.error && <p className="soc-case-scope">{c("noTransfer")}</p>}{showError(evidence.error)}
-        {evidence.data?.transaction_id && <section className="case-history"><h3><History size={17} />{c("ledgerTitle")}</h3>
+        {evidence.data?.transaction_id && <section className="case-recipient-ledger"><h3><History size={17} />{c("ledgerTitle")}</h3>
           {evidence.data.recipient_ledger ? <>
             <p className="soc-case-scope">{c("ledgerScope")}</p>
             <small>{date(evidence.data.recipient_ledger.from_time)} — {date(evidence.data.recipient_ledger.before_time)}</small>

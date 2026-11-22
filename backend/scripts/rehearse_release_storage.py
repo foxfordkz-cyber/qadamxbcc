@@ -104,6 +104,19 @@ def main() -> None:
                     break
                 time.sleep(1)
             run(sys.executable, "-m", "alembic", "upgrade", "head", env=env)
+            run("docker", "exec", pg, "createdb", "-U", "postgres", "qadam_import_rehearsal")
+            import_url = env["BCC_DATABASE_URL"].rsplit("/", 1)[0] + "/qadam_import_rehearsal"
+            import_env = {
+                **env,
+                "BCC_DATABASE_URL": import_url,
+                "QADAM_TEST_IMPORT_URL": import_url,
+            }
+            run(sys.executable, "-m", "alembic", "upgrade", "head", env=import_env)
+            subprocess.run(
+                [sys.executable, "-m", "pytest", "-q", "tests/test_mobile_snapshot_import.py"],
+                env=import_env,
+                check=True,
+            )
             # Exercise the three canonical presets with a bounded isolated background cohort.
             run(
                 sys.executable,

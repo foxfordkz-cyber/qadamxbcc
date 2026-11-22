@@ -72,8 +72,8 @@
 .soc-case-composer legend { font-size: 14px; font-weight: 650; margin-bottom: 15px; padding: 0; }
 .soc-case-composer .soc-case-scope { margin: -5px 0 0; }
 .soc-case-composer .primary { justify-self: start; }
-.case-history, .case-notes { margin-top: 27px; border-top: 1px solid var(--line); padding-top: 19px; }
-.case-history h3, .case-notes h3 { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0 0 16px; }
+.case-history, .case-notes, .case-recipient-ledger { margin-top: 27px; border-top: 1px solid var(--line); padding-top: 19px; }
+.case-history h3, .case-notes h3, .case-recipient-ledger h3 { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0 0 16px; }
 .case-history ol { list-style: none; margin: 0 0 14px; padding: 0; }
 .case-history li { display: flex; align-items: flex-start; gap: 13px; padding-bottom: 18px; position: relative; }
 .case-history li:not(:last-child)::before { content: ""; position: absolute; left: 4px; top: 12px; bottom: -4px; width: 1px; background: var(--line-strong); }
