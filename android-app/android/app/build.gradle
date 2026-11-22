@@ -14,7 +14,7 @@ android {
         applicationId "kz.qadamx.bccshield"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 17
+        versionCode 21
         versionName "2.9"
         manifestPlaceholders = [appLabel: "@string/app_name", activityLabel: "@string/title_activity_main"]
         resValue "string", "qadam_api_origin", apiOrigin
@@ -47,7 +47,7 @@ android {
             debuggable false
             signingConfig signingConfigs.debug
             resValue "string", "qadam_api_origin", "https://saq-bol-mobile.onrender.com"
-            resValue "string", "website_app_name", "Saq Bol × BCC · 2.9"
+            resValue "string", "website_app_name", "Saq Bol Г— BCC В· 2.9"
             manifestPlaceholders = [appLabel: "@string/website_app_name", activityLabel: "@string/website_app_name"]
         }
         release {

@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import Link from "next/link";
 import { AndroidDownload } from "./android-download";
+import { LanguageSwitch } from "./language-switch";
 import connectedWallet from "@/lib/connected-wallet.json";
 import { Activity, ArrowRight, CircleHelp, LogIn, Network, PhoneCall, Smartphone } from "lucide-react";
 import { BrandMark } from "./brand-mark";
@@ -36,7 +37,7 @@ const STATIC_DEMO = process.env.NEXT_PUBLIC_BCC_STATIC === "1";
 const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
 export type AppLayout = "full" | "phone" | "officer";
 function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayout }) {
-  const { lang, setLang, t } = useLocale();
+  const { lang, t } = useLocale();
   const [tab, setTabState] = useState<AppTab>("mobile");
   const activeTab = useRef<AppTab>("mobile");
   const setTab = useCallback((value: AppTab) => {
@@ -334,7 +335,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       setDraftFailed(!storage.save(result.transaction_id, answers));
       setCoolingDrafts(drafts => retainCoolingDraft(drafts, result.transaction_id, answers));
     }} onClose={() => setModal(false)} onResolved={resolved} />;
-  const languageSwitch = <div className="language" role="group" aria-label={t("language")}>{(["kk", "ru"] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)}>{l === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div>;
+  const languageSwitch = <LanguageSwitch />;
   const showWallet = config.demoActionsEnabled !== false && (!STATIC_DEMO || process.env.NEXT_PUBLIC_BCC_PAGES_WALLET === "1");
   const showCollectionReplay = config.demoActionsEnabled !== false && config.accountMode !== "pilot";
   const walletLink = showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("connectedWallet")}<ArrowRight size={15} aria-hidden="true" /></a>;

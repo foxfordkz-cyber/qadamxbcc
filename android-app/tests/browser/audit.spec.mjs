@@ -6,7 +6,11 @@ const items = ids.map((id,i)=>({transaction_id:id, counterparty:["Алия","А�
 async function enter(page,baseURL,fixture={}) {
   await page.route("https://wallet.test/**",async route=>{
     const u=new URL(route.request().url());
-    if(!u.pathname.startsWith("/mobile/v1/")) return route.fulfill({response:await route.fetch({url:new URL(u.pathname,baseURL).href})});
+    if(!u.pathname.startsWith("/mobile/v1/")) {
+      // Local static assets are read-only. Playwright retries ECONNRESET here only.
+      const response=await route.fetch({url:new URL(u.pathname,baseURL).href,maxRetries:1});
+      return route.fulfill({response});
+    }
     const path=u.pathname.slice(11);
     let status=200, json={};
     if(path==="auth/login")json={role:"client",subject:"audit-fixture",token:"fixture-session"};
@@ -30,6 +34,7 @@ async function enter(page,baseURL,fixture={}) {
       fixture.evaluated=route.request().postDataJSON();
       json={...items[0],recipient:{display_name:"Арман"},reasons:[],risk_score:0,context:fixture.evaluated.context};
     }
+    else if(path.endsWith("/packet"))json=fixture.packet || {transaction_id:path.split("/")[1],reports:[]};
     else if(path==="wallet/operations")json={items};
     else if(path==="wallet/analytics"){status=fixture.analytics||200;json={outgoing:"25000"};}
     else if(path.startsWith("api/transfers/"))json={...items.find(r=>r.transaction_id===path.split("/").at(-1)),recipient:{display_name:"Алия"}};
@@ -94,6 +99,29 @@ test("summary failure leaves the card and ledger available and supports retry",a
   fixture.analytics=200;await page.locator("[data-action=retry-summary]").click();
   await expect(page.locator("[data-action=retry-summary]")).toHaveCount(0);
 });
+test("the wallet opens the team Telegram bot and honors reduced motion", async ({page,baseURL}) => {
+  await page.setViewportSize({width:360,height:800});
+  await page.emulateMedia({reducedMotion:"reduce"});
+  await enter(page,baseURL);
+  const seal=page.locator(".foil-shield");
+  await expect(seal).toBeVisible();
+  await expect(page.locator(".foil-emblem")).toHaveCSS("contain","paint");
+  await expect(seal).toHaveCSS("animation-name","none");
+  const [sealBox,balanceBox]=await Promise.all([seal.boundingBox(),page.locator(".q-balance").boundingBox()]);
+  expect(sealBox.y).toBeGreaterThanOrEqual(balanceBox.y+balanceBox.height);
+  const action=page.locator('.action-dock [data-action="transfer"] span');
+  await expect(action).toHaveText("Перевод");
+  expect(await action.evaluate(label=>{
+    const text=document.createRange();
+    text.selectNodeContents(label);
+    return text.getClientRects().length;
+  })).toBe(1);
+  await page.evaluate(()=>{window.open=url=>{document.documentElement.dataset.openedBot=String(url);return null;};});
+  await page.locator('[data-action="open-guardian"]').first().click();
+  await expect(page.locator("html")).toHaveAttribute("data-opened-bot","https://t.me/bekzat_bcc_shield_test_bot");
+  await expect(page.locator(".q-card")).toBeVisible();
+});
+
 test("profile shortcut returns to the wallet and a quick amount survives a language switch", async ({page,baseURL}) => {
   const fixture = {};
   await enter(page,baseURL,fixture);
@@ -339,4 +367,16 @@ test("home refreshes security updates without frequent inbox reads or stale tran
   await expect(home.locator("[data-inbox-state=CASE_INFORMATION_REQUIRED]:visible")).toHaveCount(4);
   await expect(home.locator("[data-inbox-state=FAMILY_APPROVAL_RECORDED]")).toHaveCount(0);
   expect(fixture.inboxReads).toBe(2);
+});
+
+test("a mismatched incident packet ends loading and can be refreshed",async({page,baseURL})=>{
+  const fixture={packet:{transaction_id:ids[1],reports:[{id:"wrong-case",state:"OPEN"}]}};
+  await enter(page,baseURL,fixture);
+  await page.locator("[data-nav=history]").click();
+  await page.locator('[data-detail="'+ids[0]+'"]').first().click();
+  await expect(page.getByText("Не удалось загрузить сведения об обращении.")).toBeVisible();
+  await expect(page.getByText("wrong-case",{exact:false})).toHaveCount(0);
+  fixture.packet={transaction_id:ids[0],reports:[]};
+  await page.locator("[data-action=refresh-detail]").click();
+  await expect(page.getByText("Связанных обращений нет.")).toBeVisible();
 });

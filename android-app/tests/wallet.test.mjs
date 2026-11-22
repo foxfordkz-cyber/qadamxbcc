@@ -43,6 +43,15 @@ test("privacy mask hides balance and account suffix and opening Guardian preserv
   assert.match(circle, /1 \/ 3/);
   assert.match(circle, /тестовый адаптер/);
 });
+test("Guardian links to the team bot without a server override or consent transition", () => {
+  for (const name of [null, "", "bad/../../path", "untrusted.example"]) {
+    const panel = ui.telegram({ guardian_username: name, contact_limit: 3 }, { contacts: [] });
+    assert.match(panel, /href="https:\/\/t\.me\/bekzat_bcc_shield_test_bot"/);
+    assert.match(panel, /noopener noreferrer/);
+    assert.match(panel, /0 \/ 3/);
+  }
+  assert.match(ui.telegram({ guardian_username: "example_bot" }, null), /href="https:\/\/t\.me\/example_bot"/);
+});
 test("a selected chart day drills into the same day of the ledger", () => {
   const series = ["2026-11-18", "2026-11-19"].map((day, i) => ({
     day,

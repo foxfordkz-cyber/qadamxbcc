@@ -5,7 +5,5 @@
   Cache-Control: no-cache, must-revalidate
 /downloads/team.json
   Cache-Control: no-cache, must-revalidate
-/downloads/team.json
-  Cache-Control: no-cache, must-revalidate
 /download/android/*
   Cache-Control: no-cache, must-revalidate

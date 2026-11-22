@@ -389,10 +389,13 @@ async function open(next, id, remember=true) {
       const current = () => gateway === g && page === "detail" && selectedId === id && viewRevision === rev;
       const detail = await g.api("transfers/"+id);
       if (!current()) return;
+      if (detail?.transaction_id !== id) throw new Error("transaction_mismatch");
       accept(detail);
       if (product && g.role === "client") {
         void g.request("/protection/"+id+"/packet").then(packet => {
-          if (current() && packet.transaction_id === id) { receiptPacket=packet; render(); }
+          if (!current()) return;
+          receiptPacket = packet?.transaction_id === id ? packet : {unavailable:true};
+          render();
         }).catch(() => {
           if (current()) {receiptPacket={unavailable:true}; render();}
         });
@@ -1272,6 +1275,12 @@ function render() {
 
 }
 root.addEventListener("click", async (event) => {
+  const botLink = event.target.closest("a[data-guardian-bot]");
+  if (botLink && identity.usesNativeGuardian) {
+    event.preventDefault();
+    await perform(() => identity.openGuardian(botLink.dataset.guardianBot));
+    return;
+  }
   if (event.target.closest('a[href="tel:505"]') && identity.hasNativeDialer) {
     event.preventDefault();
     await perform(identity.openBankDialer);
@@ -1472,7 +1481,7 @@ root.addEventListener("click", async (event) => {
   if(act==="retry-home"){await open("home",null,false);return;}
   if(act==="mask-balance"){const key="qadam.mask."+ownerScope;putLocal(key,getLocal(key,"0")==="1"?"0":"1");render();return;}
   if(act==="projector" && gateway.role==="admin"){projector=!projector;render();return;}
-  if(act==="open-guardian"){if(account?.guardian_username)await perform(()=>identity.openGuardian(account.guardian_username));else await open("safety");return;}
+  if(act==="open-guardian"){await perform(()=>identity.openGuardian(account?.guardian_username));return;}
   if(act==="clear-period"){ledgerFilter=defaultLedger();offset=0;await open("history");return;}
   if(act==="analytics"||act==="history"||act==="socAnalytics"){offset=0;if(act==="history")ledgerFilter=defaultLedger();await open(act);return;}
   if(act==="case-prev"||act==="case-next"){caseOffset=Math.max(0,caseOffset+(act==="case-prev"?-20:20));await open("cases");return;}
