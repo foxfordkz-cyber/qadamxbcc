@@ -1,6 +1,6 @@
-# Открытие Saq Bol × BCC (Qadam Shield) 2.8 в Android Studio
+# Открытие Saq Bol × BCC (Qadam Shield) в Android Studio
 
-Ветка `mobile/android-studio-handoff` содержит мобильный проект и общие исходники веб-кабинета. Для передачи команде используйте [отчёт по сборке 2.8](WORKSPACE_28_ACCEPTANCE_RU.md).
+Принятые исходники 2.8 находятся в `mobile/android-studio-handoff`. Для работы со сборкой 2.9 клонируйте `main`. Точные ревизии исходников указаны в манифестах [APK с сайта](../frontend/public/downloads/current.json) и [командного APK](../frontend/public/downloads/team.json). Результаты установки и ограничения стенда приведены в [приёмке](FINAL_ACCEPTANCE_RU.md).
 
 ## Подготовка на Windows
 
@@ -9,7 +9,7 @@
 В PowerShell из родительской папки:
 
 ```powershell
-git clone --branch mobile/android-studio-handoff https://github.com/foxfordkz-cyber/qadamxbcc.git
+git clone --branch main https://github.com/foxfordkz-cyber/qadamxbcc.git
 cd qadamxbcc
 npm.cmd --prefix android-app ci
 npm.cmd --prefix android-app run web

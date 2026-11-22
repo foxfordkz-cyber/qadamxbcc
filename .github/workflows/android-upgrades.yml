@@ -38,10 +38,15 @@ jobs:
           for attempt in {1..90}; do
             kill -0 "$emulator_pid" || { tail -40 "$RUNNER_TEMP/emulator.log"; exit 1; }
             if [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" == "1" ]]; then
-              python android-app/scripts/test-install-upgrades.py --serial emulator-5554
+              python android-app/scripts/test-install-upgrades.py --serial emulator-5554 --evidence-dir "$RUNNER_TEMP/apk-evidence"
               exit 0
             fi
             sleep 3
           done
           tail -40 "$RUNNER_TEMP/emulator.log"
           exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-release-login-screens
+          path: ${{ runner.temp }}/apk-evidence/*-login.png
+          if-no-files-found: error

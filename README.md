@@ -21,6 +21,8 @@ Saq Bol — независимый прототип для кейса Bank Cente
 
 [Android орнату беті және QR / Страница установки Android и QR](docs/screenshots/readme/android-install-ru.png)
 
+[Аударым кідіртілген кездегі құжат / Пример пакета по приостановленному переводу (PDF)](docs/evidence/release-2.9/cooling_off.pdf) · [Сол аударымды тоқтатқаннан кейін / Тот же перевод после отмены (PDF)](docs/evidence/release-2.9/cancelled.pdf)
+
 <a name="jury"></a>
 
 ## Әмиянға кіру / Вход в кошелёк

@@ -60,7 +60,13 @@ test("a juror can select a saved recipient and an officer can inspect the same p
     expect(linked).toBeDefined();
     await officerPage.locator('[data-nav="cases"]').click();
     await officerPage.locator(`[data-case="${linked.id}"]`).click();
-    await expect(officerPage.locator(`.reason-groups [data-detail="${reports[0].transaction_id}"]`)).toBeVisible();
+    const source = officerPage.locator(".reason-groups").locator(
+      `[data-detail="${reports[0].transaction_id}"]`,
+    );
+    await expect(source).toBeVisible();
+    await source.click();
+    await expect(officerPage.locator('[data-screen="detail"]')).toBeVisible();
+    expect(new URL(officerPage.url()).searchParams.get("operation")).toBe(reports[0].transaction_id);
     // In the prepared incoming-payment cases, the preceding settled outgoing
     // receipt is recorded a minute earlier, even if other seed rows vary.
     const incomingCase = cases.find(item => !reports.some(report => report.id === item.report_id));

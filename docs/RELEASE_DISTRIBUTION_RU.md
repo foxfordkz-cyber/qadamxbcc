@@ -4,8 +4,8 @@
 
 | Где установлен предыдущий APK | Манифест | Пакет | Предыдущая сборка | Версия 2.9 |
 | --- | --- | --- | --- | --- |
-| Основной сайт | [current.json](../frontend/public/downloads/current.json) | `kz.qadamx.bccshield.website` | 2.7, код 13 | Код 14 |
-| Командный кошелёк, включая Honor | [team.json](../frontend/public/downloads/team.json) | `kz.qadamx.bccshield.demo` | 2.7, код 10 или 2.8, код 11 | Код 13 |
+| Основной сайт | [current.json](../frontend/public/downloads/current.json) | `kz.qadamx.bccshield.website` | 2.7, код 13 или 2.9, код 14 | Код 15 |
+| Командный кошелёк, включая Honor | [team.json](../frontend/public/downloads/team.json) | `kz.qadamx.bccshield.demo` | 2.7, код 10, 2.8, код 11 или 2.9, код 13 | Код 14 |
 
 Обе сборки требуют Android 7.0 (API 24) или новее. Каждый манифест указывает исходную ревизию, сертификат, контрольную сумму и размер APK. Командный файл подписан и собран из указанной там ревизии. Разработчики запускают локальные эксперименты в отдельном приложении `.dev`.
 
