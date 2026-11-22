@@ -141,7 +141,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
     return (
       greet +
       '<div class="wallet-dashboard"><div class="wallet-overview"><div class="wallet-account">'+card(a, hidden) +
-      '<div class="action-dock"><button class="transfer-primary" data-action="transfer">'+icon("transfer")+'<span>'+T("Перевести","Аудару")+'</span></button><div class="wallet-quick">'+links+'</div></div>' +
+      '<div class="action-dock"><button class="transfer-primary" data-action="transfer">'+icon("transfer")+'<span>'+T("Перевод","Аудару")+'</span></button><div class="wallet-quick">'+links+'</div></div>' +
       (pending
         ? button(
             "recover",

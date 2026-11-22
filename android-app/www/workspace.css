@@ -136,3 +136,15 @@ html[data-web-wallet] .browser-start-help { display: block; }
 }
 .guardian-bot-link svg { width: 20px; height: 20px; flex: none; }
 .guardian-bot-link:focus-visible { outline: 3px solid #cae786; outline-offset: 2px; }
+
+/* Let a narrow wallet (or enlarged type) wrap whole actions, not individual letters. */
+@media (max-width: 420px) {
+  #app .action-dock {
+    grid-template-columns: repeat(auto-fit, minmax(min(4.25rem, 100%), 1fr));
+  }
+  #app .action-dock .wallet-quick { display: contents; }
+  #app .action-dock button span { overflow-wrap: normal; }
+}
+@media (max-width: 340px) {
+  #app .action-dock { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

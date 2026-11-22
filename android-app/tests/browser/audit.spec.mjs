@@ -108,6 +108,13 @@ test("the wallet opens the team Telegram bot and honors reduced motion", async (
   await expect(seal).toHaveCSS("animation-name","none");
   const [sealBox,balanceBox]=await Promise.all([seal.boundingBox(),page.locator(".q-balance").boundingBox()]);
   expect(sealBox.y).toBeGreaterThanOrEqual(balanceBox.y+balanceBox.height);
+  const action=page.locator('.action-dock [data-action="transfer"] span');
+  await expect(action).toHaveText("Перевод");
+  expect(await action.evaluate(label=>{
+    const text=document.createRange();
+    text.selectNodeContents(label);
+    return text.getClientRects().length;
+  })).toBe(1);
   await page.evaluate(()=>{window.open=url=>{document.documentElement.dataset.openedBot=String(url);return null;};});
   await page.locator('[data-action="open-guardian"]').first().click();
   await expect(page.locator("html")).toHaveAttribute("data-opened-bot","https://t.me/bekzat_bcc_shield_test_bot");

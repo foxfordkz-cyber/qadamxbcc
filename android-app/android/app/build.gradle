@@ -14,7 +14,7 @@ android {
         applicationId "kz.qadamx.bccshield"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 19
+        versionCode 20
         versionName "2.9"
         manifestPlaceholders = [appLabel: "@string/app_name", activityLabel: "@string/title_activity_main"]
         resValue "string", "qadam_api_origin", apiOrigin
