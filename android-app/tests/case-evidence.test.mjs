@@ -44,3 +44,10 @@ test("later evidence displays its own recorded time", () => {
   assert.doesNotMatch(result,/earlier/);
 });
 
+
+test("a recorded pressure answer specifies the limit of the observation", () => {
+  const tx = {transaction_id:"reviewed", context:{call_pressure_answer:"after_call"}, reasons:[]};
+  for (const [translate, expected] of [[ru=>ru,/нельзя установить личность/], [(_,kk)=>kk,/анықтау мүмкін емес/]]) {
+    assert.match(caseEvidenceView(tx,translate,String,String), expected);
+  }
+});

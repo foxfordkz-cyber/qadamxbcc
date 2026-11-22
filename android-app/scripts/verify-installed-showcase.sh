@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-manifest=frontend/public/downloads/team.json
+manifest=frontend/public/downloads/current.json
 apk="frontend/public$(jq -r .url "$manifest")"
 pkg=$(jq -r .package "$manifest")
 expected=$(jq -r .apk_sha256 "$manifest")

@@ -1154,3 +1154,13 @@ input:focus-visible {
 .reason-groups small {display:block;overflow-wrap:anywhere}
 .receipt .funds-outcome {background:#edf6f0;color:#173b2d;padding:.85rem 1rem;border-radius:.85rem}
 .receipt-party dd {overflow-wrap:anywhere}
+
+.reason-groups > section {
+  padding: .85rem 1rem;
+  border-radius: .65rem;
+  background: var(--surface, #fff);
+  overflow-wrap: anywhere;
+}
+.reason-groups > section:first-of-type { border-inline-start-color: #a46922; }
+.reason-groups > section:last-of-type { border-inline-start-color: #667385; }
+.reason-groups > section h3 { margin-block: 0 .4rem; }

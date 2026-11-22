@@ -81,7 +81,7 @@ jobs:
           curl -fsS "$install/" -o "$RUNNER_TEMP/install.html"
           grep -Fq "href=\"$apk\"" "$RUNNER_TEMP/install.html"
           curl -fsS "$install/$apk" -o "$RUNNER_TEMP/$apk"
-          canonical=$(node -p "'frontend/public' + require('./frontend/public/downloads/team.json').url")
+          canonical=$(node -p "'frontend/public' + require('./frontend/public/downloads/current.json').url")
           cmp "$canonical" "$RUNNER_TEMP/$apk"
       - run: npm ci
         working-directory: android-app

@@ -101,10 +101,9 @@ try {
   checkInitialLanguageSwitch(installerHtml);
   assert.ok(installerHtml.includes(apkPath));
   const team = await (await fetch("/downloads/team.json")).json();
-  assert.equal(team.package, "kz.qadamx.bccshield.demo");
-  assert.equal(release.package, "kz.qadamx.bccshield.website");
-  assert.ok(installerHtml.includes(team.url));
-  assert.notEqual(team.url, apkPath);
+  assert.deepEqual(team, release);
+  assert.equal(release.package, "kz.qadamx.bccshield.demo");
+  assert.equal([...installerHtml.matchAll(/<a\b[^>]*href="[^"]+\.apk"/g)].length, 1);
   assert.equal(createHash("sha256").update(Buffer.from(await apk.arrayBuffer())).digest("hex"), release.apk_sha256);
   for (const pathname of ["/", "/mobile"]) {
     assert.ok((await (await fetch(pathname)).text()).includes('href="/download/android'), `${pathname} is missing the installer link`);

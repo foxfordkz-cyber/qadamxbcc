@@ -389,10 +389,13 @@ async function open(next, id, remember=true) {
       const current = () => gateway === g && page === "detail" && selectedId === id && viewRevision === rev;
       const detail = await g.api("transfers/"+id);
       if (!current()) return;
+      if (detail?.transaction_id !== id) throw new Error("transaction_mismatch");
       accept(detail);
       if (product && g.role === "client") {
         void g.request("/protection/"+id+"/packet").then(packet => {
-          if (current() && packet.transaction_id === id) { receiptPacket=packet; render(); }
+          if (!current()) return;
+          receiptPacket = packet?.transaction_id === id ? packet : {unavailable:true};
+          render();
         }).catch(() => {
           if (current()) {receiptPacket={unavailable:true}; render();}
         });

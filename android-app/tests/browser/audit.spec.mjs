@@ -30,6 +30,7 @@ async function enter(page,baseURL,fixture={}) {
       fixture.evaluated=route.request().postDataJSON();
       json={...items[0],recipient:{display_name:"Арман"},reasons:[],risk_score:0,context:fixture.evaluated.context};
     }
+    else if(path.endsWith("/packet"))json=fixture.packet || {transaction_id:path.split("/")[1],reports:[]};
     else if(path==="wallet/operations")json={items};
     else if(path==="wallet/analytics"){status=fixture.analytics||200;json={outgoing:"25000"};}
     else if(path.startsWith("api/transfers/"))json={...items.find(r=>r.transaction_id===path.split("/").at(-1)),recipient:{display_name:"Алия"}};
@@ -339,4 +340,16 @@ test("home refreshes security updates without frequent inbox reads or stale tran
   await expect(home.locator("[data-inbox-state=CASE_INFORMATION_REQUIRED]:visible")).toHaveCount(4);
   await expect(home.locator("[data-inbox-state=FAMILY_APPROVAL_RECORDED]")).toHaveCount(0);
   expect(fixture.inboxReads).toBe(2);
+});
+
+test("a mismatched incident packet ends loading and can be refreshed",async({page,baseURL})=>{
+  const fixture={packet:{transaction_id:ids[1],reports:[{id:"wrong-case",state:"OPEN"}]}};
+  await enter(page,baseURL,fixture);
+  await page.locator("[data-nav=history]").click();
+  await page.locator('[data-detail="'+ids[0]+'"]').first().click();
+  await expect(page.getByText("Не удалось загрузить сведения об обращении.")).toBeVisible();
+  await expect(page.getByText("wrong-case",{exact:false})).toHaveCount(0);
+  fixture.packet={transaction_id:ids[0],reports:[]};
+  await page.locator("[data-action=refresh-detail]").click();
+  await expect(page.getByText("Связанных обращений нет.")).toBeVisible();
 });

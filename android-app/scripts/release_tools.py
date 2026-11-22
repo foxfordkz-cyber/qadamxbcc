@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[2]
 DOWNLOADS = ROOT / "frontend/public/downloads"
 API = "https://saq-bol-mobile.onrender.com"
 CHANNELS = {
-    "website": ("current.json", DOWNLOADS / "Saq-Bol-Android-2.7.json"),
-    "team": ("team.json", ROOT / "deliverables/android/Saq-Bol-Android-2.7.json"),
+    "website": ("legacy-website-2.9.json", DOWNLOADS / "Saq-Bol-Android-2.7.json"),
+    "team": ("current.json", ROOT / "deliverables/android/Saq-Bol-Android-2.7.json"),
 }
 WEB_TYPES = {".html", ".css", ".mjs", ".svg"}
 
