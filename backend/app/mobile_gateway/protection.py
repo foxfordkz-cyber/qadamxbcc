@@ -363,13 +363,27 @@ def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
             )
             if approved_at:
                 items.append((approved_at, "family_approved"))
-        reports = await session.scalars(
-            select(GuardianReport.created_at)
-            .where(GuardianReport.owner_id == tx.sender_id, GuardianReport.transaction_id == tx.id)
-            .order_by(GuardianReport.created_at)
+        reports = (await session.execute(
+            select(GuardianReport.id, GuardianReport.created_at, GuardianReport.state)
+            .where(
+                GuardianReport.owner_id == tx.sender_id,
+                GuardianReport.transaction_id == tx.id,
+                GuardianReport.contact_id.is_(None),
+                GuardianReport.expires_at > utcnow(),
+            )
+            .order_by(GuardianReport.created_at, GuardianReport.id)
             .limit(100)
-        )
-        items.extend((time, "report_created") for time in reports)
+        )).all()
+        items.extend((at, "report_created") for _, at, _ in reports)
+        from app.mobile_gateway.security_inbox import case_messages
+
+        visible = case_messages(tx.sender_id, utcnow()).subquery()
+        messages = (await session.execute(
+            select(visible.c.state, visible.c.time)
+            .where(visible.c.object_id.in_([rid for rid, _, _ in reports]))
+            .order_by(visible.c.time)
+        )).all()
+        recipient = await session.get(Account, tx.recipient_id)
         return {
             "transaction_id": tx.id,
             "created_at": tx.created_at,
@@ -377,5 +391,9 @@ def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
             "status": tx.status,
             "currency": tx.currency,
             "contact_state": notice.state if notice else None,
+            "generated_at": utcnow(),
+            "recipient_reference": recipient.iban[-4:] if recipient else None,
+            "soc_messages": [{"kind": kind, "at": at} for kind, at in messages],
+            "reports": [{"id": rid, "state": state} for rid, _, state in reports],
             "events": [{"at": at, "kind": kind} for at, kind in sorted(items, key=lambda e: e[0])],
         }

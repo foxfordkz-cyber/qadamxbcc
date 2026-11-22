@@ -107,7 +107,7 @@ export const COPY = {
     cleared: "Демо-история очищена",
     storageError:
       "Хранилище недоступно. История сохранится только до закрытия приложения.",
-    version: "Saq Bol × BCC · Android 2.8",
+    version: "Saq Bol × BCC · Android 2.9",
     copyright:
       "Создано командой Qadam. Android-основа — Айдана; автономный интерфейс — Бекзат.",
     openSite: "Сайт откроется в браузере",
@@ -221,7 +221,7 @@ export const COPY = {
     cleared: "Демо-тарих тазаланды",
     storageError:
       "Сақтау орны қолжетімсіз. Тарих қолданба жабылғанша ғана сақталады.",
-    version: "Saq Bol × BCC · Android 2.8",
+    version: "Saq Bol × BCC · Android 2.9",
     copyright:
       "Qadam командасы жасаған. Android негізі — Айдана; автономды интерфейс — Бекзат.",
     openSite: "Сайт браузерде ашылады",

@@ -1,3 +1,4 @@
+import { caseEvidenceView } from "./case-evidence.mjs";
 import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
@@ -13,6 +14,7 @@ import { PUBLIC_DEMO, openExternal } from "./native.mjs";
 const product = document.documentElement.hasAttribute("data-product");
 let initializingAccount = product;
 let rememberLogin = true, restoreFailed = false;
+let receiptPacket = null;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
 const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""});
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
@@ -315,6 +317,7 @@ async function open(next, id, remember=true) {
   }
   const samePage=page===next;
   workspaceRead=null;
+  receiptPacket=null;
   lastRead={page:next,id};
   if (next==="confirmCancel") evaluation = null;
   page = next;
@@ -381,7 +384,18 @@ async function open(next, id, remember=true) {
       const check = await checkPayee(reviewed, api, account?.recipients, account?.supports_call_question);
       if (page === "review" && draft === reviewed) data = check;
     } else if (next === "detail") {
-      accept(await api(`transfers/${selectedId}`));
+      const g = gateway, id = selectedId, rev = viewRevision;
+      const current = () => gateway === g && page === "detail" && selectedId === id && viewRevision === rev;
+      const detail = await g.api("transfers/"+id);
+      if (!current()) return;
+      accept(detail);
+      if (product && g.role === "client") {
+        void g.request("/protection/"+id+"/packet").then(packet => {
+          if (current() && packet.transaction_id === id) { receiptPacket=packet; render(); }
+        }).catch(() => {
+          if (current()) {receiptPacket={unavailable:true}; render();}
+        });
+      }
       if(product && gateway.role==="client" && evaluation.status==="cooling_off") data=await gateway.request("/protection/"+selectedId+"/check");
     } else if (next === "confirmCancel") {
       const current = await api(`transfers/${id}`);
@@ -575,7 +589,7 @@ function transferView() {
     ${payeeFields(draft,T,E)}
     ${input("amount",T("Сумма, ₸","Сома, ₸"), draft?.amount ?? "", "number", 'required min="0.01" max="999999999" step="0.01" inputmode="decimal"')}
     <div class="amount-choices" role="group" aria-label="${T("Выбрать сумму перевода", "Аударым сомасын таңдау")}">${[5000, 10000, 25000].map(value => `<input type="button" data-quick-amount="${value}" value="${amount(value)}">`).join("")}</div>
-    <label class="tick-field"><input type="checkbox" name="active_call" ${draft?.context?.active_call ? "checked" : ""}>${T("Меня просят перевести во время звонка","Қоңырау кезінде аударуды сұрады")}</label>
+    <label class="tick-field"><input type="checkbox" name="active_call" ${draft?.context?.active_call ? "checked" : ""}>${T("Мне сейчас по телефону говорят перевести деньги","Маған телефон арқылы ақша аударуды айтып жатыр")}</label><small class="fine">${T("Отметка будет сохранена для этого перевода.","Бұл белгі осы аударымға сақталады.")}</small>
     <button class="primary">${T("Проверить реквизиты","Деректемелерді тексеру")}</button></form></section>${button("presets",T("Демонстрационные сценарии","Демонстрациялық сценарийлер"),"secondary")}`;
   const value = draft ?? presetValues.normal;
   return `${title(T("Новый тестовый перевод", "Жаңа тест аударымы"), T("Сумму и признаки анализирует сервер: ML, частота операций и связи получателя.", "Сома мен белгілерді сервер талдайды: ML, әрекет жиілігі және алушы байланыстары."))}<div class="filter-row">${Object.keys(
@@ -736,9 +750,15 @@ function detailView() {
     const held=tx.status==="cooling_off";
     const hold=held?coolingReceipt(tx, admin):"";
     const contact=held?'<section class="paper"><h2>'+T("Доверенный контакт в Telegram","Telegram-дағы сенімді адам")+'</h2><p>'+(!data||data.transaction_id!==tx.transaction_id?T("Обновите статус для проверки доставки.","Жеткізу күйін жаңартыңыз."):data.contact_state?E(label(data.contact_state)):T("Уведомление для этой операции пока не зарегистрировано.","Бұл операцияның хабарламасы әлі тіркелмеген."))+'</p>'+button("notifications",T("История уведомлений","Хабарлама тарихы"),"secondary")+'</section>':"";
+    const serviceState = receiptPacket?.unavailable ? T("Не удалось загрузить сведения об обращении.","Өтініш дерегін жүктеу мүмкін болмады.")
+      : !receiptPacket ? T("Запрашиваем сведения об обращении…","Өтініш дерегі жүктелуде…")
+      : !Array.isArray(receiptPacket.reports) ? T("Стенд не передал статус обращения.","Стенд өтініш күйін жібермеді.")
+      : receiptPacket.reports.length ? receiptPacket.reports.map(r=>r.id+" · "+label(r.state)).join(", ")
+      : T("Связанных обращений нет.","Байланысты өтініш жоқ.");
+    const service = '<section class="paper"><h2>'+T("Обращение в SOC","SOC-қа өтініш")+'</h2><p>'+E(serviceState)+'</p></section>';
     return title(status(tx.status),tx[lang==="ru"?"headline_ru":"headline_kk"])+
-      `<section class="paper receipt"><div class="receipt-status">${wallet.badge(tx.status)}</div><div class="amount">${amount(tx.amount)}</div><dl class="receipt-party"><dt>${T("Получатель", "Алушы")}</dt><dd><strong>${E(tx.recipient?.display_name)}</strong><span>${E(tx.recipient?.iban_masked)}</span></dd></dl><p class="funds-outcome">${E(moneyOutcome(tx.status))}</p></section>`+hold+
-      (reasons.length?'<section class="paper"><h2>'+T("Что учла проверка","Тексеруде ескерілген белгілер")+'</h2>'+reasons.map(r=>'<p>'+E(r[lang==="ru"?"reason_ru":"reason_kk"])+'</p>').join("")+'</section>':"")+contact+
+      `<section class="paper receipt"><div class="receipt-status">${wallet.badge(tx.status)}</div><div class="amount">${amount(tx.amount)}</div><dl class="receipt-party"><dt>${T("Создан","Жасалған уақыты")}</dt><dd>${E(when(tx.created_at))}</dd><dt>${T("Получатель", "Алушы")}</dt><dd><strong>${E(tx.recipient?.display_name)}</strong><span>${E(tx.recipient?.iban_masked)}</span></dd></dl><p class="funds-outcome"><strong>${T("Состояние денег","Қаражат күйі")}</strong><br>${E(moneyOutcome(tx.status))}</p></section>`+hold+
+      (reasons.length?'<section class="paper"><h2>'+T("Что учла проверка","Тексеруде ескерілген белгілер")+'</h2>'+reasons.map(r=>'<p>'+E(r[lang==="ru"?"reason_ru":"reason_kk"])+'</p>').join("")+'</section>':"")+contact+service+
       '<p class="break-id">'+E(tx.transaction_id)+'</p>'+button("refresh-detail",T("Обновить статус","Күйін жаңарту"),"secondary");
   }
   return `${title(status(tx.status), tx[lang === "ru" ? "headline_ru" : "headline_kk"])}<section class="paper"><div class="amount">${amount(tx.amount)}</div><p>${E(tx.recipient?.display_name)} · ${E(tx.recipient?.iban_masked)}</p><div class="risk-meter"><progress max="100" value="${Number(tx.risk_score)}" aria-label="${T("Оценка риска", "Тәуекел бағасы")}"></progress></div><div class="analysis-grid"><dl><dt>${T("Риск", "Тәуекел")}</dt><dd>${Number(tx.risk_score)} / 100</dd></dl><dl><dt>ML</dt><dd>${tx.ml_score == null ? "—" : Number(tx.ml_score).toFixed(1)} / 100</dd></dl></div><p class="fine">${T("Это оценки модели, не вероятность доказанного мошенничества.", "Бұл модель бағасы, дәлелденген алаяқтық ықтималдығы емес.")}</p></section>${tx.status === "cooling_off" ? coolingReceipt(tx, admin) : ""}<section class="paper"><h2>${T("Почему такое решение", "Шешім себептері")}</h2>${reasons.length ? reasons.map((r) => `<div class="reason"><h3>${E(r[lang === "ru" ? "reason_ru" : "reason_kk"])}</h3><p>${E(r.layer)} · ${E(r.code)} · ${Number(r.score_delta) >= 0 ? "+" : ""}${Number(r.score_delta)}</p></div>`).join("") : `<p>${T("Дополнительные правила не сработали.", "Қосымша ережелер іске қосылған жоқ.")}</p>`}</section><section class="paper"><h2>${T("Как объясняет модель", "Модель түсіндірмесі")}</h2><p class="fine">${E(tx.ml_model_version)} · ${E(tx.ml_explanation_method)}</p>${contributors
@@ -960,7 +980,7 @@ function roleTitle() {
   return E(account?.display_name || T("Клиент","Клиент"));
 }
 function settingsView() {
-  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.8 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
+  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.9 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
     button("remember-settings",gateway.remember ? T("Сохранённый вход включён · Изменить","Сақталған кіру қосулы · Өзгерту") : T("Сохранённый вход выключен · Изменить","Сақталған кіру өшірулі · Өзгерту"),"secondary") +
     button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
     (gateway.role === "client" ? button("contacts",T("Мои согласия","Келісімдерім"),"secondary")+button("open-guardian",T("Открыть Telegram-бот","Telegram-ботты ашу"),"secondary") : "") + button("logout",T("Выйти","Шығу"));
@@ -1015,7 +1035,7 @@ const screens = {
   incoming:()=>data?'<h1>'+T("Входящий перевод","Кіріс аударым")+'</h1><section class="paper"><h2>+'+amount(data.amount)+'</h2><p>'+E(data.counterparty)+'</p>'+wallet.badge(data.status)+'<p>'+when(data.created_at)+'</p><small>'+E(data.transaction_id)+'</small></section>':"",
   family: () => familyView(data,T,button,when) + secondSettingsView(data?.second,T,button,when,amount,E,webWallet),
   guard: () => checkView(data,T,button,when,label),
-  packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Сохранить PDF","PDF сақтау")) : "",
+  packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Скачать пакет инцидента · PDF","Оқиға құжаттарын жүктеу · PDF")) : "",
   sample: sampleView,
   login: loginView,
   home: ()=>gateway?.role==="platform_admin" ? desk.metrics(data) : historyView(),
@@ -1213,7 +1233,7 @@ function render() {
       const panel=document.createElement("section");
       panel.className="paper case-investigation";
       panel.innerHTML='<div><h2>'+T("Операция по делу","Іске қатысты операция")+'</h2><strong class="amount">'+amount(caseTransaction.amount)+'</strong><p>'+E(caseTransaction.recipient.display_name)+'</p>'+wallet.badge(caseTransaction.status)+'<p>'+E(moneyOutcome(caseTransaction.status))+'</p></div>'+
-        '<details class="case-reasoning"><summary>'+T("Основания и границы вывода","Негіз және қорытынды шегі")+'</summary><p>'+T("Статус денег указан в квитанции. Связь на графе показывает участников операции. Для решения по делу сверьте основания проверки с ответом клиента.","Қаражаттың күйі түбіртекте көрсетілген. Граф операцияға қатысушыларды көрсетеді. Іс бойынша шешім қабылдағанда тексеру негізін клиенттің жауабымен салыстырыңыз.")+'</p></details>'+
+        caseEvidenceView(caseTransaction,T,E,when)+
         (caseNetwork?'<div>'+graphView(caseNetwork,true)+'<button class="secondary" data-graph="'+E(caseTransaction.recipient.id)+'">'+T("Исследовать связи","Байланыстарды зерттеу")+'</button></div>':"");
       root.querySelector("main .paper")?.after(panel);
     }

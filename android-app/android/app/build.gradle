@@ -27,8 +27,26 @@ android {
     }
     buildTypes {
         debug {
-            applicationIdSuffix(websiteApk ? ".website" : ".demo")
-            
+            applicationIdSuffix ".dev"
+            if (usbRehearsal && !configuredOrigin) {
+                resValue "string", "qadam_api_origin", "http://127.0.0.1:18001"
+            }
+        }
+        showcase {
+            initWith release
+            matchingFallbacks = ['release']
+            applicationIdSuffix ".demo"
+            debuggable false
+            // Hackathon distribution retains the existing demo signing identity.
+            signingConfig signingConfigs.debug
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
