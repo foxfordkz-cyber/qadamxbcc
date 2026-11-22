@@ -6,7 +6,11 @@ const items = ids.map((id,i)=>({transaction_id:id, counterparty:["Алия","А�
 async function enter(page,baseURL,fixture={}) {
   await page.route("https://wallet.test/**",async route=>{
     const u=new URL(route.request().url());
-    if(!u.pathname.startsWith("/mobile/v1/")) return route.fulfill({response:await route.fetch({url:new URL(u.pathname,baseURL).href})});
+    if(!u.pathname.startsWith("/mobile/v1/")) {
+      // Local static assets are read-only. Playwright retries ECONNRESET here only.
+      const response=await route.fetch({url:new URL(u.pathname,baseURL).href,maxRetries:1});
+      return route.fulfill({response});
+    }
     const path=u.pathname.slice(11);
     let status=200, json={};
     if(path==="auth/login")json={role:"client",subject:"audit-fixture",token:"fixture-session"};
