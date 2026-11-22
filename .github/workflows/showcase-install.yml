@@ -1,0 +1,56 @@
+name: Install signed showcase
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - frontend/public/downloads/current.json
+      - frontend/public/downloads/Saq-Bol-*.apk
+      - .github/workflows/showcase-install.yml
+permissions:
+  contents: read
+jobs:
+  clean-install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start a clean Android 30 device
+        run: |
+          set -euo pipefail
+          sdkmanager 'system-images;android-30;google_apis;x86_64' 'emulator' 'platform-tools'
+          sudo setfacl -m u:"$(id -un)":rw /dev/kvm
+          echo no | avdmanager create avd -n qadam-release -k 'system-images;android-30;google_apis;x86_64' --device pixel
+          "$ANDROID_HOME/emulator/emulator" -avd qadam-release -port 5556 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
+          timeout 240 bash -c 'until [[ "$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" == 1 ]]; do sleep 3; done'
+          adb -s emulator-5556 shell wm dismiss-keyguard
+      - name: Verify the canonical APK, install and open the wallet
+        run: |
+          set -euo pipefail
+          manifest=frontend/public/downloads/current.json
+          apk="frontend/public$(jq -r .url "$manifest")"
+          pkg=$(jq -r .package "$manifest")
+          expected=$(jq -r .apk_sha256 "$manifest")
+          echo "$expected  $apk" | sha256sum -c -
+          phone=(adb -s emulator-5556)
+          test -z "$("${phone[@]}" shell pm list packages "$pkg" | tr -d '\r')"
+          "${phone[@]}" install "$apk"
+          base=$("${phone[@]}" shell pm path "$pkg" | tr -d '\r' | sed -n 's/^package://p' | head -1)
+          "${phone[@]}" pull "$base" "$RUNNER_TEMP/installed.apk"
+          echo "$expected  $RUNNER_TEMP/installed.apk" | sha256sum -c -
+          "${phone[@]}" shell am start -W -n "$pkg/kz.qadamx.bccshield.MainActivity"
+          for i in {1..20}; do
+            "${phone[@]}" shell uiautomator dump /sdcard/window.xml >/dev/null || continue
+            "${phone[@]}" exec-out cat /sdcard/window.xml > "$RUNNER_TEMP/window.xml"
+            if grep -q 'class="android.widget.EditText"' "$RUNNER_TEMP/window.xml" && grep -q "package=\"$pkg\"" "$RUNNER_TEMP/window.xml"; then
+              "${phone[@]}" exec-out screencap -p > "$RUNNER_TEMP/showcase-login.png"
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-showcase-login
+          path: ${{ runner.temp }}/showcase-login.png
+          if-no-files-found: error
+
