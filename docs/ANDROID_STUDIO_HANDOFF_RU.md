@@ -1,6 +1,6 @@
 # Открытие Saq Bol × BCC (Qadam Shield) в Android Studio
 
-Принятые исходники 2.8 находятся в `mobile/android-studio-handoff`. Для работы со сборкой 2.9 клонируйте `main`. Точные ревизии исходников указаны в манифестах [APK с сайта](../frontend/public/downloads/current.json) и [командного APK](../frontend/public/downloads/team.json). Результаты установки и ограничения стенда приведены в [приёмке](FINAL_ACCEPTANCE_RU.md).
+Для review кандидата 2.9 (код 21) используйте ветку `fix/saq-bol-final-29-readiness` из [PR #31](https://github.com/foxfordkz-cyber/qadamxbcc/pull/31). Единый [манифест](../frontend/public/downloads/current.json) содержит ревизию исходников и сертификат. Для принятой версии используйте `mobile/android-studio-handoff`. После согласованного включения изменений техлидом обновите handoff обычным fast-forward и сверьте исходники Android с манифестом. [Результаты приёмки Redmi](SAQ_BOL_FINAL_COMPLETION_RU.md).
 
 ## Подготовка на Windows
 
@@ -26,7 +26,7 @@ cd ../..
 
 APK лежит в `android-app/android/app/build/outputs/apk/debug/app-debug.apk`. Для разработки используется обычная локальная debug-подпись. Если подпись установленного на Honor приложения отличается, используйте отдельный эмулятор. Не удаляйте установленное приложение с пользовательскими данными ради проверки сборки.
 
-### Проверенная сборка
+### Архив приёмки 2.8
 
 Сборка 2.8 имеет versionCode 11 и package `kz.qadamx.bccshield.demo`. Проверенная цепочка на Windows использует JDK 21, SDK 36, Gradle Wrapper и npm ci. Вариант для демонстрации лежит в `app/build/outputs/apk/showcase/app-showcase.apk` относительно Android-проекта. Он отключает отладку и сохраняет подпись существующего учебного ключа на машине сборки. Debug APK другого разработчика может иметь другую подпись. Для обновления телефонов используйте переданный готовый APK.
 
@@ -48,6 +48,6 @@ APK по умолчанию использует `https://saq-bol-mobile.onrende
 
 ## Командный кандидат для Honor
 
-Ветка `mobile/android-studio-handoff` указывает на принятые командой исходники `4477fc6`. Для сборки именно приложенного командного APK откройте ревизию `01bcc96998d24d2ff70d5c87276562cfc1bfeff9` из ветки `feature/final-demo-release-readiness`. Под JDK 21 и SDK 36 выполнены npm ci, Capacitor sync и Gradle assembleShowcase assembleDebug. Установка `.demo` с кодом 17 обновляется поверх принятой линии Honor. Debug имеет отдельный пакет `.dev`. Контрольная сумма, подпись и origin указаны в [командном паспорте](../frontend/public/downloads/team.json).
+На этапе сборки 17 ветка `mobile/android-studio-handoff` указывала на `4477fc6`. 22 ноября она обновлена обычным fast-forward до уже принятого `main` на `b770e28`. Для сборки именно приложенного командного APK откройте ревизию `01bcc96998d24d2ff70d5c87276562cfc1bfeff9` из ветки `feature/final-demo-release-readiness`. Под JDK 21 и SDK 36 выполнены npm ci, Capacitor sync и Gradle assembleShowcase assembleDebug. Установка `.demo` с кодом 17 обновляется поверх принятой линии Honor. Debug имеет отдельный пакет `.dev`. Контрольная сумма, подпись и origin указаны в [командном паспорте](../frontend/public/downloads/team.json).
 
 Обе цели Gradle также собраны из чистого Git-архива этой ревизии с зафиксированными npm-зависимостями, SDK 36 и Android Studio JBR 25. Gradle выполнил 402 задачи. В подписанном APK проверены все 45 клиентских ресурсов из чистой синхронизации Capacitor. 44 файла совпали побайтово, один текстовый файл отличается только переводами строк LF/CRLF. Для проверки передаваемого бинарного файла используйте SHA-256 из `team.json`.

@@ -1,5 +1,6 @@
 """Run migrations, compare a full PostgreSQL restore, then restart a local mobile API twice."""
 
+import asyncio
 import json
 import os
 import secrets
@@ -11,6 +12,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import BinaryIO
+
+import asyncpg
 
 from app.mobile_gateway.passwords import encode
 from scripts import verify_persistent_release as api
@@ -24,6 +27,24 @@ def port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return int(s.getsockname()[1])
+
+
+async def wait_for_database(dsn: str) -> None:
+    # Probe the same published TCP port as Alembic. Docker's init server accepts
+    # Unix-socket connections before the external PostgreSQL server is ready.
+    deadline = time.monotonic() + 120
+    while time.monotonic() < deadline:
+        try:
+            connection = await asyncpg.connect(dsn, timeout=3)
+        except (OSError, asyncpg.PostgresConnectionError, asyncpg.CannotConnectNowError):
+            await asyncio.sleep(1)
+            continue
+        try:
+            await connection.fetchval("SELECT 1")
+        finally:
+            await connection.close()
+        return
+    raise TimeoutError("Isolated PostgreSQL did not accept a connection on its published port")
 
 
 def main() -> None:
@@ -94,15 +115,7 @@ def main() -> None:
             ]:
                 run("docker", "run", "--rm", "-d", "--name", name, *args)
                 created.append(name)
-            for _ in range(60):
-                if (
-                    subprocess.run(
-                        ["docker", "exec", pg, "pg_isready", "-U", "postgres"], capture_output=True
-                    ).returncode
-                    == 0
-                ):
-                    break
-                time.sleep(1)
+            asyncio.run(wait_for_database(env["BCC_DATABASE_URL"].replace("+asyncpg", "", 1)))
             run(sys.executable, "-m", "alembic", "upgrade", "head", env=env)
             run("docker", "exec", pg, "createdb", "-U", "postgres", "qadam_import_rehearsal")
             import_url = env["BCC_DATABASE_URL"].rsplit("/", 1)[0] + "/qadam_import_rehearsal"

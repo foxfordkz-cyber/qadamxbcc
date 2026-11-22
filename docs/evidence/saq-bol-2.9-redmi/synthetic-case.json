@@ -1,0 +1,13 @@
+{
+  "transaction_id": "8aaa1496-6e73-4351-a593-c23f4f27b234",
+  "report_id": "906d0518-685d-4276-8593-094873fce5e6",
+  "case_id": "8089c72d-1632-43be-9893-f9fd3e6a2c3e",
+  "created_at": "2026-11-22T11:36:30.095392Z",
+  "amount": "900000.00",
+  "recipient": "Алексей К.",
+  "finding": "confirmed_fraud",
+  "status_at_evaluation": "cooling_off",
+  "status_after_review": "cooling_off",
+  "device_received_resolution": true,
+  "time_and_recipient_verified": true
+}
