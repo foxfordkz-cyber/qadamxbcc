@@ -7,7 +7,7 @@ async function offline(page, language = "ru") {
   await page.locator('.bottom-nav [data-route="home"]').click();
 }
 test("an older WebView can open the same team account in a browser", async ({ page }) => {
-  await page.addInitScript(() => Object.defineProperty(AbortSignal, "timeout", {value: undefined}));
+  await page.addInitScript(() => Object.defineProperty(globalThis, "AbortController", {value: undefined}));
   await page.goto("/");
   const help = page.locator(".native-start-help");
   await expect(help.locator('[lang="kk"]')).toContainText("Android System WebView");
@@ -15,6 +15,12 @@ test("an older WebView can open the same team account in a browser", async ({ pa
   await expect(help.locator("a")).toBeVisible();
   await expect(help.locator("a")).toHaveAttribute("href", "https://saq-bol-mobile.onrender.com/wallet/");
   await expect(page.locator("#personal-login")).toHaveCount(0);
+});
+test("a WebView with AbortController but without AbortSignal.timeout opens personal sign-in", async ({page}) => {
+  await page.addInitScript(() => Object.defineProperty(AbortSignal, "timeout", {value: undefined}));
+  await page.goto("/");
+  await expect(page.locator('#personal-login input[name="login"]')).toBeVisible();
+  await expect(page.locator('#personal-login input[name="password"]')).toBeVisible();
 });
 test("welcome exposes personal sign-in and explains unavailable deployment", async ({ page }) => {
   await page.goto("/");
