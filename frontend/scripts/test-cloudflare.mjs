@@ -79,13 +79,14 @@ try {
   assert.equal((await (await fetch("/health")).json()).status, "ok");
   assert.deepEqual(await (await fetch("/mobile/link")).json(), { origins: [origin] });
   assert.equal((await fetch("/icons/icon-192.png")).status, 200);
-  const apkPath = "/downloads/Saq-Bol-Android-2.7.apk";
+  const release = await (await fetch("/downloads/current.json")).json();
+  const apkPath = release.url;
   const apk = await fetch(apkPath);
   assert.equal(apk.status, 200, "Android installer must be available without a login");
-  const release = JSON.parse(await (await fetch(apkPath.replace(/\.apk$/, ".json"))).text());
+  assert.ok((await (await fetch("/download/android/")).text()).includes(apkPath));
   assert.equal(createHash("sha256").update(Buffer.from(await apk.arrayBuffer())).digest("hex"), release.apk_sha256);
   for (const pathname of ["/", "/mobile"]) {
-    assert.ok((await (await fetch(pathname)).text()).includes(`href="${apkPath}"`), `${pathname} is missing the installer link`);
+    assert.ok((await (await fetch(pathname)).text()).includes('href="/download/android/"'), `${pathname} is missing the installer link`);
   }
   assert.deepEqual(await (await fetch("/api/v1/soc/feed")).json(), { items: [], total: 0 });
   const publicWrite = { method: "POST", headers: { origin, "content-type": "application/json" }, body: "{}" };

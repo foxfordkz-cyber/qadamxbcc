@@ -26,3 +26,9 @@ android-app/www/vendor/
 **/*.pyc
 **/.env*
 **/*.joblib
+
+!frontend/
+!frontend/public/
+!frontend/public/downloads/
+!frontend/public/downloads/Saq-Bol-*.apk
+!frontend/public/downloads/current.json

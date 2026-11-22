@@ -632,3 +632,5 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
   .scenario-results table { font-size: .82rem; }
   .scenario-results th, .scenario-results td { padding: .4rem .18rem; }
 }
+
+.android-download{display:flex;align-items:center;gap:1rem;max-width:32rem;padding:.8rem;border:1px solid #bdd6ca;border-radius:1rem;background:#f4faf7;color:#143c30}.android-download small{display:block;font-size:.82rem;margin-top:.3rem}.install-sheet{max-width:34rem;margin:8vh auto;padding:1.5rem}.install-sheet code{overflow-wrap:anywhere}

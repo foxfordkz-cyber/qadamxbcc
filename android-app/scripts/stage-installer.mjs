@@ -14,6 +14,23 @@ if (typeof packageVersion !== "string" || !/^\d+\.\d+\.\d+$/.test(packageVersion
 const version = packageVersion.replace(/\.0$/, "");
 const base = `Saq-Bol-Android-${version}`;
 const apkName = `${base}.apk`;
+const canonical = await readOptional("current.json");
+if (canonical !== null) {
+  const record = JSON.parse(canonical);
+  if (record.version !== version || record.package !== "kz.qadamx.bccshield.demo" ||
+      record.api_origin !== expectedOrigin || !/^[a-f0-9]{64}$/.test(record.apk_sha256) ||
+      record.url !== "/downloads/Saq-Bol-"+version+"-"+record.apk_sha256.slice(0,12)+".apk") {
+    throw Error("Invalid canonical manifest");
+  }
+  const bytes = await readFile(path.join(releases, path.basename(record.url)));
+  if (bytes.length !== record.bytes || createHash("sha256").update(bytes).digest("hex") !== record.apk_sha256) {
+    throw Error("Canonical APK mismatch");
+  }
+  await mkdir(install,{recursive:true});
+  await writeFile(path.join(install, apkName),bytes);
+  await writeFile(path.join(install, base+".json"),canonical);
+  process.exit(0);
+}
 const apk = await readFile(path.join(releases, apkName));
 if (!apk.length) throw Error(`Empty installer: ${apkName}`);
 const digest = createHash("sha256").update(apk).digest("hex");

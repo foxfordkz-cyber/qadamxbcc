@@ -19,9 +19,12 @@ def git(*args: str) -> bytes:
 
 
 def verify(folder: Path, version: str, package: str, apksigner: str | None) -> None:
-    apk = folder / f"Saq-Bol-Android-{version}.apk"
-    record = json.loads(apk.with_suffix(".json").read_bytes())
-    source = record["apk_source_commit"]
+    record = json.loads((folder / "current.json").read_bytes())
+    filename = record["url"].removeprefix("/downloads/")
+    if not re.fullmatch(r"Saq-Bol-[0-9.]+-[0-9a-f]{12}\.apk", filename):
+        raise ValueError("Invalid release path")
+    apk = folder / filename
+    source = record["source_commit"]
     if record["package"] != package or record["version"] != version or not re.fullmatch(r"[0-9a-f]{40}", source):
         raise ValueError("Invalid release record")
     if hashlib.sha256(apk.read_bytes()).hexdigest() != record["apk_sha256"]:
@@ -55,7 +58,7 @@ def verify(folder: Path, version: str, package: str, apksigner: str | None) -> N
         identity = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging, re.M)
         if not identity or identity.groups() != (package, str(record["versionCode"]), version):
             raise ValueError("Android package ID or version differs from the release record")
-        if package.endswith(".website") and "application-debuggable" in badging.splitlines():
+        if "application-debuggable" in badging.splitlines():
             raise ValueError("Website APK must have debugging disabled")
         print(f"Verified Android signature, certificate and package {package} (build {record['versionCode']}).")
     print(f"APK {version}: SHA-256 and all {len(files)} UI files verified against {source}.")
@@ -68,5 +71,4 @@ if __name__ == "__main__":
     version = json.loads((ROOT / "android-app/package.json").read_bytes())["version"].removesuffix(".0")
     if not re.fullmatch(r"\d+(?:\.\d+){1,2}", version):
         raise ValueError("Invalid release version")
-    verify(ROOT / "deliverables/android", version, "kz.qadamx.bccshield.demo", signer)
-    verify(ROOT / "frontend/public/downloads", version, "kz.qadamx.bccshield.website", signer)
+    verify(ROOT / "frontend/public/downloads", version, "kz.qadamx.bccshield.demo", signer)
