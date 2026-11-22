@@ -1,0 +1,28 @@
+1:"$Sreact.fragment"
+2:I[1490,[],""]
+3:I[6976,[],""]
+7:"static/chunks/139-0f3a3bfdd4fd94af.js"
+8:"static/chunks/610-8fe3790ce2837881.js"
+9:"static/chunks/441-3375973b87d8bdee.js"
+a:"static/chunks/669-bd379fc133247bd1.js"
+b:"static/chunks/app/soc/page-cf3f6f54ade390cb.js"
+c:I[9485,["139","$7","610","$8","441","$9","669","$a","370","$b"],"default"]
+d:I[9995,[],"OutletBoundary"]
+e:"$Sreact.suspense"
+10:"ViewportBoundary"
+11:I[9995,[],"$10"]
+13:"MetadataBoundary"
+14:I[9995,[],"$13"]
+16:I[8794,[],"default",1]
+:HL["/qadamxbcc/_next/static/css/e7ea8f8df62ec404.css","style"]
+:HL["/qadamxbcc/_next/static/css/270b45185068f5ce.css","style"]
+:HL["/qadamxbcc/_next/static/css/52d0b6f340c44c4e.css","style"]
+5:X
+6:[["children",{"s":"__PAGE__","h":512,"d":{"r":["$","$1","c",{"children":[["$","$Lc",null,{"config":{"mode":"demo","presets":{"normal":{"sender":"00000000-0000-4000-8000-000000000001","recipient":"+77010000002","amount":"25000","context":{"active_call":false,"from_deposit":false,"is_new_device":false,"is_new_recipient":false}},"scam":{"sender":"00000000-0000-4000-8000-000000000001","recipient":"+77010000003","amount":"900000","context":{"active_call":true,"from_deposit":true,"is_new_device":false,"is_new_recipient":true}},"hub":{"sender":"00000000-0000-4000-8000-000000000001","recipient":"+77010000004","amount":"250000","context":{"active_call":false,"from_deposit":false,"is_new_device":false,"is_new_recipient":true}}},"trafficAccounts":[{"id":"00000000-0000-4000-8000-000000000001","city":"astana","role":"normal"},{"id":"00000000-0000-4000-8000-000000000002","city":"almaty","role":"normal"},{"id":"00000000-0000-4000-8000-000000000003","city":"shymkent","role":"scam"},{"id":"00000000-0000-4000-8000-000000000004","city":"atyrau","role":"hub"}],"demoActionsEnabled":true},"layout":"officer"}],[["$","link","0",{"rel":"stylesheet","href":"/qadamxbcc/_next/static/css/52d0b6f340c44c4e.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","$Ld",null,{"children":["$","$e",null,{"name":"Next.MetadataOutlet","children":"$@f"}]}]]}],"p":false,"v":null}}]]
+4:[["children",{"s":"soc","h":512,"d":{"r":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L3",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}],"p":false,"v":"$5"},"c":"$Q6"}]]
+0:{"P":null,"c":["","soc",""],"q":"","i":false,"t":{"t":{"s":"","h":528,"d":{"r":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/qadamxbcc/_next/static/css/e7ea8f8df62ec404.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}],["$","link","1",{"rel":"stylesheet","href":"/qadamxbcc/_next/static/css/270b45185068f5ce.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"kk","children":["$","body",null,{"children":["$","$L2",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L3",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}]}]]}],"p":false,"v":null},"c":"$Q4"},"h":{"r":["$","$1","h",{"children":[null,["$","$L11",null,{"children":"$L12"}],["$","$L14",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$e",null,{"name":"Next.Metadata","children":"$L15"}]}],null]}],null]}],"p":false,"v":null}},"m":"$undefined","G":["$16",[]],"S":true,"r":"$undefined","s":"$undefined","a":"$undefined","l":"$undefined","p":"$undefined","d":"$undefined","b":"PLOIQ0pJUq8cBKrbQbPVQ"}
+5:C
+12:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+17:I[2949,[],"IconMark"]
+f:null
+15:[["$","title","0",{"children":"Saq Bol × BCC — SOC"}],["$","meta","1",{"name":"description","content":"Saq Bol × BCC · ITU Hackathon 2026. Қазақша және орысша аударым қорғауының прототипі / независимый прототип защиты переводов. Команда foxfordkz-cyber/qadamxbcc."}],["$","meta","2",{"name":"application-name","content":"Saq Bol × BCC"}],["$","link","3",{"rel":"manifest","href":"/qadamxbcc/manifest.webmanifest","crossOrigin":"$undefined"}],["$","link","4",{"rel":"icon","href":"/qadamxbcc/icon.svg?e6978093abe7e196","type":"image/svg+xml","sizes":"any"}],["$","link","5",{"rel":"apple-touch-icon","href":"/qadamxbcc/apple-icon.png?e462eed1f0089c72","type":"image/png","sizes":"180x180"}],["$","$L17","6",{}]]

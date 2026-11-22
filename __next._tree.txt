@@ -1,0 +1,5 @@
+:HL["/qadamxbcc/_next/static/css/e7ea8f8df62ec404.css","style"]
+:HL["/qadamxbcc/_next/static/css/270b45185068f5ce.css","style"]
+:HL["/qadamxbcc/_next/static/css/52d0b6f340c44c4e.css","style"]
+1:[["children",{"s":"__PAGE__","h":160}]]
+0:{"b":"PLOIQ0pJUq8cBKrbQbPVQ","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
