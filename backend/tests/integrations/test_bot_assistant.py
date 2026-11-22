@@ -12,7 +12,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
 from aiogram.fsm.storage.memory import SimpleEventIsolation
 from aiogram.methods import EditMessageText, SendMessage, SetMyCommands
-from aiogram.types import InlineKeyboardMarkup, Update
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from sqlalchemy import func, select
 
 from app.db.base import utcnow
@@ -61,15 +61,19 @@ class Chat:
         chat_id: int = 123,
         chat_type: str = "private",
         media: bool = False,
+        message_id: int = 10,
+        markup: InlineKeyboardMarkup | None = None,
     ) -> None:
         self.counter += 1
         user = {"id": actor, "is_bot": False, "first_name": "Synthetic"}
         message: dict[str, Any] = {
-            "message_id": 10,
+            "message_id": message_id,
             "date": datetime.now(UTC),
             "chat": {"id": chat_id, "type": chat_type},
             "from": user,
         }
+        if markup is not None:
+            message["reply_markup"] = markup.model_dump(exclude_none=True)
         if media:
             message["document"] = {"file_id": "synthetic", "file_unique_id": "offline"}
         else:
@@ -105,6 +109,32 @@ async def chat(iw: IntegrationWorld, monkeypatch: pytest.MonkeyPatch) -> AsyncIt
     finally:
         await dp.storage.close()
         await bot.session.close()
+
+
+async def test_suspicion_keeps_only_the_outstanding_receipt_button(
+    iw: IntegrationWorld, chat: Chat
+) -> None:
+    await iw.queue(await iw.verified())
+    assert await iw.deliver()
+    (notification_id,) = iw.adapter.messages
+    message_id = notification_id.int % 2_000_000_000
+    ack, suspect = f"ack:{notification_id}", f"suspect:{notification_id}"
+    buttons = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Получил", callback_data=ack),
+                InlineKeyboardButton(text="Есть подозрение", callback_data=suspect),
+            ]
+        ]
+    )
+    await chat.feed(suspect, text="Учебная проверка", message_id=message_id, markup=buttons)
+    assert isinstance(chat.last, EditMessageText)
+    remaining = chat.last.reply_markup
+    assert [[b.callback_data for b in row] for row in remaining.inline_keyboard] == [[ack]]
+    await chat.feed(ack, text=chat.last.text, message_id=message_id, markup=remaining)
+    assert isinstance(chat.last, EditMessageText)
+    assert chat.last.reply_markup is None
+    assert "подозрен" in chat.last.text.lower()
 
 
 async def test_private_demo_enrollment_offers_language_without_contact_consent(chat: Chat) -> None:

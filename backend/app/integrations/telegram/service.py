@@ -11,7 +11,7 @@ from app.db.locks import serialized_identity
 from app.integrations.audit import record
 from app.integrations.config import IntegrationSettings
 from app.integrations.errors import IntegrationError
-from app.integrations.models import ContactNotification, TrustedContact
+from app.integrations.models import ContactNotification, IntegrationAudit, TrustedContact
 from app.integrations.telegram.schemas import (
     ContactOut,
     ContactPreferences,
@@ -272,6 +272,17 @@ class TrustedContactService:
                 raise IntegrationError(404, "notification_not_found")
             return await self._apply_callback(row, chat_id, message_id, action)
 
+    async def was_acknowledged(self, notification_id: uuid.UUID) -> bool:
+        entry = await self.session.scalar(
+            select(IntegrationAudit.id)
+            .where(
+                IntegrationAudit.resource_id == notification_id,
+                IntegrationAudit.event == NotificationState.ACKNOWLEDGED,
+            )
+            .limit(1)
+        )
+        return entry is not None
+
     async def _apply_callback(
         self, row: ContactNotification, chat_id: int, message_id: str | None, action: str
     ) -> ContactNotification:
@@ -330,8 +341,13 @@ class TrustedContactService:
         target = (
             NotificationState.SUSPICION if action == "suspect" else NotificationState.ACKNOWLEDGED
         )
-        # A late acknowledgment never erases a suspicion; replay produces no audit duplicates.
-        if row.state not in {target, NotificationState.SUSPICION}:
+        # Callbacks can arrive in either order. Keep suspicion visible while preserving
+        # the first actual receipt acknowledgement in the same serialized transaction.
+        if row.state == NotificationState.SUSPICION and target == NotificationState.ACKNOWLEDGED:
+            if not await self.was_acknowledged(row.id):
+                record(self.session, row.owner_id, row.id, row.correlation_id, target)
+                await self.session.commit()
+        elif row.state != target:
             if target == NotificationState.SUSPICION:
                 status = await self.session.scalar(
                     select(Transaction.status).where(

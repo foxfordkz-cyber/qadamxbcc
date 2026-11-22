@@ -714,15 +714,18 @@ async def test_protection_requires_owner(
     assert (await client.post(path + "/end", headers=owner)).status_code == 404
 
 
+@pytest.mark.parametrize("first_callback", ["ack", "suspect"])
 async def test_family_one_recipient_actual_callback(
-    mobile_world: tuple[AsyncClient, Any], session_factory: async_sessionmaker[AsyncSession]
+    mobile_world: tuple[AsyncClient, Any],
+    session_factory: async_sessionmaker[AsyncSession],
+    first_callback: str,
 ) -> None:
     from datetime import timedelta
 
     from sqlalchemy import select
 
     from app.db.base import utcnow
-    from app.integrations.models import ContactNotification, TrustedContact
+    from app.integrations.models import ContactNotification, IntegrationAudit, TrustedContact
     from app.integrations.telegram.fake_adapter import FakeTelegramAdapter
     from app.integrations.telegram.service import TrustedContactService
     from app.integrations.telegram.worker import deliver_one
@@ -765,18 +768,26 @@ async def test_family_one_recipient_actual_callback(
         assert notice.state == "NOTIFICATION_SENT"
         assert notice.message_id is not None
         await TrustedContactService(db, cfg).callback(
-            notice.id, int(contact.telegram_chat_id), notice.message_id, "ack"
+            notice.id, int(contact.telegram_chat_id), notice.message_id, first_callback
         )
     check = (await client.get(path + "/check", headers=auth)).json()
-    assert check["contact_state"] == "CONTACT_ACKNOWLEDGED"
+    assert check["contact_state"] == (
+        "CONTACT_ACKNOWLEDGED" if first_callback == "ack" else "SUSPICION_REPORTED"
+    )
     assert check["answer"] is None
 
     async with session_factory() as db:
         service = TrustedContactService(db, cfg)
-        for action in ("suspect", "suspect", "ack"):
+        for action in ("suspect", "suspect", "ack", "ack"):
             await service.callback(
                 notice.id, int(contact.telegram_chat_id), notice.message_id, action
             )
+        events = list(
+            await db.scalars(
+                select(IntegrationAudit.event).where(IntegrationAudit.resource_id == notice.id)
+            )
+        )
+        assert events.count("SUSPICION_REPORTED") == events.count("CONTACT_ACKNOWLEDGED") == 1
     notification = (await client.get(path + "/check", headers=auth)).json()
     assert notification["contact_state"] == "SUSPICION_REPORTED"
     core_path = "/mobile/v1/api/transfers/" + txid
