@@ -63,6 +63,9 @@ html[data-web-wallet] .browser-start-help { display: block; }
   margin-inline-start: auto;
   display: grid;
   place-items: center;
+  /* A projected glint must stay inside the decorative seal at every frame. */
+  contain: paint;
+  overflow: hidden;
   perspective: 240px;
   pointer-events: none;
 }

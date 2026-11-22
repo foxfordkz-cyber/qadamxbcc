@@ -105,6 +105,7 @@ test("the wallet opens the team Telegram bot and honors reduced motion", async (
   await enter(page,baseURL);
   const seal=page.locator(".foil-shield");
   await expect(seal).toBeVisible();
+  await expect(page.locator(".foil-emblem")).toHaveCSS("contain","paint");
   await expect(seal).toHaveCSS("animation-name","none");
   const [sealBox,balanceBox]=await Promise.all([seal.boundingBox(),page.locator(".q-balance").boundingBox()]);
   expect(sealBox.y).toBeGreaterThanOrEqual(balanceBox.y+balanceBox.height);
