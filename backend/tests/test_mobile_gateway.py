@@ -16,7 +16,7 @@ from app.core.resources import Resources
 from app.db.base import utcnow
 from app.integrations.cases.models import FraudCase
 from app.integrations.config import IntegrationSettings
-from app.mobile_gateway.app import create_mobile_app, session_key
+from app.mobile_gateway.app import Identity, create_mobile_app, session_key
 from app.mobile_gateway.config import MobileSettings
 from app.mobile_gateway.passwords import encode
 from app.models import Account, Transaction, TransactionStatus
@@ -587,6 +587,32 @@ async def test_post_call_quiet_period_and_packet(
     assert "phone" not in str(packet)
     assert "iban" not in str(packet)
     assert (await client.get("/mobile/v1/account", headers=auth)).json()["pending_call"] is None
+
+
+async def test_incident_packet_is_private_and_masks_recipient(
+    mobile_world: tuple[AsyncClient, Any],
+) -> None:
+    api, cache = mobile_world
+    owner = await login(api)
+    txid = await call_tx(api, owner)
+    path = f"/mobile/v1/protection/{txid}/packet"
+    result = await api.get(path, headers=owner)
+    assert result.status_code == 200
+    data = result.json()
+    assert data["transaction_id"] == txid
+    assert data["amount"] == "900000.00"
+    assert data["recipient_reference"] == make_kz_iban("0000000000002")[-4:]
+    assert "phone" not in result.text
+    assert "iban" not in result.text
+    other_session = uuid.uuid4().hex
+    await cache.set(
+        session_key(other_session), Identity(role="client", subject=OTHER).model_dump_json(), ex=60
+    )
+    other = await api.get(path, headers={"Authorization": f"Bearer {other_session}"})
+    assert other.status_code == 404
+    assert txid not in other.text
+    for staff in (ADMIN_CODE, PLATFORM_CODE):
+        assert (await api.get(path, headers=await login(api, staff))).status_code == 403
 
 
 async def test_pressure_can_cancel_immediately_and_soc_sees_payment_decision(

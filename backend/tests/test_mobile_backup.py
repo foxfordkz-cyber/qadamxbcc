@@ -15,7 +15,8 @@ def test_wal_snapshot_restores_all_rows_before_and_after_reopen(tmp_path: Path) 
         app.executescript("""
             PRAGMA journal_mode=WAL;
             CREATE TABLE accounts(id PRIMARY KEY, balance INTEGER);
-            CREATE TABLE ledger(request_id TEXT UNIQUE, sender REFERENCES accounts(id), amount INTEGER);
+            CREATE TABLE ledger(request_id TEXT UNIQUE,
+                sender REFERENCES accounts(id), amount INTEGER);
             INSERT INTO accounts VALUES ('synthetic-owner', 75000);
             INSERT INTO ledger VALUES ('first', 'synthetic-owner', 25000);
         """)
@@ -31,4 +32,3 @@ def test_wal_snapshot_restores_all_rows_before_and_after_reopen(tmp_path: Path) 
                 restarted.execute("INSERT INTO ledger VALUES ('first', 'synthetic-owner', 25000)")
     with pytest.raises(FileExistsError):
         copy_verified(snapshot, restored)
-
