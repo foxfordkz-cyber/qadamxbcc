@@ -39,7 +39,17 @@ export const caseHistorySchema = z.object({ items: z.array(z.object({ id, actor_
   next_after_version: count.nullable() });
 export const caseNotesSchema = z.object({ items: z.array(z.object({ event_id: id, body: z.string().max(500), expires_at: timestamp })).max(100), next_after_version: count.nullable() });
 const auditSchema = z.object({ event: z.string(), correlation_id: id, created_at: timestamp });
-export const caseEvidenceSchema = z.object({ report_available: z.boolean(), transaction_id: id.nullable(), report_events: z.array(auditSchema).max(20), advisory_only: z.literal(true) });
+const recipientLedgerSchema = z.object({
+  from_time: timestamp, before_time: timestamp, has_more: z.boolean(),
+  items: z.array(z.object({
+    transaction_id: id, direction: z.enum(["incoming", "outgoing"]),
+    amount: z.string().regex(/^\d+(?:\.\d{1,2})?$/), settled_at: timestamp,
+  })).max(8),
+});
+export const caseEvidenceSchema = z.object({
+  case_id: id.optional(), report_available: z.boolean(), transaction_id: id.nullable(),
+  recipient_ledger: recipientLedgerSchema.nullish(), report_events: z.array(auditSchema).max(20), advisory_only: z.literal(true),
+});
 export const caseExportSchema = z.object({ category, state, source, created_at: timestamp,
   events: z.array(z.object({ code: z.string(), state, timestamp })).max(500), demonstration_only: z.literal(true) });
 export const openCaseSchema = z.object({ report_id: id }).strict();
@@ -121,6 +131,8 @@ export function validateSocIntegrationResponse(path: string, value: unknown, met
   const caseMatch = /^integrations\/guardian\/soc\/cases\/([0-9a-f-]{36})(?:\/actions)?$/i.exec(route);
   const txMatch = /^integrations\/soc\/transactions\/([0-9a-f-]{36})(?:\/(?:timeline|summary|story))?$/i.exec(route);
   if (caseMatch && (result as CaseOut).id.toLowerCase() !== caseMatch[1].toLowerCase()) throw new Error("Mismatched case response");
+  const caseEvidenceMatch = /^integrations\/guardian\/soc\/cases\/([0-9a-f-]{36})\/evidence$/i.exec(route);
+  if (caseEvidenceMatch && (result as CaseEvidence).case_id && (result as CaseEvidence).case_id !== caseEvidenceMatch[1].toLowerCase()) throw new Error("Mismatched case evidence");
   if (txMatch && (result as IntegrationSummary).transaction_id.toLowerCase() !== txMatch[1].toLowerCase()) throw new Error("Mismatched transaction response");
   return result;
 }

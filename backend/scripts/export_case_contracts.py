@@ -103,8 +103,10 @@ def case_examples() -> None:
             cases + "/{case_id}/evidence",
             None,
             {
+                "case_id": cid,
                 "report_available": True,
                 "transaction_id": None,
+                "recipient_ledger": None,
                 "report_events": [],
                 "advisory_only": True,
             },

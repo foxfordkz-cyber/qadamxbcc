@@ -60,7 +60,22 @@ test("a juror can select a saved recipient and an officer can inspect the same p
     expect(linked).toBeDefined();
     await officerPage.locator('[data-nav="cases"]').click();
     await officerPage.locator(`[data-case="${linked.id}"]`).click();
-    await expect(officerPage.locator(`[data-detail="${reports[0].transaction_id}"]`)).toBeVisible();
+    await expect(officerPage.locator(`.reason-groups [data-detail="${reports[0].transaction_id}"]`)).toBeVisible();
+    // In the prepared incoming-payment cases, the preceding settled outgoing
+    // receipt is recorded a minute earlier, even if other seed rows vary.
+    const incomingCase = cases.find(item => !reports.some(report => report.id === item.report_id));
+    const path = guardian + "/soc/cases/" + incomingCase.id + "/evidence";
+    await request(client, path, 403);
+    const evidence = await request(officer, path);
+    const first = evidence.recipient_ledger.items[0];
+    expect(Date.parse(first.settled_at)).toBeLessThan(Date.parse(evidence.recipient_ledger.before_time));
+    await officerPage.locator('[data-nav="cases"]').click();
+    await officerPage.locator(`[data-case="${incomingCase.id}"]`).click();
+    const receipt = officerPage.locator(`.case-ledger [data-detail="${first.transaction_id}"]`);
+    await expect(receipt).toContainText(/₸/);
+    await receipt.click();
+    await expect(officerPage.locator('[data-screen="detail"]')).toBeVisible();
+    expect(new URL(officerPage.url()).searchParams.get("operation")).toBe(first.transaction_id);
   } finally {
     await Promise.all([customerContext.close(), officerContext.close()]);
   }

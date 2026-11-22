@@ -42,6 +42,11 @@ test("case and incident contracts reject cross-resource or non-advisory receipts
   assert.equal("signing_key" in caseSchema.parse({ ...caseValue, signing_key: "do not expose" }), false);
   assert.throws(() => caseSchema.parse({ ...caseValue, demonstration_only: false }));
   assert.throws(() => validateSocIntegrationResponse(`integrations/guardian/soc/cases/${otherId}`, caseValue));
+  const evidence = { case_id: caseId, transaction_id: reportId, report_available: true, report_events: [],
+    advisory_only: true, recipient_ledger: { from_time: caseValue.created_at, before_time: caseValue.expires_at,
+      has_more: false, items: [{ transaction_id: otherId, amount: "56.45", settled_at: caseValue.status_since, direction: "incoming" }] } };
+  assert.deepEqual(validateSocIntegrationResponse(`integrations/guardian/soc/cases/${caseId}/evidence`, evidence), evidence);
+  assert.throws(() => validateSocIntegrationResponse(`integrations/guardian/soc/cases/${otherId}/evidence`, evidence));
   assert.throws(() => validateSocIntegrationResponse(`integrations/soc/transactions/${otherId}/timeline`, {
     transaction_id: caseId, as_of: caseValue.created_at, events: [], next_cursor: null, advisory_only: true,
   }));

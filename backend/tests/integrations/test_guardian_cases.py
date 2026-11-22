@@ -1,7 +1,8 @@
 import asyncio
 import os
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -13,7 +14,7 @@ from app.integrations.cases.policy_review import compare_policies
 from app.integrations.cases.service import expire_cases
 from app.integrations.guardian_reports import ReportRequest, create_report
 from app.integrations.models import GuardianReport
-from app.models import Transaction
+from app.models import Transaction, TransactionStatus
 from tests.integrations.conftest import IntegrationWorld
 
 ROOT = "/api/v1/integrations/guardian"
@@ -21,7 +22,9 @@ CASES = ROOT + "/soc/cases"
 DESCRIPTION = "Synthetic caller demanded urgent confidential action."
 
 
-async def opened(iw: IntegrationWorld, *, contact: bool = False) -> dict[str, Any]:
+async def opened(
+    iw: IntegrationWorld, *, contact: bool = False, transaction_id: uuid.UUID | None = None
+) -> dict[str, Any]:
     cid = uuid.UUID(await iw.verified()) if contact else None
     async with iw.factory() as session:
         report = await create_report(
@@ -30,6 +33,7 @@ async def opened(iw: IntegrationWorld, *, contact: bool = False) -> dict[str, An
             ReportRequest(
                 category="impersonation",
                 description=DESCRIPTION,
+                transaction_id=transaction_id,
                 confirmed_demo_submission=True,
             ),
             uuid.uuid4(),
@@ -101,6 +105,7 @@ async def test_case_lifecycle_history_export_analytics(iw: IntegrationWorld) -> 
     assert metrics["oldest_current_status_seconds"]["IN_REVIEW"] >= 0
     evidence = (await iw.client.get(f"{CASES}/{row['id']}/evidence", headers=iw.auth("soc"))).json()
     assert evidence["report_available"]
+    assert evidence["recipient_ledger"] is None
     assert len(evidence["report_events"]) == 1
 
 
@@ -113,6 +118,7 @@ async def test_case_role_boundary_and_safe_validation(iw: IntegrationWorld) -> N
             CASES + "/analytics",
             f"{CASES}/{row['id']}",
             f"{CASES}/{row['id']}/notes",
+            f"{CASES}/{row['id']}/evidence",
             f"{CASES}/{row['id']}/export",
         ):
             assert (await iw.client.get(path, headers=headers)).status_code == 403
@@ -144,6 +150,92 @@ async def test_case_role_boundary_and_safe_validation(iw: IntegrationWorld) -> N
     assert response.status_code == 422
     assert invalid not in response.text
     assert response.headers["Cache-Control"] == "no-store"
+
+
+async def test_case_ledger_uses_settlement_before_original_transfer(iw: IntegrationWorld) -> None:
+    payment = await iw.transfer()
+    tx_id = uuid.UUID(str(payment["transaction_id"]))
+    case = await opened(iw, transaction_id=tx_id)
+    path = f"{CASES}/{case['id']}/evidence"
+    before = datetime.fromisoformat(str(payment["created_at"]))
+    oldest = before - timedelta(hours=24)
+
+    def movement(
+        index: int,
+        created: datetime,
+        settled: datetime | None = None,
+        *,
+        outgoing: bool = False,
+        status: TransactionStatus = TransactionStatus.APPROVED,
+        currency: str = "KZT",
+    ) -> Transaction:
+        return Transaction(
+            id=uuid.UUID(int=index),
+            device_id="sample",
+            sender_id=iw.recipient.id if outgoing else iw.owner.id,
+            recipient_id=iw.owner.id if outgoing else iw.recipient.id,
+            created_at=created,
+            resolved_at=settled,
+            amount=Decimal(f"{index}.35"),
+            status=status,
+            currency=currency,
+        )
+
+    response = await iw.client.get(path, headers=iw.auth("soc"))
+    assert response.json()["recipient_ledger"]["items"] == []
+    async with iw.factory() as session:
+        session.add_all(
+            [
+                movement(1, oldest),
+                # Initiated outside the period but credited during it.
+                movement(
+                    2, oldest - timedelta(hours=1), before - timedelta(minutes=1), outgoing=True
+                ),
+                movement(3, oldest, before + timedelta(minutes=1)),
+                movement(4, before),
+                movement(5, oldest, before),
+                movement(6, oldest, status=TransactionStatus.COOLING_OFF),
+                movement(7, oldest, status=TransactionStatus.BLOCKED),
+                movement(8, oldest, status=TransactionStatus.CANCELLED),
+                movement(9, oldest, currency="USD"),
+                movement(10, oldest - timedelta(seconds=1)),
+            ]
+        )
+        await session.commit()
+    response = await iw.client.get(path, headers=iw.auth("soc"))
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.json()["case_id"] == case["id"]
+    history = response.json()["recipient_ledger"]
+    assert datetime.fromisoformat(history["before_time"]) == before
+    assert datetime.fromisoformat(history["from_time"]) == oldest
+    assert not history["has_more"]
+    assert [
+        (uuid.UUID(x["transaction_id"]).int, x["direction"], x["amount"]) for x in history["items"]
+    ] == [
+        (2, "outgoing", "2.35"),
+        (1, "incoming", "1.35"),
+    ]
+    assert datetime.fromisoformat(history["items"][0]["settled_at"]) == before - timedelta(
+        minutes=1
+    )
+    assert set(history["items"][0]) == {"transaction_id", "direction", "amount", "settled_at"}
+    async with iw.factory() as session:
+        session.add_all(movement(i, oldest) for i in range(20, 29))
+        await session.commit()
+    capped = (await iw.client.get(path, headers=iw.auth("soc"))).json()["recipient_ledger"]
+    assert capped["has_more"]
+    assert len(capped["items"]) == 8
+    assert uuid.UUID(capped["items"][1]["transaction_id"]).int == 28
+    # Expiring a linked report removes access to its ledger even if the case is still open.
+    async with iw.factory() as session:
+        report = await session.get(GuardianReport, uuid.UUID(case["report_id"]))
+        assert report is not None
+        report.expires_at = utcnow() - timedelta(seconds=1)
+        await session.commit()
+    expired = (await iw.client.get(path, headers=iw.auth("soc"))).json()
+    assert not expired["report_available"]
+    assert expired["transaction_id"] is None
+    assert expired["recipient_ledger"] is None
 
 
 async def test_shadow_review_uses_initial_decision_and_retracts_reopened_label(
