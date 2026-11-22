@@ -17,8 +17,9 @@ jobs:
       - name: Start a clean Android 30 device
         run: |
           set -euo pipefail
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
           sdkmanager 'system-images;android-30;google_apis;x86_64' 'emulator' 'platform-tools'
-          sudo setfacl -m u:"$(id -un)":rw /dev/kvm
+          sudo chown "$(id -u):$(id -g)" /dev/kvm
           echo no | avdmanager create avd -n qadam-release -k 'system-images;android-30;google_apis;x86_64' --device pixel
           "$ANDROID_HOME/emulator/emulator" -avd qadam-release -port 5556 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect >"$RUNNER_TEMP/emulator.log" 2>&1 &
           timeout 240 bash -c 'until [[ "$(adb -s emulator-5556 shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" == 1 ]]; do sleep 3; done'
