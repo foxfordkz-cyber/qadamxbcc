@@ -9,7 +9,7 @@
 В PowerShell из родительской папки:
 
 ```powershell
-git clone --branch main https://github.com/foxfordkz-cyber/qadamxbcc.git
+git clone --branch mobile/android-studio-handoff https://github.com/foxfordkz-cyber/qadamxbcc.git
 cd qadamxbcc
 npm.cmd --prefix android-app ci
 npm.cmd --prefix android-app run web
@@ -26,9 +26,9 @@ cd ../..
 
 APK лежит в `android-app/android/app/build/outputs/apk/debug/app-debug.apk`. Для разработки используется обычная локальная debug-подпись. Если подпись установленного на Honor приложения отличается, используйте отдельный эмулятор. Не удаляйте установленное приложение с пользовательскими данными ради проверки сборки.
 
-### Сборка для review
+### Проверенная сборка
 
-Ветка для review собирает **2.9 (versionCode 15)**. Вариант showcase имеет идентификатор `kz.qadamx.bccshield.demo`, отключённую отладку и подпись принятой сборки Honor 2.8 (11). Вариант debug использует отдельный идентификатор `kz.qadamx.bccshield.dev`. Путь Gradle к showcase — `app/build/outputs/apk/showcase/app-showcase.apk` относительно Android-проекта. Для обновления телефона используйте [подписанный APK](../frontend/public/downloads/Saq-Bol-2.9-b7d4f644f537.apk). Сборка на машине с другим локальным ключом получит другой сертификат.
+Сборка 2.8 имеет versionCode 11 и package `kz.qadamx.bccshield.demo`. Проверенная цепочка на Windows использует JDK 21, SDK 36, Gradle Wrapper и npm ci. Вариант для демонстрации лежит в `app/build/outputs/apk/showcase/app-showcase.apk` относительно Android-проекта. Он отключает отладку и сохраняет подпись существующего учебного ключа на машине сборки. Debug APK другого разработчика может иметь другую подпись. Для обновления телефонов используйте переданный готовый APK.
 
 ## Где лежит приложение
 
@@ -45,3 +45,9 @@ APK по умолчанию использует `https://saq-bol-mobile.onrende
 Для заполненной репетиции на ноутбуке используйте [демоданные и сценарии](DEMO_DATA_RU.md). По умолчанию этот изолированный кошелёк доступен на loopback в браузере ноутбука. На физическом телефоне обычная сборка по-прежнему покажет публичную базу. Подключение к собственному доступному HTTPS-стенду требует сборки с его origin.
 
 При пустом экране проверьте синхронизацию Capacitor после изменения файлов и версию APK. При HTTP 401 проверьте соответствие файла доступа адресу стенда. HTTP 403 означает отказ серверной роли. При ошибке SDK установите Platform 36 и укажите установленный SDK в настройках Android Studio. Файл local.properties, ключи и пароли остаются на компьютере разработчика.
+
+## Командный кандидат для Honor
+
+Ветка `mobile/android-studio-handoff` указывает на принятые командой исходники `4477fc6`. Для сборки именно приложенного командного APK откройте ревизию `01bcc96998d24d2ff70d5c87276562cfc1bfeff9` из ветки `feature/final-demo-release-readiness`. Под JDK 21 и SDK 36 выполнены npm ci, Capacitor sync и Gradle assembleShowcase assembleDebug. Установка `.demo` с кодом 17 обновляется поверх принятой линии Honor. Debug имеет отдельный пакет `.dev`. Контрольная сумма, подпись и origin указаны в [командном паспорте](../frontend/public/downloads/team.json).
+
+Обе цели Gradle также собраны из чистого Git-архива этой ревизии с зафиксированными npm-зависимостями, SDK 36 и Android Studio JBR 25. Gradle выполнил 402 задачи. В подписанном APK проверены все 45 клиентских ресурсов из чистой синхронизации Capacitor. 44 файла совпали побайтово, один текстовый файл отличается только переводами строк LF/CRLF. Для проверки передаваемого бинарного файла используйте SHA-256 из `team.json`.
