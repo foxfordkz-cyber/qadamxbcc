@@ -1,3 +1,4 @@
+import { last } from "./compat.mjs";
 import { shortDate } from "./wallet-date.mjs";
 // The mobile gateway supplies decimal KZT amounts and one row per Kazakhstan date.
 function cents(value) {
@@ -24,7 +25,7 @@ export function bucketDays(series, days) {
     }
     groups.push({
       from: rows[0].day,
-      to: rows.at(-1).day,
+      to: last(rows).day,
       incoming: decimal(income),
       outgoing: decimal(expense),
     });
@@ -72,7 +73,7 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
     );
   const selected =
     groups.find((g) => selectedDate >= g.from && selectedDate <= g.to) ||
-    groups.at(-1);
+    last(groups);
   const tickLabel = (value) => {
     const unit = value >= 1e9 ? [1e9, T("млрд", "млрд")] :
       value >= 1e6 ? [1e6, "млн"] : value >= 1e3 ? [1e3, T("тыс.", "мың")] : [1, ""];
@@ -133,7 +134,7 @@ export function cashPlot(d, selectedDate, { T, E, amount, icon }) {
     '</span><span>0</span></div><div class="plot-viewport" tabindex="0"><div class="plot-columns">' +
     cols +
     "</div></div></div>" +
-    '<div class="chart-steps"><button data-chart-step="-1" '+(selected===groups[0]?'disabled':'')+'>'+T("← Раньше","← Бұрын")+'</button><button data-chart-step="1" '+(selected===groups.at(-1)?'disabled':'')+'>'+T("Позже →","Кейін →")+'</button></div>' +
+    '<div class="chart-steps"><button data-chart-step="-1" '+(selected===groups[0]?'disabled':'')+'>'+T("← Раньше","← Бұрын")+'</button><button data-chart-step="1" '+(selected===last(groups)?'disabled':'')+'>'+T("Позже →","Кейін →")+'</button></div>' +
     '<button class="selected-day" data-drill-day="' +
     selected.from +
     '" data-through="' +

@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from app.core.resources import Resources
 from app.integrations.capabilities import Principal, Role, issue_token
@@ -16,6 +17,7 @@ from app.integrations.config import IntegrationSettings
 from app.integrations.guardian_reports import expire_reports
 from app.integrations.nbk_mock.adapter import MockGatewayAdapter
 from app.integrations.nbk_mock.client import GatewayClient
+from app.integrations.nbk_mock.models import ExternalCheck
 from app.integrations.observability import HEARTBEAT
 from app.integrations.orchestrator import process_one
 from app.integrations.telegram.fake_adapter import FakeTelegramAdapter
@@ -196,6 +198,24 @@ async def seed_soc_rehearsal(app: FastAPI, config: IntegrationSettings) -> dict[
                     "case_id": case["id"],
                 }
             )
+        # The contact notification belongs to the first transfer. Its completion
+        # doesn't establish that the worker has also enriched the second case.
+        expected = {uuid.UUID(str(item["transaction_id"])) for item in cases}
+        resources: Resources = app.state.resources
+        async with asyncio.timeout(20):
+            while True:
+                async with resources.session_factory() as session:
+                    checks = await session.scalars(
+                        select(ExternalCheck).where(ExternalCheck.transaction_id.in_(expected))
+                    )
+                    ready = {
+                        check.transaction_id
+                        for check in checks
+                        if check.result and check.result.get("source") == "MOCK"
+                    }
+                if ready == expected:
+                    break
+                await asyncio.sleep(0.2)
         return {
             "cases": cases,
             "delivery": "fake",

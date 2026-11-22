@@ -1,3 +1,4 @@
+import { hasOwn, last } from "./compat.mjs";
 import { ledgerInstant } from "./wallet-date.mjs";
 
 // Views for the connected wallet. Case and access decisions always come from the gateway.
@@ -7,7 +8,7 @@ export function serviceDesk({ T, E, when, title, button, amount, status }) {
     legitimate_transfer: ["Перевод признан правомерным", "Аударым заңды деп танылды"],
     insufficient_evidence: ["Недостаточно сведений", "Мәлімет жеткіліксіз"],
   };
-  const outcomeLabel = code => Object.hasOwn(outcomes, code) ? T(...outcomes[code]) : "";
+  const outcomeLabel = code => hasOwn(outcomes, code) ? T(...outcomes[code]) : "";
   function closeCase(c) {
     if (!["IN_REVIEW", "ESCALATED", "NEEDS_INFORMATION", "RESOLVED"].includes(c.state)) return "";
     return `<form id="case-close" class="form-stack paper"><h2>${T("Результат расследования", "Тексеру қорытындысы")}</h2>
@@ -76,7 +77,7 @@ export function serviceDesk({ T, E, when, title, button, amount, status }) {
         button("customer-callback",T("Попросить обратный звонок","Кері қоңырау сұрау"),"secondary")+'</section>' : "");
   }
   function officerCallback(c,view) {
-    if (!view || !Object.hasOwn(view,"callback")) return "";
+    if (!view || !hasOwn(view,"callback")) return "";
     const active = ["NEW","IN_REVIEW","NEEDS_INFORMATION","ESCALATED"].includes(c.state);
     const row = view.callback;
     const canInvite = active && c.assignee==="demo_analyst_a" && (!row || row.status==="customer_requested");
@@ -111,7 +112,7 @@ export function serviceDesk({ T, E, when, title, button, amount, status }) {
         const height=Math.max(0,Math.min(100,100*b.requests/max));
         return '<rect x="'+(10*i)+'" y="'+(100-height)+'" width="8" height="'+height+'"/>';
       }).join("")+'</svg>'+
-      (v.buckets.length ? '<div class="desk-axis"><small>'+minute(v.buckets[0].minute)+'</small><small>'+minute(v.buckets.at(-1).minute)+' · UTC+5</small></div>' : '')+
+      (v.buckets.length ? '<div class="desk-axis"><small>'+minute(v.buckets[0].minute)+'</small><small>'+minute(last(v.buckets).minute)+' · UTC+5</small></div>' : '')+
       '<details><summary>'+T("Поминутные значения","Әр минуттың мәндері")+'</summary><table class="desk-table"><thead><tr><th>'+T("Время","Уақыт")+'</th><th>'+
       T("Запросы","Сұраулар")+'</th><th>429</th><th>5xx</th></tr></thead><tbody>'+
       v.buckets.map(b=>'<tr><th>'+minute(b.minute)+'</th><td>'+E(b.requests)+'</td><td>'+E(b.rate_limited)+'</td><td>'+E(b.server_errors)+'</td></tr>').join("")+

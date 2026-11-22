@@ -172,6 +172,9 @@ def build_ingress_router(
             try:
                 service = TrustedContactService(session, cfg)
                 result = await process_update(service, update)
+                pending_receipt = result.state == "SUSPICION_REPORTED" and not (
+                    await service.was_acknowledged(result.resource_id)
+                )
                 language = "ru"
                 if result.state == "CONTACT_VERIFIED":
                     contact = await service.get_contact(result.resource_id)
@@ -190,7 +193,16 @@ def build_ingress_router(
             if result.state in {"CONTACT_REVOKED", "SUSPICION_REPORTED"}
             else message.reply_markup
         )
-        if result.state == "CONTACT_VERIFIED":
+        if pending_receipt and message.reply_markup:
+            receipt_buttons = [
+                button
+                for row in message.reply_markup.inline_keyboard
+                for button in row
+                if button.callback_data == f"ack:{result.resource_id}"
+            ]
+            if receipt_buttons:
+                markup = InlineKeyboardMarkup(inline_keyboard=[receipt_buttons])
+        elif result.state == "CONTACT_VERIFIED":
             # Finish onboarding in the same message; do not leave the user on consent buttons.
             await state.set_data({"language": language})
             text = " / ".join(labels) + "\n\n" + TEXT[language]["welcome"]

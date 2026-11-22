@@ -87,33 +87,34 @@ export class Gateway {
     if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
     const timeoutMs = path === "/auth/login" || path === "/sessions" ? 120000 : 20000;
     const sentToken = this.token;
-    let response;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      response = await this.fetcher(`${this.origin}/mobile/v1${path}`, {
+      const response = await this.fetcher(`${this.origin}/mobile/v1${path}`, {
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         cache: "no-store",
         credentials: this.webSession ? "same-origin" : "omit",
         redirect: "error",
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: controller.signal,
       }, timeoutMs);
-    } catch {
-      throw new GatewayError(0);
-    } // Never replay a mutation with an unknown outcome.
-    if (!response.ok) {
-      if (response.status === 401 && this.token === sentToken) {
-        this.token = null;
-        this.role = null;
-        if (sentToken) this.onExpired?.();
+      if (!response.ok) {
+        if (response.status === 401 && this.token === sentToken) {
+          this.token = null;
+          this.role = null;
+          if (sentToken) this.onExpired?.();
+        }
+        throw new GatewayError(response.status, response.headers.get("Retry-After"));
       }
-      throw new GatewayError(
-        response.status,
-        response.headers.get("Retry-After"),
-      );
+      return response.status === 204 ? null : await response.json();
+    } catch (error) {
+      if (error instanceof GatewayError) throw error;
+      if (error instanceof SyntaxError) throw new GatewayError(502);
+      throw new GatewayError(0);
+    } finally {
+      clearTimeout(timer);
     }
-    if (response.status === 204) return null;
-    return response.json();
   }
   async login(code) {
     const result = await this.request("/sessions", "POST", { code });

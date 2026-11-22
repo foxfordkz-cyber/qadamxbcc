@@ -1,3 +1,4 @@
+import { last } from "./compat.mjs";
 import { ledgerInstant, shortDate } from "./wallet-date.mjs";
 import { cashPlot } from "./spending-chart.mjs";
 
@@ -295,7 +296,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
     for(let i=0;i<d.series.length;i+=width){
       const rows=d.series.slice(i,i+width);
       const total=rows.reduce((sum,r)=>sum+Object.values(r.states).reduce((a,b)=>a+b,0),0);
-      groups.push({from:shortDate(rows[0].day),to:shortDate(rows.at(-1).day),total});
+      groups.push({from:shortDate(rows[0].day),to:shortDate(last(rows).day),total});
     }
     const max=Math.max(...groups.map(g=>g.total),1);
     return '<section class="paper"><h2>'+T("Динамика операций","Операциялар динамикасы")+'</h2><p class="fine">'+
