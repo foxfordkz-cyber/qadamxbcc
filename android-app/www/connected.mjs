@@ -2,11 +2,11 @@ import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
-import { walletUI, icon, formatTenge as amount } from "./wallet.mjs";
+import { walletUI, icon, cardThumbnail, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
 import { shortcuts, familyView, checkView, packetContent, secondConfirmationView, secondSettingsView } from "./guardian.mjs";
 import { packetView } from "./packet.mjs";
-import { canConfirmPayee, checkPayee, payeeFields, payeeVerdict, phoneNumber } from "./payee-check.mjs";
+import { canConfirmPayee, checkPayee, needsCallAnswer, payeeFields, payeeVerdict, phoneNumber, submissionContext } from "./payee-check.mjs";
 import { readScreenshot } from "./screenshot.mjs";
 import * as identity from "./identity.mjs";
 import { PUBLIC_DEMO, openExternal } from "./native.mjs";
@@ -358,7 +358,7 @@ async function open(next, id, remember=true) {
         if (product && next === "home") account = await gateway.request("/account");
       }
     } else if(next==="analytics") data=await gateway.request("/wallet/analytics?days="+walletDays);
-    else if(next==="socAnalytics")data=await gateway.request("/wallet/soc?days="+socDays);
+    else if(next==="socAnalytics")data=await gateway.request("/wallet/soc?days="+socDays+"&include_policy=true");
     else if(next==="incoming")data=await gateway.request("/wallet/incoming/"+id);
     else if(product && next==="safety") [account,circle]=await Promise.all([gateway.request("/account"),api("trusted-contacts")]);
     else if (next === "family") {
@@ -378,7 +378,7 @@ async function open(next, id, remember=true) {
       account = await gateway.request("/account");
     } else if (product && next === "review" && draft?.payee) {
       const reviewed = draft;
-      const check = await checkPayee(reviewed, api, account?.recipients);
+      const check = await checkPayee(reviewed, api, account?.recipients, account?.supports_call_question);
       if (page === "review" && draft === reviewed) data = check;
     } else if (next === "detail") {
       accept(await api(`transfers/${selectedId}`));
@@ -546,16 +546,35 @@ const presetValues = {
 function transferSteps(review=false) {
   return `<ol class="transfer-steps"><li ${review ? "" : 'aria-current="step"'}>01 · ${T("Реквизиты", "Деректемелер")}</li><li ${review ? 'aria-current="step"' : ""}>02 · ${T("Проверка", "Тексеру")}</li><li>03 · ${T("Результат", "Нәтиже")}</li></ol>`;
 }
+function readTransferDraft(fields) {
+  const manual = fields.get("recipient_phone") === "manual";
+  const personal = product && !presetMode;
+  return {
+    recipient_phone: String(fields.get(manual ? "manual_phone" : "recipient_phone") || ""),
+    amount: String(fields.get("amount") || ""),
+    ...(personal ? {payee: {
+      manual,
+      bank: String(fields.get("payee_bank") || "bcc"),
+      expectedName: String(fields.get("payee_name") || ""),
+    }} : {}),
+    context: {
+      active_call: fields.has("active_call"),
+      from_deposit: fields.has("from_deposit"),
+      ...(personal ? {} : {is_new_recipient: fields.has("is_new_recipient")}),
+    },
+  };
+}
 function transferView() {
   if (pending)
     return `${title(T("Сначала проверь предыдущий запрос", "Алдыңғы сұрауды тексер"))}${button("recover", T("Проверить статус", "Күйін тексеру"))}${button("abandon", T("Безопасно закрыть запрос", "Сұрауды қауіпсіз жабу"), "secondary")}`;
   const hidden = balanceHidden();
-  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + transferSteps() + `<div class="from-account">${icon("outgoing")}<span><small>${T("Со счёта","Шоттан")}</small><strong>Saq Bol × BCC · •••• ${hidden ? "••••" : E(account?.card_last4)}</strong><small>${T("Остаток на счёте", "Шоттағы қалдық")} · ${hidden ? "•••••• ₸" : account ? amount(account.balance) : "—"}</small></span></div><section class="paper transfer-sheet"><form id="transfer-form" class="form-stack">
+  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + transferSteps() + `<div class="from-account">${cardThumbnail}<span><small>${T("Со счёта","Шоттан")}</small><strong>Saq Bol · •••• ${hidden ? "••••" : E(account?.card_last4 || "••••")}</strong><small>${T("Остаток на счёте", "Шоттағы қалдық")} · ${hidden ? "•••••• ₸" : account ? amount(account.balance) : "—"}</small></span></div><section class="paper transfer-sheet"><form id="transfer-form" class="form-stack">
     <label>${T("Учебный получатель","Оқу аударымын алушы")}<select required name="recipient_phone"><option value="">${T("Выбери получателя","Алушыны таңда")}</option>
     ${(account?.recipients ?? []).map(r => `<option value="${E(r.phone)}" ${!draft?.payee?.manual && draft?.recipient_phone === r.phone ? "selected" : ""}>${E(r.name)}</option>`).join("")}
     <option value="manual" ${draft?.payee?.manual ? "selected" : ""}>${T("Ввести номер телефона", "Телефон нөмірін енгізу")}</option></select></label>
     ${payeeFields(draft,T,E)}
     ${input("amount",T("Сумма, ₸","Сома, ₸"), draft?.amount ?? "", "number", 'required min="0.01" max="999999999" step="0.01" inputmode="decimal"')}
+    <div class="amount-choices" role="group" aria-label="${T("Выбрать сумму перевода", "Аударым сомасын таңдау")}">${[5000, 10000, 25000].map(value => `<input type="button" data-quick-amount="${value}" value="${amount(value)}">`).join("")}</div>
     <label class="tick-field"><input type="checkbox" name="active_call" ${draft?.context?.active_call ? "checked" : ""}>${T("Меня просят перевести во время звонка","Қоңырау кезінде аударуды сұрады")}</label>
     <button class="primary">${T("Проверить реквизиты","Деректемелерді тексеру")}</button></form></section>${button("presets",T("Демонстрационные сценарии","Демонстрациялық сценарийлер"),"secondary")}`;
   const value = draft ?? presetValues.normal;
@@ -598,11 +617,22 @@ async function back() {
   const previous = backStack.pop();
   await open(previous?.page || "home", previous?.id, false);
 }
+const callAnswers = {
+  on_call: ["Да, разговор ещё идёт", "Иә, әлі сөйлесіп жатырмын"],
+  after_call: ["Да, звонок уже закончился", "Иә, қоңырау аяқталды"],
+  no_request: ["Нет, меня не просили", "Жоқ, ешкім сұраған жоқ"],
+};
+function callQuestion() {
+  return `<fieldset class="call-question"><legend>${T("Вас по телефону попросили сделать именно этот перевод?", "Осы аударымды жасауды сізден телефон арқылы сұрады ма?")}</legend>
+    ${Object.entries(callAnswers).map(([value, labels]) => `<label class="tick-field"><input type="radio" name="call_pressure_answer" value="${value}" ${draft.callAnswer === value ? "checked" : ""}>${T(...labels)}</label>`).join("")}</fieldset>`;
+}
 function reviewView() {
-  const callRequest = draft.context.active_call ? "" : `<label class="tick-field"><input type="checkbox" name="payment_requested_after_call" ${draft.context.payment_requested_after_call ? "checked" : ""}>${T("В только что завершившемся звонке меня попросили сделать этот перевод","Жаңа ғана аяқталған қоңырауда менен осы аударымды жасауды сұрады")}</label>`;
+  const ask = needsCallAnswer(draft, data, account?.supports_call_question);
+  const callRequest = ask ? callQuestion() : draft.context.active_call ? "" : `<label class="tick-field"><input type="checkbox" name="payment_requested_after_call" ${draft.context.payment_requested_after_call ? "checked" : ""}>${T("В только что завершившемся звонке меня попросили сделать этот перевод","Жаңа ғана аяқталған қоңырауда менен осы аударымды жасауды сұрады")}</label>`;
   const checked = draft.payee ? payeeVerdict(data,draft.payee.bank,T,E) : "";
   const name = draft.payee ? data?.display_name : account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name;
-  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}${transferSteps(true)}<section class="paper transfer-review"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(name || draft.recipient_phone)}</h2>${name ? "<small>"+E(draft.recipient_phone)+"</small>" : ""}<div class="amount">${amount(draft.amount)}</div><p>${T("Запрос уйдёт в тестовый antifraud и сохранится в его истории. Это не настоящий банковский перевод.", "Сұрау тест antifraud-қа жіберіліп, тарихта сақталады. Бұл нақты банк аударымы емес.")}</p>${callRequest}</section>${checked}${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"),"primary",draft.payee && !canConfirmPayee(data) ? "disabled" : "")}`;
+  const disabled = (draft.payee && !canConfirmPayee(data)) || (ask && !draft.callAnswer);
+  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}${transferSteps(true)}<section class="paper transfer-review"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(name || draft.recipient_phone)}</h2>${name ? "<small>"+E(draft.recipient_phone)+"</small>" : ""}<div class="amount">${amount(draft.amount)}</div><p>${T("Перевод между учебными счетами", "Оқу шоттары арасындағы аударым")}</p>${callRequest}</section>${checked}${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"),"primary",disabled ? "disabled" : "")}`;
 }
 const questions = [
   [
@@ -687,6 +717,15 @@ function moneyOutcome(state) {
   };
   return wording[state]?T(...wording[state]):"";
 }
+function officerCallEvidence(tx) {
+  const answer = tx.context?.call_pressure_answer;
+  const statement = Object.hasOwn(callAnswers, answer) ? T(...callAnswers[answer]) + " · " + when(tx.created_at)
+    : T("Ответ на вопрос не зарегистрирован", "Сұраққа жауап тіркелмеген");
+  const log = tx.bank_call_evidence;
+  return `<section class="paper"><h2>${T("Ответ клиента об этом переводе","Аударым туралы клиенттің жауабы")}</h2>
+    <p>${E(statement)}</p>${log ? `<p>${T("Журнал исходящих звонков банка","Банктің шығыс қоңыраулар журналы")} ·
+      ${log.outbound_call_listed ? T("Запись найдена","Жазба бар") : T("Запись не найдена","Жазба жоқ")} · ${when(log.checked_at)}</p>` : ""}</section>`;
+}
 function detailView() {
   if (!evaluation) return "";
   const tx = evaluation,
@@ -698,7 +737,7 @@ function detailView() {
     const hold=held?coolingReceipt(tx, admin):"";
     const contact=held?'<section class="paper"><h2>'+T("Доверенный контакт в Telegram","Telegram-дағы сенімді адам")+'</h2><p>'+(!data||data.transaction_id!==tx.transaction_id?T("Обновите статус для проверки доставки.","Жеткізу күйін жаңартыңыз."):data.contact_state?E(label(data.contact_state)):T("Уведомление для этой операции пока не зарегистрировано.","Бұл операцияның хабарламасы әлі тіркелмеген."))+'</p>'+button("notifications",T("История уведомлений","Хабарлама тарихы"),"secondary")+'</section>':"";
     return title(status(tx.status),tx[lang==="ru"?"headline_ru":"headline_kk"])+
-      '<section class="paper receipt"><div class="amount">'+amount(tx.amount)+'</div><strong>'+E(tx.recipient?.display_name)+'</strong><p>'+E(tx.recipient?.iban_masked)+'</p>'+wallet.badge(tx.status)+'<p class="funds-outcome">'+E(moneyOutcome(tx.status))+'</p></section>'+hold+
+      `<section class="paper receipt"><div class="receipt-status">${wallet.badge(tx.status)}</div><div class="amount">${amount(tx.amount)}</div><dl class="receipt-party"><dt>${T("Получатель", "Алушы")}</dt><dd><strong>${E(tx.recipient?.display_name)}</strong><span>${E(tx.recipient?.iban_masked)}</span></dd></dl><p class="funds-outcome">${E(moneyOutcome(tx.status))}</p></section>`+hold+
       (reasons.length?'<section class="paper"><h2>'+T("Что учла проверка","Тексеруде ескерілген белгілер")+'</h2>'+reasons.map(r=>'<p>'+E(r[lang==="ru"?"reason_ru":"reason_kk"])+'</p>').join("")+'</section>':"")+contact+
       '<p class="break-id">'+E(tx.transaction_id)+'</p>'+button("refresh-detail",T("Обновить статус","Күйін жаңарту"),"secondary");
   }
@@ -765,8 +804,17 @@ function safetyView() {
   ];
   if(product){
     const symbols={scan:"safety",call:"call",callbacks:"call",report:"cases",reports:"history",gateway:"system"};
-    const actions=cards.filter(([k])=>k!=="contacts").map(([k,n,sub])=>`<button data-action="${k}"><i>${icon(symbols[k])}</i><span><strong>${E(n)}</strong><small>${E(sub)}</small></span>${icon("arrow")}</button>`).join("");
-    return title(T("Защита","Қорғаныс"))+'<section class="safety-list">'+actions+'</section>';
+    const groups = [
+      [T("Проверки", "Тексерулер"), ["call", "scan", "gateway"]],
+      [T("Связь с отделом безопасности", "Қауіпсіздік бөлімімен байланыс"), ["callbacks", "report", "reports"]],
+    ];
+    return title(T("Защита","Қорғаныс")) + groups.map(([name, keys]) => {
+      const actions = keys.map(key => {
+        const [, label, description] = cards.find(([id]) => id === key);
+        return `<button data-action="${key}"><i>${icon(symbols[key])}</i><span><strong>${E(label)}</strong><small>${E(description)}</small></span>${icon("arrow")}</button>`;
+      }).join("");
+      return `<section class="safety-list"><h2>${name}</h2>${actions}</section>`;
+    }).join("");
   }
   return `${title(T("Защита", "Қорғаныс"))}<div class="action-list">${cards.map(([key, label, sub]) => `<button data-action="${key}">${label}<small>${sub}</small></button>`).join("")}</div>`;
 }
@@ -978,7 +1026,7 @@ const screens = {
   history: historyView,
   transfer: transferView,
   review: reviewView,
-  detail: detailView,
+  detail: () => detailView() + (evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation) : ""),
   questionnaire: questionnaireView,
   safety: safetyView,
   scan: scanView,
@@ -1032,7 +1080,7 @@ function render() {
   const navPage=nav.some(([key])=>key===page)?page:
     (gateway?.role==="admin"?({case:"cases",reports:"cases",reportDetail:"cases",gateway:"system"}[page]||"home"):
     ({detail:"history",incoming:"history",callbacks:"safety",contacts:"safety",scan:"safety",call:"safety",family:"safety",guard:"safety",report:"safety",reports:"safety",reportDetail:"safety",invite:"safety",questionnaire:"history",confirmCancel:"history"}[page]||"home"));
-  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>saq bol</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && ["home","settings"].includes(page) ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${page === "login" ? T("Подключаемся. Первый вход после перерыва может занять до двух минут.", "Қосылып жатырмыз. Үзілістен кейінгі алғашқы кіру екі минутқа дейін созылуы мүмкін.") : T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
+  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>saq bol</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && page === "settings" ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${page === "login" ? T("Подключаемся. Первый вход после перерыва может занять до двух минут.", "Қосылып жатырмыз. Үзілістен кейінгі алғашқы кіру екі минутқа дейін созылуы мүмкін.") : T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
   if (product) {
     if(workspaceRead?.pending.size && ["home","staff","cases"].includes(page)) {
       const marker=document.createElement("p");
@@ -1066,7 +1114,7 @@ function render() {
       root.querySelector("main").insertAdjacentHTML("beforeend",button("inbox",T("Сообщения безопасности","Қауіпсіздік хабарламалары"),"secondary"));
     if (page === "safety") {
       const section=root.querySelector("main");
-      section.querySelector(".heading")?.insertAdjacentHTML("afterend",wallet.telegram(account,circle)+shortcuts(T));
+      section.querySelector(".heading")?.insertAdjacentHTML("afterend",shortcuts(T)+wallet.telegram(account,circle));
     }
 
     if (page === "scan") {
@@ -1199,8 +1247,16 @@ root.addEventListener("click", async (event) => {
     await perform(identity.openBankDialer);
     return;
   }
-  const b = event.target.closest("button");
+  const b = event.target.closest("button, input[data-quick-amount]");
   if (!b || loading) return;
+  if (b.dataset.quickAmount && page === "transfer") {
+    const field = b.form?.elements.namedItem("amount");
+    if (field) {
+      field.value = b.dataset.quickAmount;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    return;
+  }
   if(b.dataset.days){const value=Number(b.dataset.days);if(gateway.role==="admin")socDays=value;else walletDays=value;selectedDay=null;await open(page);return;}
   if(b.dataset.chartStep){stepChart(root,Number(b.dataset.chartStep));return;}
   if(b.dataset.chartDay){selectedDay=data.series.findIndex(v=>v.day===b.dataset.chartDay);render();root.querySelector('[data-chart-day="'+b.dataset.chartDay+'"]')?.focus({preventScroll:true});return;}
@@ -1434,6 +1490,8 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "language") {
+    const transferForm = root.querySelector("#transfer-form");
+    if (page === "transfer" && transferForm) draft = readTransferDraft(new FormData(transferForm));
     lang = lang === "ru" ? "kk" : "ru";
     putLocal("qadam.language", lang);
     if(error && failureState)error=failureText(failureState);
@@ -1528,19 +1586,21 @@ root.addEventListener("click", async (event) => {
   }
   if (act === "submit-transfer") {
     if (pending || !draft || (draft.payee && !canConfirmPayee(data))) return;
+    if (needsCallAnswer(draft, data, account?.supports_call_question) && !draft.callAnswer) return;
+    const context = submissionContext(draft, account?.supports_call_question);
     await perform(async () => {
       const { request_id: id } = await gateway.request("/requests", "POST", {});
       await savePending(id);
       mutationOutcome = true;
       const value = await api("transfers/evaluate", "POST", {
-        recipient_phone: draft.recipient_phone, amount: draft.amount, context: draft.context,
+        recipient_phone: draft.recipient_phone, amount: draft.amount, context,
         request_id: id,
         currency: "KZT",
       });
       accept(value);
       await savePending("");
       page = "detail"; backStack=[];
-      const guarded=product && draft.context?.active_call && value.status==="cooling_off";
+      const guarded=product && context.active_call && value.status==="cooling_off";
       draft = null;
       if (product && value.status==="cooling_off") {
         try { data=await gateway.request("/protection/"+selectedId+"/check"); if(guarded)page="guard"; }
@@ -1745,17 +1805,9 @@ root.addEventListener("submit", async (event) => {
     return;
   }
   if (form.id === "transfer-form") {
-    const manual = fields.get("recipient_phone") === "manual";
-    draft = {
-      recipient_phone: phoneNumber(String(fields.get(manual ? "manual_phone" : "recipient_phone"))),
-      amount: String(fields.get("amount")),
-      ...(product && !presetMode ? {payee: {manual, bank: String(fields.get("payee_bank")), expectedName: String(fields.get("payee_name") || "").trim()}} : {}),
-      context: {
-        active_call: fields.has("active_call"),
-        from_deposit: fields.has("from_deposit"),
-        is_new_recipient: fields.has("is_new_recipient"),
-      },
-    };
+    draft = readTransferDraft(fields);
+    draft.recipient_phone = phoneNumber(draft.recipient_phone);
+    if (draft.payee) draft.payee.expectedName = draft.payee.expectedName.trim();
     await open("review");
     return;
   }
@@ -1883,6 +1935,12 @@ root.addEventListener("change", event => {
     if (event.target.checked) draft.context.payment_requested_after_call = true;
     else delete draft.context.payment_requested_after_call;
   }
+  if (page === "review" && draft && event.target.name === "call_pressure_answer" &&
+      Object.hasOwn(callAnswers, event.target.value) && needsCallAnswer(draft, data, account?.supports_call_question)) {
+    draft.callAnswer = event.target.value;
+    const confirm = root.querySelector('[data-action="submit-transfer"]');
+    if (confirm) confirm.disabled = false;
+  }
 });
 root.addEventListener("input", event => {
   if (event.target.matches('#personal-login [name="login"]')) loginName=event.target.value;
@@ -1961,7 +2019,7 @@ async function refreshVisible() {
     notifications:()=>g.api("trusted-contacts/transactions/"+id+"/notifications"),
     timeline:()=>g.api("integrations/soc/transactions/"+id+"/timeline?limit=50"),
     analytics:()=>g.request("/wallet/analytics?days="+walletDays),
-    socAnalytics:()=>g.request("/wallet/soc?days="+socDays)
+    socAnalytics:()=>g.request("/wallet/soc?days="+socDays+"&include_policy=true")
   };
   if(Object.hasOwn(reads,screen))read=async()=>{
     const rows=await reads[screen]();

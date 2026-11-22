@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 
 from app.db.base import utcnow
 from app.integrations.cases.models import CaseContent, CaseEvent, FraudCase
+from app.integrations.cases.policy_review import compare_policies
 from app.integrations.cases.service import expire_cases
 from app.integrations.guardian_reports import ReportRequest, create_report
 from app.integrations.models import GuardianReport
@@ -184,17 +185,39 @@ async def test_shadow_review_uses_initial_decision_and_retracts_reopened_label(
         == 1
     )
     assert comparison["baseline_detected"] == 0
+    assert comparison["label_coverage"] == 1
+    policies = {r["threshold"]: r for r in comparison["policies"]}
+    assert list(policies) == [None, 25, 30, 35, 40]
+    for threshold, row in policies.items():
+        assert row["missed_fraud"] == int(threshold is None or threshold > 37)
+        assert row["false_per_1000_legitimate"] is None
     case = await act(iw, case, action="transition", state="IN_REVIEW", reason="reopened")
     comparison = (await iw.client.get(url, headers=iw.auth("soc"))).json()["policy_comparison"]
     assert comparison["fraud_labelled"] == 0
+    assert comparison["label_coverage"] == 0
+    assert all(row["missed_fraud"] is None for row in comparison["policies"])
     await act(iw, case, action="transition", state="CLOSED", reason="legitimate_transfer")
     comparison = (await iw.client.get(url, headers=iw.auth("soc"))).json()["policy_comparison"]
     assert comparison["candidate_false_interventions"] == comparison["legitimate_labelled"] == 1
     assert comparison["baseline_false_interventions"] == comparison["fraud_labelled"] == 0
+    policies = {r["threshold"]: r for r in comparison["policies"]}
+    assert policies[35]["false_per_1000_legitimate"] == 1000
+    assert policies[40]["false_per_1000_legitimate"] == 0
     async with iw.factory() as session:
         txn = await session.get(Transaction, tx_id)
         assert txn is not None
         assert txn.status.value == payment["status"]
+        # All shadow policies share the same date filter and the same frozen observations.
+        now = utcnow()
+        txn.created_at = now - timedelta(days=10)
+        await session.commit()
+        recent = await compare_policies(session, now, start=now - timedelta(days=7))
+        month = await compare_policies(session, now, start=now - timedelta(days=30))
+        assert recent.first_sample_at is None
+        assert recent.label_coverage is None
+        assert all(row.false_per_1000_legitimate is None for row in recent.policies)
+        assert month.first_sample_at == month.last_sample_at == txn.created_at
+        assert month.legitimate_labelled == month.evaluated == 1
 
 
 async def test_case_idempotency_version_and_actor_scope(iw: IntegrationWorld) -> None:

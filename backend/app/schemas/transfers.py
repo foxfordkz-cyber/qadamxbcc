@@ -14,6 +14,11 @@ class TransferContextIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     active_call: bool = Field(False, description="A phone call is active during the transfer")
+    call_pressure_answer: Literal["on_call", "after_call", "no_request"] | None = Field(
+        None,
+        exclude_if=lambda value: value is None,
+        description="Explicit customer answer about this payment; omission means unknown.",
+    )
     payment_requested_after_call: bool = Field(
         False,
         strict=True,
@@ -115,6 +120,11 @@ class MLContributorOut(BaseModel):
     label_ru: str
 
 
+class BankCallEvidence(BaseModel):
+    outbound_call_listed: bool
+    checked_at: AwareDatetime
+
+
 class TransferEvaluateResponse(BaseModel):
     transaction_id: uuid.UUID
     created_at: datetime
@@ -141,6 +151,9 @@ class TransferEvaluateResponse(BaseModel):
     recipient_graph: dict[str, float | int | bool]
     amount: Decimal
     context: TransferContextIn
+    bank_call_evidence: BankCallEvidence | None = Field(
+        None, exclude_if=lambda value: value is None
+    )
     server_time: datetime
     verification_answers: "CoolingQuestionnaire | None" = None
     resolved_at: datetime | None = None

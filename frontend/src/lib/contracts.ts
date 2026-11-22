@@ -12,6 +12,7 @@ export type Status = "approved" | "cooling_off" | "blocked" | "cancelled";
 export type Preset = "normal" | "scam" | "hub";
 export const contextSchema = z.object({
   active_call: z.boolean().default(false),
+  call_pressure_answer: z.enum(["on_call", "after_call", "no_request"]).optional(),
   payment_requested_after_call: z.boolean().optional(),
   from_deposit: z.boolean().default(false),
   is_new_device: z.boolean().default(false),
@@ -69,6 +70,7 @@ export interface MLDetails {
   ml_contributors?: { feature: string; value: number; contribution: number; label_kk: string; label_ru: string }[];
 }
 export interface Evaluation extends Decision, MLDetails {
+  bank_call_evidence?: { outbound_call_listed: boolean; checked_at: string };
   reasons: Reason[]; latency_ms: number; layer_latency_ms: Record<string, number>;
   cooling_off_until: string | null; is_new_recipient: boolean; is_new_device: boolean;
   recipient: { id: string; display_name: string; iban_masked: string };
@@ -134,11 +136,13 @@ const responseContextSchema = contextSchema.partial().extend({
   is_new_recipient: z.boolean().nullable().optional().transform(value => value ?? undefined),
 });
 const riskReasonSchema = z.object({ code: z.string(), layer: z.string(), score_delta: z.number(), reason_kk: z.string(), reason_ru: z.string() }).passthrough();
+const bankCallEvidence = z.object({ outbound_call_listed: z.boolean(), checked_at: z.iso.datetime({ offset: true }) });
 const mlResponseSchema = z.object({
   ml_score: z.number().min(0).max(100).nullable().optional(), ml_base_score: z.number().nullable().optional(), ml_model_version: z.string().nullable().optional(), ml_explanation_method: z.string().nullable().optional(),
   ml_contributors: z.array(z.object({ feature: z.string(), value: z.number(), contribution: z.number(), label_kk: z.string(), label_ru: z.string() })).optional(),
 });
 export const evaluationResponseSchema = mlResponseSchema.extend({
+  bank_call_evidence: bankCallEvidence.optional(),
   transaction_id: z.uuid(), status: statusSchema, risk_score: z.number().min(0).max(100),
   headline_kk: z.string(), headline_ru: z.string(), reasons_kk: z.array(z.string()), reasons_ru: z.array(z.string()), reasons: z.array(riskReasonSchema),
   latency_ms: z.number().nonnegative(), layer_latency_ms: z.record(z.string(), z.number().nonnegative()),

@@ -119,3 +119,20 @@ test("ledger dates agree across the Kazakhstan midnight boundary", () => {
   assert.equal(ledgerInstant("2026-11-20T18:59:00Z").day, "2026-11-20");
   assert.equal(ledgerTime("invalid"), "—");
 });
+
+test("officer analytics distinguishes an unlabelled cohort from zero false holds", () => {
+  const review = {
+    sampled: 5, evaluated: 4, label_coverage: 0.5, legitimate_labelled: 2, fraud_labelled: 0,
+    policies: [
+      {threshold: null, extra_holds: 0, missed_fraud: null, false_interventions: 0, false_per_1000_legitimate: 0},
+      {threshold: 30, extra_holds: 2, missed_fraud: null, false_interventions: 1, false_per_1000_legitimate: 500},
+    ],
+  };
+  const data = {days: 7, states: {}, case_states: {}, policy_comparison: review};
+  const html = ui.soc(data, true);
+  assert.match(html, /4 \/ 5/);
+  assert.match(html, /50%/);
+  assert.match(html, /<td>—<\/td><td>0 \(0\/2\)/);
+  assert.match(html, /500 \(1\/2\)/);
+  assert.doesNotMatch(ui.soc(data, false), /data-policy-comparison/);
+});

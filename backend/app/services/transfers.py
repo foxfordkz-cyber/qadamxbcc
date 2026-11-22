@@ -6,7 +6,7 @@ import uuid
 from collections import Counter
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -35,6 +35,7 @@ from app.models import (
 from app.models.family_approval import FamilyApprovalPolicy
 from app.schemas.transfers import (
     AbandonRequestResponse,
+    BankCallEvidence,
     CoolingQuestionnaire,
     MLContributorOut,
     PartyOut,
@@ -47,6 +48,7 @@ from app.schemas.transfers import (
 from app.services import explain, family_approval
 from app.services.antifraud import (
     ACTIVE_HOLD_RULE,
+    AMOUNT_SPIKE_RATIO,
     NEW_PAYEE_NIGHT_RULE,
     POST_CALL_PAYMENT_RULE,
     AntifraudEngine,
@@ -54,7 +56,7 @@ from app.services.antifraud import (
     TransferContext,
     split_total_threshold,
 )
-from app.services.call_check import CallCheckService
+from app.services.call_check import CallCheck, CallCheckService
 from app.services.graph import MAX_GRAPH_NEIGHBOURS, GraphCapacityError, GraphStore
 from app.services.velocity import MAX_HISTORY_ROWS, SettledPayee, VelocityCapacityError
 
@@ -514,15 +516,12 @@ class TransferService:
         )
         await self._evaluate(request, uuid.uuid4(), None, refund=record)
 
-    async def _evaluate(
+    async def _scoring_context(
         self,
         req: TransferEvaluateRequest,
         tx_id: uuid.UUID,
-        request_hash: str | None,
-        *,
-        refund: PaymentReturn | None = None,
-    ) -> TransferEvaluateResponse:
-        sender = await self._get_account(req.sender_id)
+        sender: Account,
+    ) -> tuple[Account, TransferContext, CallCheck | None]:
         recipient, is_first_payment, first_day_payee = await self._resolve_recipient(req, sender)
         if sender.id == recipient.id:
             raise InvalidTransferError("sender and recipient must differ")
@@ -545,6 +544,9 @@ class TransferService:
             else device_id != sender.device_id
         )
         occurred_at = (req.occurred_at or datetime.now(UTC)).astimezone(UTC)
+        bank_check = await CallCheckService(self.engine.redis).result_for(
+            req.context.bank_call_check_id, sender.id
+        )
         ctx = TransferContext(
             tx_id=str(tx_id),
             sender_id=str(sender.id),
@@ -555,8 +557,11 @@ class TransferService:
             sender_avg_amount=float(sender.avg_tx_amount),
             first_day_payee=first_day_payee,
             settled_payee_is_new=is_first_payment,
-            active_call=req.context.active_call,
-            payment_requested_after_call=req.context.payment_requested_after_call,
+            active_call=req.context.active_call or req.context.call_pressure_answer == "on_call",
+            payment_requested_after_call=(
+                req.context.payment_requested_after_call
+                or req.context.call_pressure_answer == "after_call"
+            ),
             from_deposit=req.context.from_deposit,
             is_new_device=is_new_device,
             is_new_recipient=req.context.is_new_recipient,
@@ -572,18 +577,60 @@ class TransferService:
             hesitation_count=req.context.hesitation_count,
             recipient_input_length=req.context.recipient_input_length,
             hesitation_ms=req.context.hesitation_ms,
-            bank_call_denied=await CallCheckService(self.engine.redis).denied_for(
-                req.context.bank_call_check_id, sender.id
-            ),
+            bank_call_denied=bank_check is not None and not bank_check.verified,
         )
-        ctx = self.engine.trusted_context(ctx, known_device_id=sender.device_id)
+        return (
+            recipient,
+            self.engine.trusted_context(ctx, known_device_id=sender.device_id),
+            bank_check,
+        )
+
+    async def should_ask_about_call(self, req: TransferEvaluateRequest) -> bool:
+        """Read-only review of a material payment, before recording its first attempt."""
+        sender = await self._get_account(req.sender_id)
+        if sender.avg_tx_amount <= 0 or req.amount < sender.avg_tx_amount:
+            return False
+        recipient, ctx, _ = await self._scoring_context(req, uuid.uuid4(), sender)
+        if recipient.is_flagged or ctx.active_hold_id is not None:
+            return False
+        if not ctx.settled_payee_is_new and req.amount < AMOUNT_SPIKE_RATIO * sender.avg_tx_amount:
+            return False
+        if ctx.settled_payee_is_new and req.amount >= family_approval.MIN_AMOUNT:
+            policy = await self.session.get(FamilyApprovalPolicy, sender.id)
+            if policy and family_approval.active(policy, datetime.now(UTC)):
+                return False
+        neutral = await self.engine.evaluate(ctx, record_attempt=False)
+        if neutral.decision != TransactionStatus.APPROVED:
+            return False
+        reported = await self.engine.evaluate(replace(ctx, active_call=True), record_attempt=False)
+        if reported.decision != TransactionStatus.APPROVED:
+            return True
+        # The ended-call rule checks the settled SQL relationship. A resident
+        # graph edge can make the active-call simulation see a familiar payee.
+        if not ctx.settled_payee_is_new:
+            return False
+        ended = await self.engine.evaluate(
+            replace(ctx, payment_requested_after_call=True), record_attempt=False
+        )
+        return ended.decision != TransactionStatus.APPROVED
+
+    async def _evaluate(
+        self,
+        req: TransferEvaluateRequest,
+        tx_id: uuid.UUID,
+        request_hash: str | None,
+        *,
+        refund: PaymentReturn | None = None,
+    ) -> TransferEvaluateResponse:
+        sender = await self._get_account(req.sender_id)
+        recipient, ctx, bank_check = await self._scoring_context(req, tx_id, sender)
 
         evaluation = await self.engine.evaluate(ctx)
 
         received_at = datetime.now(UTC)
         protected = None
         if (
-            is_first_payment
+            ctx.settled_payee_is_new
             and req.amount >= family_approval.MIN_AMOUNT
             and evaluation.decision != TransactionStatus.BLOCKED
         ):
@@ -592,7 +639,9 @@ class TransferService:
                 protected = policy
                 evaluation = family_approval.hold_for_approval(evaluation)
         inherited_until = (
-            active_until if any(r.code == ACTIVE_HOLD_RULE for r in evaluation.reasons) else None
+            ctx.active_hold_until
+            if any(r.code == ACTIVE_HOLD_RULE for r in evaluation.reasons)
+            else None
         )
         cooling_until = (
             inherited_until or received_at + timedelta(minutes=evaluation.cooling_off_minutes)
@@ -610,7 +659,7 @@ class TransferService:
             status=evaluation.decision,
             risk_score=evaluation.score,
             latency_ms=evaluation.latency_ms,
-            device_id=device_id,
+            device_id=ctx.device_id,
             active_call=ctx.active_call,
             from_deposit=ctx.from_deposit,
             is_new_device=ctx.is_new_device,
@@ -635,6 +684,7 @@ class TransferService:
         ]
         tx.context_snapshot = TransferContextIn(
             active_call=ctx.active_call,
+            call_pressure_answer=req.context.call_pressure_answer,
             payment_requested_after_call=ctx.payment_requested_after_call,
             from_deposit=ctx.from_deposit,
             is_new_device=ctx.is_new_device,
@@ -647,7 +697,12 @@ class TransferService:
             hesitation_ms=ctx.hesitation_ms,
             bank_call_check_id=req.context.bank_call_check_id,
         ).model_dump(mode="json")
-        response = self._evaluation_response(tx, evaluation, recipient)
+        response = self.evaluation_response(tx, evaluation, recipient)
+        if bank_check is not None:
+            response.bank_call_evidence = BankCallEvidence(
+                outbound_call_listed=bank_check.verified,
+                checked_at=datetime.fromisoformat(bank_check.checked_at),
+            )
         tx.evaluation_snapshot = response.model_dump(mode="json")
         self.session.add(tx)
         if protected is not None:
@@ -672,8 +727,9 @@ class TransferService:
             await self.engine.ensure_consistent()
         return response
 
-    def _evaluation_response(
-        self, tx: Transaction, ev: Evaluation, recipient: Account
+    @staticmethod
+    def evaluation_response(
+        tx: Transaction, ev: Evaluation, recipient: Account
     ) -> TransferEvaluateResponse:
         rg = ev.recipient_graph
         return TransferEvaluateResponse(

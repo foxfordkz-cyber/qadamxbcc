@@ -41,10 +41,8 @@ const initials = (name) =>
     .map((w) => Array.from(w)[0])
     .join("")
     .toUpperCase();
-const ribbon = '<svg class="card-ribbon" viewBox="0 0 200 210" aria-hidden="true" preserveAspectRatio="xMaxYMid slice"><g fill="none" stroke="currentColor" stroke-width="1.7">'+
-  Array.from({length:16},(_,i)=>'<ellipse cx="165" cy="146" rx="'+(47+i*7)+'" ry="'+(97+i*6)+'" transform="rotate(-32 165 146)"/>').join("")+'</g></svg>';
-const chip =
-  '<svg class="chip" viewBox="0 0 40 30" aria-hidden="true"><rect x="1" y="1" width="38" height="28" rx="6" fill="#e6d6aa"/><path d="M1 10h11l4 4v3l-5 5H1m38-12H28l-4 4v3l5 5h10M15 1v6l4 4h3l5-5V1M16 29v-5l3-4h4l4 5v4" fill="none" stroke="#927f56" stroke-width="1.1"/></svg>';
+// The miniature represents the training account. Its number always comes from the gateway.
+export const cardThumbnail = '<span class="card-thumbnail" aria-hidden="true"><img src="mark.svg" alt=""></span>';
 export function walletUI({ T, E, amount, when, button, status }) {
   const heading = (name, extra = "") =>
     '<div class="w-heading"><h2>' + name + "</h2>" + extra + "</div>";
@@ -107,9 +105,9 @@ export function walletUI({ T, E, amount, when, button, status }) {
     );
   }
   function card(a, hidden) {
-    return `<article class="q-card">${ribbon}<div class="card-brand"><img src="mark.svg" alt=""><b>Saq Bol × BCC</b></div>
-      <div class="q-balance"><small>${T("Баланс учебной карты", "Оқу картасының балансы")}</small><div><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><button data-action="mask-balance" aria-pressed="${hidden}" aria-label="${T("Скрыть или показать баланс", "Балансты жасыру немесе көрсету")}">${icon("eye")}</button></div></div>
-      <div class="card-foot"><div><span>•••• &nbsp;${hidden ? "••••" : E(a.card_last4)}</span><b>${E(a.display_name)}</b></div>${chip}</div></article>`;
+    return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance" aria-pressed="${hidden}" aria-label="${T("Скрыть или показать баланс", "Балансты жасыру немесе көрсету")}">${icon("eye")}</button></div>
+      <div class="q-balance"><small>${T("Баланс учебной карты", "Оқу картасының балансы")}</small><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong></div>
+      <div class="card-foot">${cardThumbnail}<div><b>${T("Карта Saq Bol", "Saq Bol картасы")}</b><span>•••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</span></div></div></article>`;
   }
   function home(a, ledger, stats, hidden, pending, offline=false) {
     if (!a) return button("retry-home", T("Счёт недоступен · Повторить","Шот қолжетімсіз · Қайталау"),"secondary") + (ledger ? rows(ledger.items) : "");
@@ -118,7 +116,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
       ["safety", T("Защита", "Қорғаныс")],
       offline ? ["check", T("Проверка","Тексеру")] : ["open-guardian", "Telegram"],
     ];
-    const greet = `<header class="wallet-greeting"><span class="avatar">${E(initials(a.display_name))}</span><div><small>${T("Добрый день", "Қайырлы күн")}</small><h1>${E(a.display_name)}</h1></div><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button><button data-action="${offline?"settings":"inbox"}" aria-label="${offline?T("Профиль","Профиль"):T("Уведомления", "Хабарламалар")}">${icon(offline?"settings":"bell")}</button></header>`;
+    const greet = `<header class="wallet-greeting"><h1><button class="profile-entry" data-action="settings" aria-label="${T("Открыть профиль", "Профильді ашу")} · ${E(a.display_name)}"><span class="avatar" aria-hidden="true">${E(initials(a.display_name))}</span><span><small>${T("Добрый день", "Қайырлы күн")}</small><strong>${E(a.display_name)}</strong></span></button></h1><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button>${offline?"":`<button data-action="inbox" aria-label="${T("Уведомления", "Хабарламалар")}">${icon("bell")}</button>`}</header>`;
     const links = actions
       .map(
         ([k, n]) =>
@@ -307,6 +305,32 @@ export function walletUI({ T, E, amount, when, button, status }) {
       T("p95 движка","Қозғалтқыш p95")+" · "+Number(d.p95_engine_ms).toFixed(2)+" ms · "+d.latency_sample_size+" "+
       T("замеров за период","өлшем")+' ('+T("до","шегі")+' '+d.latency_sample_limit+')')+'</p></section>';
   }
+  function policyComparison(review) {
+    if (!review?.policies?.length) return "";
+    const formatter = new Intl.NumberFormat(T("ru-KZ", "kk-KZ"), {maximumFractionDigits: 1});
+    const value = n => Number.isFinite(n) ? formatter.format(n) : "—";
+    const label = T("Пороги риска", "Тәуекел шектері");
+    const headings = [
+      T("Порог", "Шек"), T("Доп. паузы", "Қосымша кідіріс"),
+      T("Пропущено мошеннических", "Өткізіп алған алаяқтық"),
+      T("Ложные паузы на 1 000 законных", "1 000 заңды аударымға шаққандағы қате кідіріс"),
+    ];
+    const rows = review.policies.map(row => {
+      const name = row.threshold === null ? T("Текущая", "Қазіргі") : "≥ " + value(row.threshold);
+      const support = Number.isFinite(row.false_interventions) ? " (" + value(row.false_interventions) + "/" + value(review.legitimate_labelled) + ")" : "";
+      return `<tr><th scope="row">${name}</th><td>${review.evaluated ? value(row.extra_holds) : "—"}</td><td>${value(row.missed_fraud)}</td><td>${value(row.false_per_1000_legitimate)}${support}</td></tr>`;
+    }).join("");
+    const coverage = review.label_coverage == null ? "—" : value(review.label_coverage * 100) + "%";
+    const dates = review.first_sample_at && review.last_sample_at ? E(when(review.first_sample_at)) + " – " + E(when(review.last_sample_at)) : "—";
+    return `<section class="paper" data-policy-comparison><h2>${label}</h2>
+      <p>${T("Сравнили исходные решения по переводам", "Аударымдардың бастапқы шешімдері салыстырылды")} · ${value(review.evaluated)} / ${value(review.sampled)}<br>${dates}</p>
+      <p>${T("Доля известных исходов", "Нәтижесі белгілі аударымдардың үлесі")} · ${coverage}<br>
+      ${T("Подтверждено мошеннических", "Алаяқтық расталды")} · ${value(review.fraud_labelled)} · ${T("Законных", "Заңды")} · ${value(review.legitimate_labelled)}</p>
+      ${review.fraud_labelled + review.legitimate_labelled === 0 ? "<p>" + T("Чтобы появилась разметка, укажите исход расследования при закрытии дела по оценённому переводу.", "Нәтижелерді көрсету үшін бағаланған аударымға қатысты істі жабу кезінде тергеу нәтижесін белгілеңіз.") + "</p>" : ""}
+      <p class="fine">${T("Пороги моделируют дополнительные паузы поверх действующих мер.", "Шектер қолданыстағы шараларға қосымша кідірісті модельдейді.")}</p>
+      <div class="plot-viewport"><table class="desk-table policy-table" aria-label="${label}"><thead><tr>${headings.map(h => '<th scope="col">' + h + "</th>").join("")}</tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="fine">${T("«—» означает, что данных нет. Оценка качества учитывает подтверждённые исходы закрытых дел. Для этой выборки p95 полного HTTP-запроса недоступен.", "«—» дерек жоқ екенін білдіреді. Сапа бағасына жабылған істердің расталған нәтижелері кіреді. Осы іріктеме үшін толық HTTP сұрауының p95 уақыты қолжетімсіз.")}</p></section>`;
+  }
   function soc(d, full = false) {
     if (!d) return "";
     const states = d.states,
@@ -324,7 +348,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
       <div class="soc-footer"><span>${T("Количество", "Саны")} <b>${states.blocked?.count || 0}</b></span><span>${T("Получатели", "Алушылар")} <b>${d.blocked_recipients}</b></span></div></section>
       <div class="soc-work"><div><small>${T("На проверке", "Тексерілуде")}</small><b>${states.cooling_off?.count || 0}</b><span>${T("переводов", "аударым")}</span></div>
       <button data-action="cases"><small>${T("Открытые дела", "Ашық істер")}</small><b>${open}</b><span>${T("К делам", "Істерге өту")} →</span></button></div>
-      </div>${full ? decisionTrend(d) + '<section class="paper"><h2>' + T("Решения по операциям", "Операциялар бойынша шешімдер") + "</h2>" + list + "<p>" + T("Завершённые дела", "Аяқталған істер") + " · " + closed + "</p><p>" + T("Среднее время оценки движком", "Қозғалтқыштың орташа бағалау уақыты") + " · " + (d.mean_engine_ms == null ? "—" : Number(d.mean_engine_ms).toFixed(1) + " ms") + "</p></section>" : ""}
+      </div>${full ? policyComparison(d.policy_comparison) + decisionTrend(d) + '<section class="paper"><h2>' + T("Решения по операциям", "Операциялар бойынша шешімдер") + "</h2>" + list + "<p>" + T("Завершённые дела", "Аяқталған істер") + " · " + closed + "</p><p>" + T("Среднее время оценки движком", "Қозғалтқыштың орташа бағалау уақыты") + " · " + (d.mean_engine_ms == null ? "—" : Number(d.mean_engine_ms).toFixed(1) + " ms") + "</p></section>" : ""}
       <p class="hint">${T("По дате создания с", "Жасалған күні бойынша")}&nbsp;${E(d.from)} · UTC+5</p>`;
   }
   function telegram(a, contacts) {

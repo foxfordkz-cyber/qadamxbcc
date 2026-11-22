@@ -17,12 +17,13 @@ async function enter(page,baseURL,fixture={}) {
       status = fixture.inboxStatus || 200;
       json = {items: actions ? fixture.actions || [] : fixture.messages || []};
     }
-    else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",recipients:fixture.recipients || [{name:"Арман",phone:"+77010000002"}]};
+    else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",supports_call_question:fixture.supportsCallQuestion,recipients:fixture.recipients || [{name:"Арман",phone:"+77010000002"}]};
     else if(path==="api/payee-check"){
       const body=route.request().postDataJSON();
       fixture.payee=body;
       const outcome=body.bank!=="bcc"?"unavailable":body.expected_name && body.expected_name!=="Арман"?"mismatch":"identified";
-      json={recipient:fixture.returnedRef || body.recipient,bank:body.bank,status:outcome,source:"synthetic_directory",display_name:outcome==="unavailable"?null:"Арман А."};
+      json={recipient:fixture.returnedRef || body.recipient,bank:body.bank,status:outcome,source:"synthetic_directory",display_name:outcome==="unavailable"?null:"Арман А.",
+        ask_about_call: body.review_amount ? Number(body.review_amount) >= 50000 : undefined};
     }
     else if(path==="requests")json={request_id:ids[0]};
     else if(path==="api/transfers/evaluate"){
@@ -93,6 +94,30 @@ test("summary failure leaves the card and ledger available and supports retry",a
   fixture.analytics=200;await page.locator("[data-action=retry-summary]").click();
   await expect(page.locator("[data-action=retry-summary]")).toHaveCount(0);
 });
+test("profile shortcut returns to the wallet and a quick amount survives a language switch", async ({page,baseURL}) => {
+  const fixture = {};
+  await enter(page,baseURL,fixture);
+  await page.locator(".profile-entry").click();
+  await expect(page.locator("#app")).toHaveAttribute("data-screen","settings");
+  await page.locator(".back").click();
+  await expect(page.locator(".q-card")).toContainText("Мои счета");
+  await page.locator("[data-payee]").first().click();
+  const form = page.locator("#transfer-form");
+  await form.locator('[data-quick-amount="10000"]').click();
+  await expect(form.locator("[name=amount]")).toHaveValue("10000");
+  await form.locator("[name=active_call]").check();
+  await form.locator("[name=recipient_phone]").selectOption("manual");
+  await form.locator("[name=manual_phone]").fill("+7 (701) 000-00-02");
+  await form.locator("[name=payee_name]").fill("Арман");
+  await page.locator("[data-action=language]:visible").first().click();
+  await expect(form.locator("[name=manual_phone]")).toHaveValue("+7 (701) 000-00-02");
+  await expect(form.locator("[name=payee_name]")).toHaveValue("Арман");
+  await expect(form.locator("[name=active_call]")).toBeChecked();
+  await expect(form.locator("[name=amount]")).toHaveValue("10000");
+  await form.locator("button.primary").click();
+  await expect(page.locator("[data-payee-status=identified]")).toBeVisible();
+  expect(fixture.evaluated).toBeUndefined();
+});
 test("both edit and toolbar Back retain the transfer draft",async({page,baseURL})=>{
   await enter(page,baseURL);await page.locator("[data-action=transfer]").click();
   await page.locator("[name=recipient_phone]").selectOption("+77010000002");
@@ -162,6 +187,29 @@ test("the payer reports a request from an ended call for the reviewed draft only
   await report.check();
   await page.locator("[data-action=submit-transfer]").click();
   await expect.poll(()=>fixture.evaluated?.context?.payment_requested_after_call).toBe(true);
+  expect(fixture.evaluated.context.active_call).toBe(false);
+});
+test("borderline review asks one bilingual question before any submission",async({page,baseURL})=>{
+  const fixture={supportsCallQuestion:true};
+  await enter(page,baseURL,fixture);
+  await page.locator("[data-action=transfer]").click();
+  await page.locator("[name=recipient_phone]").selectOption("+77010000002");
+  await page.locator("[name=amount]").fill("25000");
+  await page.locator("#transfer-form button").click();
+  await expect(page.locator("[data-action=submit-transfer]")).toBeEnabled();
+  await expect(page.locator(".call-question")).toHaveCount(0);
+  await page.locator("[data-action=edit-transfer]").click();
+  await page.locator("[name=amount]").fill("55000");
+  await page.locator("#transfer-form button").click();
+  await expect(page.getByRole("group",{name:/по телефону/})).toBeVisible();
+  await expect(page.locator("[data-action=submit-transfer]")).toBeDisabled();
+  expect(fixture.evaluated).toBeUndefined();
+  await page.getByRole("radio",{name:/уже закончился/}).check();
+  await page.locator("[data-action=language]:visible").first().click();
+  await expect(page.getByRole("radio",{name:/қоңырау аяқталды/})).toBeChecked();
+  await page.locator("[data-action=submit-transfer]").click();
+  await expect.poll(()=>fixture.evaluated?.context?.call_pressure_answer).toBe("after_call");
+  expect(fixture.evaluated.context.payment_requested_after_call).toBe(true);
   expect(fixture.evaluated.context.active_call).toBe(false);
 });
 test("Scam Check keeps edited text on failure, locale change and retry until cleared",async({page,baseURL})=>{

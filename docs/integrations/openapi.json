@@ -3996,6 +3996,25 @@
         ],
         "title": "AuditOut"
       },
+      "BankCallEvidence": {
+        "properties": {
+          "outbound_call_listed": {
+            "type": "boolean",
+            "title": "Outbound Call Listed"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outbound_call_listed",
+          "checked_at"
+        ],
+        "title": "BankCallEvidence"
+      },
       "CallCheckRequest": {
         "properties": {
           "customer_id": {
@@ -5171,6 +5190,16 @@
           },
           "context": {
             "$ref": "#/components/schemas/TransferContextIn"
+          },
+          "bank_call_evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankCallEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "verification_answers": {
             "anyOf": [
@@ -7099,10 +7128,113 @@
             "type": "integer",
             "title": "Candidate False Interventions",
             "default": 0
+          },
+          "first_sample_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Sample At"
+          },
+          "last_sample_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sample At"
+          },
+          "label_coverage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Coverage"
+          },
+          "policies": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyResult"
+            },
+            "type": "array",
+            "title": "Policies"
           }
         },
         "type": "object",
         "title": "PolicyComparison"
+      },
+      "PolicyResult": {
+        "properties": {
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "extra_holds": {
+            "type": "integer",
+            "title": "Extra Holds"
+          },
+          "missed_fraud": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missed Fraud"
+          },
+          "false_interventions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "False Interventions"
+          },
+          "false_per_1000_legitimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "False Per 1000 Legitimate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "threshold",
+          "extra_holds",
+          "missed_fraud",
+          "false_interventions",
+          "false_per_1000_legitimate"
+        ],
+        "title": "PolicyResult"
       },
       "Position": {
         "properties": {
@@ -8391,6 +8523,23 @@
             "description": "A phone call is active during the transfer",
             "default": false
           },
+          "call_pressure_answer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "on_call",
+                  "after_call",
+                  "no_request"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Pressure Answer",
+            "description": "Explicit customer answer about this payment; omission means unknown."
+          },
           "payment_requested_after_call": {
             "type": "boolean",
             "title": "Payment Requested After Call",
@@ -8801,6 +8950,16 @@
           },
           "context": {
             "$ref": "#/components/schemas/TransferContextIn"
+          },
+          "bank_call_evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankCallEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "server_time": {
             "type": "string",

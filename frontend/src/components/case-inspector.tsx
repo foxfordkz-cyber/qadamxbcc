@@ -51,6 +51,8 @@ export function CaseInspector({ traceRevision = 0, detail, loading, error, recei
   }
   const story = current ? caseTimeline(current) : [];
   const active = current ? (Object.keys(signals) as (keyof typeof signals)[]).filter(key => current.context?.[key] === true) : [];
+  const callAnswer = current?.context?.call_pressure_answer;
+  const callLabels = { on_call: "callOwnerOnCall", after_call: "callOwnerAfterCall", no_request: "callOwnerNoRequest" } as const;
   return <section className="panel case-panel investigation-card" aria-label={t("caseDetails")} data-transaction-id={selectedId ?? ""} aria-busy={loading}>
     <div className="case-heading"><h2>{t("caseDetails")}</h2>{current && <Badge status={current.status} />}</div>
     {error && <div className="investigation-error" role="alert"><strong>{t("caseUnavailable")}</strong><p>{t(error)}</p><button className="secondary" onClick={onRetry} disabled={loading}><RefreshCw size={15} />{t("retryCase")}</button></div>}
@@ -58,6 +60,12 @@ export function CaseInspector({ traceRevision = 0, detail, loading, error, recei
     {!current ? <p className="empty">{t(selectedId ? error ? "caseUnavailable" : "refreshing" : "select")}</p> : <>
       <div className="investigation-summary"><strong>{current.amount === undefined ? "— ₸" : money(current.amount, lang)}</strong><Gauge compact score={current.risk_score} /></div>
       <p className="case-recipient">{current.recipient.display_name} · {current.recipient.iban_masked}</p>
+      <dl className="tech-grid">
+        <div><dt>{t("callOwnerStatement")}</dt><dd>{t(callAnswer ? callLabels[callAnswer] : "callOwnerUnknown")}
+          {callAnswer && current.created_at && <> · {date(current.created_at)}</>}</dd></div>
+        {current.bank_call_evidence && <div><dt>{t("sigBankLog")}</dt>
+          <dd>{t(current.bank_call_evidence.outbound_call_listed ? "sigBankCalling" : "sigBankNotCalling")} · {date(current.bank_call_evidence.checked_at)}</dd></div>}
+      </dl>
       {!readOnly && current.reasons.some(reason => reason.code === "RETURN_REDIRECT_REPORTED") && (
         <ReturnReviewControls
           key={`${current.transaction_id}/${current.updated_at ?? current.reasons.length}`}

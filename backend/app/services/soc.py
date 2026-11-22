@@ -121,6 +121,7 @@ async def feed(
                 resolved_at=tx.resolved_at,
                 reasons=detail.reasons,
                 context=detail.context,
+                bank_call_evidence=detail.bank_call_evidence,
                 verification_answers=detail.verification_answers,
                 ml_score=detail.ml_score,
                 ml_base_score=detail.ml_base_score,

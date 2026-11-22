@@ -8,6 +8,7 @@ on:
       - backend/uv.lock
       - .dockerignore
       - deliverables/android/Saq-Bol-Android-2.7.apk
+      - frontend/public/downloads/**
       - deliverables/android/Saq-Bol-Android-2.7.json
       - backend/scripts/start-persistent.sh
       - deploy/render-persistent.yaml

@@ -1,6 +1,6 @@
 // Exercise the compiled Worker in workerd, with a deterministic HTTPS API fixture.
 import assert from "node:assert/strict";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -79,6 +79,14 @@ try {
   assert.equal((await (await fetch("/health")).json()).status, "ok");
   assert.deepEqual(await (await fetch("/mobile/link")).json(), { origins: [origin] });
   assert.equal((await fetch("/icons/icon-192.png")).status, 200);
+  const apkPath = "/downloads/Saq-Bol-Android-2.7.apk";
+  const apk = await fetch(apkPath);
+  assert.equal(apk.status, 200, "Android installer must be available without a login");
+  const release = JSON.parse(await (await fetch(apkPath.replace(/\.apk$/, ".json"))).text());
+  assert.equal(createHash("sha256").update(Buffer.from(await apk.arrayBuffer())).digest("hex"), release.apk_sha256);
+  for (const pathname of ["/", "/mobile"]) {
+    assert.ok((await (await fetch(pathname)).text()).includes(`href="${apkPath}"`), `${pathname} is missing the installer link`);
+  }
   assert.deepEqual(await (await fetch("/api/v1/soc/feed")).json(), { items: [], total: 0 });
   const publicWrite = { method: "POST", headers: { origin, "content-type": "application/json" }, body: "{}" };
   assert.equal((await fetch(`/api/v1/soc/recipients/${config.vars.BCC_NORMAL_SENDER_ID}/flag`, publicWrite)).status, 403);

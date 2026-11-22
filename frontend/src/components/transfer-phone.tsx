@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, BatteryFull, Check, ChevronDown, Clock3, House, Landmark, LoaderCircle, LockKeyhole, Users, PhoneCall, ScanText, ShieldCheck, ShieldX, Signal, SlidersHorizontal, Smartphone, Wifi, XCircle } from "lucide-react";
-import { api, type AppConfig, type CallCheck, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, BatteryFull, Check, ChevronDown, ChevronRight, Clock3, House, Landmark, LoaderCircle, LockKeyhole, Users, PhoneCall, ScanText, ShieldCheck, ShieldX, Signal, SlidersHorizontal, Smartphone, Wifi, XCircle } from "lucide-react";
+import { api, type AppConfig, type CallCheck, type Evaluation, type PresetForm } from "@/lib/contracts";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
 import { groupAmount, rawAmount } from "@/lib/amount";
@@ -14,7 +14,8 @@ import { FamilyCallback } from "./family-callback";
 import { MessageCheck } from "./message-check";
 import { MarketOrderCheck } from "./market-order-check";
 import { PayeeCheck } from "./payee-check";
-import { recipientRef } from "@/lib/payee-check";
+import { fixtureContactName, recipientRef } from "@/lib/payee-check";
+import { ids } from "@/lib/demo-ids";
 import { CallLogResult } from "./call-log-result";
 import { TrustedCircle } from "./trusted-circle";
 import type { Biometrics } from "./use-biometrics";
@@ -53,9 +54,14 @@ interface Props {
 /** Synthetic balance of the demo card. It is labelled as a demo value wherever it is shown. */
 const DEMO_BALANCE = 1_250_000;
 const contextKeys = ["active_call", "from_deposit", "is_new_device"] as const;
+const contactSlots = [
+  { key: "normal", fallback: "contactOne", tone: "mint" },
+  { key: "scam", fallback: "contactTwo", tone: "lilac" },
+  { key: "hub", fallback: "contactThree", tone: "peach" },
+] as const;
 
 function maskRecipient(value: string, type: RecipientType) {
-  const compact = value.replace(/\s/g, "");
+  const compact = value.replace(/[\s()-]/g, "");
   if (type === "phone" && /^\+?7\d{10}$/.test(compact)) {
     const digits = compact.replace(/^\+?7/, "");
     return `+7 ••• ••• ${digits.slice(6, 8)} ${digits.slice(8)}`;
@@ -161,12 +167,16 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   const pressEnd = () => { if (hold.current.timer) { clearTimeout(hold.current.timer); hold.current.timer = null; } };
   const ReceiptIcon = silent ? Clock3 : receipt?.status === "approved" ? Check : receipt?.status === "cooling_off" ? Clock3 : receipt?.status === "cancelled" ? XCircle : ShieldX;
   const receiptCopy = silent ? "receiptProcessing" : receipt?.status === "approved" ? "receiptApproved" : receipt?.status === "cooling_off" ? "receiptHeld" : receipt?.status === "cancelled" ? "receiptCancelled" : "receiptBlocked";
-  const contacts = [
-    { key: "normal", name: config.mode === "demo" ? "Данияр" : t("contactOne"), initials: "ДА", tone: "mint" },
-    { key: "scam", name: config.mode === "demo" ? "Алексей" : t("contactTwo"), initials: "АК", tone: "lilac" },
-    { key: "hub", name: config.mode === "demo" ? "Марат" : t("contactThree"), initials: "МТ", tone: "peach" },
-  ] satisfies { key: Preset; name: string; initials: string; tone: string }[];
-  const chosenContact = recipientType === "phone" ? contacts.find(contact => config.presets[contact.key].recipient === form.recipient) : undefined;
+  const contactName = fixtureContactName(config, recipientType, form.recipient);
+  const hasDemoSource = (config.mode === "demo" || config.accountMode === "test") && form.sender.trim() === ids.sender;
+  const sourceName = hasDemoSource ? "#картакарта" : m("senderAccount");
+  const sourceCard = <div className="source-card">
+    <span className={hasDemoSource ? "card-thumbnail" : "source-account-icon"} aria-hidden="true">{hasDemoSource ? "#" : <Landmark size={20} />}</span>
+    <div className="source-name"><b className="card-brand">{sourceName}</b>{hasDemoSource && <small className="card-number">•••• 4821</small>}</div>
+    <div className="source-balance">{hasDemoSource
+      ? <><b className="tabular-nums">{money(DEMO_BALANCE, lang)}</b><small>{m("demoBalance")}</small></>
+      : <small>{m("balanceUnavailable")}</small>}</div>
+  </div>;
   const activeContext = contextKeys.filter(key => form.context[key]).length;
   const numericAmount = Number(form.amount);
   const title = screen === "returns" ? returnsTitle(lang) : screen === "home" ? m("tabHome") : screen === "circle" ? m("circle") : screen === "scam" ? m("scam")
@@ -196,11 +206,17 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
       <div className="phone-body">
         {offline && <p className="phone-alert warning" role="status">{m("offline")}</p>}
         {screen === "home" ? <section className="mobile-tool home-tools">
-          <div className="source-card"><small>{m("available")} · {m("demoValue")}</small><strong>{money(DEMO_BALANCE, lang)}</strong><span>•••• 4821</span></div>
-          <button type="button" className="primary" onClick={() => { if (receipt && !blocked) onNewTransfer(); if (step === "discarded") setStep("details"); setScreen("transfer"); }}><ArrowLeftRight size={18}/>{m("homeTransfer")}</button>
-          <button type="button" className="secondary" onClick={() => setScreen("circle")}><Users size={18}/>{m("circle")}</button>
-          {config.mode === "live" && config.accountMode === "test" && config.demoActionsEnabled && <button type="button" className="secondary" onClick={() => setScreen("returns")}><RotateCcw size={18}/>{returnsTitle(lang)}</button>}
-          <button type="button" className="secondary" onClick={() => setScreen("scam")}><ScanText size={18}/>{m("scam")}</button>
+          <section className="wallet-home-account" aria-labelledby="wallet-accounts-title">
+            <h3 id="wallet-accounts-title">{m("myAccounts")}</h3>
+            {sourceCard}
+            <button type="button" className="primary" onClick={() => { if (receipt && !blocked) onNewTransfer(); if (step === "discarded") setStep("details"); setScreen("transfer"); }}><ArrowLeftRight size={18} aria-hidden="true"/>{m("homeTransfer")}</button>
+          </section>
+          <section className="wallet-home-services" aria-labelledby="wallet-protection-title">
+            <h3 id="wallet-protection-title">{m("homeProtection")}</h3>
+            <button type="button" className="secondary" onClick={() => setScreen("circle")}><Users size={19} aria-hidden="true"/>{m("circle")}<ChevronRight size={16} aria-hidden="true"/></button>
+            {config.mode === "live" && config.accountMode === "test" && config.demoActionsEnabled && <button type="button" className="secondary" onClick={() => setScreen("returns")}><RotateCcw size={19} aria-hidden="true"/>{returnsTitle(lang)}<ChevronRight size={16} aria-hidden="true"/></button>}
+            <button type="button" className="secondary" onClick={() => setScreen("scam")}><ScanText size={19} aria-hidden="true"/>{m("scam")}<ChevronRight size={16} aria-hidden="true"/></button>
+          </section>
         </section> : screen === "returns" ? <IncomingReturns onReview={onReviewReturn} transferDisabled={busy || blocked || submissionPaused} /> : screen === "circle" ? <CircleMembers /> : screen === "scam" ? <MessageCheck /> : receipt ? <section className={`phone-receipt receipt-${silent ? "processing" : receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
           <div className="receipt-symbol" aria-hidden="true"><ReceiptIcon size={32} strokeWidth={1.8} /></div>
           {silent ? <span className="badge processing">{m("processingBadge")}</span> : <Badge status={receipt.status} />}
@@ -208,7 +224,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           <h3 id="phone-receipt-title">{silent ? m("processingTitle") : lang === "kk" ? receipt.headline_kk : receipt.headline_ru}</h3>
           <dl className="receipt-details">
             <div><dt>{m("recipientName")}</dt><dd>{receipt.recipient.display_name}<small>{receipt.recipient.iban_masked}</small></dd></div>
-            <div><dt>{m("fromCard")}</dt><dd>#картакарта •••• 4821</dd></div>
+            <div><dt>{m("fromCard")}</dt><dd>{sourceName}{hasDemoSource && " •••• 4821"}</dd></div>
             <div><dt>{m("operationShort")}</dt><dd className="tabular-nums" title={receipt.transaction_id}>…{receipt.transaction_id.slice(-8)}</dd></div>
           </dl>
           <p className="receipt-explanation" role="status">{m(receiptCopy)}</p>
@@ -232,8 +248,8 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           <h3 id="confirm-title" ref={confirmHeading} tabIndex={-1} className="sr-only">{m("stepConfirm")}</h3>
           <div className="confirm-amount"><span>{t("transferAmount")}</span><strong className="tabular-nums">{money(form.amount, lang)}</strong></div>
           <dl className="confirm-list">
-            <div><dt>{m("recipientName")}</dt><dd>{chosenContact ? <><b>{chosenContact.name}</b><small>{maskRecipient(form.recipient, recipientType)}</small></> : <><b>{maskRecipient(form.recipient, recipientType)}</b><small>{m("recipientUnverified")}</small></>}</dd></div>
-            <div><dt>{m("fromCard")}</dt><dd><b>#картакарта •••• 4821</b><small>{m("available")}: {money(DEMO_BALANCE, lang)} · {m("demoValue")}</small></dd></div>
+            <div><dt>{m("recipientName")}</dt><dd>{contactName ? <><b>{contactName}</b><small>{maskRecipient(form.recipient, recipientType)}</small></> : <><b>{maskRecipient(form.recipient, recipientType)}</b><small>{m("recipientUnverified")}</small></>}</dd></div>
+            <div><dt>{m("fromCard")}</dt><dd><b>{sourceName}{hasDemoSource && " •••• 4821"}</b><small>{hasDemoSource ? `${m("demoBalance")} · ${money(DEMO_BALANCE, lang)}` : m("balanceUnavailable")}</small></dd></div>
             <div><dt>{m("feeLabel")}</dt><dd><b>{m("feeValue")}</b></dd></div>
             <div><dt>{m("creditTime")}</dt><dd><b>{m("creditValue")}</b></dd></div>
             <div className="confirm-total"><dt>{m("totalLabel")}</dt><dd><b className="tabular-nums">{money(form.amount, lang)}</b></dd></div>
@@ -264,24 +280,23 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           <fieldset disabled={busy || blocked} className="phone-fields">
             <section className="phone-section" aria-labelledby="source-label">
               <p id="source-label" className="field-label">{m("fromCard")}</p>
-              <div className="source-card" aria-label="#картакарта •••• 4821">
-                <div className="source-top"><span><span className="card-brand">#картакарта</span><small className="card-kind">{m("cardKind")}</small></span><span className="card-bank">bcc</span></div>
-                <div className="source-bottom"><span className="card-chip" aria-hidden="true" /><span className="card-number">•••• 4821</span><span className="card-currency">KZT</span></div>
-              </div>
-              <p className="source-balance"><span>{m("available")}</span><b className="tabular-nums">{money(DEMO_BALANCE, lang)}</b><em>{m("demoValue")}</em></p>
+              {sourceCard}
             </section>
             <section className="phone-section" aria-labelledby="recipient-label">
               <div className="field-heading"><label id="recipient-label" htmlFor="recipient">{m("toWhom")}</label><div className="segmented" role="group" aria-label={t("recipient")}>{(["phone", "card", "iban"] as const).map(type => <button key={type} type="button" aria-pressed={recipientType === type} onClick={() => {
                 sensor.reset(); setRecipientType(type); setForm(v => ({ ...v, recipient: "", context: { ...v.context, is_new_recipient: undefined } }));
               }}>{t(type)}</button>)}</div></div>
               {recipientType === "phone" && <div className="contact-list" role="group" aria-label={t("quickContacts")}>
-                {contacts.map(contact => {
+                {contactSlots.map((contact, index) => {
                   const phone = config.presets[contact.key].recipient;
                   const active = !!phone && form.recipient === phone;
-                  return <button key={contact.key} type="button" className={`contact ${active ? "selected" : ""}`} disabled={busy || !phone} aria-pressed={active} aria-label={`${t("contactHint")}: ${contact.name}`} onClick={() => {
+                  const displayName = fixtureContactName(config, "phone", phone);
+                  const label = displayName?.split(" ")[0] ?? t(contact.fallback);
+                  const initials = displayName?.split(" ").map(part => part[0]).join("") ?? String(index + 1);
+                  return <button key={contact.key} type="button" className={`contact ${active ? "selected" : ""}`} disabled={busy || !phone} aria-pressed={active} aria-label={`${t("contactHint")}: ${displayName ?? label}`} onClick={() => {
                     sensor.reset(); setRecipientType("phone");
                     setForm(v => ({ ...v, recipient: phone, context: { ...v.context, is_new_recipient: undefined } }));
-                  }}><span className={`avatar ${contact.tone}`}>{config.mode === "demo" ? contact.initials : contact.name.slice(-1)}{active && <i><Check size={10} strokeWidth={3} /></i>}</span><span className="contact-name">{contact.name}</span></button>;
+                  }}><span className={`avatar ${contact.tone}`} aria-hidden="true">{initials}{active && <i><Check size={10} strokeWidth={3} /></i>}</span><span className="contact-name">{label}</span></button>;
                 })}
               </div>}
               <div className="recipient-input"><input id="recipient" required value={form.recipient} inputMode={recipientType === "iban" ? "text" : "tel"} autoComplete="off" placeholder={recipientType === "phone" ? "+7 701 000 00 02" : recipientType === "card" ? "4400 0000 0000 0002" : "KZ000000000000000002"} onFocus={e => sensor.focus("recipient", e.target.value.length)} onBlur={() => sensor.blur("recipient")} onPaste={() => sensor.paste("recipient")} onChange={e => { sensor.input("recipient", e); setForm(v => ({ ...v, recipient: e.target.value, context: { ...v.context, is_new_recipient: undefined } })); }} /></div>
@@ -291,7 +306,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
               <label id="amount-label" htmlFor="transfer-amount" className="field-label">{m("howMuch")}</label>
               <div className="amount-input"><input id="transfer-amount" required type="text" inputMode="decimal" autoComplete="off" maxLength={18} aria-describedby="amount-hint" pattern="[0-9\s ]*[1-9][0-9\s ]*([.,][0-9]{1,2})?|[0\s ]*[.,]([1-9][0-9]?|0[1-9])" value={groupAmount(form.amount)} onFocus={e => sensor.focus("amount", e.target.value.length)} onBlur={() => sensor.blur("amount")} onPaste={() => sensor.paste("amount")} onChange={e => { const raw = rawAmount(e.target.value); if (raw === null) return; sensor.input("amount", e); setForm(v => ({ ...v, amount: raw })); }} /><span aria-hidden="true">₸</span></div>
               <div className="amount-pills" role="group" aria-label={t("quickAmounts")}>{[5000, 25000, 100000].map(value => <button key={value} type="button" aria-pressed={numericAmount === value} onClick={() => { sensor.blur("amount"); setForm(v => ({ ...v, amount: String(value) })); }}>{money(value, lang)}</button>)}</div>
-              <p id="amount-hint" className={`input-hint${numericAmount > DEMO_BALANCE ? " warn" : ""}`}>{m("feeLabel")}: {m("feeValue")}{numericAmount > DEMO_BALANCE ? ` · ${m("available")}: ${money(DEMO_BALANCE, lang)} (${m("demoValue")})` : ""}</p>
+              <p id="amount-hint" className={`input-hint${hasDemoSource && numericAmount > DEMO_BALANCE ? " warn" : ""}`}>{m("feeLabel")}: {m("feeValue")}{hasDemoSource && numericAmount > DEMO_BALANCE ? ` · ${m("demoBalance")} · ${money(DEMO_BALANCE, lang)}` : ""}</p>
             </section>
             <details ref={contextDetails} className="demo-context">
               <summary><SlidersHorizontal size={16} aria-hidden="true" /><span>{m("demoContextTitle")}</span>{activeContext > 0 && <em>{activeContext} {m("demoContextActive")}</em>}<ChevronDown size={16} aria-hidden="true" className="chevron" /></summary>

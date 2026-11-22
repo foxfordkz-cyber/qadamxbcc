@@ -143,6 +143,14 @@ class AnswerReceipt(BaseModel):
 OUTCOME_REASONS = frozenset({"confirmed_fraud", "legitimate_transfer", "insufficient_evidence"})
 
 
+class PolicyResult(BaseModel):
+    threshold: int | None
+    extra_holds: int
+    missed_fraud: int | None
+    false_interventions: int | None
+    false_per_1000_legitimate: float | None
+
+
 class PolicyComparison(BaseModel):
     sampled: int = 0
     evaluated: int = 0
@@ -154,6 +162,10 @@ class PolicyComparison(BaseModel):
     candidate_detected: int = 0
     baseline_false_interventions: int = 0
     candidate_false_interventions: int = 0
+    first_sample_at: datetime | None = None
+    last_sample_at: datetime | None = None
+    label_coverage: float | None = None
+    policies: list[PolicyResult] = Field(default_factory=list)
 
 
 class CaseAnalytics(BaseModel):

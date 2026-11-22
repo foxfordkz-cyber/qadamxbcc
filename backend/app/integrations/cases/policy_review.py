@@ -1,4 +1,4 @@
-"""Read-only paired replay of the recorded decision and an earlier holding threshold."""
+"""Read-only paired replay of extra holds against immutable initial decisions."""
 
 import uuid
 from collections import defaultdict
@@ -8,27 +8,32 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.cases.models import CaseEvent, FraudCase
-from app.integrations.cases.schemas import OUTCOME_REASONS, PolicyComparison
+from app.integrations.cases.schemas import OUTCOME_REASONS, PolicyComparison, PolicyResult
 from app.integrations.models import GuardianReport
 from app.models import Transaction
 
 
-async def compare_policies(session: AsyncSession, now: datetime) -> PolicyComparison:
-    # Bound work and examine the immutable initial evaluation, including for a later cancellation.
+async def compare_policies(
+    session: AsyncSession, now: datetime, *, start: datetime | None = None
+) -> PolicyComparison:
+    query = select(
+        Transaction.id,
+        Transaction.created_at,
+        Transaction.evaluation_snapshot["status"].label("initial_status"),
+        Transaction.evaluation_snapshot["risk_score"].label("initial_score"),
+    ).where(Transaction.created_at <= now)
+    if start is not None:
+        query = query.where(Transaction.created_at >= start)
     sample = (
         await session.execute(
-            select(
-                Transaction.id,
-                Transaction.evaluation_snapshot["status"].label("initial_status"),
-                Transaction.evaluation_snapshot["risk_score"].label("initial_score"),
-            )
-            .order_by(Transaction.created_at.desc(), Transaction.id.desc())
-            .limit(100)
+            query.order_by(Transaction.created_at.desc(), Transaction.id.desc()).limit(100)
         )
     ).all()
-    metrics = PolicyComparison(sampled=len(sample))
-    if not sample:
-        return metrics
+    metrics = PolicyComparison(
+        sampled=len(sample),
+        first_sample_at=sample[-1].created_at if sample else None,
+        last_sample_at=sample[0].created_at if sample else None,
+    )
     labels: dict[uuid.UUID, set[str]] = defaultdict(set)
     reason = CaseEvent.result["reason"].as_string()
     rows = await session.execute(
@@ -51,24 +56,56 @@ async def compare_policies(session: AsyncSession, now: datetime) -> PolicyCompar
     for tx_id, outcome in rows:
         if tx_id is not None:
             labels[tx_id].add(outcome)
-    for tx_id, decision, score in sample:
+    # Each eligible transfer appears once, even when multiple cases refer to it.
+    observations: list[tuple[bool, int, str | None]] = []
+    for tx_id, _, decision, score in sample:
         if (
             decision not in {"approved", "cooling_off", "blocked"}
             or type(score) is not int
             or not 0 <= score <= 100
         ):
             continue
-        metrics.evaluated += 1
-        baseline = decision in {"cooling_off", "blocked"}
-        candidate = baseline or score >= metrics.candidate_threshold
-        metrics.extra_holds += int(candidate and not baseline)
-        # Multiple cases may refer to one transfer. Disagreement is not ground truth.
-        if labels[tx_id] == {"confirmed_fraud"}:
-            metrics.fraud_labelled += 1
-            metrics.baseline_detected += int(baseline)
-            metrics.candidate_detected += int(candidate)
-        elif labels[tx_id] == {"legitimate_transfer"}:
-            metrics.legitimate_labelled += 1
-            metrics.baseline_false_interventions += int(baseline)
-            metrics.candidate_false_interventions += int(candidate)
+        outcomes = labels[tx_id]
+        label = next(iter(outcomes)) if len(outcomes) == 1 else None
+        observations.append((decision != "approved", score, label))
+
+    metrics.evaluated = len(observations)
+    metrics.fraud_labelled = sum(label == "confirmed_fraud" for _, _, label in observations)
+    metrics.legitimate_labelled = sum(
+        label == "legitimate_transfer" for _, _, label in observations
+    )
+    if observations:
+        metrics.label_coverage = (metrics.fraud_labelled + metrics.legitimate_labelled) / len(
+            observations
+        )
+
+    for threshold in (None, 25, 30, metrics.candidate_threshold, 40):
+        missed = false_holds = extra_holds = 0
+        for held, score, label in observations:
+            extra = not held and threshold is not None and score >= threshold
+            extra_holds += int(extra)
+            intervened = held or extra
+            missed += int(label == "confirmed_fraud" and not intervened)
+            false_holds += int(label == "legitimate_transfer" and intervened)
+        metrics.policies.append(
+            PolicyResult(
+                threshold=threshold,
+                extra_holds=extra_holds,
+                missed_fraud=missed if metrics.fraud_labelled else None,
+                false_interventions=false_holds if metrics.legitimate_labelled else None,
+                false_per_1000_legitimate=(
+                    1000 * false_holds / metrics.legitimate_labelled
+                    if metrics.legitimate_labelled
+                    else None
+                ),
+            )
+        )
+        # Keep the original API's baseline and threshold-35 projection for older clients.
+        if threshold is None:
+            metrics.baseline_detected = metrics.fraud_labelled - missed
+            metrics.baseline_false_interventions = false_holds
+        elif threshold == metrics.candidate_threshold:
+            metrics.extra_holds = extra_holds
+            metrics.candidate_detected = metrics.fraud_labelled - missed
+            metrics.candidate_false_interventions = false_holds
     return metrics

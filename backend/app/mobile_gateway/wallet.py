@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import SessionDep
 from app.db.base import utcnow
 from app.integrations.cases.models import FraudCase
+from app.integrations.cases.policy_review import compare_policies
 from app.integrations.cases.schemas import CaseOut, State
 from app.mobile_gateway.app import IdentityDep
 from app.mobile_gateway.protection import client
@@ -273,7 +274,9 @@ def install_wallet(app: FastAPI) -> None:
         }
 
     @app.get(base + "/soc")
-    async def soc(principal: IdentityDep, session: SessionDep, days: int = 7) -> dict[str, Any]:
+    async def soc(
+        principal: IdentityDep, session: SessionDep, days: int = 7, include_policy: bool = False
+    ) -> dict[str, Any]:
         if principal.role != "admin":
             raise HTTPException(403, "soc_required")
         first, start, end = window(days)
@@ -333,4 +336,9 @@ def install_wallet(app: FastAPI) -> None:
             "p95_engine_ms": sample[math.ceil(len(sample) * 0.95) - 1] if sample else None,
             "latency_sample_size": len(sample),
             "latency_sample_limit": LATENCY_SAMPLE_LIMIT,
+            **(
+                {"policy_comparison": await compare_policies(session, end, start=start)}
+                if include_policy
+                else {}
+            ),
         }

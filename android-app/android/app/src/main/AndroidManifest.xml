@@ -3,7 +3,7 @@
     <application
         android:allowBackup="false"
         android:icon="@drawable/qadam_mark"
-        android:label="@string/app_name"
+        android:label="${appLabel}"
         android:roundIcon="@drawable/qadam_mark"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
@@ -12,7 +12,7 @@
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
-            android:label="@string/title_activity_main"
+            android:label="${activityLabel}"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
             android:exported="true">

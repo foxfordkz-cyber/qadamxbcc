@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -17,15 +18,11 @@ def git(*args: str) -> bytes:
     return subprocess.check_output(["git", *args], cwd=ROOT)
 
 
-def verify(apksigner: str | None) -> None:
-    version = json.loads((ROOT / "android-app/package.json").read_bytes())["version"].removesuffix(".0")
-    if not re.fullmatch(r"\d+(?:\.\d+){1,2}", version):
-        raise ValueError("Invalid release version")
-    base = ROOT / "deliverables/android" / f"Saq-Bol-Android-{version}"
-    apk = base.parent / (base.name + ".apk")
-    record = json.loads((base.parent / (base.name + ".json")).read_bytes())
+def verify(folder: Path, version: str, package: str, apksigner: str | None) -> None:
+    apk = folder / f"Saq-Bol-Android-{version}.apk"
+    record = json.loads(apk.with_suffix(".json").read_bytes())
     source = record["apk_source_commit"]
-    if record["version"] != version or not re.fullmatch(r"[0-9a-f]{40}", source):
+    if record["package"] != package or record["version"] != version or not re.fullmatch(r"[0-9a-f]{40}", source):
         raise ValueError("Invalid release record")
     if hashlib.sha256(apk.read_bytes()).hexdigest() != record["apk_sha256"]:
         raise ValueError("Packaged APK digest differs from the release record")
@@ -53,11 +50,23 @@ def verify(apksigner: str | None) -> None:
             raise ValueError("apksigner verified the APK but returned no signing certificate digest")
         if [value.lower() for value in digests] != [record["certificate_sha256"]]:
             raise ValueError(f"Unexpected Android signing certificate fingerprints: {digests}")
-        print("Android signature and certificate match the release record.")
+        aapt = Path(apksigner).with_name("aapt.exe" if os.name == "nt" else "aapt")
+        badging = subprocess.check_output([str(aapt), "dump", "badging", str(apk)], encoding="utf-8")
+        identity = re.search(r"^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging, re.M)
+        if not identity or identity.groups() != (package, str(record["versionCode"]), version):
+            raise ValueError("Android package ID or version differs from the release record")
+        if package.endswith(".website") and "application-debuggable" in badging.splitlines():
+            raise ValueError("Website APK must have debugging disabled")
+        print(f"Verified Android signature, certificate and package {package} (build {record['versionCode']}).")
     print(f"APK {version}: SHA-256 and all {len(files)} UI files verified against {source}.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apksigner", help="Android SDK apksigner executable to verify the signature")
-    verify(parser.parse_args().apksigner)
+    signer = parser.parse_args().apksigner
+    version = json.loads((ROOT / "android-app/package.json").read_bytes())["version"].removesuffix(".0")
+    if not re.fullmatch(r"\d+(?:\.\d+){1,2}", version):
+        raise ValueError("Invalid release version")
+    verify(ROOT / "deliverables/android", version, "kz.qadamx.bccshield.demo", signer)
+    verify(ROOT / "frontend/public/downloads", version, "kz.qadamx.bccshield.website", signer)

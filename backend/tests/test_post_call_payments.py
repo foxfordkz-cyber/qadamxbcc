@@ -4,6 +4,7 @@ import hashlib
 import json
 import uuid
 from dataclasses import replace
+from decimal import Decimal
 
 import pytest
 
@@ -13,7 +14,10 @@ from app.services.antifraud import (
     NEW_PAYEE_NIGHT_RULE,
     POST_CALL_PAYMENT_RULE,
     AntifraudEngine,
+    Evaluation,
+    TransferContext,
 )
+from app.services.transfers import TransferService
 from tests.test_antifraud import DAY, ctx
 from tests.test_antifraud import engine as engine
 from tests.test_api import API, CLEAN, NIGHT, World
@@ -52,6 +56,36 @@ async def test_night_review_requires_all_three_signals(
         assert matching[0].evidence["ratio"] == "3,0"
     else:
         assert result.decision is TransactionStatus.APPROVED
+
+
+async def test_review_asks_if_only_an_ended_call_changes_the_decision(
+    world: World, engine: AntifraudEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payer, payee = world.acc["dana"], world.acc["scammer"]
+    # The resident graph has seen a connection, but SQL records no settled payment.
+    engine.graph.add_transfer(str(payer.id), str(payee.id), 1000)
+    payment = TransferEvaluateRequest(
+        sender_id=payer.id, recipient_id=payee.id, amount=Decimal("50000"), occurred_at=DAY
+    )
+    outcomes = []
+    evaluate = engine.evaluate
+
+    async def observe(context: TransferContext, *, record_attempt: bool = True) -> Evaluation:
+        assert not record_attempt
+        result = await evaluate(context, record_attempt=record_attempt)
+        outcomes.append(
+            (context.active_call, context.payment_requested_after_call, result.decision)
+        )
+        return result
+
+    monkeypatch.setattr(engine, "evaluate", observe)
+    async with world.sessions() as session:
+        assert await TransferService(session, engine).should_ask_about_call(payment)
+    assert outcomes == [
+        (False, False, TransactionStatus.APPROVED),
+        (True, False, TransactionStatus.APPROVED),
+        (False, True, TransactionStatus.COOLING_OFF),
+    ]
 
 
 async def test_floor_never_increases_a_block_and_does_not_double_count_reports(
