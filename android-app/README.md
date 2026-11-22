@@ -1,5 +1,7 @@
 # Saq Bol × BCC · Android
 
+Кандидат 2.9 (14) для Honor и сборка из исходников описаны в [инструкции для Айданы](../docs/ANDROID_STUDIO_HANDOFF_RU.md). Проверка подписи и контрольной суммы приведена в [паспорте выпуска](../frontend/public/downloads/current.json). Состояние публичной кнопки и результаты проверки ролей указаны в [матрице приёмки](../docs/FINAL_ACCEPTANCE_RU.md).
+
 Android 2.7 жинағы, оның SHA-256 мәні және команданың орнату беті [Android нұсқаулығында](../docs/ANDROID.md). Сборка Android 2.7, её контрольная сумма и ссылка на установку с телефона приведены в [инструкции Android](../docs/ANDROID.md).
 
 Для сборки сайта установите `QADAM_WEBSITE_APK=1` перед запуском `assembleDebug`. Получится пакет `kz.qadamx.bccshield.website` с отключённой отладкой для командного HTTPS-сервера. Перед публикацией проверьте подпись, SHA-256 и исходную ревизию командой `python android-app/scripts/verify-release.py --apksigner <путь-к-apksigner>` из корня репозитория.
