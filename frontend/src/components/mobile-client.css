@@ -36,7 +36,8 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .phone-frame .segmented button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
 .source-card { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; min-width: 0; color: var(--ink); }
 .card-thumbnail, .source-account-icon { display: grid; place-items: center; flex: none; width: 42px; height: 29px; border-radius: 6px; }
-.card-thumbnail { position: relative; isolation: isolate; overflow: hidden; background: #163e35; color: #c4f7d9; font-size: 23px; font-weight: 750; font-style: italic; line-height: 1; }
+.card-thumbnail { position: relative; isolation: isolate; overflow: hidden; background: #163e35; }
+.card-mark { position: absolute; inset: 4px auto auto 4px; }
 .card-thumbnail::after { content: ""; position: absolute; inset: -16px -9px -17px 22px; z-index: -1; border: 6px solid #26725a; border-radius: 45%; transform: rotate(-24deg); }
 .source-account-icon { background: var(--emerald-soft); color: var(--emerald-ink); }
 .source-name, .source-balance { display: grid; gap: 2px; min-width: 0; }
@@ -137,9 +138,8 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .mobile-cooling { width: min(560px, calc(100vw - 24px)); padding: 0; overflow-y: auto; }
 .mobile-cooling > * { margin-left: 24px; margin-right: 24px; }
 .cooling-toolbar { display: flex; align-items: center; gap: 10px; margin: 0 !important; padding: 16px 20px 14px 24px; position: sticky; top: 0; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--line); }
-.sheet-mark { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; background: var(--amber-soft); color: var(--amber-ink); }
+.sheet-mark { display: block; width: 34px; height: 34px; flex-shrink: 0; }
 .sheet-wordmark { flex: 1; min-width: 0; font-size: 18px; font-weight: 750; letter-spacing: -.03em; white-space: nowrap; }
-.sheet-wordmark span { font-weight: 400; color: var(--ink-3); }
 .sheet-close { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; background: var(--surface-3); color: var(--ink-3); }
 .sheet-close:hover:not(:disabled) { background: var(--line); color: var(--ink); }
 .cooling-stages { display: flex; justify-content: space-between; gap: 6px; padding: 0; margin-top: 18px; margin-bottom: 16px; list-style: none; }

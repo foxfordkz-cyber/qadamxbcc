@@ -18,7 +18,7 @@ Focused regression tests in `tests/cooling-flow.test.ts` and `tests/mobile-sessi
 
 `/mobile` renders the same `App` from `shield-app.tsx` with `layout="phone"`: only the phone screen at full width, without the bezel, the fake status bar, the "Решение Saq Bol" panel, the demo presets and the SOC tab. Logic is not duplicated: recovery, the cooling sheet, drafts and ҚАЗ/РУС work exactly as on `/`. `TransferPhone` takes `bare` for this mode; styles are the `.phone-stage.is-bare` / `.mobile-shell` block at the end of `mobile-client.css` (safe areas, sticky tab bar, `interactive-widget=resizes-content` so the keyboard does not cover "Продолжить").
 
-`src/app/manifest.ts` (start URL `/mobile`, theme `#00A859`, icons in `public/icons/`, `apple-icon.png`) lets the page be added to the home screen and open full-screen.
+`src/app/manifest.ts` opens the installed web app at `/mobile` using the Saq Bol mark and the `#00644B` theme color. The manifest also supports the GitHub Pages project path.
 
 The SOC header has a QR button ("Открыть на телефоне"). It encodes `<this origin>/mobile`; when the SOC is opened on `localhost`, it asks `GET /mobile/link` for the laptop's private Wi-Fi address. In the pilot it uses `BCC_PUBLIC_ORIGIN`.
 

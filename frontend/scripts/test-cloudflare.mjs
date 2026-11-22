@@ -66,6 +66,7 @@ try {
     assert.ok(html.includes("Saq Bol"), pathname);
     if (pathname !== "/pitch") {
       const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
+      assert.match(header, /<img\b[^>]*src="\/saq-bol-mark\.svg"/, pathname);
       assert.match(header, /<a\b[^>]*href="https:\/\/saq-bol-jury\.onrender\.com\/"[^>]*>[\s\S]*?Қазылар кабинеті<\/a>/, pathname);
       assert.ok(html.includes('href="https://saq-bol-mobile.onrender.com/wallet/"'), pathname);
     }
@@ -79,6 +80,10 @@ try {
   assert.equal((await (await fetch("/health")).json()).status, "ok");
   assert.deepEqual(await (await fetch("/mobile/link")).json(), { origins: [origin] });
   assert.equal((await fetch("/icons/icon-192.png")).status, 200);
+  const mark = await fetch("/saq-bol-mark.svg");
+  assert.equal(mark.status, 200);
+  assert.match(mark.headers.get("content-type") ?? "", /image\/svg\+xml/);
+  assert.equal(await mark.text(), await readFile("public/saq-bol-mark.svg", "utf8"));
   const apkPath = "/downloads/Saq-Bol-Android-2.7.apk";
   const apk = await fetch(apkPath);
   assert.equal(apk.status, 200, "Android installer must be available without a login");

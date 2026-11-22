@@ -3,7 +3,8 @@
 import { Suspense, useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import Link from "next/link";
 import connectedWallet from "@/lib/connected-wallet.json";
-import { Activity, ArrowRight, CircleHelp, Download, LogIn, Network, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
+import { Activity, ArrowRight, CircleHelp, Download, LogIn, Network, PhoneCall, Smartphone } from "lucide-react";
+import { BrandMark } from "./brand-mark";
 import { api, ApiError, transferSchema, type AbandonResult, type Answers, type AppConfig, type CallCheck, type Context, type Evaluation, type Preset, type PresetForm } from "@/lib/contracts";
 import { reconcileTraffic, type TrafficRecord } from "@/lib/traffic";
 import type { FeedItem } from "@/lib/contracts";
@@ -344,7 +345,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   );
   if (layout === "officer") return <>
     <header className="topbar"><div className="topbar-inner"><div className="brand">
-      <span className="brand-mark"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("officerWorkspace")}</small></div>
+      <BrandMark /><div><strong>Saq Bol<span> × BCC</span></strong><small>{t("officerWorkspace")}</small></div>
     </div>{juryEntry}{languageSwitch}</div></header>
     <main className="shell">
       {showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("staffWalletLogin")}<ArrowRight size={15} aria-hidden="true" /></a>}
@@ -357,7 +358,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   // /mobile: the same client logic on a real smartphone — no bezel, decision panel or SOC tab.
   if (layout === "phone") return <>
     <header className="topbar mobile-topbar"><div className="topbar-inner">
-      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={18} /></span><div><strong>saq<span> bol × BCC</span></strong></div></div>
+      <div className="brand"><BrandMark /><div><strong>Saq Bol<span> × BCC</span></strong></div></div>
       {juryEntry}{languageSwitch}
     </div></header>
     <main className="mobile-shell">
@@ -370,7 +371,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   </>;
   return <>
     <header className="topbar"><div className="topbar-inner">
-      <div className="brand"><span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} /></span><div><strong>saq<span> bol × BCC</span></strong><small>{t("prototypeIdentity")}</small></div></div>
+      <div className="brand"><BrandMark /><div><strong>Saq Bol<span> × BCC</span></strong><small>{t("prototypeIdentity")}</small></div></div>
       {juryEntry}<div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span>{languageSwitch}</div>
     </div></header>
     <main className="shell">
