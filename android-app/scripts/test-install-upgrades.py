@@ -26,10 +26,10 @@ def main():
         args.error("Use a dedicated emulator for the upgrade test")
 
     def adb(*cmd):
-        return subprocess.check_output(["adb", "-s", serial, *map(str, cmd)], text=True, timeout=120).strip()
+        return subprocess.check_output(["adb", "-s", serial, *map(str, cmd)], encoding="utf-8", timeout=180).strip()
 
     def install(apk):
-        if adb("install", "-r", apk).splitlines()[-1] != "Success":
+        if adb("install", "--no-streaming", "-r", apk).splitlines()[-1] != "Success":
             raise ValueError(f"Android did not install {apk.name}")
 
     def identity(package, code):
@@ -46,8 +46,18 @@ def main():
         activity = adb("shell", "cmd", "package", "resolve-activity", "--brief", package).splitlines()[-1]
         if not activity.startswith(package + "/"):
             raise ValueError(f"Missing {package} launcher activity")
-        if "Status: ok" not in adb("shell", "am", "start", "-W", "-n", activity):
-            raise ValueError(f"Could not launch {activity}")
+        result = adb("shell", "am", "start", "-W", "-n", activity)
+        if "Status: ok" in result:
+            return
+        if "Status: timeout" in result:
+            # A slow first WebView draw can outlast Activity Manager's wait.
+            # Confirm the resumed activity in Android before testing its UI.
+            for _ in range(10):
+                state = adb("shell", "dumpsys", "activity", "activities")
+                if re.search(r"(?:topResumedActivity|mResumedActivity)[^\n]*" + re.escape(activity), state):
+                    return
+                time.sleep(1)
+        raise ValueError(f"Could not launch {activity}: {result}")
 
     def verify_clean_install(package, channel, apk, record):
         install(apk)
