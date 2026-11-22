@@ -80,18 +80,24 @@ try {
   assert.equal((await (await fetch("/health")).json()).status, "ok");
   assert.deepEqual(await (await fetch("/mobile/link")).json(), { origins: [origin] });
   assert.equal((await fetch("/icons/icon-192.png")).status, 200);
-  const release = await (await fetch("/downloads/current.json")).json();
-  const apkPath = release.url;
   const mark = await fetch("/saq-bol-mark.svg");
   assert.equal(mark.status, 200);
   assert.match(mark.headers.get("content-type") ?? "", /image\/svg\+xml/);
   assert.equal(await mark.text(), await readFile("public/saq-bol-mark.svg", "utf8"));
+  const release = await (await fetch("/downloads/current.json")).json();
+  const apkPath = release.url;
   const apk = await fetch(apkPath);
   assert.equal(apk.status, 200, "Android installer must be available without a login");
-  assert.ok((await (await fetch("/download/android/")).text()).includes(apkPath));
+  const installerHtml = await (await fetch("/download/android")).text();
+  assert.ok(installerHtml.includes(apkPath));
+  const team = await (await fetch("/downloads/team.json")).json();
+  assert.equal(team.package, "kz.qadamx.bccshield.demo");
+  assert.equal(release.package, "kz.qadamx.bccshield.website");
+  assert.ok(installerHtml.includes(team.url));
+  assert.notEqual(team.url, apkPath);
   assert.equal(createHash("sha256").update(Buffer.from(await apk.arrayBuffer())).digest("hex"), release.apk_sha256);
   for (const pathname of ["/", "/mobile"]) {
-    assert.ok((await (await fetch(pathname)).text()).includes('href="/download/android/"'), `${pathname} is missing the installer link`);
+    assert.ok((await (await fetch(pathname)).text()).includes('href="/download/android'), `${pathname} is missing the installer link`);
   }
   assert.deepEqual(await (await fetch("/api/v1/soc/feed")).json(), { items: [], total: 0 });
   const publicWrite = { method: "POST", headers: { origin, "content-type": "application/json" }, body: "{}" };

@@ -4943,6 +4943,11 @@
       },
       "EvidenceOut": {
         "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
           "report_available": {
             "type": "boolean",
             "title": "Report Available"
@@ -4959,6 +4964,16 @@
             ],
             "title": "Transaction Id"
           },
+          "recipient_ledger": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipientLedger"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "report_events": {
             "items": {
               "$ref": "#/components/schemas/AuditOut"
@@ -4974,8 +4989,10 @@
         },
         "type": "object",
         "required": [
+          "case_id",
           "report_available",
           "transaction_id",
+          "recipient_ledger",
           "report_events"
         ],
         "title": "EvidenceOut"
@@ -6567,6 +6584,41 @@
         ],
         "title": "JobPage"
       },
+      "LedgerEntry": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "incoming",
+              "outgoing"
+            ],
+            "title": "Direction"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount"
+          },
+          "settled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Settled At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "direction",
+          "amount",
+          "settled_at"
+        ],
+        "title": "LedgerEntry"
+      },
       "MLContributorOut": {
         "properties": {
           "feature": {
@@ -7664,6 +7716,39 @@
           "updated_at"
         ],
         "title": "RecipientFlagState"
+      },
+      "RecipientLedger": {
+        "properties": {
+          "from_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "From Time"
+          },
+          "before_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Before Time"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntry"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from_time",
+          "before_time",
+          "items",
+          "has_more"
+        ],
+        "title": "RecipientLedger"
       },
       "ReportOut": {
         "properties": {

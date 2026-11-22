@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.api.deps import SessionDep
 from app.db.base import utcnow
 from app.integrations.cases import service
+from app.integrations.cases.ledger import RecipientLedger, recipient_ledger
 from app.integrations.cases.models import CaseContent, CaseEvent
 from app.integrations.cases.schemas import (
     Action,
@@ -182,8 +183,10 @@ async def notes(
 
 
 class EvidenceOut(BaseModel):
+    case_id: uuid.UUID
     report_available: bool
     transaction_id: uuid.UUID | None
+    recipient_ledger: RecipientLedger | None
     report_events: list[AuditOut]
     advisory_only: bool = True
 
@@ -207,9 +210,13 @@ async def evidence(
         .order_by(IntegrationAudit.created_at)
         .limit(20)
     )
+    tx_id = report.transaction_id if report and available and report.contact_id is None else None
+    ledger = await recipient_ledger(session, tx_id, report.owner_id) if tx_id and report else None
     return EvidenceOut(
+        case_id=row.id,
         report_available=available,
-        transaction_id=report.transaction_id if report and available else None,
+        transaction_id=tx_id if ledger is not None else None,
+        recipient_ledger=ledger,
         report_events=[AuditOut.model_validate(e) for e in events],
     )
 

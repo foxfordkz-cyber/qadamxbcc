@@ -633,4 +633,27 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
   .scenario-results th, .scenario-results td { padding: .4rem .18rem; }
 }
 
-.android-download{display:flex;align-items:center;gap:1rem;max-width:32rem;padding:.8rem;border:1px solid #bdd6ca;border-radius:1rem;background:#f4faf7;color:#143c30}.android-download small{display:block;font-size:.82rem;margin-top:.3rem}.install-sheet{max-width:34rem;margin:8vh auto;padding:1.5rem}.install-sheet code{overflow-wrap:anywhere}
+.installer { width: min(100%, 760px); margin: 0 auto; padding: clamp(16px, 4vw, 40px); color: #101828; }
+.installer-nav, .installer-back, .installer-action, .installer-browser { display: flex; align-items: center; gap: 8px; }
+.installer-nav { justify-content: space-between; margin-bottom: 24px; }
+.installer-back, .installer-browser, .installer-help a { font-weight: 650; color: #006943; }
+.installer-back, .installer-browser { min-height: 44px; }
+.installer-card, .installer-help { background: #fff; border: 1px solid #dfe7e3; border-radius: 24px; padding: clamp(20px, 4vw, 36px); }
+.installer-card { display: flex; align-items: center; gap: 28px; justify-content: space-between; box-shadow: 0 10px 36px #143c300a; }
+.installer-main { max-width: 390px; }
+.installer-main h1 { margin: 18px 0 8px; font-size: clamp(32px, 5vw, 44px); line-height: 1.05; letter-spacing: -.04em; font-weight: 760; }
+.installer p, .installer figcaption, .installer small { color: #475467; line-height: 1.5; }
+.installer-action { justify-content: center; width: fit-content; min-height: 48px; border-radius: 14px; margin: 22px 0 8px; padding: 10px 21px; color: white; background: #007a49; font-weight: 700; }
+.installer-action:hover { background: #00683d; }
+.installer-qr { margin: 0; flex: 0 0 160px; text-align: center; font-size: .875rem; }
+.installer-qr img { margin: 0 auto 8px; }
+.installer-help { margin-top: 16px; }
+.installer-help h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+.installer-help details { margin-top: 12px; border-top: 1px solid #e4e9e7; padding-top: 8px; overflow-wrap: anywhere; }
+.installer-help summary { cursor: pointer; padding: 10px 0; font-weight: 650; }
+.installer-help code { font-size: .85rem; }
+.installer-browser { margin-top: 12px; }
+@media (max-width: 600px) {
+  .installer-qr { display: none; }
+  .installer-action { width: 100%; }
+}

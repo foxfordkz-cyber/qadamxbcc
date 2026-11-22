@@ -1,5 +1,5 @@
 import { copyDraftData, hasOwn, requestId } from "./compat.mjs";
-import { caseEvidenceView } from "./case-evidence.mjs";
+import { caseEvidenceView, caseLedgerView } from "./case-evidence.mjs";
 import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
@@ -428,20 +428,28 @@ async function open(next, id, remember=true) {
       );
     else if (next === "case") {
       caseEvidence=null;caseEvents=[];caseTransaction=null;caseNetwork=null;
-      data = await api(`integrations/guardian/soc/cases/${id}`);
+      const g=gateway, rev=viewRevision;
+      const current=()=>gateway===g && g.role==="admin" && viewRevision===rev && page==="case" && lastRead?.id===id;
+      const record=await g.api(`integrations/guardian/soc/cases/${id}`);
+      if(!current() || record.id!==id)return;
+      data=record;
       render();
       const path="integrations/guardian/soc/cases/"+id;
       const [historyRows,evidence,callback]=await Promise.all([
-        api(path+"/history"), product ? api(path+"/evidence") : null,
-        product && data.source==="owner_demo" ? readCallback(gateway,"/cases/"+id+"/callback") : null
+        g.api(path+"/history"), product ? g.api(path+"/evidence") : null,
+        product && record.source==="owner_demo" ? readCallback(g,"/cases/"+id+"/callback") : null
       ]);
+      if(!current() || (evidence?.case_id && evidence.case_id!==id))return;
       caseEvents=historyRows.items;
       if(product){
         caseEvidence=evidence;callbackView=callback;
         if(caseEvidence?.transaction_id){
           try{
-            caseTransaction=await api("transfers/"+caseEvidence.transaction_id);
-            caseNetwork=await api("soc/graph/"+caseTransaction.recipient.id+"?depth=1");
+            const tx=await g.api("transfers/"+evidence.transaction_id);
+            if(!current() || tx.transaction_id!==evidence.transaction_id)return;
+            caseTransaction=tx;
+            const graph=await g.api("soc/graph/"+tx.recipient.id+"?depth=1");
+            if(current())caseNetwork=graph;
           }catch(e){if(e.status===401)throw e;}
         }
       }
@@ -1230,11 +1238,12 @@ function render() {
         root.querySelector("#edge-detail").textContent = edge ? (edge.data.edge_type==="transfer" ? T("Переводы","Аударымдар") : T("Общее устройство","Ортақ құрылғы"))+" · "+edge.data.tx_count : "";
       };
     }
-    if(page==="case" && caseTransaction){
+    if(page==="case" && gateway?.role==="admin" && data?.id && caseTransaction && caseTransaction.transaction_id===caseEvidence?.transaction_id){
       const panel=document.createElement("section");
       panel.className="paper case-investigation";
       panel.innerHTML='<div><h2>'+T("Операция по делу","Іске қатысты операция")+'</h2><strong class="amount">'+amount(caseTransaction.amount)+'</strong><p>'+E(caseTransaction.recipient.display_name)+'</p>'+wallet.badge(caseTransaction.status)+'<p>'+E(moneyOutcome(caseTransaction.status))+'</p></div>'+
         caseEvidenceView(caseTransaction,T,E,when)+
+        caseLedgerView(caseEvidence.recipient_ledger,T,E,when)+
         (caseNetwork?'<div>'+graphView(caseNetwork,true)+'<button class="secondary" data-graph="'+E(caseTransaction.recipient.id)+'">'+T("Исследовать связи","Байланыстарды зерттеу")+'</button></div>':"");
       root.querySelector("main .paper")?.after(panel);
     }

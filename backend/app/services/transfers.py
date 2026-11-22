@@ -54,6 +54,7 @@ from app.services.antifraud import (
     AntifraudEngine,
     Evaluation,
     TransferContext,
+    is_large_first_day_followup,
     split_total_threshold,
 )
 from app.services.call_check import CallCheck, CallCheckService
@@ -326,7 +327,9 @@ class TransferService:
     async def _resolve_recipient(
         self, req: TransferEvaluateRequest, sender: Account
     ) -> tuple[Account, bool, SettledPayee]:
-        stmt = select(Account, GraphEdge.tx_count, GraphEdge.weight).outerjoin(
+        stmt = select(
+            Account, GraphEdge.tx_count, GraphEdge.weight, GraphEdge.last_seen_at
+        ).outerjoin(
             GraphEdge,
             and_(
                 GraphEdge.source_id == sender.id,
@@ -346,7 +349,12 @@ class TransferService:
         row = result.one_or_none()
         if row is None:
             raise NotFoundError("recipient not found")
-        account, lifetime_count, weight = row
+        account, lifetime_count, weight, last_settled = row
+        now = datetime.now(UTC)
+        if lifetime_count == 1 and now - timedelta(days=1) < last_settled <= now:
+            # The single edge is written on approval with the bank's settlement
+            # time. Its amount and age are available without another ledger read.
+            return account, False, SettledPayee(1, weight, weight)
         threshold = split_total_threshold(float(sender.avg_tx_amount))
         if (lifetime_count or 0) < 2 or round((weight or 0) + float(req.amount), 2) < threshold:
             return account, not lifetime_count, SettledPayee()
@@ -354,7 +362,6 @@ class TransferService:
         # A concurrent approval can already be committed while its Redis outbox
         # is still pending. Confirm the pair from the ledger under the sender lock.
         # The existing sender/status/settlement index bounds the scan to one day.
-        now = datetime.now(UTC)
         settled_at = func.coalesce(Transaction.resolved_at, Transaction.created_at)
         recent = (
             select(Transaction.recipient_id, Transaction.amount)
@@ -607,7 +614,9 @@ class TransferService:
             return True
         # The ended-call rule checks the settled SQL relationship. A resident
         # graph edge can make the active-call simulation see a familiar payee.
-        if not ctx.settled_payee_is_new:
+        if not ctx.settled_payee_is_new and not is_large_first_day_followup(
+            ctx.first_day_payee, ctx.amount, ctx.sender_avg_amount
+        ):
             return False
         ended = await self.engine.evaluate(
             replace(ctx, payment_requested_after_call=True), record_attempt=False

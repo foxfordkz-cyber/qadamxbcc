@@ -984,8 +984,10 @@
     "request": null,
     "status": 200,
     "response": {
+      "case_id": "00000000-0000-4000-8000-000000000010",
       "report_available": true,
       "transaction_id": null,
+      "recipient_ledger": null,
       "report_events": [],
       "advisory_only": true
     }

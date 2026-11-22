@@ -31,4 +31,4 @@ android-app/www/vendor/
 !frontend/public/
 !frontend/public/downloads/
 !frontend/public/downloads/Saq-Bol-*.apk
-!frontend/public/downloads/current.json
+!frontend/public/downloads/team.json

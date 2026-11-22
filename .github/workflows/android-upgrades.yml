@@ -1,0 +1,51 @@
+name: Android release upgrades
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &paths
+      - frontend/public/downloads/**
+      - deliverables/android/Saq-Bol-Android-2.7.apk
+      - android-app/scripts/test-install-upgrades.py
+      - .github/workflows/android-upgrades.yml
+  push:
+    branches: [main]
+    paths: *paths
+
+permissions:
+  contents: read
+
+jobs:
+  upgrade:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 35
+            options: ''
+          - api: 30
+            options: --legacy-system-image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable hardware acceleration
+        run: sudo setfacl -m "u:$(id -un):rw" /dev/kvm
+      - name: Start Android and exercise both signed release channels
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          cores: 2
+          ram-size: 2048M
+          disk-size: 2048M
+          emulator-boot-timeout: 600
+          script: python android-app/scripts/test-install-upgrades.py --serial emulator-5554 --evidence-dir "$RUNNER_TEMP/apk-evidence" ${{ matrix.options }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-release-api-${{ matrix.api }}-screens
+          path: ${{ runner.temp }}/apk-evidence/
+          if-no-files-found: error

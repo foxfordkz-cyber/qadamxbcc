@@ -2,15 +2,13 @@
 
 # Saq Bol × BCC
 
-[Android для Айданы](docs/ANDROID_STUDIO_HANDOFF_RU.md) · [Приёмка 2.8](docs/WORKSPACE_28_ACCEPTANCE_RU.md)
-
 **Аударым кезіндегі алаяқтықтан қорғау · Защита от мошенничества при переводах**
 
 Saq Bol — ITU Hackathon 2026 аясындағы Bank CenterCredit кейсіне арналған тәуелсіз прототип. Клиент аударымды тексереді, ал күмән туса, қауіпсіздік қызметкері сол операция бойынша өтінішті қарайды. Стендте оқу шоттары мен виртуалды теңге қолданылады.
 
 Saq Bol — независимый прототип для кейса Bank CenterCredit на ITU Hackathon 2026. Клиент видит, кому уходят деньги и почему перевод поставлен на паузу. Сотрудник службы безопасности (SOC) может разобрать ту же операцию и ответить клиенту. На стенде используются учебные счета и виртуальные тенге.
 
-**[Әмиянға кіру / Открыть кошелёк жюри](https://saq-bol-jury.onrender.com/)** · [Сайт және SOC / Сайт и SOC](https://saq-bol-bcc.zerdeliportald.workers.dev/) · [Android 2.7 жүктеу / Скачать APK](https://saq-bol-bcc.zerdeliportald.workers.dev/downloads/Saq-Bol-Android-2.7.apk)
+**[Әмиянға кіру / Открыть кошелёк жюри](https://saq-bol-jury.onrender.com/)** · [Сайт және SOC / Сайт и SOC](https://saq-bol-bcc.zerdeliportald.workers.dev/) · [Android 2.9 жүктеу / Скачать APK](https://saq-bol-bcc.zerdeliportald.workers.dev/download/android/)
 
 <a name="screens"></a>
 
@@ -20,6 +18,10 @@ Saq Bol — независимый прототип для кейса Bank Cente
 </p>
 
 [Кері қоңырау / Обратный звонок клиенту](docs/screenshots/readme/wallet-case-callback.png) · [Әкімші кабинеті / Кабинет администратора](docs/screenshots/readme/wallet-platform-traffic.png) · [Экрандар галереясы / Галерея экранов](docs/PRODUCT_GUIDE.md#screens)
+
+[Android орнату беті және QR / Страница установки Android и QR](docs/screenshots/readme/android-install-ru.png)
+
+[Аударым кідіртілген кездегі құжат / Пример пакета по приостановленному переводу (PDF)](docs/evidence/release-2.9/cooling_off.pdf) · [Сол аударымды тоқтатқаннан кейін / Тот же перевод после отмены (PDF)](docs/evidence/release-2.9/cancelled.pdf)
 
 <a name="jury"></a>
 
@@ -38,6 +40,10 @@ Saq Bol — независимый прототип для кейса Bank Cente
 Оқу бөлмесі 30 минут әрекетсіздіктен кейін немесе сервис қайта қосылғанда тазарады. Android қолданбасы команданың бөлек стендіне қосылады және оған команда берген құпиясөз қажет.
 
 Учебная комната очищается через 30 минут бездействия или при перезапуске сервиса. Приложение Android подключается к отдельному командному стенду. Для входа в APK используется тестовый пароль от команды. [Android нұсқаулығы / Инструкция Android](docs/ANDROID.md)
+
+**2.9.** Қауіпсіздік қызметкері өтініштен алушының аударым алдындағы 24 сағатта орындалған операцияларын қарай алады. Клиент іс бойынша жауапты өз әмиянынан оқиды.
+
+В карточке обращения сотрудник может проверить исполненные операции получателя за 24 часа до перевода. Клиент видит ответ службы безопасности в своём кошельке. [2.9 тексерулері / Проверки выпуска](docs/FINAL_ACCEPTANCE_RU.md) · [Android Studio](docs/ANDROID_STUDIO_HANDOFF_RU.md)
 
 <a name="kk"></a>
 

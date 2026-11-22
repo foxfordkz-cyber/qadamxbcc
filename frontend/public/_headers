@@ -3,5 +3,9 @@
   X-Content-Type-Options: nosniff
 /downloads/current.json
   Cache-Control: no-cache, must-revalidate
+/downloads/team.json
+  Cache-Control: no-cache, must-revalidate
+/downloads/team.json
+  Cache-Control: no-cache, must-revalidate
 /download/android/*
   Cache-Control: no-cache, must-revalidate

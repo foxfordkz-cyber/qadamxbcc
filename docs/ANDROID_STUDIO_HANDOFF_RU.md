@@ -1,6 +1,6 @@
 # Открытие Saq Bol × BCC (Qadam Shield) в Android Studio
 
-Принятые исходники 2.8 находятся в `mobile/android-studio-handoff`. Для review сборки 2.9 клонируйте ветку `feature/final-demo-release-readiness`. Её исходники интерфейса и адрес API зафиксированы в [паспорте APK](../frontend/public/downloads/current.json). Результаты установки и ограничения стенда приведены в [приёмке](FINAL_ACCEPTANCE_RU.md).
+Принятые исходники 2.8 находятся в `mobile/android-studio-handoff`. Для работы со сборкой 2.9 клонируйте `main`. Точные ревизии исходников указаны в манифестах [APK с сайта](../frontend/public/downloads/current.json) и [командного APK](../frontend/public/downloads/team.json). Результаты установки и ограничения стенда приведены в [приёмке](FINAL_ACCEPTANCE_RU.md).
 
 ## Подготовка на Windows
 
@@ -9,7 +9,7 @@
 В PowerShell из родительской папки:
 
 ```powershell
-git clone --branch feature/final-demo-release-readiness https://github.com/foxfordkz-cyber/qadamxbcc.git
+git clone --branch main https://github.com/foxfordkz-cyber/qadamxbcc.git
 cd qadamxbcc
 npm.cmd --prefix android-app ci
 npm.cmd --prefix android-app run web

@@ -123,6 +123,17 @@ def split_total_threshold(sender_avg_amount: float) -> float:
     return max(SPLIT_MIN_TOTAL_KZT, SPLIT_AVERAGE_MULTIPLE * sender_avg_amount)
 
 
+def is_large_first_day_followup(
+    pair: SettledPayee | None, amount: float, sender_avg_amount: float
+) -> bool:
+    return (
+        pair is not None
+        and pair.count == 1
+        and 0 < pair.total < sender_avg_amount
+        and amount >= AMOUNT_SPIKE_RATIO * sender_avg_amount
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class TransferContext:
     tx_id: str
@@ -440,16 +451,23 @@ class AntifraudEngine:
                 )
             )
             score += deficit
-        reported_request = post_call_request and is_new_recipient
+        reported_request = post_call_request and (
+            is_new_recipient or is_large_first_day_followup(pair, ctx.amount, ctx.sender_avg_amount)
+        )
         if reported_request:
             # A customer report can require verification. It must not increase an
             # independently justified hold/block or push ML over the block threshold.
             deficit = max(0, COOLING_OFF_THRESHOLD - score)
-            reasons.append(
-                _reason(POST_CALL_PAYMENT_RULE, LAYER_BEHAVIORAL, deficit, source="customer_report")
-            )
+            evidence: dict[str, Any] = {"source": "customer_report"}
+            if not is_new_recipient and pair is not None:
+                evidence.update(
+                    settled_count=pair.count,
+                    previous_amount_kzt=pair.total,
+                    window_hours=24,
+                )
+            reasons.append(_reason(POST_CALL_PAYMENT_RULE, LAYER_BEHAVIORAL, deficit, **evidence))
             score += deficit
-        if is_new_recipient and (night_spike or post_call_request):
+        if (is_new_recipient and night_spike) or reported_request:
             reasons.sort(key=lambda r: (-r.score_delta, r.code))
         if (
             score < COOLING_OFF_THRESHOLD

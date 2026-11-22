@@ -14,7 +14,7 @@ android {
         applicationId "kz.qadamx.bccshield"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15
+        versionCode 17
         versionName "2.9"
         manifestPlaceholders = [appLabel: "@string/app_name", activityLabel: "@string/title_activity_main"]
         resValue "string", "qadam_api_origin", apiOrigin
@@ -39,6 +39,16 @@ android {
             debuggable false
             // Hackathon distribution retains the existing demo signing identity.
             signingConfig signingConfigs.debug
+        }
+        website {
+            initWith release
+            matchingFallbacks = ['release']
+            applicationIdSuffix ".website"
+            debuggable false
+            signingConfig signingConfigs.debug
+            resValue "string", "qadam_api_origin", "https://saq-bol-mobile.onrender.com"
+            resValue "string", "website_app_name", "Saq Bol × BCC · 2.9"
+            manifestPlaceholders = [appLabel: "@string/website_app_name", activityLabel: "@string/website_app_name"]
         }
         release {
             minifyEnabled false

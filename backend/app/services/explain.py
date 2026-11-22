@@ -167,6 +167,14 @@ HEADLINES: Final[dict[TransactionStatus, tuple[str, str]]] = {
 
 
 def render(code: str, **evidence: object) -> tuple[str, str]:
+    if code == "POST_CALL_PAYMENT_REQUEST" and evidence.get("settled_count") == 1:
+        return (
+            "Соңғы тәулікте бұл алушыға алғаш рет ақша аудардыңыз. Ол сома әдеттегіден аз еді. "
+            "Айтуыңызша, бұл жолы қоңырау шалған адам әлдеқайда көп ақша аударуды сұраған.",
+            "За последние сутки вы впервые отправили деньги этому получателю. "
+            "Сумма была ниже вашей обычной. "
+            "По вашим словам, во время звонка вас попросили перевести гораздо больше обычного.",
+        )
     kk, ru = REASONS[code]
     return kk.format(**evidence), ru.format(**evidence)
 

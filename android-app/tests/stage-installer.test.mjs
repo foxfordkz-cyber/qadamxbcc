@@ -49,6 +49,23 @@ test("stages a manifest-backed release and preserves its metadata", async t => {
   assert.equal(await readFile(path.join(f.install, `${f.apk}.sha256`), "utf8"), `${digest}  ${f.apk}\n`);
 });
 
+test("serves the signed team package in the wallet alongside a separate website release", async t => {
+  const f = await release(t, "2.9");
+  const url = `/downloads/Saq-Bol-2.9-${digest.slice(0, 12)}.apk`;
+  const team = { ...f.record, bytes: bytes.length, url };
+  const website = { ...team, package: "kz.qadamx.bccshield.website" };
+  await writeFile(path.join(f.dir, "current.json"), JSON.stringify(website));
+  const manifest = path.join(f.dir, "team.json");
+  await writeFile(path.join(f.dir, path.basename(url)), bytes);
+  await writeFile(manifest, JSON.stringify(team));
+  const result = f.stage();
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(await readFile(path.join(f.install, f.apk)), bytes);
+  assert.deepEqual(JSON.parse(await readFile(path.join(f.install, path.basename(f.manifest)))), team);
+  await writeFile(manifest, JSON.stringify(website));
+  assert.match(f.stage().stderr, /Invalid team APK manifest/);
+});
+
 test("rejects missing artifacts and mismatches in either release record", async t => {
   const f = await release(t, "2.7");
   function rejects(message) {
