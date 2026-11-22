@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from collections.abc import AsyncIterator
 from datetime import datetime, timedelta
@@ -604,7 +605,7 @@ async def test_incident_packet_is_private_and_masks_recipient(
     assert data["recipient_reference"] == make_kz_iban("0000000000002")[-4:]
     assert "phone" not in result.text
     assert "iban" not in result.text
-    other_session = uuid.uuid4().hex
+    other_session = secrets.token_urlsafe(32)
     await cache.set(
         session_key(other_session), Identity(role="client", subject=OTHER).model_dump_json(), ex=60
     )
