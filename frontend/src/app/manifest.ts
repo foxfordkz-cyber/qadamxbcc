@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Saq Bol — қауіпсіз аударым / безопасный перевод",
     short_name: "Saq Bol",
-    description: "Демо-клиент Saq Bol: перевод с проверкой на мошенничество (ҚАЗ/РУС).",
+    description: "Saq Bol · Аударымдарды қорғау / Защита переводов.",
     id: `${base}/mobile`,
     start_url: `${base}/mobile`,
     scope: `${base}/`,

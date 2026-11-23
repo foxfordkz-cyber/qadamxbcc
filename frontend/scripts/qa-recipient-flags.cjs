@@ -29,7 +29,7 @@ const check = (name, value) => { assert.ok(value, name); report.checks.push(name
   try {
     await page.goto(target, { waitUntil: 'networkidle', timeout: 60000 });
     await page.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
-    if (process.env.QA_EXPECT_STATIC === '1') check('static_export_uses_demo_configuration', (await page.locator('.mode-text').innerText()).trim() === 'Демо');
+    if (process.env.QA_EXPECT_STATIC === '1') check('static_export_uses_demo_configuration', (await page.locator('.mode-text').innerText()).trim() === 'Учебный режим');
     const approvedId = await normal('approved');
     check('initial_normal_transfer_is_approved', Boolean(approvedId));
     await page.locator('#tab-soc').click();

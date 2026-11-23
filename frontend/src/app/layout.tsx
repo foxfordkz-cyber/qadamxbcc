@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Saq Bol × BCC — Қауіпсіз аударымдар / Безопасные переводы",
-  description: "Saq Bol × BCC · ITU Hackathon 2026. Қазақша және орысша аударым қорғауының прототипі / независимый прототип защиты переводов. Команда foxfordkz-cyber/qadamxbcc.",
+  description: "Saq Bol × BCC. Аударымды алаяқтардан қорғау / Защита перевода от мошенников.",
   applicationName: "Saq Bol × BCC",
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

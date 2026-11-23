@@ -59,7 +59,7 @@ async function setup(browser) {
   await page.getByRole('button', { name: 'РУС', exact: true }).click();
   // This label is rendered directly from AppConfig.mode. A live API or pilot
   // console must fail before the script permits any application mutation.
-  await expect(page.locator('.mode')).toHaveText('Демо режим • синтетические данные');
+  await expect(page.locator('.mode')).toHaveAttribute('title', 'Учебный режим · синтетические данные');
   await expect(page.locator('.preset')).toHaveCount(3);
   for (const button of await page.locator('.preset').all()) await expect(button).toBeEnabled();
   demoConfirmed = true;
