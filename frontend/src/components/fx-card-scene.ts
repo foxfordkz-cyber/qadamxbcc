@@ -42,17 +42,21 @@ function roundedRect(w: number, h: number, r: number) {
   return s;
 }
 
-/** A photo-studio environment: dim walls and softboxes that draw long highlights on metal and glass. */
+/**
+ * A photo-studio environment: dim walls, white softboxes for long highlights and
+ * two emerald panels, so the chrome picks up the brand colour as a rim reflection.
+ */
 function studio(renderer: WebGLRenderer) {
   const room = new Scene();
   room.add(new Mesh(new BoxGeometry(30, 20, 30), new MeshBasicMaterial({ color: new Color("#9AA29E"), side: BackSide })));
-  const softbox = (w: number, h: number, intensity: number, x: number, y: number, z: number, rx: number, ry: number) => {
-    const panel = new Mesh(new PlaneGeometry(w, h), new MeshBasicMaterial({ color: new Color("#ffffff").multiplyScalar(intensity) }));
+  const softbox = (w: number, h: number, intensity: number, x: number, y: number, z: number, rx: number, ry: number, color = "#ffffff") => {
+    const panel = new Mesh(new PlaneGeometry(w, h), new MeshBasicMaterial({ color: new Color(color).multiplyScalar(intensity) }));
     panel.position.set(x, y, z); panel.rotation.set(rx, ry, 0); room.add(panel);
   };
   softbox(16, 2.4, 6, 0, 9, 1, Math.PI / 2, 0);        // long overhead strip
   softbox(2.4, 10, 3.4, -12, 1, 3, 0, Math.PI / 2);     // tall box on the left
-  softbox(3, 6, 2, 12, -1, -3, 0, -Math.PI / 2);        // right fill
+  softbox(4, 9, 2.6, 12, -1, -2, 0, -Math.PI / 2, "#2FD39A");  // emerald rim on the right
+  softbox(18, 3, 1.6, 0, -9, 2, -Math.PI / 2, 0, "#0F7A55");   // emerald bounce from below
   softbox(9, 4, 1.2, 0, 0, 14, 0, Math.PI);             // soft front fill
   const pmrem = new PMREMGenerator(renderer);
   const texture = pmrem.fromScene(room, .02).texture;

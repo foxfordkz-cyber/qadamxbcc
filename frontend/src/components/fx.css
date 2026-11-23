@@ -79,3 +79,7 @@
   .fx-glass, .fx-frost { transition: none; animation: none !important; }
   .fx-glass::after { animation: none; }
 }
+
+/* On the emerald hero the drawn card picks up the brand colour at its edge, like chrome under a coloured light. */
+.fx-hero .fx-css-card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset -14px -10px 40px -10px rgba(47, 211, 154, .35), 0 0 0 1px rgba(0, 0, 0, .12), 0 50px 80px -30px rgba(0, 20, 12, .7), 0 18px 30px -16px rgba(0, 20, 12, .5); }
+.fx-hero .fx-floor { background: radial-gradient(closest-side, rgba(0, 18, 11, .55), transparent); }

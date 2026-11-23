@@ -71,8 +71,8 @@ export function Landing() {
           <h1 id="land-title" className="land-title"><span>{L("titleA")}</span><span className="land-title-b">{L("titleB")}</span></h1>
           <p className="land-lead">{L("lead")}</p>
           <div className="land-cta">
-            <a className="primary" href="#story">{L("ctaStory")}<ArrowDown size={17} aria-hidden="true" /></a>
-            <Link className="secondary" href="/mobile">{L("ctaClient")}</Link>
+            <a className="land-btn" href="#story">{L("ctaStory")}<ArrowDown size={17} aria-hidden="true" /></a>
+            <Link className="land-btn land-btn-ghost" href="/mobile">{L("ctaClient")}</Link>
             <Link className="land-link" href="/soc">{L("ctaSoc")}<ArrowRight size={16} aria-hidden="true" /></Link>
           </div>
         </div>
@@ -81,11 +81,15 @@ export function Landing() {
           <span className={`land-scroll ${ring > .05 ? "is-hidden" : ""}`} aria-hidden="true">{L("scrollHint")}<i /></span>
         </div>
       </div>
+    </section>
+
+    <section className="land-proof" aria-labelledby="proof-title">
+      <p className="land-proof-big" aria-hidden="true"><Counter value={57} /><span>/60</span></p>
+      <h2 id="proof-title" className="land-proof-title">{L("proofA")} <em>{L("proofB")}</em></h2>
       <dl className="land-stats">
-        <div><dt>{L("statStopped")}</dt><dd><Counter value={57} suffix=" / 60" /></dd></div>
         <div><dt>{L("statFalse")}</dt><dd><Counter value={4} suffix=" / 60" /></dd></div>
         <div><dt>{L("statSpeed")}</dt><dd><Counter value={5} suffix=" мс" /></dd></div>
-        <p className="land-stats-note">{L("statNote")}</p>
+        <div><dt>{L("statNoteShort")}</dt><dd><Counter value={120} /></dd></div>
       </dl>
     </section>
 
