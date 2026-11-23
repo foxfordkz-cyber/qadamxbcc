@@ -2,37 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, BadgeCheck, FileText, Phone, PhoneOff, ShieldAlert, ShieldX } from "lucide-react";
+import { ArrowDown, ArrowRight, BadgeCheck, FileText, Phone, PhoneOff, ShieldAlert, ShieldX, Timer } from "lucide-react";
 import { useLocale } from "@/lib/i18n";
 import { landingText, type LandingKey } from "@/lib/landing-copy";
 import { FxCard } from "./fx-card";
-import { useReducedMotion } from "./use-fx-tier";
 import "./landing.css";
 
 const steps = [1, 2, 3, 4, 5] as const;
 
-function Counter({ value, decimals = 0, prefix = "", suffix = "" }: { value: number; decimals?: number; prefix?: string; suffix?: string }) {
-  const node = useRef<HTMLElement>(null);
-  const reduced = useReducedMotion();
-  const [shown, setShown] = useState(0);
-  useEffect(() => {
-    if (reduced) { setShown(value); return; }
-    const element = node.current; if (!element) return;
-    let raf = 0;
-    const io = new IntersectionObserver(entries => {
-      if (!entries.some(e => e.isIntersecting)) return;
-      io.disconnect(); const start = performance.now();
-      const tick = (now: number) => {
-        const k = Math.min(1, (now - start) / 1400); const eased = 1 - Math.pow(1 - k, 4);
-        setShown(value * eased); if (k < 1) raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    }, { threshold: .6 });
-    io.observe(element);
-    return () => { io.disconnect(); cancelAnimationFrame(raf); };
-  }, [value, reduced]);
-  return <strong ref={node} className="land-stat-value">{prefix}{shown.toFixed(decimals).replace(".", ",")}{suffix}</strong>;
-}
+const sampleSize = 60;
+const proofGroups = [
+  { group: "fraud", count: 57, title: "proofFraud", outcome: "proofStopped", rest: "proofMissed" },
+  { group: "ordinary", count: 4, title: "proofOrdinary", outcome: "proofHeld", rest: "proofPassed" },
+] as const;
 
 export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
   const { lang, t } = useLocale();
@@ -63,7 +45,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
 
   const locked = ring > .97;
   return <>
-    <section className="land-hero" ref={hero} aria-labelledby="land-title">
+    <section className="land-hero" ref={hero} aria-labelledby="land-title" data-tour={tourEnabled || undefined}>
       <div className="land-aurora" aria-hidden="true" />
       <div className="land-hero-inner">
         <div className="land-copy">
@@ -85,13 +67,19 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
     </section>
 
     <section className="land-proof" aria-labelledby="proof-title">
-      <p className="land-proof-big" aria-hidden="true"><Counter value={57} /><span>/60</span></p>
-      <h2 id="proof-title" className="land-proof-title">{L("proofA")} <em>{L("proofB")}</em></h2>
-      <dl className="land-stats">
-        <div><dt>{L("statFalse")}</dt><dd><Counter value={4} suffix=" / 60" /></dd></div>
-        <div><dt>{L("statSpeed")}</dt><dd><Counter value={5} suffix=" мс" /></dd></div>
-        <div><dt>{L("statNoteShort")}</dt><dd><Counter value={120} /></dd></div>
-      </dl>
+      <div className="proof-head">
+        <h2 id="proof-title">{L("proofTitle")}</h2>
+        <p className="proof-time"><Timer size={21} aria-hidden="true" /><strong>5 мс</strong><span>{L("proofSpeed")}</span></p>
+      </div>
+      <div className="proof-grid">{proofGroups.map(({ group, count, title, outcome, rest }) =>
+        <article className="proof-card" data-group={group} key={group}>
+          <h3>{L(title)}</h3>
+          <p className="proof-result"><strong>{count}<span> / {sampleSize}</span></strong><span>{L(outcome)}</span></p>
+          <div className="proof-marks" aria-hidden="true">{Array.from({ length: sampleSize }, (_, index) =>
+            <i key={index} className={index < count ? "counted" : undefined} />)}</div>
+          <p className="proof-remainder">{L(rest).replace("{n}", String(sampleSize - count))}</p>
+        </article>
+      )}</div>
     </section>
 
     <section id="story" className="land-story" aria-labelledby="story-title">

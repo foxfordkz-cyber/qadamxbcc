@@ -60,7 +60,18 @@ async function walk(browser, viewport, lang, cold) {
       await page.goto(tourUrl);
     } else {
       await page.goto(origin);
-      await page.locator('.land-hero').getByRole('link', { name: lang === 'ru' ? 'Демо для жюри' : 'Қазыларға арналған көрсетілім' }).click();
+      const entry = page.locator('.land-hero').getByRole('link', { name: lang === 'ru' ? 'Демо для жюри' : 'Қазыларға арналған көрсетілім' });
+      await entry.waitFor();
+      await page.evaluate(() => document.fonts.ready);
+      const box = await entry.boundingBox();
+      assert.ok(box && box.y >= 0 && box.y + box.height <= viewport.height && box.height >= 44, 'The entire jury entry must be visible before scrolling');
+      for (const [group, stopped] of [['fraud', 57], ['ordinary', 4]]) {
+        const card = page.locator('.proof-card[data-group="' + group + '"]');
+        assert.equal(await card.locator('.proof-marks i').count(), 60);
+        assert.equal(await card.locator('.proof-marks .counted').count(), stopped);
+        assert.equal((await card.locator('.proof-result strong').innerText()).trim(), stopped + ' / 60');
+      }
+      await entry.click();
     }
     await probe;
     if (cold) {
