@@ -1,5 +1,5 @@
-.picker { margin: 0 18px 12px; padding: 10px 14px; border: 1px solid #d7e6df; border-radius: 12px; background: #f8fbf9; color: #174631; }
+.picker { margin: 0 18px 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--emerald-ink); }
 .picker summary { cursor: pointer; font-weight: 650; font-size: .88rem; }
-.picker p { margin: 8px 0; color: #475467; font-size: .83rem; }
-.picker button { display: flex; align-items: center; gap: 10px; width: 100%; border-top: 1px solid #d7e6df; padding: 9px 0; font-variant-numeric: tabular-nums; text-align: start; }
+.picker p { margin: 8px 0; color: var(--muted); font-size: .83rem; }
+.picker button { display: flex; align-items: center; gap: 10px; width: 100%; border-top: 1px solid var(--line); padding: 9px 0; font-variant-numeric: tabular-nums; text-align: start; }
 .picker strong { margin-inline-start: auto; }

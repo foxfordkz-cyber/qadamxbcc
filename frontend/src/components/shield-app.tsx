@@ -30,13 +30,14 @@ import { resetStaticDemo } from "@/lib/static-api";
 import type { RecoveryRecord } from "@/lib/recovery";
 import { readAppTab, saveAppTab, type AppTab } from "@/lib/app-tab-session";
 import { CollectionComparison, CollectionReplayInspector } from "./collection-comparison";
+import { Landing } from "./landing";
 
 const STATIC_DEMO = process.env.NEXT_PUBLIC_BCC_STATIC === "1";
 
 
 const presetIcons = { normal: ArrowRight, scam: PhoneCall, hub: Network };
 export type AppLayout = "full" | "phone" | "officer";
-function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayout }) {
+function App({ config, layout = "full", landing = false }: { config: AppConfig; layout?: AppLayout; landing?: boolean }) {
   const { lang, t } = useLocale();
   const [tab, setTabState] = useState<AppTab>("mobile");
   const activeTab = useRef<AppTab>("mobile");
@@ -345,7 +346,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const juryEntry = config.demoActionsEnabled !== false && config.accountMode !== "pilot" && (
     <a className="jury-entry" href={connectedWallet.juryUrl}><LogIn size={17} aria-hidden="true" />{t("juryLogin")}</a>
   );
-  if (layout === "officer") return <>
+  if (layout === "officer") return <div className="officer-root">
     <header className="topbar"><div className="topbar-inner"><div className="brand">
       <BrandMark /><div><strong>Saq Bol<span> × BCC</span></strong><small>{t("officerWorkspace")}</small></div>
     </div>{juryEntry}{languageSwitch}</div></header>
@@ -356,7 +357,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} busy={busy} />
       <footer className="page-footer"><Link href="/">{t("bothWorkspaces")}</Link><span>{t(config.accountMode === "test" ? "testDataScope" : "prototypeIdentity")}</span></footer>
     </main>
-  </>;
+  </div>;
   // /mobile: the same client logic on a real smartphone — no bezel, decision panel or SOC tab.
   if (layout === "phone") return <>
     <header className="topbar mobile-topbar"><div className="topbar-inner">
@@ -376,7 +377,8 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
       <div className="brand"><BrandMark /><div><strong>Saq Bol<span> × BCC</span></strong><small>{t("prototypeIdentity")}</small></div></div>
       {juryEntry}<div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span>{languageSwitch}</div>
     </div></header>
-    <main className="shell">
+    {landing && <Landing />}
+    <main className="shell" id="live">
       <section className="demo-bar" aria-label={t("presets")}>
         <div className="demo-bar-label"><CircleHelp size={16} aria-hidden="true" /><span>{t(config.demoActionsEnabled === false ? "pilotMode" : "demoScenarios")}</span></div>
         <div className="preset-buttons">{(["normal", "scam", "hub"] as const).map(key => { const Icon = presetIcons[key]; return <button key={key} type="button" className={`preset ${preset === key ? "chosen" : ""}`} disabled={busy || !!submissionRetryAt || hasUnknown || config.demoActionsEnabled === false} onClick={() => runPreset(key)}><Icon size={15} aria-hidden="true" />{t(key)}</button>; })}</div>
@@ -406,6 +408,6 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
     {cooling}
   </>;
 }
-export default function ShieldApp({ config, layout = "full" }: { config: AppConfig; layout?: AppLayout }) {
-  return <LocaleProvider><App config={config} layout={layout} /></LocaleProvider>;
+export default function ShieldApp({ config, layout = "full", landing = false }: { config: AppConfig; layout?: AppLayout; landing?: boolean }) {
+  return <LocaleProvider><App config={config} layout={layout} landing={landing} /></LocaleProvider>;
 }

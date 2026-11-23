@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/roboto-flex";
+import "@fontsource-variable/onest";
+import "@fontsource-variable/geologica";
 import "@xyflow/react/dist/style.css";
 import "./globals.css";
 

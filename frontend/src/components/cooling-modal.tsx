@@ -11,6 +11,7 @@ import { completeCoolingAnswers, coolingQuestions as questions, firstCoolingStep
 import { mobileText } from "@/lib/mobile-copy";
 import { errorKey, money, useLocale, type MessageKey } from "@/lib/i18n";
 import { TrustedCircle } from "./trusted-circle";
+import { FxCard } from "./fx-card";
 import "./mobile-client.css";
 
 type Props = { draftFailed: boolean; result: Evaluation; context: Partial<Context>; answers: Partial<Answers>; onAnswersChange: (value: Partial<Answers>) => void; onClose: () => void; onResolved: (value: Evaluation) => void };
@@ -90,6 +91,7 @@ export function CoolingModal({ draftFailed, result, context, answers, onAnswersC
   return <dialog ref={dialog} className="cooling-modal mobile-cooling" data-step={awaitingPostCall ? "post-call" : step < 0 ? "intro" : reviewing ? "review" : "question"} aria-labelledby="cooling-title" aria-describedby="cooling-description" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
     <div className="cooling-toolbar"><BrandMark className="sheet-mark" size={34} /><span className="sheet-wordmark">Saq Bol</span><div className="language" aria-label={t("language")}>{(["kk", "ru"] as const).map(value => <button type="button" key={value} aria-pressed={lang === value} onClick={() => setLang(value)}>{value === "kk" ? "ҚАЗ" : "РУС"}</button>)}</div><button type="button" className="sheet-close" aria-label={t("leaveHeld")} disabled={busy} onClick={onClose}><X size={20} /></button></div>
     <ol className="cooling-stages" aria-label={t("securityCheck")}>{(["coolingIntroStep", "coolingQuestionsStep", "coolingReviewStep"] as const).map((key, index) => <li key={key} className={index <= stage ? "active" : ""} aria-current={index === stage ? "step" : undefined}><span>{index < stage ? <Check size={12} /> : index + 1}</span>{m(key)}</li>)}</ol>
+    <FxCard size="sheet" state="frozen" label={m("coolingSummary")} className="cooling-card" />
     <div className="cooling-transfer"><div><small>{m("coolingSummary")}</small><strong>{result.amount === undefined ? "— ₸" : money(result.amount, lang)}</strong><span>{result.recipient.display_name} · {result.recipient.iban_masked}</span></div><div className="cooling-clock" role="timer" aria-label={t("remaining")}><Clock3 size={16} aria-hidden="true" /><strong className="tabular-nums">{seconds === null ? "—" : `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`}</strong><small>{t("remaining")}</small></div></div>
     {seconds === null && <p className="cooling-time-note" role="status">{m("coolingMissing")}</p>}{seconds === 0 && <p className="cooling-time-note" role="status">{t("expired")}</p>}
     {awaitingPostCall ? <section className="cooling-step-content post-call-prompt">

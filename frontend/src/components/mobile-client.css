@@ -292,3 +292,68 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .family-payment dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .reported-call-request { display: flex; align-items: flex-start; gap: .65rem; padding-block: .75rem; cursor: pointer; }
 .reported-call-request input { flex: 0 0 auto; width: 1.15rem; height: 1.15rem; margin-top: .15rem; accent-color: var(--green, #008f4c); }
+
+/* ==========================================================================
+   2026 refresh: graphite device, display numerals, wallet card, and colour
+   that fills the whole screen only when money is at risk.
+   ========================================================================== */
+.phone-frame { background: var(--bg); border: 10px solid #121815; border-radius: 54px; box-shadow: 0 0 0 1px #2E3833, 0 0 0 2px #0A0E0C, inset 0 0 0 1px rgba(255, 255, 255, .04), var(--shadow-lg); transition: background-color .8s var(--ease-out); }
+.phone-status, .phone-appbar, .phone-tabbar { background: transparent; }
+.phone-appbar { border-bottom-color: transparent; }
+.appbar-title h2 { font-family: var(--font-display); font-weight: 560; letter-spacing: -.02em; }
+.phone-section, .confirm-amount, .phone-receipt { border-radius: 26px; box-shadow: none; border: 1px solid var(--line); }
+.amount-input input:not([type=radio]), .confirm-amount strong, .receipt-amount { font-family: var(--font-display); font-weight: 560; letter-spacing: -.045em; }
+.confirm-amount strong { font-size: 40px; }
+.receipt-amount { font-size: 38px; }
+.amount-input { border-radius: 18px; }
+.recipient-input input:not([type=radio]) { border-radius: 16px; }
+.receipt-actions > button, .mobile-cooling .primary, .mobile-cooling .secondary, .mobile-cooling .danger-button { border-radius: 999px; }
+.phone-tabbar span.active { color: var(--ink); }
+.avatar.mint, .avatar.lilac, .avatar.peach { background: var(--surface-3); color: var(--ink-2); }
+.contact.selected .avatar { background: var(--ink); color: #fff; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--ink); }
+.contact.selected { color: var(--ink); }
+.avatar i { background: var(--signal); color: #04130D; }
+.amount-pills button[aria-pressed=true] { border-color: var(--ink); background: var(--ink); color: #fff; }
+
+/* Wallet home: the card is the hero, the balance is the headline. */
+.wallet-hero { display: grid; gap: 18px; padding: 4px 4px 8px; }
+.wallet-hero .fx-card { width: 100%; }
+.wallet-balance { display: grid; gap: 2px; }
+.wallet-balance small { color: var(--muted); font-size: 13px; }
+.wallet-balance b { font-family: var(--font-display); font-size: 40px; font-weight: 560; letter-spacing: -.05em; line-height: 1.05; }
+.home-tools .wallet-home-account { background: transparent; border: 0; padding: 0; box-shadow: none; }
+.home-tools .wallet-home-account h3 { font-family: var(--font-display); font-weight: 560; font-size: 15px; color: var(--muted); letter-spacing: 0; }
+
+/* Risk fills the screen, not a box. */
+.phone-stage[data-risk=cooling_off] .phone-frame { background: linear-gradient(180deg, #E3EDF3 0%, #F1F5F7 34%, var(--bg) 78%); }
+.phone-stage[data-risk=blocked] .phone-frame { background: linear-gradient(180deg, #F3E1E2 0%, #F7F1F1 34%, var(--bg) 78%); }
+.phone-stage[data-risk=approved] .phone-frame { background: linear-gradient(180deg, #E4EFE9 0%, #F2F6F3 34%, var(--bg) 78%); }
+:root:has(.mobile-shell .phone-stage[data-risk=cooling_off]) body { background: linear-gradient(180deg, #E3EDF3, var(--bg) 60vh) no-repeat; }
+:root:has(.mobile-shell .phone-stage[data-risk=blocked]) body { background: linear-gradient(180deg, #F3E1E2, var(--bg) 60vh) no-repeat; }
+.phone-stage[data-risk] .phone-receipt { background: rgba(255, 255, 255, .7); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.receipt-card { width: 100%; margin: -6px 0 2px; }
+.receipt-cooling_off .receipt-amount { color: var(--ink); }
+.receipt-blocked .receipt-amount { color: var(--ink); }
+
+/* Pause sheet */
+.mobile-cooling { border-radius: 32px; background: linear-gradient(180deg, #E6EEF3 0, #F3F6F8 300px, var(--surface) 520px); }
+.cooling-toolbar { background: rgba(232, 240, 245, .8); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom-color: var(--line); }
+.cooling-card { margin: 6px auto -8px !important; }
+.cooling-transfer { background: rgba(255, 255, 255, .7); border-color: var(--line); border-radius: 22px; }
+.cooling-transfer > div:first-child > strong { font-family: var(--font-display); font-weight: 560; font-size: 32px; letter-spacing: -.045em; }
+.cooling-clock strong { font-family: var(--font-display); font-weight: 560; font-size: 34px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.mobile-cooling h2 { font-family: var(--font-display); font-weight: 580; font-size: 26px; letter-spacing: -.035em; line-height: 1.12; }
+.ai-warning { border-radius: 20px; }
+.cooling-choices label { border-radius: 18px; }
+.cooling-choices label:has(input:checked) { border-color: var(--ink); background: var(--ink); color: #fff; }
+.cooling-choices label:has(input:checked) input { accent-color: var(--signal); }
+.cooling-stages li.active > span { border-color: var(--ink); background: var(--ink); }
+.cooling-progress::-webkit-progress-value { background: var(--ink); }
+.cooling-progress::-moz-progress-bar { background: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-frame { transition: none; }
+}
+.wallet-home-services .secondary svg:first-child { background: var(--surface-3); color: var(--ink); border-radius: 50%; }
+.wallet-home-services, .home-tools h3 { font-family: var(--font-display); }
+.wallet-home-services { border-radius: 26px; box-shadow: none; border: 1px solid var(--line); }

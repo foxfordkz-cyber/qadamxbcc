@@ -82,13 +82,13 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
     return { ...edge, ariaLabel: shared ? t("shared") : t("transfer"), label: shared ? t("shared") : edge.label ?? undefined, animated: !shared && (risky || streaming),
       style: { stroke: color, strokeWidth: 1.8, strokeDasharray: shared ? "6 5" : undefined },
       markerEnd: shared ? undefined : { type: MarkerType.ArrowClosed, color },
-      labelStyle: { fill: "#344054", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }, labelBgStyle: { fill: "#FFFFFF", fillOpacity: 0.96 },
+      labelStyle: { fill: "var(--ink-2)", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }, labelBgStyle: { fill: "var(--surface)", fillOpacity: 0.96 },
     };
   });
   return <><div className="graph-canvas" data-depth={graph.depth} ref={container}><ReactFlow<AccountNode> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange}
     onNodeClick={(_, node) => setSelectedId(node.id)} onSelectionChange={({ nodes: selectedNodes }) => setSelectedId(selectedNodes[0]?.id ?? null)} onPaneClick={() => setSelectedId(null)} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1.1 }} minZoom={0.2} maxZoom={2} nodesConnectable={false} edgesFocusable={false} colorMode="light"
     ariaLabelConfig={{ "node.a11yDescription.default": t("graphKeyboard"), "node.a11yDescription.keyboardDisabled": t("graphKeyboard"), "node.a11yDescription.ariaLiveMessage": ({ x, y }) => `${t("account")}: ${x}, ${y}`, "edge.a11yDescription.default": t("graphKeyboard"), "handle.ariaLabel": t("account") }}>
-    <Background color="#E4E7EC" gap={22} size={1.2} /><Controls />
+    <Background color="var(--line-strong)" gap={22} size={1.2} /><Controls />
     {graph.depth === 1 && <Panel position="top-center"><div className="graph-columns" aria-hidden="true"><span>{t("legendIncoming")}</span><b>{t("legendHub")}</b><span>{t("legendOutgoing")}</span></div></Panel>}
   </ReactFlow></div>
     <div className="graph-legend"><span><i className="legend-warning" />{t("legendIncoming")}</span><span><i className="legend-danger" />{t("legendHub")}</span><span><i className="legend-safe" />{t("legendOutgoing")}</span><span><i className="legend-shared" />{t("shared")}</span></div>

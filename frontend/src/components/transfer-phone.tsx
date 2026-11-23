@@ -3,6 +3,7 @@
 import { BrandMark } from "./brand-mark";
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { FxCard } from "./fx-card";
 import { AlertTriangle, ArrowLeft, ArrowLeftRight, BatteryFull, Check, ChevronDown, ChevronRight, Clock3, House, Landmark, LoaderCircle, LockKeyhole, Users, PhoneCall, ScanText, ShieldCheck, ShieldX, Signal, SlidersHorizontal, Smartphone, Wifi, XCircle } from "lucide-react";
 import { api, type AppConfig, type CallCheck, type Evaluation, type PresetForm } from "@/lib/contracts";
 import { money, useLocale, type MessageKey } from "@/lib/i18n";
@@ -193,7 +194,8 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
     setStep("discarded");
   }
 
-  return <div className={`phone-stage${bare ? " is-bare" : ""}`}>
+  const risk = receipt ? (silent ? "processing" : receipt.status) : undefined;
+  return <div className={`phone-stage${bare ? " is-bare" : ""}`} data-risk={risk}>
     <section className="phone-frame" aria-label={t("mobile")}>
       {!bare && <div className="phone-status" aria-hidden="true"><span>9:41</span><i /><div><Signal size={14} /><Wifi size={14} /><BatteryFull size={19} /></div></div>}
       <header className="phone-appbar">
@@ -210,7 +212,10 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
         {screen === "home" ? <section className="mobile-tool home-tools">
           <section className="wallet-home-account" aria-labelledby="wallet-accounts-title">
             <h3 id="wallet-accounts-title">{m("myAccounts")}</h3>
-            {sourceCard}
+            {hasDemoSource ? <div className="wallet-hero">
+              <FxCard size="wallet" allow3d={false} label={`${sourceName} •••• 4821`} />
+              <div className="wallet-balance"><small>{m("demoBalance")}</small><b className="tabular-nums">{money(DEMO_BALANCE, lang)}</b></div>
+            </div> : sourceCard}
             <button type="button" className="primary" onClick={() => { if (receipt && !blocked) onNewTransfer(); if (step === "discarded") setStep("details"); setScreen("transfer"); }}><ArrowLeftRight size={18} aria-hidden="true"/>{m("homeTransfer")}</button>
           </section>
           <section className="wallet-home-services" aria-labelledby="wallet-protection-title">
@@ -220,7 +225,9 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             <button type="button" className="secondary" onClick={() => setScreen("scam")}><ScanText size={19} aria-hidden="true"/>{m("scam")}<ChevronRight size={16} aria-hidden="true"/></button>
           </section>
         </section> : screen === "returns" ? <IncomingReturns onReview={onReviewReturn} transferDisabled={busy || blocked || submissionPaused} /> : screen === "circle" ? <CircleMembers /> : screen === "scam" ? <MessageCheck /> : receipt ? <section className={`phone-receipt receipt-${silent ? "processing" : receipt.status}`} data-transaction-id={receipt.transaction_id} aria-labelledby="phone-receipt-title">
-          <div className="receipt-symbol" aria-hidden="true"><ReceiptIcon size={32} strokeWidth={1.8} /></div>
+          {!silent && (receipt.status === "cooling_off" || receipt.status === "blocked")
+            ? <FxCard size="sheet" allow3d={false} state={receipt.status === "blocked" ? "blocked" : "frozen"} label={m(receiptCopy)} className="receipt-card" />
+            : <div className="receipt-symbol" aria-hidden="true"><ReceiptIcon size={32} strokeWidth={1.8} /></div>}
           {silent ? <span className="badge processing">{m("processingBadge")}</span> : <Badge status={receipt.status} />}
           <strong className="receipt-amount">{money(receipt.amount ?? amount, lang)}</strong>
           <h3 id="phone-receipt-title">{silent ? m("processingTitle") : lang === "kk" ? receipt.headline_kk : receipt.headline_ru}</h3>
