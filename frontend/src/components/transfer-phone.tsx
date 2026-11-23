@@ -19,7 +19,7 @@ import { MarketOrderCheck } from "./market-order-check";
 import { PayeeCheck } from "./payee-check";
 import { fixtureContactName, recipientRef } from "@/lib/payee-check";
 import { ids } from "@/lib/demo-ids";
-import { CallLogResult } from "./call-log-result";
+import { CallCheckButton, CallLogResult } from "./call-log-result";
 import { TrustedCircle } from "./trusted-circle";
 import type { Biometrics } from "./use-biometrics";
 import "./mobile-client.css";
@@ -27,6 +27,27 @@ import "./mobile-tools.css";
 
 /** Holding «Перевести» this long sends the silent alarm instead of a normal confirmation. */
 export const DURESS_HOLD_MS = 1500;
+
+export function TransferConfirmButton({ amount, busy = false, disabled, onSubmit }: {
+  amount: string; busy?: boolean; disabled?: boolean; onSubmit: (duress: boolean) => void;
+}) {
+  const { lang } = useLocale();
+  const hold = useRef<{ timer?: ReturnType<typeof setTimeout>; fired: boolean }>({ fired: false });
+  const release = () => clearTimeout(hold.current.timer);
+  useEffect(() => release, []);
+  return <button type="button" className="primary transfer-confirm" disabled={busy || disabled}
+    onPointerDown={() => { release(); hold.current.fired = false; hold.current.timer = setTimeout(() => { hold.current.fired = true; }, DURESS_HOLD_MS); }}
+    onPointerUp={release} onPointerLeave={release} onPointerCancel={release} onContextMenu={event => event.preventDefault()}
+    onClick={() => { const duress = hold.current.fired; hold.current.fired = false; onSubmit(duress); }}>
+    {busy ? <><LoaderCircle className="animate-spin" size={18} />{mobileText(lang, "checking")}</>
+      : <><LockKeyhole size={17} />{mobileText(lang, "confirmCta")} {money(amount, lang)}</>}
+  </button>;
+}
+
+export function TransferAmount({ amount }: { amount: string }) {
+  const { lang, t } = useLocale();
+  return <div className="confirm-amount"><span>{t("transferAmount")}</span><strong className="tabular-nums">{money(amount, lang)}</strong></div>;
+}
 
 export type RecipientType = "phone" | "card" | "iban";
 interface Props {
@@ -161,13 +182,6 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
   // Silent alarm: the bank has blocked the transfer, but a fraudster looking at the
   // screen sees an ordinary "processing" receipt and has no reason to push harder.
   const silent = !!receipt?.reasons?.some(reason => reason.code === "DURESS_SIGNAL");
-  const hold = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean }>({ timer: null, fired: false });
-  const pressStart = () => {
-    hold.current.fired = false;
-    if (hold.current.timer) clearTimeout(hold.current.timer);
-    hold.current.timer = setTimeout(() => { hold.current.fired = true; hold.current.timer = null; }, DURESS_HOLD_MS);
-  };
-  const pressEnd = () => { if (hold.current.timer) { clearTimeout(hold.current.timer); hold.current.timer = null; } };
   const ReceiptIcon = silent ? Clock3 : receipt?.status === "approved" ? Check : receipt?.status === "cooling_off" ? Clock3 : receipt?.status === "cancelled" ? XCircle : ShieldX;
   const receiptCopy = silent ? "receiptProcessing" : receipt?.status === "approved" ? "receiptApproved" : receipt?.status === "cooling_off" ? "receiptHeld" : receipt?.status === "cancelled" ? "receiptCancelled" : "receiptBlocked";
   const contactName = fixtureContactName(config, recipientType, form.recipient);
@@ -255,7 +269,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
           onDiscard={discardFamilyDraft} onReturn={() => setStep("confirm")} />
         : step === "confirm" || step === "family" ? <section className="phone-confirm" aria-labelledby="confirm-title" aria-busy={busy}>
           <h3 id="confirm-title" ref={confirmHeading} tabIndex={-1} className="sr-only">{m("stepConfirm")}</h3>
-          <div className="confirm-amount"><span>{t("transferAmount")}</span><strong className="tabular-nums">{money(form.amount, lang)}</strong></div>
+          <TransferAmount amount={form.amount} />
           <dl className="confirm-list">
             <div><dt>{m("recipientName")}</dt><dd>{contactName ? <><b>{contactName}</b><small>{maskRecipient(form.recipient, recipientType)}</small></> : <><b>{maskRecipient(form.recipient, recipientType)}</b><small>{m("recipientUnverified")}</small></>}</dd></div>
             <div><dt>{m("fromCard")}</dt><dd><b>{sourceName}{hasDemoSource && " •••• 4821"}</b><small>{hasDemoSource ? `${m("demoBalance")} · ${money(DEMO_BALANCE, lang)}` : m("balanceUnavailable")}</small></dd></div>
@@ -277,8 +291,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             <button type="button" className="secondary family-check-start" disabled={busy || blocked || completed || submissionPaused} onClick={() => setStep("family")}>
               <PhoneCall size={17} aria-hidden="true" />{m("familyStart")}
             </button>
-            <button type="button" className="primary transfer-confirm" disabled={busy || submissionPaused || blocked || completed || offline || awaitingPayee} onPointerDown={pressStart} onPointerUp={pressEnd} onPointerCancel={pressEnd} onPointerLeave={pressEnd} onContextMenu={event => event.preventDefault()}
-              onClick={() => { const duress = hold.current.fired; hold.current.fired = false; onSubmit(duress); }}>{busy ? <><LoaderCircle className="animate-spin" size={18} />{m("checking")}</> : <><LockKeyhole size={17} />{m("confirmCta")} {money(form.amount, lang)}</>}</button>
+            <TransferConfirmButton amount={form.amount} busy={busy} disabled={submissionPaused || blocked || completed || offline || awaitingPayee} onSubmit={onSubmit} />
             <button type="button" className="secondary transfer-edit" disabled={busy} onClick={() => setStep("details")}>{m("editCta")}</button>
           </div>
         </section>
@@ -332,7 +345,7 @@ export function TransferPhone({ config, form, setForm, recipientType, setRecipie
             </details>
             {onCall && <section className="call-check" aria-live="polite">
               <div className="call-check-row"><span className="call-check-icon"><PhoneCall size={18} aria-hidden="true" /></span><div><strong>{m("callActive")}</strong><p>{m("callCheckHint")}</p></div></div>
-              <button type="button" className="call-check-cta" disabled={callChecking || !form.sender.trim()} onClick={() => void checkBankCall()}>{callChecking ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" /> : <ShieldCheck size={16} aria-hidden="true" />}{callChecking ? m("callChecking") : callCheck ? m("callRecheck") : m("callCheckCta")}</button>
+              <CallCheckButton busy={callChecking} disabled={!form.sender.trim()} checked={!!callCheck} onCheck={checkBankCall} />
               {(callCheck || callCheckFailed) && <CallLogResult check={callCheck} />}
             </section>}
             {showUnknown && <div className="phone-alert warning" role="status"><AlertTriangle size={18} aria-hidden="true" /><div><strong>{m("unknownTitle")}</strong><p>{m("unknownText")}</p></div></div>}

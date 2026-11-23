@@ -2,7 +2,7 @@ import type { Evaluation } from "./contracts";
 
 /** One step of a transfer's story for the SOC analyst and the police report. */
 export type TimelineKey = "tlSent" | "tlSignals" | "tlBankLog" | "tlNetwork" | "tlDuress" | "tlDecisionHeld" | "tlDecisionBlocked" | "tlDecisionApproved"
-  | "tlAnswersClean" | "tlAnswersFlag" | "tlCancelled" | "tlReleased" | "tlStopped" | "tlHoldUntil";
+  | "tlAnswersClean" | "tlAnswersFlag" | "tlContactSuspicion" | "tlCancelled" | "tlReleased" | "tlStopped" | "tlHoldUntil";
 export type SignalKey = "active_call" | "from_deposit" | "is_new_device" | "is_new_recipient" | "pasted_recipient";
 export interface TimelineEvent { key: TimelineKey; time: string | null; tone: "info" | "risk" | "safe" | "planned"; signals?: SignalKey[]; score?: number }
 
@@ -24,12 +24,17 @@ export function caseTimeline(detail: Evaluation): TimelineEvent[] {
   if (codes.has("BANK_CALL_DENIED")) events.push({ key: "tlBankLog", time: created, tone: "risk" });
   if ([...codes].some(code => networkCodes.has(code))) events.push({ key: "tlNetwork", time: created, tone: "risk" });
   const answered = codes.has("QUESTIONNAIRE_PASSED") || codes.has("QUESTIONNAIRE_RED_FLAG") || detail.verification_answers != null;
-  const wasHeld = detail.status === "cooling_off" || valid(detail.cooling_off_until) !== null || answered || detail.status === "cancelled";
+  const contactReported = codes.has("TRUSTED_CONTACT_SUSPICION");
+  const wasHeld = detail.status === "cooling_off" || valid(detail.cooling_off_until) !== null || answered || contactReported || detail.status === "cancelled";
   const first = wasHeld ? "tlDecisionHeld" : detail.status === "blocked" ? "tlDecisionBlocked" : "tlDecisionApproved";
   // The record keeps the current score; for a resolved hold it already includes the answers.
-  events.push({ key: first, time: created, tone: first === "tlDecisionApproved" ? "safe" : "risk", ...(answered ? {} : { score: detail.risk_score }) });
+  events.push({ key: first, time: created, tone: first === "tlDecisionApproved" ? "safe" : "risk", ...(answered || contactReported ? {} : { score: detail.risk_score }) });
   const resolved = valid(detail.resolved_at);
   const later = resolved ?? valid(detail.updated_at);
+  if (detail.bank_call_evidence?.outbound_call_listed === false && !codes.has("BANK_CALL_DENIED")) {
+    events.push({ key: "tlBankLog", time: valid(detail.bank_call_evidence.checked_at), tone: "risk" });
+  }
+  if (contactReported) events.push({ key: "tlContactSuspicion", time: later, tone: "risk" });
   if (answered) events.push({ key: codes.has("QUESTIONNAIRE_RED_FLAG") ? "tlAnswersFlag" : "tlAnswersClean", time: later, tone: codes.has("QUESTIONNAIRE_RED_FLAG") ? "risk" : "safe" });
   if (wasHeld && detail.status === "cancelled") events.push({ key: "tlCancelled", time: resolved, tone: "safe" });
   else if (wasHeld && detail.status === "approved") events.push({ key: "tlReleased", time: resolved, tone: "safe", score: detail.risk_score });

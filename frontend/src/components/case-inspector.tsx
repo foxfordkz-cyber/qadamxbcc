@@ -17,6 +17,11 @@ type Props = { traceRevision?: number; detail: Evaluation | null; loading: boole
 const nextSteps = { approved: "caseNextApproved", cooling_off: "caseNextHeld", blocked: "caseNextBlocked", cancelled: "caseNextCancelled" } as const;
 const signals = { active_call: "active_call", from_deposit: "from_deposit", is_new_device: "is_new_device", is_new_recipient: "is_new_recipient", pasted_recipient: "pasteDetected" } as const;
 
+export function PoliceReportButton({ onOpen, disabled }: { onOpen: () => void; disabled?: boolean }) {
+  const { t } = useLocale();
+  return <button type="button" className="secondary police-report" disabled={disabled} onClick={onOpen}><FileText size={16} />{t("policeReport")}</button>;
+}
+
 export function CaseInspector({ traceRevision = 0, detail, loading, error, receivedAt, selectedId, onReview, onSelectReceipt, readOnly, busy, onRetry }: Props) {
   const { t, lang } = useLocale();
   const [notice, setNotice] = useState<MessageKey | null>(null);
@@ -87,7 +92,7 @@ export function CaseInspector({ traceRevision = 0, detail, loading, error, recei
         {current.verification_answers && <p className="investigation-answers"><Check size={16} />{t("caseAnswersSaved")}</p>}
       </>
       {!readOnly && onReview && current.status === "cooling_off" && <button className="primary review-button" disabled={busy || loading || !!error} onClick={() => onReview(current.transaction_id)}><Clock3 size={17} />{t("review")}</button>}
-      <div className="investigation-export"><div className="investigation-export-buttons"><button className="secondary police-report" disabled={loading || !!error} onClick={policeReport}><FileText size={16} />{t("policeReport")}</button><button className="secondary case-export" disabled={loading || !!error} onClick={download}><Download size={16} />{t("caseExport")}</button></div><p>{t("policeReportHint")}</p></div>
+      <div className="investigation-export"><div className="investigation-export-buttons"><PoliceReportButton disabled={loading || !!error} onOpen={policeReport} /><button className="secondary case-export" disabled={loading || !!error} onClick={download}><Download size={16} />{t("caseExport")}</button></div><p>{t("policeReportHint")}</p></div>
       {notice && <p className="investigation-notice" role="status">{t(notice)}</p>}
     </>}
   </section>;

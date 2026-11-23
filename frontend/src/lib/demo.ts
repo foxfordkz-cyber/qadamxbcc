@@ -77,9 +77,13 @@ export function callCheckDemo(customerId: string, now = Date.now()) {
   const verified = (bankCalls().get(customerId) ?? 0) > now;
   const check_id = globalThis.crypto.randomUUID();
   callChecks().set(check_id, { customer: customerId, verified, at: now });
+  return callLogRecord(check_id, now, verified ? bankCalls().get(customerId)! - BANK_CALL_TTL_MS : null);
+}
+export function callLogRecord(check_id: string, now: number, started: number | null) {
+  const verified = started !== null;
   return {
     check_id, verified, checked_at: new Date(now).toISOString(), simulated_log: true,
-    started_at: verified ? new Date(bankCalls().get(customerId)! - BANK_CALL_TTL_MS).toISOString() : null,
+    started_at: started !== null ? new Date(started).toISOString() : null,
     employee_name: verified ? DEMO_EMPLOYEE.employee_name : null, department: verified ? DEMO_EMPLOYEE.department : null,
     message_kk: verified ? `Журналда шығыс қоңырауы тіркелген. Қызметкер: ${DEMO_EMPLOYEE.employee_name}.` : "Журналда сізге шалынған белсенді шығыс қоңырау табылмады.",
     message_ru: verified ? `В журнале есть исходящий звонок. Сотрудник в записи: ${DEMO_EMPLOYEE.employee_name}.` : "В журнале нет активного исходящего звонка на ваш номер.",
@@ -95,7 +99,7 @@ export class DemoError extends Error {
 function reason(code: string, layer: string, score_delta: number, reason_kk: string, reason_ru: string): Reason {
   return { code, layer, score_delta, reason_kk, reason_ru };
 }
-function decision(status: Status, risk_score: number, transaction_id: string, reasons: Reason[]): Decision {
+export function decision(status: Status, risk_score: number, transaction_id: string, reasons: Reason[]): Decision {
   const headlines = {
     approved: ["Аударым мақұлданды", "Перевод одобрен"],
     cooling_off: ["Аударым 15 минутқа кідіртілді", "Перевод приостановлен на 15 минут"],
@@ -255,6 +259,14 @@ export function abandonDemo(id: string, now = Date.now(), capacity = 5000): Aban
   abandoned().add(id);
   return { request_id: id, status: "abandoned", server_time: new Date(now).toISOString() };
 }
+export function contactBlock(detail: Pick<Evaluation, "risk_score" | "reasons" | "transaction_id">) {
+  const score = Math.max(90, detail.risk_score);
+  const report = reason("TRUSTED_CONTACT_SUSPICION", "questionnaire", score - detail.risk_score,
+    "Сенімді адамыңыз алаяқтыққа күдіктенетінін хабарлады. Аударым бұғатталды.",
+    "Доверенное лицо сообщило о подозрении на мошенничество. Перевод заблокирован.");
+  const reasons = [report, ...detail.reasons];
+  return { ...decision("blocked", score, detail.transaction_id, reasons), reasons };
+}
 export function resolveDemo(id: string, answers: Answers, now = Date.now(), contactSuspicion = false, saveOnly = false): Evaluation {
   const row = rows().find(r => r.transaction_id === id);
   if (!row) throw new DemoError(404, "notFound");
@@ -285,10 +297,9 @@ export function resolveDemo(id: string, answers: Answers, now = Date.now(), cont
     "Алушы SOC тарапынан күдікті дроп ретінде белгіленген.", "Получатель отмечен SOC как подозреваемый дроп.")] : [reason("QUESTIONNAIRE", "questionnaire", flagged ? 90 : 0,
     flagged ? "Жауаптарда алаяқтық белгілері бар. Аударым бұғатталды." : "Қауіпсіздік тексеруі аяқталды. Аударым мақұлданды.",
     flagged ? "В ответах обнаружены признаки обмана. Перевод заблокирован." : "Проверка безопасности пройдена. Перевод одобрен."), ...row.reasons];
-  if (contactSuspicion) row.reasons = [reason("TRUSTED_CONTACT_SUSPICION", "questionnaire", Math.max(0, row.risk_score - previousRisk),
-    "Сенімді адамыңыз алаяқтыққа күдіктенетінін хабарлады. Аударым бұғатталды.",
-    "Доверенное лицо сообщило о подозрении на мошенничество. Перевод заблокирован."), ...detail.reasons];
-  const result = { ...detail, ...decision(row.status, row.risk_score, id, row.reasons), reasons: row.reasons, cooling_off_until: null, resolved_at: row.resolved_at };
+  const outcome = contactSuspicion ? contactBlock(detail) : { ...decision(row.status, row.risk_score, id, row.reasons), reasons: row.reasons };
+  row.reasons = outcome.reasons;
+  const result = { ...detail, ...outcome, cooling_off_until: null, resolved_at: row.resolved_at };
   details().set(id, result);
   return structuredClone(result);
 }
@@ -346,11 +357,11 @@ export function feedDemo(query: Partial<FeedQuery> = {}): Feed {
     max_latency_ms: Math.max(0, ...items.map(r => r.latency_ms)),
   } };
 }
-export function graphDemo(center: string, depth = 2): Graph {
+export function graphDemo(center: string, depth = 2, isFlagged = (id: string) => flags().get(id)?.flagged === true): Graph {
   const account = accounts.find(a => a.id === center);
   if (!account) throw new DemoError(404, "notFound");
   const isHub = center === ids.hub;
-  const data = (party: Party, patch: Partial<GraphData> = {}): GraphData => ({ label: party.full_name, role: "normal", depth: 1, device_id: `device-${party.id.slice(-4)}`, flagged: flags().get(party.id)?.flagged === true, suspected_mule: false, in_degree: 0, out_degree: 1, in_weight: 0, out_weight: 90000, transit_ratio: 0, shared_device_accounts: 0, ...patch });
+  const data = (party: Party, patch: Partial<GraphData> = {}): GraphData => ({ label: party.full_name, role: "normal", depth: 1, device_id: `device-${party.id.slice(-4)}`, flagged: isFlagged(party.id), suspected_mule: false, in_degree: 0, out_degree: 1, in_weight: 0, out_weight: 90000, transit_ratio: 0, shared_device_accounts: 0, ...patch });
   const nodes: Graph["nodes"] = [{ id: center, type: "account", position: { x: 0, y: 0 }, data: data(account, { role: "center", depth: 0, suspected_mule: isHub, in_degree: isHub ? 12 : 1, shared_device_accounts: isHub ? 2 : 0, transit_ratio: isHub ? 0.85 : 0 }) }];
   const edges: Graph["edges"] = [];
   const count = isHub ? 12 : 1;

@@ -1,9 +1,17 @@
-import { PhoneCall } from "lucide-react";
+import { LoaderCircle, PhoneCall, ShieldCheck } from "lucide-react";
 import type { CallCheck } from "@/lib/contracts";
 import { useLocale } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
 
-export function CallLogResult({ check }: { check: CallCheck | null }) {
+export function CallCheckButton({ busy, disabled, checked, onCheck }: { busy?: boolean; disabled?: boolean; checked?: boolean; onCheck: () => void }) {
+  const { lang } = useLocale();
+  return <button type="button" className="call-check-cta" disabled={busy || disabled} onClick={onCheck}>
+    {busy ? <LoaderCircle className="animate-spin" size={16} aria-hidden /> : <ShieldCheck size={16} aria-hidden />}
+    {mobileText(lang, busy ? "callChecking" : checked ? "callRecheck" : "callCheckCta")}
+  </button>;
+}
+
+export function CallLogResult({ check, showHotline = true }: { check: CallCheck | null; showHotline?: boolean }) {
   const { lang } = useLocale();
   const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const clock = new Intl.DateTimeFormat(lang === "kk" ? "kk-KZ" : "ru-KZ", {
@@ -21,6 +29,6 @@ export function CallLogResult({ check }: { check: CallCheck | null }) {
       {check && <p>{m("callCaution")}</p>}
       {check && check.simulated_log !== false && <small>{m("callLogSimulated")}</small>}
     </div>
-    <a className="secondary" href="tel:505"><PhoneCall size={16} aria-hidden="true" />{m("postCallBank")} · 505</a>
+    {showHotline && <a className="secondary" href="tel:505"><PhoneCall size={16} aria-hidden="true" />{m("postCallBank")} · 505</a>}
   </div>;
 }

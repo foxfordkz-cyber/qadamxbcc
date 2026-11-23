@@ -23,6 +23,11 @@ const errorFor = (failure: unknown): ErrorKey => {
     : code === "unavailable" ? "trustedErrorUnavailable" : "trustedErrorGeneric";
 };
 
+export function SuspicionReply({ onReport, disabled, label }: { onReport: () => void; disabled?: boolean; label?: string }) {
+  const { lang } = useLocale();
+  return <button type="button" className="secondary" disabled={disabled} onClick={onReport}>{label ?? mobileText(lang, "simulateSuspicion")}</button>;
+}
+
 /** "Notify a trusted contact" inside the cooling sheet. Hidden when the integration is not available. */
 export function TrustedCircle({ transactionId, active, historyOnly = false }: { transactionId: string; active: boolean; historyOnly?: boolean }) {
   const { lang } = useLocale();
@@ -99,7 +104,7 @@ export function TrustedCircle({ transactionId, active, historyOnly = false }: { 
       })}
     </ul>}
     {suspicion && <p className="trusted-suspicion" role="alert"><AlertTriangle size={16} aria-hidden="true" />{m("trustedSuspicion")}</p>}
-    {simulatedReply && <button type="button" className="secondary" disabled={sending} onClick={async () => {
+    {simulatedReply && <SuspicionReply disabled={sending} onReport={async () => {
       if (writing.current) return;
       writing.current = true; read.current = false; ++version.current; setSending(true); setError(null);
       try {
@@ -108,7 +113,7 @@ export function TrustedCircle({ transactionId, active, historyOnly = false }: { 
         }));
       } catch (failure) { setError(errorFor(failure)); }
       finally { writing.current = false; setSending(false); }
-    }}>{m("simulateSuspicion")}</button>}
+    }} />}
     {circle.notifications.some(item => item.state === "NOTIFICATION_SENT") && <p className="trusted-note">{m("trustedSentNote")}</p>}
     {circle.notifications.length === 0 && <p className="trusted-note">{contacts.length ? m("trustedIntro") : `${m(circle.contact_state && circle.contact_state !== "CONTACT_VERIFIED" ? circle.contact_state : "CONTACT_NOT_CONFIGURED")}. ${m("trustedSetup")}`}</p>}
     {active && pending.length > 0 && <div className="trusted-actions">{pending.map(contact => <button key={contact.id} type="button" className="secondary trusted-notify" disabled={sending} onClick={() => void notify(contact.id)}>
