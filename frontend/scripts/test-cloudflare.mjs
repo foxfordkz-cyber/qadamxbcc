@@ -29,6 +29,7 @@ const mf = new Miniflare(await convertV4MiniflareOptions({
   outboundService: async request => {
     const url = new URL(request.url);
     assert.equal(url.origin, upstream);
+    if (url.pathname === "/health") return Response.json({ status: "ok" });
     if (url.pathname.startsWith("/api/v1/trusted-contacts")) {
       assert.equal(request.headers.get("Authorization"), null);
       assert.equal(request.headers.get("X-BCC-API-Key"), apiKey);
@@ -87,6 +88,10 @@ try {
     assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
   }
   assert.equal((await (await fetch("/health")).json()).status, "ok");
+  assert.deepEqual(await (await fetch("/health?tour=1")).json(), { source: "api" });
+  const tour = await (await fetch("/mobile?tour=1")).text();
+  assert.ok(tour.includes("Стендті дайындап жатырмыз"), "jury entry should render the warm-up screen");
+  assert.ok(!tour.includes('class="wallet-home-account"'), "the ordinary wallet must stay unmounted during a tour");
   assert.deepEqual(await (await fetch("/mobile/link")).json(), { origins: [origin] });
   assert.equal((await fetch("/icons/icon-192.png")).status, 200);
   const mark = await fetch("/saq-bol-mark.svg");
