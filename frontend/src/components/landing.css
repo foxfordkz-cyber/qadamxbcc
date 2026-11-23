@@ -27,7 +27,7 @@
 .land-scroll { position: absolute; bottom: -4px; left: 50%; translate: -50% 0; display: grid; justify-items: center; gap: 8px; color: rgba(255, 255, 255, .6); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; transition: opacity .4s; }
 .land-scroll i { width: 1px; height: 34px; background: linear-gradient(rgba(255, 255, 255, .7), transparent); animation: land-scroll 1.8s ease-in-out infinite; transform-origin: top; }
 .land-scroll.is-hidden { opacity: 0; }
-.land-proof { max-width: 1320px; margin: 0 auto; padding: clamp(32px, 4vw, 56px) clamp(16px, 4vw, 48px) 0; }
+.land-proof { max-width: 1320px; margin: 0 auto; padding: clamp(32px, 4vw, 56px) clamp(16px, 4vw, 48px) 0; scroll-margin-top: 76px; }
 .proof-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; margin-bottom: clamp(18px, 2vw, 26px); }
 .proof-head h2 { font-size: clamp(26px, 3vw, 44px); line-height: 1.07; letter-spacing: -.045em; }
 .proof-time { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 15px; }
@@ -141,6 +141,7 @@
   .story-steps li:first-child { margin-top: 24px; }
 }
 @media (max-width: 600px) {
+  .land-proof { scroll-margin-top: 126px; }
   .proof-grid { grid-template-columns: 1fr; }
   .proof-marks { gap: 3px; }
   .land-hero[data-tour] .fx-hero { width: min(100%, 36svh); }

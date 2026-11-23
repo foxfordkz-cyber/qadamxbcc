@@ -66,7 +66,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
       </div>
     </section>
 
-    <section className="land-proof" aria-labelledby="proof-title">
+    <section id="results" className="land-proof" aria-labelledby="proof-title">
       <div className="proof-head">
         <h2 id="proof-title">{L("proofTitle")}</h2>
         <p className="proof-time"><Timer size={21} aria-hidden="true" /><strong>5 мс</strong><span>{L("proofSpeed")}</span></p>
