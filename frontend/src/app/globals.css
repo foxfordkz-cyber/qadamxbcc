@@ -583,6 +583,7 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
 .soc-dashboard.is-stage .mobile-qr-card { width: min(340px, calc(100vw - 32px)); }
 @media (max-width: 600px) { .mobile-qr-card { right: -52px; } }
 .mobile-qr-card strong { font-size: 15px; color: var(--ink); }
+.mobile-qr-card .segmented button { min-height: 44px; white-space: normal; }
 
 /* ---------- Decision panel: what Saq Bol sees, as plain rows ---------- */
 .signal-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }

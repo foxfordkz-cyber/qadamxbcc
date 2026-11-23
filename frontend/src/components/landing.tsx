@@ -34,8 +34,8 @@ function Counter({ value, decimals = 0, prefix = "", suffix = "" }: { value: num
   return <strong ref={node} className="land-stat-value">{prefix}{shown.toFixed(decimals).replace(".", ",")}{suffix}</strong>;
 }
 
-export function Landing() {
-  const { lang } = useLocale();
+export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
+  const { lang, t } = useLocale();
   const L = (key: LandingKey) => landingText(lang, key);
   const hero = useRef<HTMLElement>(null);
   const [ring, setRing] = useState(0);
@@ -71,7 +71,8 @@ export function Landing() {
           <h1 id="land-title" className="land-title"><span>{L("titleA")}</span><span className="land-title-b">{L("titleB")}</span></h1>
           <p className="land-lead">{L("lead")}</p>
           <div className="land-cta">
-            <a className="land-btn" href="#story">{L("ctaStory")}<ArrowDown size={17} aria-hidden="true" /></a>
+            {tourEnabled && <Link className="land-btn" href="/mobile?tour=1" prefetch={false}>{t("tourEntry")}<ArrowRight size={17} aria-hidden="true" /></Link>}
+            <a className={tourEnabled ? "land-link" : "land-btn"} href="#story">{L("ctaStory")}<ArrowDown size={17} aria-hidden="true" /></a>
             <Link className="land-btn land-btn-ghost" href="/mobile">{L("ctaClient")}</Link>
             <Link className="land-link" href="/soc">{L("ctaSoc")}<ArrowRight size={16} aria-hidden="true" /></Link>
           </div>

@@ -1,0 +1,102 @@
+.jury-tour {
+  --tour-light: var(--surface-2);
+  --tour-halo: var(--line-strong);
+  --tour-ring: var(--emerald);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  background: radial-gradient(ellipse at 30% 0, var(--surface), transparent 70%), var(--bg);
+}
+.jury-tour[data-state=held] { --tour-light: var(--amber-soft); --tour-halo: var(--amber-line); --tour-ring: var(--amber-ink); background-color: var(--amber-line); }
+.jury-tour[data-state=blocked] { --tour-light: var(--red-soft); --tour-halo: var(--red-line); --tour-ring: var(--red); }
+.tour-brand, .tour-layout, .tour-warmup { width: min(100%, 1060px); margin-inline: auto; }
+.tour-brand { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; }
+.tour-brand > div:first-child, .tour-call, .tour-channel, .tour-phone header small, .tour-signals li, .tour-case-meta { display: flex; align-items: center; gap: 10px; }
+.tour-brand strong { font-size: 20px; letter-spacing: -.03em; }
+.tour-brand strong span { font-weight: 450; color: var(--muted); }
+.tour-brand .language button { min-width: 48px; min-height: 44px; }
+.tour-layout { display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 370px); gap: clamp(30px, 6vw, 90px); align-items: center; justify-content: center; flex: 1; padding: 16px 24px 36px; }
+.tour-phone { background: var(--tour-light); border: 6px solid var(--ink-2); border-radius: 36px; box-shadow: var(--shadow-lg); overflow: hidden; min-width: 0; display: flex; flex-direction: column; height: min(730px, 76svh); }
+.tour-phone > header { padding: 24px 22px 18px; background: var(--surface); border-bottom: 1px solid var(--tour-halo); }
+.tour-phone header small { color: var(--muted); font-size: 14px; font-weight: 600; }
+.tour-phone h1, .tour-warmup h1 { margin: 6px 0 0; font-size: clamp(22px, 2vw, 30px); line-height: 1.16; font-weight: 680; letter-spacing: -.035em; }
+.tour-phone h1:focus { outline: none; }
+.tour-screen { flex: 1; min-height: 0; overflow-y: auto; overflow-x: clip; overscroll-behavior: contain; scrollbar-width: thin; padding: 22px; display: flex; flex-direction: column; align-items: stretch; gap: 15px; isolation: isolate; }
+.tour-screen > * { flex-shrink: 0; min-width: 0; }
+.tour-screen p { margin: 0; }
+.tour-screen .tour-caption { font-size: 14px; color: var(--ink-3); }
+.tour-account { display: flex; align-items: center; gap: clamp(12px, 3vw, 22px); padding-block: 8px; }
+.tour-account .fx-wallet { width: clamp(94px, 28%, 132px); flex: none; }
+.tour-account .confirm-amount { min-width: 0; }
+.tour-account .confirm-amount strong, .tour-amount { font-family: var(--font-display); }
+.tour-account .confirm-amount strong { font-size: clamp(24px, 2.5vw, 32px); }
+.tour-call { padding: 14px; border-radius: var(--r-lg); background: var(--surface-3); }
+.tour-call svg { flex-shrink: 0; }
+.tour-call div { display: grid; gap: 3px; }
+.tour-call small { color: var(--ink-3); }
+.tour-call strong { font-size: 17px; }
+.tour-facts > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; }
+.tour-facts dd { font-weight: 650; }
+.tour-focus {
+  position: relative; z-index: 1; border-radius: var(--r-lg); background: var(--surface);
+  box-shadow: 0 0 0 2px var(--tour-ring), 0 0 0 100vmax rgb(14 19 17 / 18%);
+}
+.tour-focus:has(> button:only-child) { border-radius: 999px; }
+.tour-focus > button, .tour-guide > button { width: 100%; min-height: 50px; }
+.tour-focus > .secondary { color: var(--ink); }
+.tour-signals { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.tour-signals li { font-size: 15px; }
+.tour-signals svg { flex-shrink: 0; color: var(--amber-ink); }
+.tour-question, .tour-result, .tour-analysis { padding: 16px; }
+.tour-question .cooling-choices { grid-template-columns: 1fr 1fr; }
+.tour-question .cooling-choices label { min-height: 48px; }
+.tour-symbol { color: var(--ink-2); display: grid; place-items: center; width: 54px; height: 54px; background: var(--surface-3); border-radius: 50%; }
+.tour-symbol-icon { color: var(--red-ink); }
+.tour-result, .tour-message, .tour-saved { display: grid; gap: 14px; justify-items: start; }
+.tour-result .call-log-summary { margin: 0; }
+.tour-channel { font-size: 18px; font-weight: 650; color: var(--ink-3); }
+.tour-message { padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px 16px 16px 3px; gap: 6px; }
+.tour-message > b, .tour-case-meta > b { font-size: 21px; }
+.tour-symbol-icon { width: 38px; height: 38px; }
+.tour-amount { display: block; font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -.04em; }
+.tour-case-meta { justify-content: space-between; }
+.tour-focus .row-select { border-radius: inherit; padding: 16px; text-align: left; }
+.tour-graph { overflow: hidden; }
+.tour-graph .graph-canvas { height: clamp(190px, 31svh, 355px); }
+.tour-graph .graph-controls button { width: 44px; height: 44px; }
+.tour-graph .graph-legend { padding: 8px; gap: 5px 10px; }
+.tour-analysis .ml-inspector { padding: 0; border: 0; }
+.tour-analysis .ml-heading { flex-wrap: wrap; }
+.tour-laws { display: grid; gap: 4px; }
+.tour-laws h3 { margin: 0; font-weight: 650; }
+.tour-laws a { display: flex; align-items: center; min-height: 44px; color: var(--emerald-dark); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
+.tour-document { width: 100%; flex: 1; min-height: 185px; border: 0; }
+.tour-saved { margin: auto; text-align: center; justify-items: center; }
+.tour-saved svg { color: var(--emerald); }
+.tour-saved h2 { font-size: clamp(28px, 3vw, 38px); line-height: 1.13; letter-spacing: -.035em; font-weight: 700; }
+.tour-guide, .tour-warmup { background: var(--surface); border: 1px solid var(--tour-halo); box-shadow: var(--shadow); border-radius: var(--r-card); padding: 24px; }
+.tour-guide-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+.tour-guide-head strong { font-size: 15px; }
+.tour-skip { min-height: 44px; padding: 0 8px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
+.tour-progress { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin: 3px 0 14px; }
+.tour-progress i { height: 4px; background: var(--surface-3); border-radius: 3px; }
+.tour-progress .active { background: var(--ink-2); }
+.tour-hint { margin: 0 0 14px; font-size: 17px; line-height: 1.35; font-weight: 550; }
+.tour-warmup { align-self: center; width: min(calc(100% - 28px), 420px); margin: auto; display: grid; gap: 12px; }
+.tour-warmup progress { width: 100%; accent-color: var(--ink); height: 12px; }
+.tour-warmup .tour-skip { justify-self: end; }
+@media (max-width: 719px) {
+  .jury-tour { height: 100vh; height: 100dvh; min-height: min(560px, 100svh); }
+  .tour-brand { padding: max(4px, env(safe-area-inset-top)) 16px 4px; }
+  .tour-brand strong { font-size: 17px; }
+  .tour-layout { flex: 1; min-height: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 8px; padding: 4px 8px max(8px, env(safe-area-inset-bottom)); }
+  .tour-phone { height: 100%; border: 0; border-radius: 18px; box-shadow: none; }
+  .tour-phone > header { padding: 14px 16px 12px; }
+  .tour-phone h1 { font-size: 22px; }
+  .tour-screen { padding: 16px; gap: 12px; }
+  .tour-guide { padding: 3px 14px 12px; border-radius: 16px; }
+  .tour-progress { margin: 0 0 8px; }
+  .tour-hint { font-size: 16px; margin-bottom: 8px; }
+  .tour-guide > button { min-height: 46px; }
+}
