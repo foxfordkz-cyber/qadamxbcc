@@ -37,7 +37,7 @@ jobs:
           BCC_NORMAL_SENDER_ID: 11111111-1111-4111-8111-111111111111
         run: |
           node --test scripts/wallet-link.test.mjs
-          node scripts/build-pages.mjs pages-out --base "/${{ github.event.repository.name }}"
+          node scripts/build-pages.mjs pages-out --qa-workspace --base "/${{ github.event.repository.name }}"
       - name: Verify static transfer and recipient flags
         working-directory: frontend
         env:
@@ -49,9 +49,10 @@ jobs:
           npx --no-install playwright install --with-deps chromium
           mkdir -p "$RUNNER_TEMP/saqbol-pages"
           ln -s "$PWD/pages-out" "$RUNNER_TEMP/saqbol-pages/$REPO_NAME"
+          ln -s "$PWD/pages-out-qa-workspace" "$PWD/pages-out/qa-workspace"
           python3 -m http.server 3014 --bind 127.0.0.1 --directory "$RUNNER_TEMP/saqbol-pages" > "$RUNNER_TEMP/saqbol-pages.log" 2>&1 &
           static_pid=$!
-          trap 'kill "$static_pid"' EXIT
+          trap 'kill "$static_pid"; unlink "$PWD/pages-out/qa-workspace"' EXIT
           sleep 1
           node scripts/qa-recipient-flags.cjs "http://127.0.0.1:3014/$REPO_NAME/"
           QA_OUTPUT="$GITHUB_WORKSPACE/.local-checks/pages-active-hold-ci" node scripts/qa-active-hold.cjs "http://127.0.0.1:3014/$REPO_NAME/"

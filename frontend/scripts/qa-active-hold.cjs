@@ -16,7 +16,8 @@ const seconds = value => { const [m, s] = value.trim().split(':').map(Number); r
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.on('pageerror', error => report.errors.push(error.message));
   try {
-    await page.goto(target, { waitUntil: 'networkidle' });
+    const workspace = new URL(process.env.QA_EXPECT_STATIC === '1' ? 'qa-workspace/' : 'soc?workspace=full', target);
+    await page.goto(workspace.href, { waitUntil: 'networkidle' });
     await page.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
     await page.locator('.preset').nth(1).click();
     await page.locator('dialog[open] .cooling-clock strong').waitFor();

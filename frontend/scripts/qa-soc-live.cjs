@@ -22,7 +22,7 @@ const check = (name, value) => { assert.ok(value, name); report.checks.push(name
   page.on('request', request => { if (request.url().includes('/api/v1/integrations/')) requests.push({ url: request.url(), method: request.method() }); });
   const screenshot = async name => { const file = path.join(output, `${name}.png`); await page.screenshot({ path: file, fullPage: true }); report.screenshots.push(file); };
   try {
-    await page.goto(target, { waitUntil: 'domcontentloaded' });
+    await page.goto(new URL('/soc?workspace=full', target).href, { waitUntil: 'domcontentloaded' });
     await page.locator('.topbar').getByRole('button', { name: 'РУС', exact: true }).click();
     await page.locator('#tab-soc').click();
     await page.getByTestId('soc-mode-cases').click();

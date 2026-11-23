@@ -2,13 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowRight, BadgeCheck, FileText, Phone, PhoneOff, ShieldAlert, ShieldX, Timer } from "lucide-react";
+import { ArrowRight, BadgeCheck, ChartColumn, FileText, Menu, Phone, PhoneOff, ScanLine, ShieldAlert, ShieldCheck, ShieldX, Smartphone, Timer, X } from "lucide-react";
 import { useLocale } from "@/lib/i18n";
 import { landingText, type LandingKey } from "@/lib/landing-copy";
 import { FxCard } from "./fx-card";
+import { BrandMark } from "./brand-mark";
+import { LanguageSwitch } from "./language-switch";
+import { MobileQr } from "./mobile-qr";
+import wallets from "@/lib/connected-wallet.json";
 import "./landing.css";
 
 const steps = [1, 2, 3, 4, 5] as const;
+const media = (process.env.NEXT_PUBLIC_BASE_PATH ?? "") + "/media";
 
 const sampleSize = 60;
 const proofGroups = [
@@ -22,6 +27,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
   const hero = useRef<HTMLElement>(null);
   const [ring, setRing] = useState(0);
   const [active, setActive] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
   const stepNodes = useRef<(HTMLLIElement | null)[]>([]);
 
   useEffect(() => {
@@ -44,24 +50,46 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
   }, []);
 
   const locked = ring > .97;
-  return <>
-    <section className="land-hero" ref={hero} aria-labelledby="land-title" data-tour={tourEnabled || undefined}>
+  const sections = [
+    { key: "how", href: "#story", Icon: ShieldCheck },
+    { key: "results", href: "#results", Icon: ChartColumn },
+    { key: "application", href: "/download/android", Icon: Smartphone },
+    ...(tourEnabled ? [{ key: "jury", href: "#jury", Icon: ScanLine } as const] : []),
+  ] as const;
+  return <div className="public-home">
+    <header className="public-header">
+      <div className="public-mast">
+        <a className="public-brand" href="#overview" aria-label="Saq Bol × BCC"><BrandMark /><strong>Saq Bol <span>× BCC</span></strong></a>
+        <div className="public-tools"><LanguageSwitch />
+          <a className="public-signin" href={wallets.juryUrl}>{L("access")}<ArrowRight size={18} aria-hidden="true" /></a>
+          <button className="public-menu-toggle" type="button" aria-label={L("menu")} aria-controls="public-nav" aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}>
+            {menuOpen ? <X size={21} /> : <Menu size={21} />}
+          </button>
+        </div>
+      </div>
+      <nav id="public-nav" className="public-nav" data-open={menuOpen || undefined} aria-label={L("nav")}>
+        {sections.map(({ key, href, Icon }) => <Link key={key} href={href} onClick={() => setMenuOpen(false)}>
+          <span aria-hidden="true"><Icon size={23} /></span>{L(key)}</Link>)}
+      </nav>
+    </header>
+    <main>
+    <section id="overview" className="land-hero" ref={hero} aria-labelledby="land-title" data-tour={tourEnabled || undefined}>
+      <picture className="land-photo" aria-hidden="true">
+        <source media="(max-width: 680px)" srcSet={media + "/alatau-640.webp"} />
+        <img src={media + "/alatau-wide.webp"} alt="" fetchPriority="high" width="1600" height="2000" />
+      </picture>
       <div className="land-aurora" aria-hidden="true" />
       <div className="land-hero-inner">
         <div className="land-copy">
-          <p className="eyebrow land-eyebrow"><span className="live-dot" />{L("eyebrow")}</p>
           <h1 id="land-title" className="land-title"><span>{L("titleA")}</span><span className="land-title-b">{L("titleB")}</span></h1>
           <p className="land-lead">{L("lead")}</p>
           <div className="land-cta">
             {tourEnabled && <Link className="land-btn" href="/mobile?tour=1" prefetch={false}>{t("tourEntry")}<ArrowRight size={17} aria-hidden="true" /></Link>}
-            <a className={tourEnabled ? "land-link" : "land-btn"} href="#story">{L("ctaStory")}<ArrowDown size={17} aria-hidden="true" /></a>
-            <Link className="land-btn land-btn-ghost" href="/mobile">{L("ctaClient")}</Link>
-            <Link className="land-link" href="/soc">{L("ctaSoc")}<ArrowRight size={16} aria-hidden="true" /></Link>
+            <a className={tourEnabled ? "land-link" : "land-btn"} href="#story">{L("ctaStory")}<ArrowRight size={17} aria-hidden="true" /></a>
           </div>
         </div>
         <div className="land-visual">
           <FxCard size="hero" state={locked ? "locked" : "idle"} ring={ring} label={L("cardLabel")} />
-          <span className={`land-scroll ${ring > .05 ? "is-hidden" : ""}`} aria-hidden="true">{L("scrollHint")}<i /></span>
         </div>
       </div>
     </section>
@@ -138,10 +166,11 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
       </div>
     </section>
 
-    <section className="land-live" aria-labelledby="live-title">
-      <p className="eyebrow">{L("liveEyebrow")}</p>
-      <h2 id="live-title">{L("liveTitle")}</h2>
-      <p>{L("liveText")}</p>
-    </section>
-  </>;
+    {tourEnabled && <section className="public-jury" id="jury">
+      <div><h2>{L("juryTitle")}</h2><p>{L("juryHint")}</p></div>
+      <div className="public-jury-actions"><Link href="/mobile?tour=1" className="land-btn" prefetch={false}>{t("tourEntry")}<ArrowRight size={17} /></Link><MobileQr tourEnabled /></div>
+    </section>}
+    </main>
+    <footer className="public-footer"><strong>Saq Bol × BCC</strong><Link href="/download/android">{L("application")}</Link><a href={wallets.url}>{L("teamAccess")}</a></footer>
+  </div>;
 }

@@ -5,7 +5,7 @@
 // server routes (API proxy, health, mobile link, request proxy) are removed, pages are
 // rendered at build time, and the synthetic demo engine runs in the browser
 // (src/lib/static-api.ts). The FastAPI backend, PostgreSQL and the ML model are not used.
-import { cp, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
@@ -31,6 +31,16 @@ try {
   } });
   // Junctions do not require Windows Developer Mode or the symlink privilege.
   await symlink(path.join(root, "node_modules"), path.join(work, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+  const includeWorkspaceFixture = args.includes("--qa-workspace");
+  if (includeWorkspaceFixture) {
+    const fixture = path.join(work, "src/app/qa-workspace");
+    await mkdir(fixture);
+    await writeFile(path.join(fixture, "page.tsx"), [
+      'import ShieldApp from "@/components/shield-app";',
+      'import { appConfig } from "@/lib/config";',
+      'export default function Page() { return <ShieldApp config={appConfig()} />; }',
+    ].join("\n"));
+  }
   for (const server of ["src/app/api", "src/app/health", "src/app/mobile/link", "src/proxy.ts"]) await rm(path.join(work, server), { recursive: true, force: true });
   for (const page of ["src/app/page.tsx", "src/app/mobile/page.tsx", "src/app/soc/page.tsx", "src/app/pitch/page.tsx"]) {
     const file = path.join(work, page);
@@ -57,7 +67,9 @@ try {
   if (build.status !== 0) throw new Error("next build failed");
   if (!existsSync(path.join(work, "out/index.html"))) throw new Error("static export produced no index.html");
   await rm(out, { recursive: true, force: true });
-  await cp(path.join(work, "out"), out, { recursive: true });
+  const fixtureOutput = path.join(work, "out", "qa-workspace");
+  if (includeWorkspaceFixture) await cp(fixtureOutput, out + "-qa-workspace", { recursive: true });
+  await cp(path.join(work, "out"), out, { recursive: true, filter: source => source !== fixtureOutput });
   await writeFile(path.join(out, ".nojekyll"), "");
   // A plain 404 page that sends visitors back to the demo instead of GitHub's default.
   if (!existsSync(path.join(out, "404.html"))) await cp(path.join(out, "index.html"), path.join(out, "404.html"));

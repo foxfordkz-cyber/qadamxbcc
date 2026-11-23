@@ -53,7 +53,7 @@ async function setup(browser) {
     if (request.url().startsWith(`${base}/api/`) && !['GET', 'HEAD'].includes(request.method())) apiMutationsObserved += 1;
   });
   await page.clock.install();
-  const response = await page.goto(base, { waitUntil: 'networkidle' });
+  const response = await page.goto(new URL('/soc?workspace=full', base).href, { waitUntil: 'networkidle' });
   assert.equal(response?.status(), 200, 'The demo page must be accessible without live/pilot credentials.');
   assert.equal(new URL(page.url()).origin, base, 'The demo page must stay on the selected loopback origin.');
   await page.getByRole('button', { name: 'РУС', exact: true }).click();

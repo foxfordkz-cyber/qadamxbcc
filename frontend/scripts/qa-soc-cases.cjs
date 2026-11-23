@@ -139,7 +139,7 @@ async function main() {
   const prepare = async (action, selector, value) => { await page.locator('#case-action-kind').selectOption(action); if (selector) { const field = page.locator(selector); if (await field.evaluate(node => node.tagName === 'SELECT')) await field.selectOption(value); else await field.fill(value); } await page.locator('.case-action-submit').click(); await page.locator('.case-action-confirm').waitFor(); };
   const confirm = async () => { const sent = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname.startsWith(base)); await page.locator('.case-action-confirm').click(); await sent; await page.waitForFunction(() => !document.querySelector('.case-action-confirm')); await settle(); };
   try {
-    await page.goto(target, { waitUntil: 'networkidle' }); await page.locator('#tab-soc').click();
+    await page.goto(new URL('/soc?workspace=full', target).href, { waitUntil: 'networkidle' }); await page.locator('#tab-soc').click();
     await page.getByTestId('soc-mode-cases').click(); await workspace.waitFor(); await workspace.locator('.soc-case-row').first().waitFor();
     check('queue_reads_backend_cases', await workspace.locator('.soc-case-row').count() === 2);
     check('queue_has_explicit_pagination', await workspace.locator('.case-load-more').isVisible());

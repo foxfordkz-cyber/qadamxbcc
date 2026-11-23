@@ -68,7 +68,7 @@ function checkInitialLanguageSwitch(html) {
 }
 try {
   await checkPrivateCircle();
-  for (const pathname of ["/", "/mobile", "/soc", "/pitch"]) {
+  for (const pathname of ["/", "/mobile", "/pitch"]) {
     const response = await fetch(pathname);
     assert.equal(response.status, 200, pathname);
     const html = await response.text();
@@ -77,15 +77,20 @@ try {
       const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
       checkInitialLanguageSwitch(header);
       assert.match(header, /<img\b[^>]*src="\/saq-bol-mark\.svg"/, pathname);
-      assert.match(header, /<a\b[^>]*href="https:\/\/saq-bol-jury\.onrender\.com\/"[^>]*>[\s\S]*?Қазылар кабинеті<\/a>/, pathname);
+      assert.ok(header.includes('href="https://saq-bol-jury.onrender.com/"'), pathname);
       assert.ok(html.includes('href="https://saq-bol-mobile.onrender.com/wallet/"'), pathname);
     }
-    if (pathname === "/soc") {
-      assert.ok(html.includes("сынақ аударымдарын"), "Public SOC must describe the synthetic data");
-      assert.ok(!html.includes("soc-mode-cases"), "Private case workspace must stay hidden");
+    if (pathname === "/") {
+      assert.match(html, /class="public-signin"[^>]*>Кіру/, "Public navigation must lead to sign-in");
+      assert.ok(!html.includes('id="tab-soc"') && !html.includes('class="transfer-cta"'), "Public home must not mount the workspaces");
     }
     assert.ok(!html.includes(apiKey) && !html.includes(socKey), pathname);
     assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
+  }
+  for (const path of ["/soc", "/soc?workspace=full"]) {
+    const response = await fetch(path, { redirect: "manual" });
+    assert.ok([303, 307, 308].includes(response.status), "Hosted SOC requires wallet sign-in");
+    assert.equal(response.headers.get("location"), "https://saq-bol-jury.onrender.com/");
   }
   assert.equal((await (await fetch("/health")).json()).status, "ok");
   assert.deepEqual(await (await fetch("/health?tour=1")).json(), { source: "api" });

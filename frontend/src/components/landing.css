@@ -1,9 +1,75 @@
-/* Landing: hero with the 3D card, scroll story with a sticky phone, live-stand intro. */
+/* Public product navigation, transfer story and measured results. */
+.public-home { max-width: 1576px; margin-inline: auto; padding: 10px clamp(12px, 2vw, 32px) 0; }
+.public-header { position: relative; z-index: 4; background: #fff; border: 1px solid var(--line); border-radius: 22px; margin-bottom: clamp(12px, 1.5vw, 24px); }
+.public-mast { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px clamp(14px, 2vw, 32px); }
+.public-brand, .public-tools, .public-signin, .public-nav a { display: inline-flex; align-items: center; }
+.public-brand { gap: 10px; min-height: 44px; white-space: nowrap; }
+.public-brand strong { font: 620 clamp(20px, 1.7vw, 27px)/1 var(--font-display); letter-spacing: -.045em; }
+.public-brand strong span { color: var(--ink-3); font-weight: 450; }
+.public-brand img { width: 36px; height: 36px; }
+.public-tools { gap: clamp(8px, 1.2vw, 20px); }
+.public-tools .language button { min-height: 42px; }
+.public-signin { gap: 7px; min-height: 44px; color: #00704c; font-weight: 650; padding-inline: 8px; }
+.public-signin svg { border-radius: 100%; color: white; padding: 3px; background: #008c61; }
+.public-menu-toggle { display: none; }
+.public-nav { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 6px clamp(14px, 2vw, 32px) 12px; border-top: 1px solid var(--line); }
+.public-nav a { flex-direction: column; gap: 5px; padding: 7px; border-radius: 12px; text-align: center; justify-content: center; font-size: 15px; font-weight: 560; }
+.public-nav a span { display: grid; place-items: center; width: 39px; height: 37px; color: #087452; border-radius: 11px; background: linear-gradient(145deg,#eaf8ee,#d3ebdf); }
+.public-nav a:hover, .public-nav a:focus-visible { background: #f0f6f2; }
+.public-home .land-hero { min-height: clamp(380px, 34vw, 552px); padding: clamp(22px, 3.5vw, 60px); border-radius: 28px; }
+.public-home .land-hero-inner { max-width: none; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); }
+.public-home .land-title { margin: 0; font-size: clamp(37px, 4.3vw, 72px); }
+.public-home .land-title-b { color: #d4f7e7; }
+.public-home .land-lead { max-width: 39ch; margin-top: 20px; color: #f1f5f3; }
+.public-home .land-btn { background: #007e55; color: white; border-radius: 13px; min-height: 50px; }
+.public-home .land-btn:hover { background: #006344; }
+.public-home .land-proof, .public-home .land-story { max-width: none; padding-inline: clamp(4px, 1.2vw, 20px); }
+.public-jury { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 20px 0; padding: clamp(20px, 3vw, 44px); background: #e6f1ea; border-radius: 22px; }
+.public-jury h2 { font: 590 clamp(27px,3vw,44px)/1.08 var(--font-display); letter-spacing: -.045em; }
+.public-jury p { margin-top: 8px; color: var(--ink-3); }
+.public-jury-actions, .public-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.public-footer { justify-content: flex-end; padding: 20px 4px 28px; gap: 8px 24px; border-top: 1px solid var(--line); }
+.public-footer strong { margin-right: auto; }
+.public-footer a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink-3); }
+@media (max-width: 760px) {
+  .public-home { padding: 6px 10px 0; }
+  .public-mast { min-height: 54px; padding: 4px 8px; }
+  .public-header { border-radius: 16px; margin-bottom: 9px; }
+  .public-brand { gap: 5px; }
+  .public-brand img { width: 25px; height: 25px; }
+  .public-brand strong { font-size: 16px; }
+  .public-tools { gap: 2px; }
+  .public-tools .language button { padding-inline: 6px; }
+  .public-signin { padding-inline: 5px; }
+  .public-signin svg { display: none; }
+  .public-menu-toggle { display: grid; place-items: center; width: 44px; min-height: 44px; border: 0; color: var(--ink); background: transparent; }
+  .public-nav { display: none; }
+  .public-nav[data-open] { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .public-nav a { flex-direction: row; justify-content: flex-start; text-align: start; }
+  .public-nav a span { flex-shrink: 0; }
+  .public-home .land-hero { min-height: 0; padding: 24px 18px 10px; border-radius: 19px; }
+  .public-home .land-hero-inner { grid-template-columns: minmax(0,1fr); gap: 0; }
+  .public-home .land-visual { order: 1; justify-self: end; width: min(78%,280px); height: clamp(125px, 21svh, 170px); margin: 0; }
+  .public-home .land-lead { margin-top: 12px; font-size: 16px; }
+  .public-home .land-cta { gap: 6px 10px; }
+  .public-home .land-cta .land-btn { flex: 0 1 auto; padding-inline: 16px; }
+  .public-home .land-cta .land-link { padding-inline: 2px; font-size: .88rem; }
+  .public-home .land-photo { inset: 0; }
+  .public-home .land-photo img { object-position: 55% 37%; }
+  .public-home .land-photo::after { background: linear-gradient(145deg,rgb(10 28 27 / .93) 5%,rgb(13 30 30 / .84) 37%,rgb(13 29 29 / .10) 89%); }
+  .public-jury { display: grid; }
+  .public-home .land-proof { padding-top: 26px; }
+  .public-footer { justify-content: flex-start; }
+  .public-footer strong { width: 100%; }
+}
 .land-hero { position: relative; isolation: isolate; overflow: hidden; padding: clamp(40px, 7vw, 96px) clamp(16px, 4vw, 48px) clamp(48px, 6vw, 88px); min-height: min(88vh, 900px); display: grid; align-content: center; color: #fff;
-  background: radial-gradient(90% 80% at 78% 45%, #13865F 0%, #0B6447 38%, #073F2D 75%, #052C20 100%); }
+  background: #111d1c; }
+.land-photo { position: absolute; inset: 0 0 0 30%; z-index: -2; pointer-events: none; }
+.land-photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 43%; }
+.land-photo::after { content: ""; position: absolute; inset: -1px; background: linear-gradient(90deg, #111d1c 0%, rgb(17 29 28 / .86) 14%, rgb(15 26 29 / .23) 65%), linear-gradient(0deg, rgb(9 20 22 / .62), transparent 62%); }
 .land-aurora { position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(38% 46% at 76% 42%, rgba(160, 255, 214, .22), transparent 70%),
+    radial-gradient(38% 46% at 76% 42%, rgba(187, 225, 214, .10), transparent 70%),
     radial-gradient(60% 50% at 10% 110%, rgba(0, 0, 0, .28), transparent 70%);
   animation: land-drift 16s ease-in-out infinite alternate; }
 .land-aurora::after { content: ""; position: absolute; inset: 0; opacity: .5; mix-blend-mode: overlay;
@@ -123,6 +189,9 @@
   .screen-pause .fx-card { width: 150px; }
   .land-hero { min-height: auto; padding-top: 28px; }
   .land-hero-inner { grid-template-columns: 1fr; }
+  .land-photo { inset: 0 0 27%; }
+  .land-photo img { object-position: 50% 32%; }
+  .land-photo::after { background: linear-gradient(0deg, #111d1c 0%, rgb(17 29 28 / .83) 20%, rgb(14 26 28 / .23) 80%); }
   .land-visual { order: -1; margin: 0 -8%; }
   .land-scroll { display: none; }
   .land-cta .land-btn { flex: 1 1 auto; }

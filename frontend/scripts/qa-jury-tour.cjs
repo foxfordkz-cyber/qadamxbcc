@@ -60,6 +60,15 @@ async function walk(browser, viewport, lang, cold) {
       await page.goto(tourUrl);
     } else {
       await page.goto(origin);
+      assert.equal(await page.locator('#tab-soc, .demo-bar, #personal-login').count(), 0);
+      assert.equal(await page.locator('.public-signin').getAttribute('href'), 'https://saq-bol-jury.onrender.com/');
+      if (viewport.width === 360) {
+        const menu = page.locator('.public-menu-toggle');
+        await menu.click();
+        await page.locator('#public-nav a[href="#results"]').waitFor({state:'visible'});
+        await menu.click();
+        assert.equal(await menu.getAttribute('aria-expanded'), 'false');
+      }
       const entry = page.locator('.land-hero').getByRole('link', { name: lang === 'ru' ? 'Демо для жюри' : 'Қазыларға арналған көрсетілім' });
       await entry.waitFor();
       await page.evaluate(() => document.fonts.ready);
@@ -146,7 +155,7 @@ async function checkQr(browser) {
   try {
     await page.route('**/mobile/link', route => route.fulfill({ json: { origins: [new URL(origin).origin] } }));
     await page.route('**/api/v1/soc/feed?*', route => route.fulfill({ json: feedDemo() }));
-    await page.goto(new URL('/soc', origin).href);
+    await page.goto(origin);
     await page.locator('.mobile-qr summary').click();
     await page.locator(`.mobile-qr-url[href="${tourUrl}"]`).waitFor();
     const svg = await require('qrcode').toString(tourUrl, { type: 'svg', margin: 4, errorCorrectionLevel: 'M' });

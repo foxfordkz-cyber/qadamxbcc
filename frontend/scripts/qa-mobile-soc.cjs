@@ -170,7 +170,7 @@ async function main() {
     return { width: canvas.width, height: canvas.height, scale: new DOMMatrix(getComputedStyle(viewport).transform).a, fitted: nodes.length === expected && nodes.every(box => box.left >= -1 && box.left + box.width <= canvas.width + 1 && box.top >= -1 && box.top + box.height <= canvas.height + 1), nodes };
   }, expectedCount);
   try {
-    await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto(new URL('/soc?workspace=full', target).href, { waitUntil: 'domcontentloaded', timeout: 60000 });
     // SSR starts in Kazakh; the locale effect confirms hydration before clicking presets.
     await page.waitForFunction(() => document.documentElement.lang === 'ru');
     check('public_jury_entry_ru', await page.getByRole('link', { name: 'Вход для жюри', exact: true }).getAttribute('href') === 'https://saq-bol-jury.onrender.com/');
