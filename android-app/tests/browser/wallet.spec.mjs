@@ -1,5 +1,22 @@
 import { test, expect } from "@playwright/test";
 
+test("the team sign-in adapts its photo and links directly to jury rooms", async ({ page }) => {
+  for (const [width, height] of [[360, 780], [1920, 1080]]) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    await expect(page.locator(".access-switch")).toHaveAttribute("href", "https://saq-bol-jury.onrender.com/");
+    await expect(page.locator('#personal-login select, [data-role]')).toHaveCount(0);
+    const photo = page.locator(".access-art picture img");
+    await expect.poll(() => photo.evaluate(img => img.naturalWidth)).toBe(width === 360 ? 640 : 1280);
+    const form = await page.locator("#personal-login").boundingBox();
+    const artwork = await photo.boundingBox();
+    if (width === 360) expect(form.y).toBeGreaterThanOrEqual(artwork.y + artwork.height - 4);
+    else expect(form.x).toBeGreaterThanOrEqual(artwork.x + artwork.width - 12);
+    await expect(page.locator("#personal-login button[type=submit]")).toBeInViewport({ratio: 1});
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+  }
+});
+
 test("wallet card and chart remain usable at phone widths", async ({
   page,
 }) => {

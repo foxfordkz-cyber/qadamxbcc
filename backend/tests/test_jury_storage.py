@@ -70,7 +70,7 @@ def rooms(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     assets = tmp_path / "assets"
     assets.mkdir()
-    (assets / "index.html").write_text("<html data-web-wallet data-install></html>")
+    (assets / "index.html").write_text("<html data-web-wallet data-install><body></body></html>")
     monkeypatch.setattr(gateway, "WEB_ASSETS", assets)
     directory = tmp_path / "rooms"
     directory.mkdir()
@@ -94,6 +94,8 @@ async def test_active_rooms_and_reused_slot_isolate_sessions_sql_and_risk_state(
                 shell = await http.get(url)
                 assert shell.status_code == 200
                 assert "data-web-wallet" in shell.text
+                assert "data-jury-wallet" in shell.text
+                assert "SaqBol-Officer-2026" not in shell.text
                 assert "data-install" not in shell.text
             customer = await sign_in(http, "client_demo", "customer fixture")
             officer = await sign_in(http, "admin_demo", "officer fixture")

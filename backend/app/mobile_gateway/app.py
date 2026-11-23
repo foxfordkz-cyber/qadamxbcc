@@ -615,7 +615,11 @@ def create_mobile_app(
 
         if browser_only:
             # The downloadable team APK connects to a different service than a browser room.
-            browser_shell = index.read_text(encoding="utf-8").replace(" data-install>", ">", 1)
+            browser_shell = (
+                index.read_text(encoding="utf-8")
+                .replace(" data-install>", ">", 1)
+                .replace(" data-web-wallet", " data-web-wallet data-jury-wallet", 1)
+            )
 
             @app.api_route("/wallet/", methods=["GET", "HEAD"], include_in_schema=False)
             @app.api_route("/wallet/index.html", methods=["GET", "HEAD"], include_in_schema=False)

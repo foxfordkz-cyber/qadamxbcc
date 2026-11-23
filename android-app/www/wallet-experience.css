@@ -1,0 +1,94 @@
+html[data-product] {
+  --bg: #f5f5f1;
+  --paper: #fff;
+  --ink: #191e1b;
+  --muted: #515d56;
+  --line: #d6dcd4;
+  --pine: #075c46;
+  --mint: #e3efe8;
+}
+html[data-product] body, #app .shell, #app .topbar {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Onest Variable", system-ui, sans-serif;
+}
+#app :is(button, input, select, textarea) { font-family: inherit; }
+#app[data-screen=login] .shell { max-width: 84rem; padding-inline: clamp(16px, 5vw, 72px); }
+#app[data-screen=login] .topbar {
+  height: auto; min-height: 68px; padding: 8px 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+#app[data-screen=login] .wordmark { display: flex; color: var(--ink); }
+#app[data-screen=login] .wordmark span { font-size: 1.2rem; font-weight: 680; }
+#app[data-screen=login] .wordmark img { width: 26px; height: 26px; }
+#app[data-screen=login] .topbar button { padding-inline: 16px; min-height: 44px; border-radius: 99px; }
+#app[data-screen=login] main { padding: 0 0 24px; animation: none; }
+.wallet-access {
+  display: grid; grid-template-columns: minmax(0, 1.16fr) minmax(0, 1fr);
+  align-items: stretch; overflow: hidden; border: 1px solid var(--line);
+  border-radius: 22px; background: var(--paper);
+}
+.access-art { position: relative; isolation: isolate; overflow: hidden; min-height: clamp(510px, 68svh, 690px); background: #262c2c; color: white; }
+.access-art picture, .access-art picture img { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; }
+.access-art picture { z-index: -2; }
+.access-art picture img { object-position: 54% 48%; }
+.access-art::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(155deg, rgb(10 18 17 / .68), transparent 43%), linear-gradient(0deg, rgb(7 15 16 / .83), transparent 53%);
+}
+#app .access-caption { position: absolute; left: clamp(22px, 3.3vw, 50px); margin: 0; color: white; }
+#app .access-caption { bottom: clamp(24px, 4vw, 60px); max-width: 10ch; font-size: clamp(34px, 4.8vw, 74px); line-height: 1.02; letter-spacing: -.055em; font-weight: 520; }
+.access-panel { align-self: center; min-width: 0; padding: clamp(26px, 3.8vw, 62px); }
+.access-heading small { color: var(--pine); font-weight: 650; }
+#app .access-heading h1 { margin: .5rem 0; font-size: clamp(31px, 3.1vw, 48px); line-height: 1.04; letter-spacing: -.055em; }
+#app .access-hint { margin: .55rem 0 0; font-size: 1rem; color: var(--muted); line-height: 1.45; }
+.access-switch { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; font-weight: 650; color: var(--pine); text-underline-offset: 4px; }
+.access-switch span { font-size: 1.15rem; }
+#app .wallet-access #personal-login { display: grid; gap: .7rem; padding: 0; margin: .6rem 0 0; background: transparent; border: 0; }
+#app #personal-login label { color: var(--ink); font-size: .92rem; gap: 5px; }
+#app #personal-login :is(input:not([type=checkbox]), select), #app #personal-login .password-field {
+  border: 1px solid var(--line); border-radius: 12px; background: #fafbf9; min-height: 48px; color: var(--ink); font-size: 1rem;
+}
+#app #personal-login .password-field { display: flex; padding: 0; align-items: center; }
+#app #personal-login .password-field input { min-width: 0; flex: 1; border: 0; background: transparent; }
+#app #personal-login .password-field button { width: auto; min-height: 44px; padding: 0 12px; background: transparent; color: var(--pine); font-weight: 650; }
+#app #personal-login .remember-choice { min-height: 44px; display: flex; flex-direction: row; align-items: center; gap: 8px; }
+#app #personal-login .primary, #app .transfer-primary, #app button.primary { background: #202723; color: white; }
+#app #personal-login .primary { display: flex; justify-content: center; align-items: center; width: 100%; min-height: 49px; border-radius: 99px; }
+#app #personal-login .primary:hover, #app .transfer-primary:hover { background: #144639; }
+#app #personal-login :is(.error-banner,.busy-banner) { margin: 0; }
+.access-footer { display: flex; flex-wrap: wrap; gap: 0 16px; margin-top: 16px; padding-top: 8px; border-top: 1px solid var(--line); }
+#app .access-footer :is(a,button) { display: inline-flex; align-items: center; width: auto; min-height: 44px; padding: 0; background: transparent; color: var(--muted); font-size: .81rem; font-weight: 550; text-decoration: underline; text-underline-offset: 3px; }
+#app :is(.q-card,.soc-hero,.desk-queue) {
+  color: white; border: 0; background-color: #1d2825;
+  background-image: linear-gradient(104deg, rgb(15 27 24 / .96) 12%, rgb(15 27 24 / .86) 48%, rgb(16 24 22 / .46)), url(media/facade-640.webp);
+  background-size: cover; background-position: center, 50% 47%;
+}
+#app .q-card .card-ribbon { display: none; }
+#app :is(.q-card,.soc-hero,.desk-queue) :is(strong,h2,small) { color: white; }
+#app .hold-card:has(.pause-clock) { background: #eaf1f6; border-color: #bdcfdc; }
+#app .hold-card .pause-next { border-color: #bdcfdc; }
+#app .desk-stats { border-color: #237259; background: #e7eee9; }
+@media (min-width: 880px) {
+  #app[data-actor]:not([data-actor=guest]) .bottom-nav { background: #202723; border-color: #202723; }
+  #app[data-actor]:not([data-actor=guest]) .bottom-nav button { color: #e0e7e1; }
+  #app[data-actor]:not([data-actor=guest]) .bottom-nav button[aria-current=page] { color: #152c23; background: #e6f3eb; }
+}
+@media (max-width: 760px) {
+  #app[data-screen=login] .shell { max-width: 34rem; }
+  #app[data-screen=login] .topbar { min-height: 56px; padding-block: 5px; }
+  .wallet-access { grid-template-columns: minmax(0,1fr); }
+  .access-art { min-height: 0; height: clamp(104px, 17svh, 150px); }
+  .access-art picture img { object-position: 50% 36%; }
+  .access-art::before { background: linear-gradient(80deg, rgb(9 18 15 / .82), transparent); }
+  #app .access-caption { left: 20px; bottom: 14px; max-width: none; font-size: clamp(22px, 5.8vw, 32px); }
+  .access-panel { padding: 18px clamp(16px, 4.5vw, 26px) 10px; }
+  #app .wallet-access #personal-login { margin-top: 2px; gap: 6px; }
+  .access-footer { margin-top: 12px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .access-art picture { animation: access-photo 1.2s ease-out both; }
+  .access-switch span { transition: transform .2s ease; }
+  .access-switch:hover span { transform: translate(2px,-2px); }
+}
+@keyframes access-photo { from { transform: scale(1.035); } to { transform: scale(1); } }

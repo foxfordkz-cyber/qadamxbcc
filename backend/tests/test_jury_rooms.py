@@ -2,6 +2,7 @@ import asyncio
 import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -45,6 +46,24 @@ class Stores:
             self.closed.append(slot)
 
 
+async def test_welcome_assets_load_before_a_room_is_created(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    media = tmp_path / "media"
+    media.mkdir()
+    (media / "rooms.css").write_text("body{margin:0}", encoding="utf-8")
+    monkeypatch.setattr("app.mobile_gateway.jury_rooms.WEB_ASSETS", tmp_path)
+    stores = Stores()
+    app = create_jury_app(stores.factory)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as client:
+        asset = await client.get("/jury/visuals/rooms.css")
+        assert asset.status_code == 200
+        assert asset.headers["content-type"].startswith("text/css")
+        assert "set-cookie" not in asset.headers
+        assert (await client.get("/wallet/")).headers["location"] == "/jury"
+    assert stores.started == []
+
+
 async def test_private_rooms_only_start_by_same_origin_post_and_join_by_invitation() -> None:
     stores = Stores()
     app = create_jury_app(stores.factory)
@@ -61,7 +80,9 @@ async def test_private_rooms_only_start_by_same_origin_post_and_join_by_invitati
         assert welcome.status_code == 200
         assert "/jury/start/history" not in welcome.text
         assert (await alice.post("/jury/start/history", headers=ORIGIN)).status_code == 404
-        assert "<details><summary>" in welcome.text
+        assert '<details id="accounts">' in welcome.text
+        assert 'data-jury-account="admin_demo"' in welcome.text
+        assert "script-src 'self'" in welcome.headers["Content-Security-Policy"]
         assert all(
             f"SaqBol-{role}-2026" in welcome.text for role in ("Client", "Officer", "Platform")
         )

@@ -26,6 +26,7 @@ let lastRead=null;
 let viewRevision=0, loginName="", projector=false;
 let polling=false, nextPoll=0;
 const webWallet=document.documentElement.hasAttribute("data-web-wallet");
+const juryWallet=document.documentElement.hasAttribute("data-jury-wallet");
 let guardRefreshed = "", guardReceived = 0;
 let scanText = "", reportChoice = false;
 let drafts = {byOperation:{}, last:null};
@@ -216,10 +217,12 @@ const errText = (code) =>
 let failureState = null;
 function failureText({status,login,offline,mutation,report}) {
   return offline ? T("Нет интернета. Подключись и попробуй снова.", "Интернет жоқ. Қосылып, қайта көр.")
-      : login && status === 401 ? T("Неверный логин или пароль.","Логин немесе құпиясөз қате.")
+      : login && status === 401 ? (juryWallet
+        ? T("Неверный логин или пароль. Сверьте данные своей роли в комнате жюри.", "Логин немесе құпиясөз қате. Қазылар бөлмесінен өз рөліңіздің деректерін тексеріңіз.")
+        : T("Неверный логин или пароль. Здесь нужен пароль команды. Для данных жюри откройте вход для жюри.", "Логин немесе құпиясөз қате. Мұнда команданың құпиясөзі қажет. Қазыларға берілген құпиясөзбен қазылар бөлмесіне кіріңіз."))
       : report && status === 429 ? T("Обращение не отправлено. Попробуйте позже. За 24 часа можно отправить до пяти обращений.", "Өтініш жіберілмеді. Кейінірек қайталап көріңіз. 24 сағат ішінде бес өтінішке дейін жіберуге болады.")
       : status === 499 ? T("Вход отменён. Можно выбрать другой способ.", "Кіру тоқтатылды. Басқа тәсілді таңда.")
-      : login && (status === 0 || status >= 500) ? T("Сервис входа пока недоступен. Попробуй позже или открой демонстрацию.", "Кіру қызметі әзірге қолжетімсіз. Кейін қайтала немесе демоны аш.")
+      : login && (status === 0 || status >= 500) ? T("Сервис входа пока недоступен. Попробуйте ещё раз чуть позже.", "Кіру қызметі әзірге қолжетімсіз. Сәл кейінірек қайталап көріңіз.")
       : status === 0 && !mutation ? T("Сервис не ответил. Попробуй обновить данные.", "Қызмет жауап бермеді. Деректерді жаңартып көр.")
       : errText(status);
 }
@@ -481,15 +484,28 @@ async function readReport(session,id) {
   return Promise.all([session.api(path),session.api(path+"/history"),questions,callback]);
 }
 function loginView() {
-  if (product) return `<section class="entry sign-in"><div class="sign-heading"><img src="mark.svg" alt=""><div><small>Saq Bol × BCC</small><h1>${T("Вход в кабинет","Кабинетке кіру")}</h1></div></div>
+  if (product) {
+    const photograph = juryWallet ? "alatau" : "facade";
+    const place = juryWallet ? T("Комната жюри", "Қазылар бөлмесі") : T("Кошелёк команды", "Команда әмияны");
+    const otherEntrance = juryWallet
+      ? '<a class="access-switch" href="/jury#accounts">'+T("Данные для входа","Кіру деректері")+' <span aria-hidden="true">↗</span></a>'
+      : '<a class="access-switch" href="https://saq-bol-jury.onrender.com/">'+T("Вход для жюри","Қазылар кабинеті")+' <span aria-hidden="true">↗</span></a>';
+    return `<section class="wallet-access">
+    <div class="access-art"><picture><source media="(max-width: 680px)" srcset="media/${photograph}-640.webp"><img alt="" src="media/${photograph}-${juryWallet ? 764 : 1280}.webp" fetchpriority="high"></picture>
+    <p class="access-caption">${juryWallet ? T("Комната жюри","Қазылар бөлмесі") : T("Защита переводов","Аударымдарды қорғау")}</p></div>
+    <div class="access-panel"><header class="access-heading"><small>${place}</small><h1>${T("Вход в кабинет","Кабинетке кіру")}</h1></header>
+    <p class="access-hint">${juryWallet ? T("Введите логин и пароль для комнаты жюри.", "Қазылар бөлмесіне арналған логин мен құпиясөзді енгізіңіз.") : T("Используйте логин и пароль, выданные команде.", "Командаға берілген логин мен құпиясөзді енгізіңіз.")}</p>
+    ${otherEntrance}
     ${restoreFailed ? button("restore-access",T("Восстановить сессию","Сессияны қалпына келтіру"),"secondary") : ""}
     <form id="personal-login" class="form-stack">
+    ${feedbackView()}
     ${input("login",T("Логин","Логин"),loginName, "text",'autocomplete="username" required maxlength="64" autocapitalize="none" spellcheck="false"')}
     <label>${T("Пароль","Құпиясөз")}<span class="password-field"><input type="password" name="password" required minlength="1" maxlength="128" autocomplete="current-password">
     <button type="button" data-action="show-password" aria-pressed="false">${T("Показать","Көрсету")}</button></span></label>
     <label class="remember-choice"><input type="checkbox" name="remember" ${rememberLogin?"checked":""}><span>${T("Запомнить меня","Мені есте сақтау")}</span></label>
     <button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти","Кіру")}</button></form>
-    ${webWallet && document.documentElement.hasAttribute("data-install")?'<a class="install-link" href="install/">'+T("Установить на Android","Android жүйесіне орнату")+'</a>':""}<div class="sign-footer">${button("web-client",T("Открыть веб-клиент","Веб-клиентті ашу"),"text-button")}${button("offline",T("Офлайн-обзор","Офлайн шолу"),"text-button")}</div></section>`;
+    <div class="access-footer">${webWallet && document.documentElement.hasAttribute("data-install")?'<a href="install/">'+T("Установить на Android","Android жүйесіне орнату")+'</a>':""}${webWallet ? '<a href="https://saq-bol-bcc.zerdeliportald.workers.dev/">'+T("На главную Saq Bol","Saq Bol басты беті")+'</a>' : button("web-client",T("Веб-клиент","Веб-клиент"),"text-button")+button("offline",T("Офлайн-обзор","Офлайн шолу"),"text-button")}</div></div></section>`;
+  }
   return `${title(T("Всё начинается с тебя", "Бәрі сенен басталады"), T("Выбери свою роль и войди на тестовый стенд.", "Рөліңді таңдап, тест стендіне кір."))}<div class="role-choice"><button data-role="client" aria-pressed="${chosenRole === "client"}">${T("Клиент", "Клиент")}<small>${T("Свои переводы и защита", "Өз аударымдарың мен қорғаныс")}</small></button><button data-role="admin" aria-pressed="${chosenRole === "admin"}">${T("Сотрудник SOC", "SOC қызметкері")}<small>${T("Мониторинг и расследования", "Мониторинг пен тексеру")}</small></button><button data-role="platform_admin" aria-pressed="${chosenRole === "platform_admin"}">${T("Администратор платформы","Платформа әкімшісі")}<small>${T("Доступ сотрудников и нагрузка","Қызметкерлер рұқсаты мен жүктеме")}</small></button></div><section class="paper login-card"><form id="login-form" class="form-stack" autocomplete="off">${input("origin", T("Адрес тестового сервера", "Тест серверінің мекенжайы"), loginOrigin, "text", 'required inputmode="url" placeholder="127.0.0.1:18001"')}${input("code", T("Код доступа твоей роли", "Өз рөліңнің кіру коды"), "", "password", 'required minlength="24" maxlength="128" autocomplete="off" spellcheck="false"')}<button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти", "Кіру")} →</button></form><p class="fine">${T("Код выдаёт владелец тестового стенда. Роль проверяет сервер. Это отдельный тестовый код, не пароль банка.", "Кодты тест стендінің иесі береді. Рөлді сервер тексереді. Бұл банк құпиясөзі емес, бөлек тест коды.")}</p></section>${button("offline", T("Попробовать без сервера", "Серверсіз байқап көру"), "secondary")}`;
 }
 function transactionRows(items, soc = false) {
@@ -1082,6 +1098,15 @@ const screens = {
   invite: () =>
     `${title(T("Тестовое приглашение", "Тест шақыруы"))}<p class="callout">${T("Создайте приглашение для близкого. Уведомления доступны только после его личного согласия.", "Жақын адамыңызға шақыру жасаңыз. Хабарламалар оның жеке келісімінен кейін ғана қолжетімді.")}</p>${button("create-invite", T("Подтверждаю", "Растаймын"))}`,
 };
+function feedbackView() {
+  const alert = error ? `<div class="error-banner" role="alert">${E(error)}</div>` : "";
+  if (!loading) return alert;
+  const message = page === "login"
+    ? T("Подключаемся. Первый вход после перерыва может занять до двух минут.", "Қосылып жатырмыз. Үзілістен кейінгі алғашқы кіру екі минутқа дейін созылуы мүмкін.")
+    : T("Получаем данные…", "Деректер алынуда…");
+  return alert + `<div class="busy-banner" role="status"><span class="spinner"></span>${message}</div>`;
+}
+
 function render() {
   const homeNoticesExpanded = page === "home" && root.querySelector(".more-security")?.open;
   document.documentElement.lang = lang;
@@ -1108,7 +1133,7 @@ function render() {
   const navPage=nav.some(([key])=>key===page)?page:
     (gateway?.role==="admin"?({case:"cases",reports:"cases",reportDetail:"cases",gateway:"system"}[page]||"home"):
     ({detail:"history",incoming:"history",callbacks:"safety",contacts:"safety",scan:"safety",call:"safety",family:"safety",guard:"safety",report:"safety",reports:"safety",reportDetail:"safety",invite:"safety",questionnaire:"history",confirmCancel:"history"}[page]||"home"));
-  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>saq bol</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && page === "settings" ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${page === "login" ? T("Подключаемся. Первый вход после перерыва может занять до двух минут.", "Қосылып жатырмыз. Үзілістен кейінгі алғашқы кіру екі минутқа дейін созылуы мүмкін.") : T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
+  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>${product && page === "login" ? "Saq Bol × BCC" : "saq bol"}</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && page === "settings" ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${product && page === "login" ? "" : feedbackView()}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
   if (product) {
     if(workspaceRead?.pending.size && ["home","staff","cases"].includes(page)) {
       const marker=document.createElement("p");
@@ -1948,6 +1973,7 @@ async function restoreSession() {
 }
 if (product) void restoreSession();
 root.addEventListener("change", event => {
+
   if (event.target.name === "remember") rememberLogin=event.target.checked;
   if (page === "transfer" && event.target.name === "recipient_phone") {
     const manualField = root.querySelector("[data-manual-phone]");

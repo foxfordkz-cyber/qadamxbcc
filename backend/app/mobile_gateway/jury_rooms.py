@@ -11,9 +11,10 @@ from time import monotonic
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.mobile_gateway.app import WEB_COOKIE
+from app.mobile_gateway.app import WEB_ASSETS, WEB_COOKIE
 
 Factory = Callable[[int], AbstractAsyncContextManager[ASGIApp]]
 ROOM_COOKIE = "__Host-saq-jury"
@@ -120,27 +121,46 @@ class RoomPool:
         return key
 
 
+def bilingual(kk: str, ru: str) -> str:
+    return f'<span lang="kk">{kk}</span><span lang="ru">{ru}</span>'
+
+
+_PUBLIC_ROLES = (
+    ("Клиент", "Клиент", "client_demo", "SaqBol-Client-2026"),
+    ("SOC қызметкері", "Сотрудник SOC", "admin_demo", "SaqBol-Officer-2026"),
+    ("Платформа әкімшісі", "Администратор платформы", "platform_demo", "SaqBol-Platform-2026"),
+)
+_PUBLIC_LOGINS = (
+    '<details id="accounts"><summary>'
+    + bilingual("Оқу тіркелгілерінің кіру деректері", "Данные учебных аккаунтов")
+    + "</summary><dl>"
+    + "".join(
+        f'<div data-jury-account="{login}"><dt>{bilingual(kk, ru)}</dt>'
+        f'<dd><small>Логин</small><code>{login}</code></dd>'
+        f'<dd><small>{bilingual("Құпиясөз", "Пароль")}</small><code>{password}</code></dd></div>'
+        for kk, ru, login, password in _PUBLIC_ROLES
+    )
+    + "</dl></details>"
+)
+
+
 _HEAD = """<!doctype html><html lang="kk"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Saq Bol × BCC · Қазылар алқасы / Жюри</title><style>
-*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#101828;
-font:1rem/1.5 system-ui,sans-serif}main{max-width:36rem;margin:8vh auto;padding:2rem;
-border-radius:1.5rem;background:white}h1{font-size:1.6rem;line-height:1.2}button,a{font:inherit}
-button{border:0;border-radius:.75rem;padding:.7rem 1rem;background:#00804c;color:white;
-cursor:pointer}a{color:#006b40}small{color:#475467}p{margin:1rem 0}
-details{margin-top:1.25rem}summary{cursor:pointer}dt{font-weight:600;margin-top:.75rem}
-dd{margin:0}code{overflow-wrap:anywhere}.room-actions{display:flex;gap:.5rem;flex-wrap:wrap}
-.with-history{color:#006b40;background:white;border:1px solid #00804c}
-</style></head><body><main><small>Saq Bol × BCC</small>"""
+<meta name="theme-color" content="#f5f5f1">
+<title>Saq Bol × BCC · Қазылар алқасы / Жюри</title>
+<link rel="icon" href="/jury/visuals/mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/jury/visuals/fonts/onest.css">
+<link rel="stylesheet" href="/jury/visuals/rooms.css">
+<script src="/jury/visuals/room-language.js" defer></script></head><body>
+<header class="mast"><b>Saq Bol <span>× BCC</span></b>
+<button type="button" id="room-language" hidden>РУС</button></header><main>
+<div class="room-art"><picture>
+<source media="(max-width: 680px)" srcset="/jury/visuals/alatau-640.webp">
+<img alt="" src="/jury/visuals/alatau-764.webp" fetchpriority="high"></picture>
+<div class="room-caption"><span lang="kk">Тянь-Шань<br><small>Қазақстан</small></span>
+<span lang="ru">Тянь-Шань<br><small>Казахстан</small></span></div></div>
+<section class="room-content">"""
 
-_PUBLIC_LOGINS = """<details><summary>Үш рөлге кіру / Вход под тремя ролями</summary>
-<dl><dt>Клиент</dt>
-<dd>Логин <code>client_demo</code><br>Құпиясөз / Пароль <code>SaqBol-Client-2026</code></dd>
-<dt>SOC қызметкері / Сотрудник SOC</dt>
-<dd>Логин <code>admin_demo</code><br>Құпиясөз / Пароль <code>SaqBol-Officer-2026</code></dd>
-<dt>Платформа әкімшісі / Администратор платформы</dt>
-<dd>Логин <code>platform_demo</code><br>Құпиясөз / Пароль <code>SaqBol-Platform-2026</code></dd>
-</dl></details>"""
 
 
 def landing(
@@ -152,59 +172,59 @@ def landing(
     status: int = 200,
 ) -> HTMLResponse:
     # All markup consists of fixed bilingual copy and a server-generated URL-safe key.
-    title = "<h1>Қазылар алқасының әмияны<br><span lang=ru>Кошелёк жюри</span></h1>"
-    intro = (
-        "<p>Клиент пен SOC қызметкері бір оқу ісімен жұмыс істейді. "
-        "Әкімші сұраулар санын көреді және қызметкердің кіру рұқсатын басқарады. "
-        "Бөлме 30 минут әрекетсіздіктен кейін тазартылады.</p>"
-        "<p lang=ru>Клиент и сотрудник SOC работают с одним учебным делом. "
-        "Администратор видит счётчики запросов и управляет доступом сотрудника. "
-        "Через 30 минут бездействия данные комнаты удаляются.</p>"
+    title = "<h1>" + bilingual("Қазылар әмияны", "Кошелёк жюри") + "</h1>"
+    intro = "<p>" + bilingual(
+        "Жеке оқу бөлмесін ашыңыз. Оған өз логиніңізбен кіре аласыз.",
+        "Откройте свою учебную комнату и войдите со своим логином.",
+    ) + "</p>"
+    submit = (
+        bilingual("Әмиянға оралу", "Вернуться в кошелёк")
+        if key else bilingual("Бос бөлме ашу", "Открыть пустую комнату")
     )
-    submit = "Әмиянға оралу / Вернуться в кошелёк" if key else "Бөлме ашу / Открыть комнату"
     history = ""
     if history_available and not key:
         history = (
             '<form method="post" action="/jury/start/history">'
-            '<button class="with-history" type="submit">Тарихымен ашу / '
-            "Открыть с историей</button></form>"
+            '<button class="with-history" type="submit">'
+            + bilingual("Тарихымен ашу", "Открыть с историей") + "</button></form>"
         )
-        intro += (
-            "<p>Дайын тарихта 40 оқу аударымы мен 10 іс бар. "
-            "<span lang=ru>В комнате с историей уже есть 40 учебных переводов и 10 дел SOC."
-            "</span></p>"
-        )
+        intro += '<p class="room-sample">' + bilingual(
+            "40 оқу аударымы · 10 іс", "40 учебных переводов · 10 дел SOC"
+        ) + "</p>"
     shared = ""
     if key:
         shared = (
-            "<p>Қосымша рөлге кіру үшін сілтемені басқа браузер профилінде ашыңыз.</p>"
-            "<p lang=ru>Чтобы войти под другой ролью, откройте ссылку в отдельном "
-            "профиле браузера. По этой ссылке доступны учебные данные вашей комнаты.</p>"
-            f'<p><a href="/jury/join/{key}">Бөлме сілтемесі / Ссылка на вашу комнату</a></p>'
+            "<p>" + bilingual(
+                "Басқа рөлмен кіру үшін бөлменің сілтемесін бөлек браузер профилінде ашыңыз.",
+                "Для другой роли откройте ссылку своей комнаты в отдельном профиле браузера.",
+            ) + f'</p><a href="/jury/join/{key}">'
+            + bilingual("Бөлме сілтемесі", "Ссылка на вашу комнату") + "</a>"
         )
     if contact_invite:
         shared += (
-            "<p>Сенімді адамның шақыруын басқа браузерге көшіріңіз. "
-            "Скопируйте приглашение в отдельный профиль браузера. В нём близкий "
-            "увидит сумму, получателя и срок только своих учебных запросов.</p>"
-            f'<a href="/jury/invite-contact/{contact_invite}">'
-            "Сенімді адамның шақыруы / Приглашение доверенному лицу</a>"
+            f'<p><a href="/jury/invite-contact/{contact_invite}">'
+            + bilingual("Сенімді адамға шақыру", "Приглашение доверенному лицу") + "</a></p>"
         )
     return HTMLResponse(
-        _HEAD + title + message + intro + '<div class="room-actions">'
-        '<form method="post" action="/jury/start">'
+        _HEAD + title + message + intro + '<div class="room-actions">' + history
+        + '<form method="post" action="/jury/start">'
         f'<button type="submit">{submit}</button></form>'
-        + history
         + "</div>"
         + _PUBLIC_LOGINS
         + shared
-        + "</main></body></html>",
+        + '<p class="room-expiry">' + bilingual(
+            "Бөлмеге 30 минут бойы ешкім кірмесе, деректері өшіріледі.",
+            "После 30 минут бездействия данные комнаты удаляются.",
+        ) + '</p><a href="https://saq-bol-mobile.onrender.com/wallet/">'
+        + bilingual("Команда әмиянына кіру", "Вход в кошелёк команды")
+        + "</a></section></main></body></html>",
         status_code=status,
         headers={
             "Cache-Control": "no-store",
             "Referrer-Policy": "same-origin",
             "X-Robots-Tag": "noindex, nofollow",
-            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; "
+            "Content-Security-Policy": "default-src 'none'; style-src 'self'; script-src 'self'; "
+            "img-src 'self'; font-src 'self'; "
             "form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
         },
     )
@@ -261,6 +281,7 @@ def create_jury_app(
             await pool.reap(shutdown=True)
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.mount("/jury/visuals", StaticFiles(directory=WEB_ASSETS / "media", check_dir=False))
 
     @app.api_route("/health", methods=["GET", "HEAD"])
     async def health() -> JSONResponse:

@@ -12,10 +12,11 @@ for (const file of await readdir(source, { withFileTypes: true })) {
   if (file.isFile() && /\.(mjs|css|svg|html)$/.test(file.name)) {
     // Keep the served text identical to the Linux APK build on Windows checkouts.
     await writeFile(to, (await readFile(from, "utf8")).replace(/\r\n/g, "\n"));
-  } else if (file.isDirectory() && file.name === "vendor") {
+  } else if (file.isDirectory() && ["vendor", "media"].includes(file.name)) {
     await cp(from, to, {recursive: true});
   }
 }
+await cp(path.join(source, "mark.svg"), path.join(destination, "media", "mark.svg"));
 const shell = await readFile(path.join(source, "index.html"), "utf8");
 const version = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version.replace(/\.0$/, "");
 const apkName = `Saq-Bol-Android-${version}.apk`;
