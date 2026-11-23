@@ -7,7 +7,7 @@ import "./fx.css";
 
 type Props = {
   state?: CardState;
-  /** 0..1: ring closing progress for scroll-driven scenes. */
+  /** 0..1: how far the glass shield has slid in front of the card (scroll-driven scenes). */
   ring?: number;
   size?: "hero" | "sheet" | "wallet";
   last4?: string;
@@ -66,13 +66,13 @@ export function FxCard({ state = "idle", ring = 0, size = "sheet", last4 = "4821
   return <div ref={host} role="img" aria-label={label} className={`fx-card fx-${size} ${className}`} data-state={state} data-live={live || undefined}
     style={{ "--ring": ring.toFixed(3) } as CSSProperties} onPointerMove={move} onPointerLeave={leave}>
     <div className="fx-stage">
-      <span className="fx-ring" aria-hidden="true" />
       <div className="fx-css-card" aria-hidden="true">
         <span className="fx-css-mark">{MARK}</span>
         <span className="fx-chip" /><svg className="fx-wave" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7a7 7 0 0 1 0 10M12 4.5a11 11 0 0 1 0 15M16 2a15 15 0 0 1 0 20" /></svg>
         <span className="fx-css-name">Saq Bol</span><span className="fx-css-number">•••• {last4}</span>
-        <span className="fx-frost" /><span className="fx-sheen" />
+        <span className="fx-sheen" />
       </div>
+      <span className="fx-glass" aria-hidden="true"><span className="fx-frost" /></span>
     </div>
     {rich && <canvas ref={canvas} className="fx-canvas" aria-hidden="true" />}
     <span className="fx-floor" aria-hidden="true" />
