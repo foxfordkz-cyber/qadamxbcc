@@ -4,6 +4,54 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Lang } from "./contracts";
 
 const messages = {
+  tourEntry: ["Қазыларға арналған көрсетілім", "Демо для жюри"],
+  tourName: ["Қауіпсіз аударым", "Защита перевода"],
+  tourPrepare: ["Стендті дайындап жатырмыз…", "Подготавливаем стенд…"],
+  tourWait: ["Банк сервисінің жауабын күтеміз. Ең көбі бір минут.", "Ждём ответа сервиса банка. Это займёт до минуты."],
+  tourProgress: ["{n}-қадам (барлығы 6)", "Шаг {n} из 6"],
+  tourNext: ["Келесі", "Далее"], tourSkip: ["Өткізіп жіберу", "Пропустить"],
+  tourRestart: ["Қайта өту", "Пройти ещё раз"],
+  tourMother: ["Анаңыз, 62 жаста", "Мама, 62 года"], tourSon: ["Ұлының телефоны", "Телефон сына"],
+  tourTransfer: ["Жаңа картаға аударым", "Перевод на новую карту"],
+  tourCard: ["Анаңыздың Saq Bol картасы", "Карта Saq Bol мамы"],
+  tourHeldCard: ["Карта әйнек қалқанның астында. Аударым кідіртілді.", "Карта под матовым щитом. Перевод на паузе."],
+  tourCaller: ["«Банктің қауіпсіздік қызметі»", "«Служба безопасности банка»"],
+  tourCallSimulated: ["Стендтегі қоңырау үлгісі", "Звонок моделируется на стенде"],
+  tourTelegramSimulated: ["Стендтегі Telegram хабарламасының үлгісі", "Уведомление Telegram моделируется на стенде"],
+  tourIncoming: ["Қоңырау шалушы", "Вам звонит"],
+  tourPause: ["Аударым 15 минутқа кідіртілді", "Перевод на паузе на 15 минут"],
+  tourPasted: ["Қоңырау кезінде карта нөмірін көшіріп енгізді", "Реквизиты вставлены во время звонка"],
+  tourCadence: ["Теру кезіндегі кідіріс", "Пауза при вводе"],
+  tourSeconds: ["с", "с"],
+  tourNoCall: ["Банк қоңырау шалмаған", "Банк не звонил"],
+  tourTelegram: ["Сенімді адамға хабарлама", "Уведомление доверенному лицу"],
+  tourTelegramBody: ["Банк анаңызға қоңырау шалмаған. Ол жаңа картаға ақша аударғалы тұр. Сізше, бұл алаяқтар ма?", "Банк маме не звонил. Она переводит деньги на новую карту. Вы подозреваете мошенничество?"],
+  tourFraud: ["Бұл алаяқтар", "Это мошенники"],
+  tourBlocked: ["Аударым бұғатталды", "Перевод заблокирован"],
+  tourContactReason: ["Ұлы алаяқтық туралы хабарлады. Ақша анасының шотында қалды.", "Сын сообщил о мошенничестве. Деньги остались на счёте мамы."],
+  tourFeed: ["SOC · Аударымдар тізімі", "SOC · Лента переводов"],
+  tourGraph: ["Алушының байланыстары", "Связи получателя"],
+  tourGraphCaption: ["Бұл алушыға {n} шоттан ақша түскен.", "Число счетов, с которых поступили деньги, — {n}."],
+  tourModel: ["ML-инспектор", "ML-инспектор"],
+  tourModelCaption: ["Аударым кідіртілген сәттегі модель бағасы", "Оценка модели в момент паузы"],
+  tourTopFactor: ["Модельге ең көп әсер еткен белгі —", "Главный признак для модели —"],
+  tourLaws: ["ҚР заңдары", "Законы РК"],
+  tourSaved: ["{amount} сақталды", "Сохранено {amount}"],
+  tourHintTransfer: ["Анаңызға «банктен» қоңырау түсті. Аударымды бастаңыз.", "Маме звонят «из банка». Начните перевод."],
+  tourHintCaller: ["Қауіп белгілері бар. Қоңырау туралы сұраққа жауап беріңіз.", "Saq Bol заметил риск. Ответьте на вопрос о звонке."],
+  tourHintPayee: ["Анаңыз бұл картаға бұрын ақша жібермеген.", "Мама впервые переводит деньги на эту карту."],
+  tourHintCall: ["Қоңырауды банк журналынан тексеріңіз.", "Проверьте звонок по журналу банка."],
+  tourHintVerdict: ["Журналда бұл нөмірге қоңырау тіркелмеген.", "В журнале нет звонка на мамин номер."],
+  tourHintTelegram: ["Ұлы Telegram-да ескерту алды. Оның атынан жауап беріңіз.", "Сын получил сообщение. Ответьте за него."],
+  tourHintBlocked: ["Енді осы аударымды банк қызметкері қарайды.", "Теперь эту операцию увидит сотрудник SOC."],
+  tourHintFeed: ["Осы аударымды тізімнен ашыңыз.", "Откройте этот перевод в ленте."],
+  tourHintGraph: ["Алушының басқа шоттармен байланысын қараңыз.", "Посмотрите, как связаны счета в сети дропов."],
+  tourHintModel: ["Қай белгілер модель бағасына көбірек әсер етті?", "Какие признаки сильнее повлияли на оценку?"],
+  tourHintReport: ["Осы аударым бойынша анықтаманы ашыңыз.", "Откройте справку по этому переводу."],
+  tourHintDocument: ["Анықтамада оқиға барысы мен заңға сілтемелер бар.", "В справке есть ход событий и ссылки на законы."],
+  tourQr: ["Қазыларға арналған QR", "QR для жюри"],
+  tourQrHint: ["Камераны QR-кодқа бағыттап, алты қадамнан өтіңіз.", "Наведите камеру на QR-код и пройдите шесть шагов."],
+  tlContactSuspicion: ["Сенімді адам алаяқтық туралы хабарлады", "Доверенное лицо сообщило о мошенничестве"],
   callOwnerStatement: ["Аударым туралы клиенттің жауабы", "Ответ клиента об этом переводе"],
   callOwnerUnknown: ["Сұраққа жауап тіркелмеген", "Ответ на вопрос не зарегистрирован"],
   callOwnerOnCall: ["Қоңырау кезінде аударуды сұрады", "Попросили перевести во время текущего звонка"],
@@ -304,18 +352,25 @@ const messages = {
   mobileQr: ["Телефоннан ашу", "Открыть на телефоне"],
   mobileQrHint: ["QR-кодты сканерлеп, аударымды өз телефоныңыздан жасаңыз — ол осы тізімде бірден көрінеді. Телефон мен ноутбук бір Wi-Fi желісінде болуы керек.", "Отсканируйте QR-код и сделайте перевод со своего телефона — он сразу появится в этой ленте. Телефон и ноутбук должны быть в одной Wi-Fi."],
   mobileQrLoading: ["Мекенжай анықталуда…", "Определяем адрес…"],
-  mobileQrUnavailable: ["Wi-Fi мекенжайы табылмады. Демоны BCC_MOBILE_LAN=true және --hostname 0.0.0.0 арқылы іске қосыңыз.", "Адрес в Wi-Fi не найден. Запустите демо с BCC_MOBILE_LAN=true и --hostname 0.0.0.0."],
+  mobileQrUnavailable: ["Wi-Fi мекенжайы табылмады. Стендті BCC_MOBILE_LAN=true және --hostname 0.0.0.0 параметрлерімен іске қосыңыз.", "Адрес в Wi-Fi не найден. Запустите стенд с BCC_MOBILE_LAN=true и --hostname 0.0.0.0."],
 } as const;
 export type MessageKey = keyof typeof messages;
 const Locale = createContext<{ lang: Lang; setLang: (lang: Lang) => void }>({ lang: "kk", setLang: () => undefined });
-export function LocaleProvider({ children }: { children: ReactNode }) {
+export function LocaleProvider({ children, tabOnly = false }: { children: ReactNode; tabOnly?: boolean }) {
   const [lang, updateLang] = useState<Lang>("kk");
-  const setLang = useCallback((value: Lang) => { updateLang(value); try { window.localStorage.setItem("bcc-shield.locale", value); } catch { /* The live switch still works when storage is unavailable. */ } }, []);
+  const setLang = useCallback((value: Lang) => {
+    updateLang(value);
+    try { (tabOnly ? window.sessionStorage : window.localStorage).setItem("bcc-shield.locale", value); } catch { /* The switch also works in memory. */ }
+  }, [tabOnly]);
   useEffect(() => {
-    try { const saved = window.localStorage.getItem("bcc-shield.locale"); if (saved === "kk" || saved === "ru") updateLang(saved); } catch { /* Default to Kazakh. */ }
+    try {
+      const saved = (tabOnly ? window.sessionStorage.getItem("bcc-shield.locale") : null) ?? window.localStorage.getItem("bcc-shield.locale");
+      if (saved === "kk" || saved === "ru") updateLang(saved);
+    } catch { /* Default to Kazakh. */ }
+    if (tabOnly) return;
     const changed = (event: StorageEvent) => { if (event.key === "bcc-shield.locale" && (event.newValue === "kk" || event.newValue === "ru")) updateLang(event.newValue); };
     window.addEventListener("storage", changed); return () => window.removeEventListener("storage", changed);
-  }, []);
+  }, [tabOnly]);
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
   return <Locale.Provider value={{ lang, setLang }}>{children}</Locale.Provider>;
 }

@@ -1,0 +1,109 @@
+{
+  "amount": "450000",
+  "context": {
+    "active_call": true,
+    "pasted_recipient": true,
+    "is_new_recipient": true,
+    "from_deposit": false,
+    "is_new_device": false,
+    "recipient_input_length": 0,
+    "typing_duration_ms": 3100,
+    "hesitation_ms": 2100,
+    "hesitation_count": 1
+  },
+  "risk_score": 74,
+  "reasons": [
+    {
+      "code": "ACTIVE_CALL",
+      "layer": "behavioral",
+      "score_delta": 25,
+      "reason_kk": "Аударым кезінде белсенді телефон қоңырауы анықталды — алаяқтар жиі банк немесе полиция қызметкері болып хабарласады.",
+      "reason_ru": "Во время перевода обнаружен активный телефонный звонок — мошенники часто представляются сотрудниками банка или полиции.",
+      "evidence": {}
+    },
+    {
+      "code": "AMOUNT_SPIKE",
+      "layer": "behavioral",
+      "score_delta": 20,
+      "reason_kk": "Сома әдеттегі орташа аударымнан 11,2 есе көп (450 000 ₸, орташа 40 000 ₸).",
+      "reason_ru": "Сумма в 11,2 раза выше обычного среднего перевода (450 000 ₸ при среднем 40 000 ₸).",
+      "evidence": {
+        "ratio": "11,2",
+        "amount": "450 000",
+        "avg": "40 000"
+      }
+    },
+    {
+      "code": "PASTED_DURING_CALL",
+      "layer": "behavioral",
+      "score_delta": 15,
+      "reason_kk": "Реквизиттер белсенді қоңырау кезінде алмасу буферінен қойылды",
+      "reason_ru": "Реквизиты вставлены из буфера обмена во время активного звонка",
+      "evidence": {}
+    },
+    {
+      "code": "NEW_RECIPIENT",
+      "layer": "behavioral",
+      "score_delta": 10,
+      "reason_kk": "Алушы жаңа: бұрын бұл шотқа аударым жасалмаған.",
+      "reason_ru": "Новый получатель: ранее переводов на этот счёт не было.",
+      "evidence": {}
+    },
+    {
+      "code": "SOCIAL_ENGINEERING_PATTERN",
+      "layer": "behavioral",
+      "score_delta": 10,
+      "reason_kk": "Әлеуметтік инженерия үлгісі: телефон қоңырауы кезінде депозиттен немесе жаңа алушыға шұғыл аударым.",
+      "reason_ru": "Паттерн социальной инженерии: срочный перевод с депозита или новому получателю во время телефонного звонка.",
+      "evidence": {}
+    }
+  ],
+  "ml_model_version": "bcc-synthetic-rf-v3",
+  "ml_score": 48.7807,
+  "ml_base_score": 26.1538,
+  "ml_contributors": [
+    {
+      "feature": "amount_ratio",
+      "value": 11.25,
+      "contribution": 56.7707,
+      "label_kk": "Соманың әдеттегі сомаға қатынасы",
+      "label_ru": "Отношение суммы к обычной"
+    },
+    {
+      "feature": "transit_ratio",
+      "value": 0.0,
+      "contribution": -24.3579,
+      "label_kk": "Транзиттік қатынас",
+      "label_ru": "Транзитное отношение"
+    },
+    {
+      "feature": "new_recipient",
+      "value": 1.0,
+      "contribution": 14.3652,
+      "label_kk": "Жаңа алушы",
+      "label_ru": "Новый получатель"
+    },
+    {
+      "feature": "hesitation_count",
+      "value": 1.0,
+      "contribution": -12.7179,
+      "label_kk": "Кідірістер саны",
+      "label_ru": "Число пауз"
+    },
+    {
+      "feature": "hesitation_ms",
+      "value": 2100.0,
+      "contribution": -11.1432,
+      "label_kk": "Кідіріс ұзақтығы",
+      "label_ru": "Длительность пауз"
+    }
+  ],
+  "latency_ms": 34.634,
+  "layer_latency_ms": {
+    "behavioral": 0.069,
+    "velocity": 34.093,
+    "graph": 0.042,
+    "ml": 0.385,
+    "decision": 0.045
+  }
+}
