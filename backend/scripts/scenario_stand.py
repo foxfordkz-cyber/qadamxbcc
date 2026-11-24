@@ -376,10 +376,9 @@ def main() -> None:
             json.dumps(call_scorecard(calls), indent=2) + "\n", encoding="utf-8"
         )
         (ROOT / "docs/SCENARIO_STAND.md").write_text(rendered, encoding="utf-8")
-        (ROOT / "docs/evidence/scenario_stand.json").write_text(
-            json.dumps([asdict(r) for r in results], ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        detail = json.dumps([asdict(r) for r in results], ensure_ascii=False, indent=2) + "\n"
+        for path in ("docs/evidence/scenario_stand.json", "frontend/src/lib/scenario-details.json"):
+            (ROOT / path).write_text(detail, encoding="utf-8")
     print(rendered)
 
 

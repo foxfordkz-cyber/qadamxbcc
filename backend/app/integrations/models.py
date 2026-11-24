@@ -81,4 +81,9 @@ class GuardianReport(Base):
 
     @property
     def source(self) -> str:
+        if self.transaction_id and self.id == uuid.uuid5(self.transaction_id, "saqbol:hold-review"):
+            if self.idempotency_key == uuid.uuid5(self.id, "deadline"):
+                return "guardian_timeout"
+            if self.idempotency_key == uuid.uuid5(self.id, "suspicion"):
+                return "guardian_signal"
         return "trusted_contact" if self.contact_id is not None else "owner_demo"

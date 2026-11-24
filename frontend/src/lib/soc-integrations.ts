@@ -23,7 +23,7 @@ export const caseQuestions = ["caller_request", "remote_access", "secrecy_pressu
 const state = z.enum(caseStates);
 const staff = z.enum(caseStaff).nullable();
 const category = z.enum(caseCategories);
-const source = z.enum(["owner_demo", "trusted_contact"]);
+const source = z.enum(["owner_demo", "trusted_contact", "guardian_timeout", "guardian_signal"]);
 const version = z.number().int().min(1);
 const descriptions = { description_ru: z.string(), description_kk: z.string() };
 export const caseSchema = z.object({ id, report_id: id, source, category, state, assignee: staff, version,
@@ -35,7 +35,7 @@ export const caseAnalyticsSchema = z.object({ as_of: timestamp, total: count, op
   oldest_current_status_seconds: z.record(z.string(), z.number().nonnegative()), demonstration_only: z.literal(true),
   policy_comparison: policyComparisonSchema.nullish() });
 export const caseHistorySchema = z.object({ items: z.array(z.object({ id, actor_id: id, version, code: z.string(),
-  actor_role: z.enum(["soc", "owner"]), timestamp, state, category, assignee: staff, reason: z.string().nullable(), ...descriptions })).max(100),
+  actor_role: z.enum(["soc", "owner", "system"]), timestamp, state, category, assignee: staff, reason: z.string().nullable(), ...descriptions })).max(100),
   next_after_version: count.nullable() });
 export const caseNotesSchema = z.object({ items: z.array(z.object({ event_id: id, body: z.string().max(500), expires_at: timestamp })).max(100), next_after_version: count.nullable() });
 const auditSchema = z.object({ event: z.string(), correlation_id: id, created_at: timestamp });

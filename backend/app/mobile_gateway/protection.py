@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Literal
-from uuid import UUID
+from uuid import UUID, uuid5
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import EngineDep, SessionDep
 from app.db.base import utcnow
 from app.db.locks import serialize_sender, serialized_identity
+from app.integrations.cases.models import FraudCase
 from app.integrations.config import IntegrationSettings
 from app.integrations.errors import IntegrationError
 from app.integrations.models import ContactNotification, GuardianReport, TrustedContact
@@ -153,6 +154,11 @@ async def snapshot(db: AsyncSession, tx: Transaction) -> dict[str, Any]:
         for r in (tx.evaluation_snapshot or {}).get("reasons", [])
     )
     state, expires_at = await family_approval.approval_state(db, tx, now, required=required)
+    review_id = await db.scalar(
+        select(FraudCase.report_id).where(
+            FraudCase.id == uuid5(tx.id, "saqbol:hold-review"), FraudCase.expires_at > now
+        )
+    )
     second = None if state == "none" else {"state": state, "expires_at": expires_at}
     return {
         "transaction_id": tx.id,
@@ -163,6 +169,7 @@ async def snapshot(db: AsyncSession, tx: Transaction) -> dict[str, Any]:
         "contact_state": notice.state if notice else None,
         "family_enabled": enabled(policy, now),
         "second_confirmation": second,
+        "review_report_id": review_id,
     }
 
 
@@ -259,6 +266,17 @@ def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
             policy.disable_at = utcnow() + GRACE
         await session.commit()
         return await family(principal, session)
+
+    @app.post(base + "/{txid}/review")
+    async def request_review(
+        txid: UUID, principal: IdentityDep, session: SessionDep
+    ) -> dict[str, UUID]:
+        from app.mobile_gateway.hold_review import review
+
+        if not settings.enabled:
+            raise HTTPException(503, "integrations_disabled")
+        tx = await owned(session, txid, client(principal), lock=True)
+        return {"report_id": await review(session, tx, trigger="appeal")}
 
     @app.get(base + "/{txid}/check")
     async def check(txid: UUID, principal: IdentityDep, session: SessionDep) -> dict[str, Any]:

@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -420,6 +420,7 @@ dev = [
 ]
 mobile-ephemeral = [
     { name = "aiosqlite" },
+    { name = "fakeredis" },
 ]
 
 [package.metadata]
@@ -452,7 +453,10 @@ dev = [
     { name = "ruff", specifier = ">=0.6" },
     { name = "types-networkx", specifier = ">=3.2" },
 ]
-mobile-ephemeral = [{ name = "aiosqlite", specifier = ">=0.20" }]
+mobile-ephemeral = [
+    { name = "aiosqlite", specifier = ">=0.20" },
+    { name = "fakeredis", specifier = ">=2.24" },
+]
 
 [[package]]
 name = "certifi"

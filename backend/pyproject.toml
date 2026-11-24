@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-mobile-ephemeral = ["aiosqlite>=0.20"]
+mobile-ephemeral = ["aiosqlite>=0.20", "fakeredis>=2.24"]
 dev = [
     "ruff>=0.6",
     "mypy>=1.11",

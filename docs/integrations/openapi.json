@@ -4237,7 +4237,9 @@
             "type": "string",
             "enum": [
               "owner_demo",
-              "trusted_contact"
+              "trusted_contact",
+              "guardian_timeout",
+              "guardian_signal"
             ],
             "title": "Source"
           },
@@ -4286,7 +4288,9 @@
             "type": "string",
             "enum": [
               "owner_demo",
-              "trusted_contact"
+              "trusted_contact",
+              "guardian_timeout",
+              "guardian_signal"
             ],
             "title": "Source"
           },
@@ -4830,7 +4834,8 @@
             "type": "string",
             "enum": [
               "soc",
-              "owner"
+              "owner",
+              "system"
             ],
             "title": "Actor Role"
           },
@@ -7761,7 +7766,9 @@
             "type": "string",
             "enum": [
               "owner_demo",
-              "trusted_contact"
+              "trusted_contact",
+              "guardian_timeout",
+              "guardian_signal"
             ],
             "title": "Source"
           },

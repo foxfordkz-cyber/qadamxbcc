@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 
 from fakeredis import FakeAsyncRedis
 
-from app.services.antifraud import AntifraudEngine, TransferContext
+from app.services.antifraud import AntifraudEngine, Evaluation, TransferContext
 from app.services.graph import GraphStore
 
 
@@ -49,39 +49,45 @@ PAIRS = (
 )
 
 
-async def replay() -> list[tuple[str, bool, str, int]]:
+async def evaluate_arm(pair: Pair, is_fraud: bool) -> Evaluation:
+    arm = pair.fraud if is_fraud else pair.honest
     redis = FakeAsyncRedis()
     try:
         engine = AntifraudEngine(redis, GraphStore())
-        rows = []
-        for pair in PAIRS:
-            for is_fraud, arm in ((True, pair.fraud), (False, pair.honest)):
-                key = f"{pair.name}-{int(is_fraud)}"
-                payment = TransferContext(
-                    tx_id=key,
-                    sender_id=f"payer-{key}",
-                    recipient_id=f"payee-{key}",
-                    device_id=f"device-{key}",
-                    occurred_at=datetime(2026, 11, 21, 8, tzinfo=UTC),
-                    amount=pair.amount,
-                    sender_avg_amount=pair.average,
-                    payment_requested_after_call=arm.requested,
-                )
-                if arm.prior:
-                    settled = replace(
-                        payment,
-                        tx_id=f"settled-{key}",
-                        amount=arm.prior,
-                        occurred_at=payment.occurred_at - timedelta(hours=arm.hours_ago),
-                        payment_requested_after_call=False,
-                    )
-                    await engine.record_settled(settled)
-                    engine.apply_transfer(settled)
-                result = await engine.evaluate(payment)
-                rows.append((pair.name, is_fraud, result.decision.value, result.score))
-        return rows
+        key = f"{pair.name}-{int(is_fraud)}"
+        payment = TransferContext(
+            tx_id=key,
+            sender_id=f"payer-{key}",
+            recipient_id=f"payee-{key}",
+            device_id=f"device-{key}",
+            occurred_at=datetime(2026, 11, 21, 8, tzinfo=UTC),
+            amount=pair.amount,
+            sender_avg_amount=pair.average,
+            payment_requested_after_call=arm.requested,
+        )
+        if arm.prior:
+            settled = replace(
+                payment,
+                tx_id=f"settled-{key}",
+                amount=arm.prior,
+                occurred_at=payment.occurred_at - timedelta(hours=arm.hours_ago),
+                payment_requested_after_call=False,
+            )
+            await engine.record_settled(settled)
+            engine.apply_transfer(settled)
+        result = await engine.evaluate(payment)
+        return result
     finally:
         await redis.aclose()
+
+
+async def replay() -> list[tuple[str, bool, str, int]]:
+    rows = []
+    for pair in PAIRS:
+        for is_fraud in (True, False):
+            result = await evaluate_arm(pair, is_fraud)
+            rows.append((pair.name, is_fraud, result.decision.value, result.score))
+    return rows
 
 
 if __name__ == "__main__":

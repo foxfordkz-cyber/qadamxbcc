@@ -55,7 +55,7 @@ export function actionAllowed(current: CaseOut, action: CaseAction): boolean {
   if (action.action === "transition") return caseTransitions[current.state].includes(action.state)
     && (current.state !== "CLOSED" || action.reason === "reopened");
   if (current.state === "CLOSED" || current.state === "RESOLVED") return false;
-  if (action.action === "request_information") return current.source === "owner_demo" && ["IN_REVIEW", "ESCALATED"].includes(current.state);
+  if (action.action === "request_information") return current.source !== "trusted_contact" && ["IN_REVIEW", "ESCALATED"].includes(current.state);
   return true;
 }
 export type CaseIntent = { caseId: string | null; key: string; body: CaseAction | { report_id: string }; createdAt: number };

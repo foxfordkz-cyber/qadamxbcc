@@ -4,13 +4,14 @@ The core is an internal ASGI target, not mounted on the gateway's public routes.
 Only exact role/method/path combinations are forwarded. Bank keys never leave this process.
 """
 
+import asyncio
 import hashlib
 import json
 import re
 import secrets
 import uuid
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Annotated, Any, Literal, cast
 
@@ -192,8 +193,19 @@ def create_mobile_app(
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=core), base_url="http://internal-core"
             ) as client:
+                from app.mobile_gateway.hold_review import monitor
+
                 app.state.core_client = client
-                yield
+                if not core.state.integration_settings.enabled:
+                    yield
+                    return
+                task = asyncio.create_task(monitor(app.state.resources.session_factory))
+                try:
+                    yield
+                finally:
+                    task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await task
 
     app = FastAPI(title="Qadam Android synthetic gateway", lifespan=lifespan)
     app.state.mobile_settings = cfg

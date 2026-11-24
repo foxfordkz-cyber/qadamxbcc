@@ -439,7 +439,7 @@ async function open(next, id, remember=true) {
       const path="integrations/guardian/soc/cases/"+id;
       const [historyRows,evidence,callback]=await Promise.all([
         g.api(path+"/history"), product ? g.api(path+"/evidence") : null,
-        product && record.source==="owner_demo" ? readCallback(g,"/cases/"+id+"/callback") : null
+        product && ["owner_demo","guardian_timeout","guardian_signal"].includes(record.source) ? readCallback(g,"/cases/"+id+"/callback") : null
       ]);
       if(!current() || (evidence?.case_id && evidence.case_id!==id))return;
       caseEvents=historyRows.items;
@@ -742,6 +742,8 @@ function coolingReceipt(tx, admin) {
     : T("Пройти опрос", "Сауалнамадан өту");
   const coSign = family && !admin ? secondConfirmationView(family, T, when) : "";
   return `<section class="paper hold-card"><div class="pause-clock"><span class="eyebrow">${T("Время на проверку", "Тексеру уақыты")}</span><h2>${T("Защитная пауза", "Қорғаныс кідірісі")}</h2><div class="timer" id="countdown" role="timer">${timerText()}</div></div>
+    ${product && !admin && data?.transaction_id===tx.transaction_id && data?.review_report_id ? `<button class="secondary" data-object="report" data-object-id="${E(data.review_report_id)}">${T("Открыть дело и переписку","Іс пен хат алмасуды ашу")}</button>` : product && !admin ? button("request-review",T("Это мой перевод · запросить проверку","Бұл менің аударымым · тексеруді сұрау"),"secondary") : ""}
+    ${family?.state==="expired" ? "<p>"+T("Контакт не ответил вовремя. Деньги на счёте. Откройте обращение, чтобы увидеть ответ сотрудника.", "Сенімді адам уақытында жауап бермеді. Ақша шотта. Қызметкердің жауабын көру үшін өтінішті ашыңыз.")+"</p>" : ""}
     <div class="pause-next"><p>${T("По истечении таймера деньги останутся на счёте. Для перевода потребуется ваше подтверждение.", "Таймер аяқталғанда ақша шотта қалады. Аудару үшін сіздің растауыңыз қажет.")}</p>
     ${saved && !admin ? `<details><summary>${T("Сохранённые ответы", "Сақталған жауаптар")}</summary>${questions.map(([key, ru, kk]) => `<p>${T(ru,kk)} <strong>${saved[key] ? T("Да","Иә") : T("Нет","Жоқ")}</strong></p>`).join("")}</details>` : ""}
     ${coSign}${admin ? "" : `<div class="inline-actions">${button("questionnaire",reviewLabel)}${button("cancel-confirm",T("Отменить перевод","Аударымды тоқтату"),"secondary")}</div>`}</div></section>`;
@@ -1275,7 +1277,7 @@ function render() {
       `<section class="paper case-rail"><h2>${T("История дела","Іс тарихы")}</h2>${caseEvents.map(e => `<p>${E(e[lang === "ru" ? "description_ru" : "description_kk"])} · ${when(e.timestamp)} ${desk.outcomeLabel(e.reason)}</p>`).join("")}</section>` +
       (!["RESOLVED","CLOSED"].includes(data.state) ? `<form id="case-note" class="form-stack paper"><label>${T("Заметка аналитика","Талдаушы жазбасы")}<textarea name="note" required minlength="10" maxlength="500"></textarea></label><button>${T("Сохранить","Сақтау")}</button></form>` : "") +
       (caseEvidence?.transaction_id?'<button class="secondary" data-detail="'+E(caseEvidence.transaction_id)+'">'+T("Связанная операция","Байланысты операция")+'</button>':"") +
-      (data.source==="owner_demo" && ["IN_REVIEW","ESCALATED"].includes(data.state)?button("case-information",T("Спросить, что требовал звонящий","Қоңырау шалушының талабын сұрау"),"secondary"):"") +
+      (["owner_demo","guardian_timeout","guardian_signal"].includes(data.source) && ["IN_REVIEW","ESCALATED"].includes(data.state)?button("case-information",T("Спросить, что требовал звонящий","Қоңырау шалушының талабын сұрау"),"secondary"):"") +
       (data.assignee!=="demo_analyst_a" && !["RESOLVED","CLOSED"].includes(data.state) ? button("case-assign",T("Назначить на себя","Өзіме тағайындау"),"secondary") : "")+desk.officerCallback(data,callbackView));
     if (page === "detail" && gateway?.role === "client" && evaluation) {
       root.querySelector(".paper")?.insertAdjacentHTML("afterbegin", `<small>${accountLabel()}</small>`);
@@ -1506,6 +1508,13 @@ root.addEventListener("click", async (event) => {
     field.type = reveal ? "text" : "password";
     b.setAttribute("aria-pressed",String(reveal));
     b.textContent = reveal ? T("Скрыть","Жасыру") : T("Показать","Көрсету");
+    return;
+  }
+  if (act === "request-review" && gateway?.role === "client" && evaluation?.status === "cooling_off") {
+    const g=gateway, id=evaluation.transaction_id;
+    let reportId;
+    await perform(async()=>{reportId=(await g.request("/protection/"+id+"/review","POST",{})).report_id;});
+    if(reportId && gateway===g && selectedId===id) await open("reportDetail", reportId);
     return;
   }
   if (act === "report") {
@@ -2084,7 +2093,7 @@ async function refreshVisible() {
     const metrics=await g.request("/admin/metrics");
     if(here() && !same(data,metrics)){data=metrics;render();}
   };
-  if(screen==="case" && g.role==="admin" && data?.source==="owner_demo")read=async()=>{
+  if(screen==="case" && g.role==="admin" && ["owner_demo","guardian_timeout","guardian_signal"].includes(data?.source))read=async()=>{
     const casePath="integrations/guardian/soc/cases/"+data.id;
     const state=await readCallback(g,"/cases/"+data.id+"/callback");
     if (!here() || same(callbackView,state)) return;

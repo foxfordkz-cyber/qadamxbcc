@@ -79,7 +79,7 @@ class CaseOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     report_id: uuid.UUID
-    source: Literal["owner_demo", "trusted_contact"]
+    source: Literal["owner_demo", "trusted_contact", "guardian_timeout", "guardian_signal"]
     category: Category
     state: State
     assignee: Staff | None
@@ -100,7 +100,7 @@ class EventOut(BaseModel):
     actor_id: uuid.UUID
     version: int
     code: str
-    actor_role: Literal["soc", "owner"]
+    actor_role: Literal["soc", "owner", "system"]
     timestamp: datetime
     state: State
     category: Category
@@ -192,7 +192,7 @@ class ExportEvent(BaseModel):
 class CaseExport(BaseModel):
     category: Category
     state: State
-    source: Literal["owner_demo", "trusted_contact"]
+    source: Literal["owner_demo", "trusted_contact", "guardian_timeout", "guardian_signal"]
     created_at: datetime
     events: list[ExportEvent]
     demonstration_only: Literal[True] = True

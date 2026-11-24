@@ -210,6 +210,7 @@ def landing(
         + '<form method="post" action="/jury/start">'
         f'<button type="submit">{submit}</button></form>'
         + "</div>"
+        + '<p><a href="/jury/results">Неге тоқтады? · Почему остановлен перевод?</a></p>'
         + _PUBLIC_LOGINS
         + shared
         + '<p class="room-expiry">' + bilingual(
@@ -281,6 +282,9 @@ def create_jury_app(
             await pool.reap(shutdown=True)
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    from app.mobile_gateway.jury_results import router
+
+    app.include_router(router)
     app.mount("/jury/visuals", StaticFiles(directory=WEB_ASSETS / "media", check_dir=False))
 
     @app.api_route("/health", methods=["GET", "HEAD"])

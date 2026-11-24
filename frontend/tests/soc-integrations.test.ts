@@ -13,6 +13,16 @@ const settings = { BCC_ENVIRONMENT: "local", BCC_API_MODE: "live", BCC_SOC_CAPAB
 const caseValue = { id: caseId, report_id: reportId, source: "owner_demo", category: "impersonation", state: "NEW", assignee: null,
   version: 1, created_at: "2026-11-15T09:00:00Z", status_since: "2026-11-15T09:00:00Z", expires_at: "2026-12-15T09:00:00Z", demonstration_only: true };
 const path = ["guardian", "soc", "cases", caseId, "actions"];
+
+test("SOC can read a system-opened hold review and its original actor", () => {
+  for (const source of ["guardian_timeout", "guardian_signal"]) {
+    assert.equal(caseSchema.parse({...caseValue, source}).source, source);
+  }
+  const history = {items:[{id:otherId, actor_id:reportId, version:1, code:"OPENED",
+    actor_role:"system", timestamp:caseValue.created_at, state:"NEW", category:"other",
+    assignee:null, reason:null, description_ru:"Открыто", description_kk:"Ашылды"}], next_after_version:null};
+  assert.deepEqual(validateSocIntegrationResponse(`integrations/guardian/soc/cases/${caseId}/history`,history), history);
+});
 const action = { action: "assign", expected_version: 1, assignee: "demo_analyst_a" };
 const key = "ABCDEF01-ABCD-4ABC-8ABC-ABCDEF012345";
 const admit = () => ({ status: 200, retryAfter: 0 });

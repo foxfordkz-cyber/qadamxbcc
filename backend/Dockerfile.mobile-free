@@ -23,6 +23,8 @@ COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --group mobile-ephemeral
 COPY backend/app ./app
 COPY backend/scripts ./scripts
+COPY docs/evidence/scenario_stand.json ./scenario_stand.json
+COPY frontend/src/lib/scenario-signals.json ./scenario-signals.json
 COPY --from=wallet /src/backend/.qadam-web ./.qadam-web
 RUN useradd --create-home mobile && python -m scripts.train_fraud_model \
     && chmod 0444 /app/app/ml/fraud_model.joblib

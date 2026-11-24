@@ -30,9 +30,15 @@ async function enter(page,baseURL,fixture={}) {
       fixture.evaluated=route.request().postDataJSON();
       json={...items[0],recipient:{display_name:"Арман"},reasons:[],risk_score:0,context:fixture.evaluated.context};
     }
-    else if(path==="wallet/operations")json={items};
+    else if(path==="wallet/operations")json={items:fixture.operations || items};
+    else if(path===`protection/${ids[0]}/check`)json={transaction_id:ids[0],review_report_id:fixture.reviewId || null};
+    else if(path===`protection/${ids[0]}/review` && route.request().method()==="POST"){
+      fixture.reviewPosts=(fixture.reviewPosts || 0)+1;
+      fixture.reviewId=ids[1];
+      json={report_id:fixture.reviewId};
+    }
     else if(path==="wallet/analytics"){status=fixture.analytics||200;json={outgoing:"25000"};}
-    else if(path.startsWith("api/transfers/"))json={...items.find(r=>r.transaction_id===path.split("/").at(-1)),recipient:{display_name:"Алия"}};
+    else if(path.startsWith("api/transfers/"))json={...(fixture.operations || items).find(r=>r.transaction_id===path.split("/").at(-1)),recipient:{display_name:"Алия"}};
     else if(path.endsWith("/scam-check")){
       fixture.scanRequests = (fixture.scanRequests ?? 0) + 1;
       status = fixture.scan || 200;
@@ -55,6 +61,19 @@ async function enter(page,baseURL,fixture={}) {
   await page.locator("[name=password]").fill("fixture");
   await page.locator("#personal-login [type=submit]").click();
 }
+
+test("a held receipt opens its own conversation and reuses it on return",async({page,baseURL})=>{
+  const fixture={operations:[{...items[0], status:"cooling_off", cooling_until:new Date(Date.now()+600000).toISOString()}]};
+  await enter(page,baseURL,fixture);
+  await page.locator(`[data-detail="${ids[0]}"]`).first().click();
+  await page.getByRole("button",{name:/Это мой перевод/}).click();
+  await expect(page.locator("#app")).toHaveAttribute("data-screen","reportDetail");
+  await expect(page.locator("#app")).toContainText(ids[1]);
+  await page.locator(".back").click();
+  await page.getByRole("button",{name:"Открыть дело и переписку"}).click();
+  await expect(page.locator("#app")).toHaveAttribute("data-screen","reportDetail");
+  expect(fixture.reviewPosts).toBe(1);
+});
 
 test("dashboard hierarchy, hidden amounts and RU/KK fit phone and desktop at large text",async({page,baseURL},info)=>{
   await enter(page,baseURL);

@@ -100,7 +100,7 @@ def case_query(now: datetime) -> Select[FraudCase, GuardianReport]:
         .where(
             FraudCase.expires_at > now,
             GuardianReport.expires_at > now,
-            FraudCase.source == "owner_demo",
+            FraudCase.source.in_(("owner_demo", "guardian_timeout", "guardian_signal")),
             GuardianReport.contact_id.is_(None),
             GuardianReport.description.is_not(None),
         )

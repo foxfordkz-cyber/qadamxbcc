@@ -1,6 +1,8 @@
 "use client";
 
 import { money, useLocale } from "@/lib/i18n";
+import samples from "@/lib/scenario-details.json";
+import signalNames from "@/lib/scenario-signals.json";
 import results from "@/lib/scenario-summary.json";
 import postCallReplay from "@/lib/post-call-replay.json";
 
@@ -47,6 +49,17 @@ export function ScenarioResults() {
     <p>{kk
       ? `Жүйе ${scams.heldOrBlocked} алаяқтық аударымды тоқтатты (барлығы ${scams.total}). ${honest.total} адал аударым бойынша ${honest.heldOrBlocked} жалған дабыл тіркелді.`
       : `Система остановила ${scams.heldOrBlocked} из ${scams.total} мошеннических переводов. Ложные тревоги возникли в ${honest.heldOrBlocked} случаях из ${honest.total} честных переводов.`}</p>
+    {[
+      {label: kk ? "Тоқтатылған алаяқтық" : "Мошеннические переводы на паузе или в блоке", items: samples.filter(r => r.fraud && r.decision !== "approved")},
+      {label: kk ? "Өтіп кеткен алаяқтық" : "Пропущенное мошенничество", items: samples.filter(r => r.fraud && r.decision === "approved")},
+      {label: kk ? "Артық кідірген қалыпты төлемдер" : "Лишние задержки обычных платежей", items: samples.filter(r => !r.fraud && r.decision !== "approved")},
+    ].map(({label, items}) => <details key={label}>
+      <summary><strong>{items.length}</strong> · {label}</summary>
+      <ul>{items.map(r => <li key={r.id}><b>{r.id}</b> · {labels[r.story as keyof typeof labels][kk ? 0 : 1]} ·
+        {" "}{r.decision === "approved" ? (kk ? "Мақұлданды" : "Одобрено") : r.decision === "blocked" ? (kk ? "Бұғатталды" : "Блокировка") : (kk ? "Кідіріс" : "Пауза")}
+        <small>{r.signals.map(code => signalNames[code as keyof typeof signalNames]?.[kk ? 0 : 1] ?? code).join(" · ") || (kk ? "Белгі анықталмады" : "Признаков не выявлено")}</small>
+      </li>)}</ul>
+    </details>)}
     <table><thead><tr>
       <th scope="col">{kk ? "Сценарий" : "Сценарий"}</th>
       <th scope="col">{kk ? "Мақұлдау" : "Одобрено"}</th>

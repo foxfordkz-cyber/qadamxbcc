@@ -48,7 +48,7 @@ class ReportRequest(BaseModel):
 class ReportOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
-    source: Literal["owner_demo", "trusted_contact"]
+    source: Literal["owner_demo", "trusted_contact", "guardian_timeout", "guardian_signal"]
     category: Category
     description: str
     transaction_id: uuid.UUID | None
