@@ -1,0 +1,2125 @@
+/*
+ * Saq Bol design layer, loaded last.
+ * Visual language of the BCC mobile bank: cool grey canvas, white edge-to-edge
+ * sheets with large radii, big bold titles, bright green accents, flat
+ * surfaces without shadows. Earlier stylesheets keep layout and behaviour.
+ */
+:root,
+html[data-product] {
+  --bg: #f2f3f7;
+  --surface: #ffffff;
+  --fill: #f2f3f7;
+  --fill-2: #e6e8ed;
+  --ink: #26272b;
+  --ink-2: #45474d;
+  --muted: #8a8c93;
+  --line: #ecedf1;
+
+  --brand: #0fa06a;
+  --brand-press: #0b8a5b;
+  --brand-text: #0a8a5a;
+  --brand-soft: #dff5ea;
+  --brand-deep: #00644b;
+
+  --blue: #6e9cf6;
+  --amber: #f3b42f;
+  --rose: #f1758a;
+
+  --warn: #8f5600;
+  --warn-bg: #fff4dc;
+  --warn-line: #f6e2b5;
+  --danger: #d6363b;
+  --danger-bg: #fdecec;
+
+  --r-sheet: 28px;
+  --r-card: 22px;
+  --r-ctl: 14px;
+  --gutter: 16px;
+  --bleed: calc(-1 * var(--gutter));
+  --ring: 0 0 0 3px rgb(15 160 106 / 25%);
+
+  /* Names used by earlier layers. */
+  --pine: var(--brand);
+  --green: var(--brand);
+  --mint: var(--brand-soft);
+  --paper: var(--surface);
+  --rad: var(--r-card);
+
+  font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+html[data-product] body,
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 16px;
+}
+#app .shell {
+  background: var(--bg);
+}
+#app .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Type ---------- */
+#app main h1,
+#app .heading h1 {
+  margin: 6px 0 18px;
+  color: var(--ink);
+  font-size: clamp(1.75rem, 7.6vw, 2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+#app .heading {
+  margin-bottom: 16px;
+}
+#app .heading h1 {
+  margin-bottom: 8px;
+}
+#app .heading p {
+  margin-top: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+#app main h2 {
+  color: var(--ink);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+#app main h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+#app main p {
+  color: var(--ink-2);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+#app :is(.hint, .fine, small) {
+  color: var(--muted);
+}
+
+/* ---------- Top bar: flat, no logo noise ---------- */
+#app .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 56px;
+  height: auto;
+  gap: 8px;
+  padding: 6px 8px;
+  padding-top: calc(6px + var(--safe-top, 0px));
+  background: var(--bg);
+  border: 0;
+}
+#app .topbar .back {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+#app .topbar .back:active {
+  background: var(--fill-2);
+}
+#app[data-actor=client] .topbar .wordmark {
+  visibility: hidden;
+}
+#app .topbar .wordmark {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+#app .topbar .wordmark img {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+#app .topbar .text-button,
+#app .locale-short {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--brand-text);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+#app .topbar .profile-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  background: transparent;
+  color: var(--ink);
+}
+#app .role-tag {
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+#app .demo-strip {
+  margin: 0 var(--gutter);
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+}
+
+#app main {
+  padding: 4px var(--gutter) calc(108px + env(safe-area-inset-bottom));
+}
+
+/* ---------- Sheets and cards (flat, no shadows) ---------- */
+#app :is(.paper, .wallet-section, .ledger-filter, .wallet-insight, .count-list, .safety-list, .profile-sheet, .from-account, .q-card, .metric, .live-row, .week-summary, .telegram-panel, .soc-hero) {
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--r-card);
+  box-shadow: none;
+}
+#app :is(.paper, .wallet-section) {
+  padding: 20px;
+  margin: 0 0 12px;
+}
+#app .paper p {
+  margin-top: 8px;
+}
+@media (max-width: 879px) {
+  /* Content blocks become edge-to-edge white sheets, like the bank's own screens. */
+  #app :is(.paper, .wallet-section, .safety-list, .telegram-panel, .q-card, .wallet-insight, .count-list) {
+    margin-inline: var(--bleed);
+    border-radius: var(--r-sheet);
+    padding-inline: calc(var(--gutter) + 4px);
+  }
+}
+
+/* ---------- Buttons ---------- */
+#app :is(.primary, .secondary, .danger-button) {
+  min-height: 56px;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 18px;
+  font-size: 1.03rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  box-shadow: none;
+  transition: background-color 0.15s ease, transform 0.08s ease;
+}
+#app .primary {
+  justify-content: center;
+  text-align: center;
+  background: var(--brand);
+  color: #fff;
+}
+#app .primary:hover {
+  background: var(--brand-press);
+}
+#app .primary > span[aria-hidden] {
+  display: none;
+}
+#app .secondary {
+  background: var(--fill);
+  color: var(--ink);
+  font-weight: 500;
+}
+#app main > .secondary,
+#app main > div > .secondary {
+  background: var(--surface);
+}
+#app .secondary:hover {
+  background: var(--fill-2);
+}
+#app main > .secondary:hover {
+  background: #fafbfc;
+}
+#app .secondary > span[aria-hidden] {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  font-size: 0;
+  background: currentColor;
+  opacity: 0.4;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / 22px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / 22px no-repeat;
+}
+#app :is(.primary, .secondary, .danger-button, .transfer-primary, .wallet-quick button, .ledger-row, .safety-list button, .guard-actions button, .story, .week-summary, .wallet-protection, .people button, .live-row):active:not(:disabled) {
+  transform: scale(0.98);
+}
+#app .primary + .secondary,
+#app .secondary + .secondary,
+#app .secondary + .primary {
+  margin-top: 10px;
+}
+#app .text-button {
+  color: var(--brand-text);
+  font-weight: 600;
+}
+#app .inline-actions {
+  gap: 10px;
+}
+#app .inline-actions button {
+  min-height: 52px;
+  border-radius: 16px;
+  background: var(--fill);
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 600;
+}
+#app .inline-actions .primary {
+  background: var(--brand);
+  color: #fff;
+}
+#app :is(button, select, input, textarea, summary, a):focus-visible {
+  outline: 0;
+  box-shadow: var(--ring);
+}
+#app button:disabled {
+  opacity: 0.45;
+}
+
+/* ---------- Forms: filled grey fields ---------- */
+#app .form-stack {
+  gap: 18px;
+}
+#app .form-stack label {
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+#app :where(.form-stack input:not([type=checkbox], [type=radio], [type=button]), .form-stack select, .form-stack textarea, .filter-input, #search-form input) {
+  min-height: 56px;
+  padding: 0.8rem 1rem;
+  border: 2px solid transparent;
+  border-radius: var(--r-ctl);
+  background-color: var(--fill);
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 500;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+#app :where(.form-stack input, .form-stack select, .form-stack textarea, .filter-input, #search-form input, .search-field input)::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+#app :where(.form-stack input, .form-stack select, .form-stack textarea, .filter-input, #search-form input):focus {
+  border-color: var(--brand);
+  background-color: var(--surface);
+  box-shadow: none;
+  outline: 0;
+}
+#app :is(.form-stack select, .ledger-filter select) {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 2.6rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2326272b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 20px;
+  text-overflow: ellipsis;
+}
+#app .password-field {
+  border: 2px solid transparent;
+  border-radius: var(--r-ctl);
+  background: var(--fill);
+}
+#app .password-field:focus-within {
+  border-color: var(--brand);
+  background: var(--surface);
+}
+#app .password-field input {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+#app .password-field button {
+  color: var(--brand-text);
+  font-weight: 600;
+}
+#app .shell input:is([type=checkbox], [type=radio]) {
+  accent-color: var(--brand);
+  width: 1.3rem;
+  height: 1.3rem;
+}
+#app .tick-field {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--fill);
+  color: var(--ink);
+  font-weight: 500;
+}
+#app .transfer-sheet input[name=amount] {
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+#app .form-stack .amount-choices {
+  gap: 8px;
+}
+#app .form-stack .amount-choices input {
+  min-height: 40px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+#app .form-stack .amount-choices input:hover,
+#app .form-stack .amount-choices input:focus-visible {
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+
+/* Call question: legend stays inside the box instead of cutting its border. */
+#app .call-question {
+  margin: 18px 0 0;
+  padding: 16px 16px 6px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--fill);
+}
+#app .call-question legend {
+  float: left;
+  width: 100%;
+  padding: 0 0 6px;
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+#app .call-question legend + * {
+  clear: both;
+}
+#app .call-question label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 500;
+}
+#app .call-question label + label {
+  border-top: 1px solid var(--fill-2);
+}
+
+/* ---------- Banners ---------- */
+#app :is(.empty, .callout) {
+  border-radius: 16px;
+  background: var(--fill);
+  color: var(--muted);
+  padding: 16px;
+}
+#app .error-banner {
+  border: 0;
+  border-radius: 16px;
+  background: var(--danger-bg);
+  color: #a8262a;
+  font-size: 0.95rem;
+}
+#app .busy-banner {
+  display: flex;
+  align-items: center;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 0.95rem;
+}
+#app .spinner {
+  border-color: var(--brand-soft);
+  border-top-color: var(--brand);
+}
+#notice {
+  background: var(--ink);
+  border-radius: 16px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+#app .sync-note {
+  display: block;
+  padding: 16px 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+/* ---------- Sign in ---------- */
+#app .entry.sign-in {
+  border: 0;
+  border-radius: var(--r-sheet);
+  box-shadow: none;
+  gap: 1.25rem;
+}
+#app .entry.sign-in .sign-heading {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+#app .sign-heading img {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+}
+#app .sign-heading h1 {
+  font-size: clamp(1.6rem, 7vw, 2rem);
+  letter-spacing: -0.02em;
+}
+#app .sign-footer {
+  border-top: 1px solid var(--line);
+}
+#app .sign-footer .text-button {
+  font-size: 0.92rem;
+}
+
+/* ---------- Home: greeting ---------- */
+#app .wallet-greeting {
+  gap: 6px;
+  margin: 4px 0 14px;
+}
+#app .wallet-greeting .profile-entry {
+  gap: 12px;
+}
+#app .wallet-greeting .avatar {
+  width: 52px;
+  height: 52px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+#app .wallet-greeting .profile-entry > span:last-child {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+}
+#app .wallet-greeting strong {
+  font-size: clamp(1.1rem, 5.6vw, 1.45rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+#app .wallet-greeting small {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 10px 3px 3px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--ink-2);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+#app .wallet-greeting small b {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--brand-deep);
+  color: #fff;
+  font-size: 0.75rem;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+#app .wallet-greeting :is(.locale-short, .locale-short + button) {
+  flex: none;
+  white-space: nowrap;
+}
+#app .wallet-greeting .locale-short {
+  margin-left: auto;
+  min-width: 44px;
+  padding: 0 8px;
+  background: transparent;
+  box-shadow: none;
+}
+#app .wallet-greeting .locale-short + button {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+}
+#app .wallet-greeting .locale-short + button .wi {
+  width: 27px;
+  height: 27px;
+}
+
+/* ---------- Home: stories with anti-fraud tips ---------- */
+#app .tip-stories {
+  display: flex;
+  gap: 10px;
+  margin: 0 var(--bleed) 12px;
+  padding: 2px var(--gutter) 4px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--gutter);
+  scrollbar-width: none;
+}
+#app .tip-stories::-webkit-scrollbar {
+  display: none;
+}
+#app .story {
+  position: relative;
+  flex: 0 0 100px;
+  height: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 10px;
+  overflow: hidden;
+  border: 2.5px solid var(--brand);
+  border-radius: 22px;
+  box-shadow: inset 0 0 0 2.5px var(--bg);
+  text-align: start;
+  scroll-snap-align: start;
+}
+#app .story span {
+  position: relative;
+  z-index: 1;
+  display: block;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+#app .story i {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 6px 14px -6px rgb(0 0 0 / 35%);
+  transform: rotate(-10deg);
+}
+#app .story i .wi {
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.9;
+}
+#app .story.s0 { background: linear-gradient(160deg, #eaf8f1 0%, #c3ecd8 100%); }
+#app .story.s0 i { color: var(--brand); }
+#app .story.s1 { background: linear-gradient(160deg, #eeedff 0%, #d5d2fb 100%); }
+#app .story.s1 i { color: #5b56d6; }
+#app .story.s2 { background: linear-gradient(160deg, #fff3e0 0%, #fbdcae 100%); }
+#app .story.s2 i { color: #c47300; }
+#app .story.s3 { background: linear-gradient(160deg, #e9f2ff 0%, #cbe0ff 100%); }
+#app .story.s3 i { color: #2e6fd8; }
+#app .story.s4 { background: linear-gradient(160deg, #ffecee 0%, #fbcbd2 100%); }
+#app .story.s4 i { color: #d03a4c; }
+
+/* ---------- Home: "Мои счета" sheet ---------- */
+#app .q-card {
+  display: grid;
+  gap: 14px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  isolation: auto;
+  overflow: visible;
+  color: var(--ink);
+  background: var(--surface);
+}
+#app .q-card::before,
+#app .q-card::after {
+  content: none;
+}
+#app .q-card .account-heading {
+  align-items: baseline;
+}
+#app .q-card .account-heading h2 {
+  color: var(--ink);
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+#app .q-card .balance-privacy {
+  width: auto;
+  height: auto;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--brand-text);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: end;
+}
+#app .card-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+#app .q-card .q-balance {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+#app .q-card .q-balance strong {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+#app .q-card .q-balance small {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+#app .card-thumbnail {
+  width: 60px;
+  height: 42px;
+  border-radius: 9px;
+  box-shadow: none;
+}
+#app .card-thumbnail img {
+  width: 15px;
+  height: 15px;
+  left: 6px;
+  top: 6px;
+}
+
+/* Round actions inside the sheet */
+#app .action-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  gap: 4px;
+  margin: 4px 0 0;
+}
+#app .action-dock .wallet-quick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+#app .action-dock :is(.transfer-primary, .wallet-quick button) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+#app .action-dock .transfer-primary > .wi,
+#app .action-dock .wallet-quick i {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+#app .action-dock .transfer-primary > .wi {
+  padding: 15px;
+  background: var(--brand);
+  color: #fff;
+  stroke-width: 2;
+}
+#app .action-dock .wallet-quick i {
+  background: var(--fill);
+  color: var(--brand-text);
+}
+#app .action-dock .wallet-quick i .wi {
+  width: 25px;
+  height: 25px;
+  stroke-width: 1.9;
+}
+
+/* Pending checks */
+#app .wallet-checks {
+  margin: 12px 0;
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--warn-bg);
+}
+#app .wallet-check {
+  min-height: 56px;
+  padding: 12px 16px;
+  color: var(--warn);
+  font-size: 1rem;
+  font-weight: 600;
+}
+#app .wallet-check + .wallet-check {
+  border-top: 1px solid var(--warn-line);
+}
+#app .wallet-account > :is(.primary, .secondary) {
+  margin-top: 12px;
+}
+
+/* Two tiles: analytics and protection */
+#app .wallet-companion {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+#app .wallet-companion > * {
+  min-width: 0;
+}
+#app .week-summary,
+#app .wallet-protection {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-height: 132px;
+  margin: 0;
+  padding: 16px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+#app :is(.week-summary, .wallet-protection) b {
+  font-size: 1.08rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+}
+#app :is(.week-summary, .wallet-protection) small {
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--muted);
+}
+#app .week-summary strong {
+  display: block;
+  margin: auto 0 0;
+  padding-top: 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+#app .flow-bar {
+  display: block;
+  width: 100%;
+  height: 10px;
+  margin-top: 8px;
+}
+#app .flow-bar .in { fill: #4fcb8c; }
+#app .flow-bar .out { fill: var(--blue); }
+#app .flow-bar .empty { fill: var(--fill-2); }
+#app .wallet-companion > .secondary {
+  min-height: 132px;
+  background: var(--surface);
+}
+#app .guard-dots {
+  display: flex;
+  margin-top: auto;
+  padding-top: 10px;
+}
+#app .guard-dots .wi {
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  stroke-width: 2;
+}
+#app .guard-dots .wi + .wi {
+  margin-left: -9px;
+}
+#app .guard-dots .wi:nth-child(1) { background: var(--brand); }
+#app .guard-dots .wi:nth-child(2) { background: var(--amber); }
+#app .guard-dots .wi:nth-child(3) { background: var(--blue); }
+
+/* Section headings and links */
+#app .w-heading {
+  margin: 0 0 8px;
+  gap: 12px;
+}
+#app .w-heading h2 {
+  font-size: 1.3rem;
+}
+#app .w-link,
+#app .w-heading button {
+  min-height: 40px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--brand-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+#app .w-link .wi {
+  display: none;
+}
+
+/* ---------- Operation rows ---------- */
+#app .ledger-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 14px;
+  min-height: 72px;
+  padding: 10px 0;
+  flex-wrap: nowrap;
+  border-radius: 0;
+}
+#app .ledger-row + .ledger-row {
+  border-top: 0;
+}
+#app .ledger-row > span:not(.right) strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+#app .ledger-row small {
+  margin-top: 3px;
+  font-size: 0.92rem;
+}
+#app .ledger-row > .right {
+  min-width: 0;
+  margin: 0;
+  text-align: end;
+  overflow-wrap: normal;
+}
+#app .ledger-row > .right strong {
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+#app .ledger-row[data-incoming] > .right strong {
+  color: var(--brand-text);
+}
+#app .flow {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--ink);
+}
+#app .flow.credit {
+  color: var(--brand-text);
+}
+#app .flow .wi {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.8;
+}
+#app .wb {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+#app .wb.cooling_off,
+#app .wb.blocked,
+#app .wb.cancelled {
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+#app .wb.cooling_off {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+#app .wb.blocked {
+  background: var(--danger-bg);
+  color: #b3262b;
+}
+#app .wb.cancelled {
+  background: var(--fill);
+}
+#app .wb.approved {
+  background: transparent;
+  color: var(--brand-text);
+}
+#app .day-title {
+  margin: 0;
+  padding: 18px 0 2px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Recipients */
+#app .wallet-activity .people,
+#app .wallet-recipients .people {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin: 10px -4px 0;
+  padding: 2px 4px 4px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+#app .people::-webkit-scrollbar {
+  display: none;
+}
+#app .wallet-activity .people button,
+#app .wallet-recipients .people button {
+  flex: 0 0 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  scroll-snap-align: start;
+}
+#app .people button > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+#app .wallet-activity .people .person,
+#app .wallet-recipients .person,
+#app .person {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+#app .people .person.p1 { background: #fff0d9; color: #a35f00; }
+#app .people .person.p2 { background: #e8efff; color: #2e5fc0; }
+#app .people .person.p3 { background: #fde8ec; color: #b8324a; }
+#app .people .person.p4 { background: #eeedff; color: #5b56d6; }
+
+@media (max-width: 879px) {
+  #app .wallet-dashboard,
+  #app .wallet-overview,
+  #app .wallet-activity {
+    display: block;
+  }
+  #app .wallet-account {
+    min-width: 0;
+  }
+}
+
+/* ---------- Bottom navigation: flat, green active state ---------- */
+#app .connected-nav,
+#app .bottom-nav {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  padding: 6px 2px max(8px, env(safe-area-inset-bottom));
+}
+#app .connected-nav button,
+#app .bottom-nav button {
+  gap: 4px;
+  min-height: 54px;
+  border-radius: 0;
+  background: transparent !important;
+}
+#app .connected-nav button b {
+  width: auto;
+  height: 28px;
+  border-radius: 0;
+  background: transparent !important;
+  color: var(--ink-2);
+}
+#app .connected-nav svg {
+  width: 27px;
+  height: 27px;
+  stroke-width: 1.6;
+}
+#app .connected-nav button span {
+  color: var(--ink-2);
+  font-size: clamp(0.68rem, 2.9vw, 0.8rem);
+  font-weight: 500;
+}
+#app .connected-nav button[aria-current="page"] b,
+#app .connected-nav button[aria-current="page"] span {
+  color: var(--brand);
+}
+#app .connected-nav button[aria-current="page"] svg {
+  stroke-width: 2.2;
+}
+#app .connected-nav button[aria-current="page"] span {
+  font-weight: 600;
+}
+
+/* ---------- History ---------- */
+#app .ledger-filter {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 4px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+#app .search-field {
+  position: relative;
+  display: block;
+}
+#app .search-field .wi {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+#app .search-field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.6rem 1rem 0.6rem 2.9rem;
+  border: 2px solid transparent;
+  border-radius: var(--r-ctl);
+  background: var(--fill-2);
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+#app .search-field input:focus {
+  border-color: var(--brand);
+  background: var(--surface);
+  outline: 0;
+}
+#app .ledger-filter > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#app .ledger-filter select {
+  flex: 1 1 9rem;
+  width: auto;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 2.4rem 0 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  background-color: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 500;
+}
+#app .ledger-filter > button {
+  justify-content: center;
+  width: auto;
+  min-height: 46px;
+  margin: 0;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--ink-2);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  justify-self: start;
+}
+#app .ledger-filter > button > span[aria-hidden] {
+  display: none;
+}
+#app[data-screen=history] main > .w-link {
+  min-height: 40px;
+  padding: 0 14px;
+  margin: 6px 0 0;
+  border-radius: 999px;
+  background: var(--ink-2);
+  color: #fff;
+}
+#app[data-screen=history] main .ledger {
+  margin: 14px 0 12px;
+  padding: 4px 20px 10px;
+  border-radius: var(--r-sheet);
+  background: var(--surface);
+}
+@media (max-width: 879px) {
+  #app[data-screen=history] main .ledger {
+    margin-inline: var(--bleed);
+  }
+}
+
+/* ---------- Analytics ---------- */
+#app .segments {
+  gap: 0;
+  padding: 4px;
+  margin: 0 0 14px;
+  border-radius: var(--r-ctl);
+  background: var(--surface);
+  width: 100%;
+}
+#app .segments button {
+  flex: 1;
+  min-height: 42px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 500;
+}
+#app .segments [aria-pressed="true"] {
+  background: var(--ink-2);
+  color: #fff;
+  box-shadow: none;
+}
+#app .cash-metrics {
+  gap: 10px;
+}
+#app .metric-cash,
+#app .metric-cash.outgoing {
+  padding: 16px;
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+#app .metric-cash > div {
+  color: var(--muted);
+}
+#app .metric-cash .wi {
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border-radius: 50%;
+  background: #4fcb8c;
+  color: #fff;
+  stroke-width: 2.2;
+}
+#app .metric-cash.outgoing .wi {
+  background: var(--blue);
+}
+#app .metric-cash small {
+  font-size: 0.92rem;
+}
+#app .metric-cash strong {
+  font-size: clamp(1.2rem, 5.2vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+#app .wallet-insight {
+  padding-top: 20px;
+  padding-bottom: 14px;
+}
+#app .plot-legend span::before {
+  border-radius: 50%;
+  background: #4fcb8c;
+}
+#app .plot-legend span + span::before {
+  background: var(--blue);
+}
+#app .plot-columns {
+  background: linear-gradient(to bottom, var(--line) 1px, transparent 1px) 0 0 / 100% calc(var(--plot-height) / 2) repeat-y;
+}
+#app .plot-col rect {
+  fill: #4fcb8c;
+  rx: 5px;
+}
+#app .plot-col rect + rect {
+  fill: var(--blue);
+}
+#app .plot-col[aria-pressed="true"] {
+  background: var(--fill);
+  border-radius: 12px;
+}
+#app .plot-col[aria-pressed="true"] span {
+  color: var(--ink);
+}
+#app .selected-day {
+  border-radius: 14px;
+  background: var(--fill);
+}
+#app .chart-steps button {
+  color: var(--brand-text);
+}
+#app .count-list {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+#app .count-list button {
+  min-height: 60px;
+  font-size: 1.02rem;
+}
+#app .count-list button + button {
+  border-top: 1px solid var(--line);
+}
+#app details > summary {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------- Protection ---------- */
+#app .guard-actions {
+  gap: 10px;
+  margin: 0 0 12px;
+}
+#app .guard-actions button {
+  min-height: 112px;
+  gap: 12px;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+#app .guard-actions button svg {
+  width: 48px;
+  height: 48px;
+  padding: 11px;
+  border-radius: 16px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+#app .guard-actions button:first-child {
+  background: var(--surface);
+  color: var(--ink);
+}
+#app .guard-actions button:first-child svg {
+  background: var(--warn-bg);
+  color: #c47300;
+}
+#app .telegram-panel {
+  padding-top: 20px;
+  padding-bottom: 20px;
+  color: var(--ink);
+}
+#app .telegram-panel::after,
+#app .soc-hero::after {
+  content: none;
+}
+#app :is(.telegram-panel, .soc-hero) :is(h2, p, strong, b) {
+  color: var(--ink);
+}
+#app .telegram-panel p {
+  margin: 12px 0;
+  color: var(--ink-2);
+}
+#app :is(.telegram-panel, .soc-hero) small,
+#app .guardian-ident small,
+#app .telegram-panel > small,
+#app .soc-footer span {
+  color: var(--muted);
+}
+#app .guardian-ident i {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: #e8f1ff;
+  color: #2e6fd8;
+}
+#app .guardian-count,
+#app .soc-footer {
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+}
+#app .guardian-links {
+  display: flex;
+  gap: 8px;
+}
+#app .guardian-links > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+#app .guardian-links button.primary,
+#app .telegram-panel .primary {
+  background: var(--brand);
+  color: #fff;
+}
+#app .guardian-links button.secondary,
+#app .telegram-panel .secondary {
+  background: var(--fill);
+  border: 0;
+  color: var(--ink);
+}
+#app .safety-list {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+#app .safety-list h2 {
+  margin: 12px 0 6px;
+  color: var(--ink);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  text-transform: none;
+}
+#app .safety-list button {
+  min-height: 72px;
+  gap: 14px;
+}
+#app .safety-list button + button {
+  border-top: 0;
+}
+#app .safety-list i {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--brand-text);
+}
+#app .safety-list strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+#app .safety-list small {
+  font-size: 0.9rem;
+}
+#app .safety-list button > .wi:last-child {
+  color: #b6b8be;
+}
+
+/* ---------- Profile ---------- */
+#app .profile-sheet {
+  gap: 14px;
+  padding: 18px;
+  margin: 0 0 14px;
+  border-radius: var(--r-card);
+}
+#app .profile-sheet i {
+  width: 56px;
+  height: 56px;
+  background: var(--brand);
+  color: #fff;
+}
+#app .profile-sheet h2 {
+  font-size: 1.2rem;
+}
+#app .profile-sheet p {
+  margin: 2px 0;
+  color: var(--ink-2);
+  font-size: 0.95rem;
+}
+#app[data-screen=settings] main > button.secondary {
+  margin: 0;
+  border-radius: 0;
+  background: var(--surface);
+  min-height: 58px;
+  font-weight: 500;
+}
+#app[data-screen=settings] main > button.secondary + button.secondary {
+  border-top: 1px solid var(--line);
+}
+#app[data-screen=settings] main > :not(button.secondary) + button.secondary,
+#app[data-screen=settings] main > button.secondary:first-child {
+  border-top-left-radius: var(--r-card);
+  border-top-right-radius: var(--r-card);
+}
+#app[data-screen=settings] main > button.secondary:has(+ :not(button.secondary)),
+#app[data-screen=settings] main > button.secondary:last-child {
+  border-bottom-left-radius: var(--r-card);
+  border-bottom-right-radius: var(--r-card);
+  margin-bottom: 14px;
+}
+#app [data-action=logout] {
+  justify-content: center;
+  margin: 0 0 14px;
+  border: 0;
+  border-radius: var(--r-card) !important;
+  background: var(--surface) !important;
+  color: var(--danger) !important;
+  font-weight: 600;
+}
+#app [data-action=logout] > span[aria-hidden] {
+  display: none;
+}
+
+/* ---------- Transfer flow ---------- */
+#app .transfer-steps {
+  gap: 6px;
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+#app .transfer-steps li {
+  position: relative;
+  padding-top: 10px;
+  border-top: 0;
+}
+#app .transfer-steps li::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--fill-2);
+}
+#app .transfer-steps [aria-current=step] {
+  color: var(--ink);
+  font-weight: 600;
+}
+#app .transfer-steps [aria-current=step]::before {
+  background: var(--brand);
+}
+#app .from-account {
+  gap: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: var(--r-card);
+}
+#app .from-account small {
+  font-size: 0.88rem;
+}
+#app .from-account strong {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+#app .transfer-review .amount,
+#app .receipt > .amount,
+#app .amount {
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+#app .paper.receipt {
+  padding-top: 24px;
+  padding-bottom: 22px;
+  text-align: center;
+}
+#app .receipt-status {
+  justify-content: center;
+  margin: 10px 0 4px;
+}
+#app .receipt-status .wb {
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+#app .receipt-status .wb.approved {
+  background: var(--brand-soft);
+}
+#app .receipt > .amount {
+  margin: 6px 0 14px;
+  font-size: clamp(2rem, 9vw, 2.4rem);
+}
+#app .receipt-party {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px 16px;
+  margin: 8px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  text-align: start;
+}
+#app .receipt-party dt {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+#app .receipt-party dd {
+  text-align: end;
+  font-size: 0.98rem;
+}
+#app .receipt-party dd span {
+  font-size: 0.88rem;
+}
+#app .receipt .funds-outcome {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--brand-soft);
+  color: #0d5b3d;
+  text-align: start;
+}
+#app .hold-card {
+  border: 0;
+  background: var(--warn-bg);
+}
+#app .hold-card p {
+  color: #6b4300;
+}
+#app .hold-card .timer {
+  color: var(--warn);
+  font-size: clamp(2.4rem, 10vw, 3rem);
+  font-weight: 700;
+}
+#app .pause-clock .eyebrow {
+  color: var(--warn);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+#app .hold-card .inline-actions {
+  justify-content: stretch;
+}
+#app .hold-card .inline-actions .secondary {
+  background: var(--surface);
+}
+#app [data-action=cancel-confirm],
+#app [data-action=pressure] {
+  color: var(--danger) !important;
+}
+#app .guard-state {
+  border: 0;
+  background: var(--warn-bg);
+}
+#app .guard-state h1 {
+  margin: 0 0 4px;
+  color: #4a2e00;
+  font-size: 1.5rem;
+}
+#app .guard-state p {
+  color: #6b4300;
+}
+#app .paper > :is(p, .hint, .fine) + :is(.primary, .secondary),
+#app .paper > p + .inline-actions {
+  margin-top: 16px;
+}
+
+/* Paragraph lists (risk reasons and similar): rows with a marker. */
+#app .paper:has(> h2 + p + p + p) > p {
+  position: relative;
+  margin: 0;
+  padding: 10px 0 10px 22px;
+}
+#app .paper:has(> h2 + p + p + p) > p + p {
+  border-top: 1px solid var(--line);
+}
+#app .paper:has(> h2 + p + p + p) > p::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 19px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+#app main > .break-id {
+  margin: 4px 4px 12px;
+}
+
+/* Trailing arrows become quiet chevrons, as in the bank app. */
+#app :is(.safety-list button, .count-list button, .wallet-check, .selected-day) > .wi:last-child {
+  display: none;
+}
+#app :is(.safety-list button, .count-list button, .wallet-check, .selected-day)::after {
+  content: "";
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  background: currentColor;
+  opacity: 0.35;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / 22px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / 22px no-repeat;
+}
+#app .count-list strong {
+  margin-left: auto;
+}
+#app .count-list button::after {
+  margin-left: 6px;
+}
+
+/* ---------- Statuses and chips ---------- */
+#app .status-pill {
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: var(--fill);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+#app .status-pill.approved {
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+#app .status-pill.cooling_off {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+#app .status-pill.blocked {
+  background: var(--danger-bg);
+  color: #b3262b;
+}
+#app .score {
+  border-radius: 999px;
+  background: var(--fill);
+  font-weight: 600;
+}
+#app .filter-row {
+  gap: 8px;
+}
+#app .filter-row button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 500;
+}
+#app .filter-row button[aria-pressed="true"] {
+  background: var(--ink-2);
+  color: #fff;
+}
+#app .risk-meter {
+  height: 8px;
+  margin: 16px 0;
+  border-radius: 999px;
+  background: var(--fill-2);
+}
+#app .risk-meter progress {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--amber);
+}
+#app .risk-meter progress::-webkit-progress-bar {
+  background: var(--fill-2);
+  border-radius: 999px;
+}
+#app .risk-meter progress::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--amber), #e0782b);
+  border-radius: 999px;
+}
+#app .risk-meter progress::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--amber), #e0782b);
+  border-radius: 999px;
+}
+
+/* ---------- SOC and admin ---------- */
+#app .soc-heading small {
+  color: var(--brand-text);
+}
+#app .soc-heading > .wi {
+  color: var(--brand);
+}
+#app .soc-hero {
+  padding: 20px;
+}
+#app .soc-hero > div .wi {
+  color: var(--danger);
+}
+#app .soc-hero strong {
+  font-size: clamp(2rem, 9vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+#app .soc-work > * {
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+#app .soc-work b {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+#app .soc-work button span {
+  color: var(--brand-text);
+}
+#app .soc-kpis > div {
+  border: 0;
+  border-radius: 16px;
+}
+#app .desk-stats {
+  border-left: 0;
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+#app .desk-queue {
+  background: var(--surface);
+  color: var(--ink);
+}
+#app .desk-queue :is(small, h2, strong) {
+  color: inherit;
+}
+#app [data-case] {
+  border-inline-start-color: var(--brand);
+}
+#app .linked-receipt {
+  background: var(--brand-soft);
+  border-radius: 16px;
+}
+#app .live-row {
+  margin: 0 0 10px;
+  padding: 16px 18px;
+}
+#app .projector-switch {
+  border: 0;
+  background: var(--surface);
+  color: var(--brand-text);
+}
+#app :is(.filter-input, #search-form input) {
+  width: 100%;
+  margin: 0 0 10px;
+  min-height: 48px;
+  background-color: var(--fill-2);
+}
+
+/* ---------- Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  #app * {
+    transition: none !important;
+  }
+}
+
+/* ---------- Small phones ---------- */
+@media (max-width: 360px) {
+  #app .wallet-greeting small b {
+    display: none;
+  }
+  #app .wallet-greeting small {
+    padding-left: 10px;
+  }
+  #app .wallet-greeting .avatar {
+    width: 46px;
+    height: 46px;
+  }
+  #app .story {
+    flex-basis: 94px;
+    height: 92px;
+  }
+  #app .action-dock .transfer-primary > .wi,
+  #app .action-dock .wallet-quick i {
+    width: 52px;
+    height: 52px;
+  }
+  #app .action-dock .transfer-primary > .wi {
+    padding: 14px;
+  }
+  #app .action-dock :is(.transfer-primary, .wallet-quick button) {
+    font-size: 0.78rem;
+  }
+  #app .week-summary,
+  #app .wallet-protection {
+    padding: 14px;
+  }
+}
+
+/* ---------- Wide screens keep the side rail ---------- */
+@media (min-width: 880px) {
+  #app[data-actor]:not([data-actor=guest]) .bottom-nav {
+    border: 0;
+    border-radius: var(--r-card);
+    background: var(--surface);
+  }
+  #app[data-actor]:not([data-actor=guest]) .bottom-nav button {
+    border-radius: 14px;
+  }
+  #app[data-actor]:not([data-actor=guest]) .bottom-nav button[aria-current="page"] {
+    background: var(--brand-soft) !important;
+  }
+  #app .tip-stories {
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+  #app .wallet-companion {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* =====================================================================
+ * 3D layer: rendered illustrations (img3d/*.webp, generated by
+ * scripts/illustrations) replace line icons, and surfaces get soft depth.
+ * ===================================================================== */
+:root {
+  --elev-1: 0 1px 2px rgb(20 30 50 / 4%), 0 10px 24px -14px rgb(20 30 50 / 16%);
+  --elev-2: 0 2px 4px rgb(20 30 50 / 5%), 0 18px 36px -18px rgb(20 30 50 / 24%);
+}
+
+/* Depth on surfaces */
+#app :is(.paper, .wallet-section, .safety-list, .telegram-panel, .q-card, .wallet-insight, .count-list, .profile-sheet, .from-account, .live-row, .soc-hero, .soc-work > *, .metric-cash, .guard-actions button, .week-summary, .wallet-protection, .entry.sign-in, .segments, .filter-row button, .ledger-filter select, .wallet-checks) {
+  box-shadow: var(--elev-1);
+}
+#app[data-screen=settings] main > button.secondary,
+#app [data-action=logout] {
+  box-shadow: var(--elev-1);
+}
+#app[data-screen=history] main .ledger {
+  box-shadow: var(--elev-1);
+}
+
+/* Tactile primary buttons */
+#app .primary {
+  background: linear-gradient(180deg, #19b57a 0%, #0e9a64 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 25%), 0 10px 20px -10px rgb(15 160 106 / 70%);
+}
+#app .primary:hover {
+  background: linear-gradient(180deg, #14a86f 0%, #0b8a5b 100%);
+}
+#app .primary:disabled {
+  box-shadow: none;
+}
+#app .connected-nav {
+  box-shadow: 0 -10px 30px -20px rgb(20 30 50 / 30%);
+}
+
+/* Shared helper: an element that shows one illustration. */
+#app :is(.story i, .action-dock .wallet-quick i, .safety-list i, .guardian-ident i) > .wi,
+#app .action-dock .transfer-primary > .wi,
+#app .guard-actions button > svg,
+#app .metric-cash .wi,
+#app .wallet-protection .guard-dots {
+  display: none;
+}
+
+/* Stories: big objects bleeding off the corner */
+#app .story i {
+  right: -2px;
+  bottom: -4px;
+  width: 62px;
+  height: 62px;
+  border-radius: 0;
+  background: center / contain no-repeat;
+  box-shadow: none;
+  transform: none;
+}
+#app .story[data-action=call] i { background-image: url("img3d/phone.webp"); }
+#app .story[data-action=scan] i { background-image: url("img3d/chat.webp"); }
+#app .story[data-action=family] i { background-image: url("img3d/family.webp"); }
+#app .story[data-action=gateway] i { background-image: url("img3d/search.webp"); }
+#app .story[data-action=report] i { background-image: url("img3d/warning.webp"); }
+
+/* Quick actions: service tiles with objects */
+#app .action-dock .transfer-primary::before,
+#app .action-dock .wallet-quick i {
+  content: "";
+  display: block;
+  flex: none;
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  background: var(--fill) center / 44px no-repeat;
+}
+#app .action-dock .transfer-primary::before {
+  background-color: var(--brand-soft);
+  background-image: url("img3d/transfer.webp");
+}
+#app .action-dock .transfer-primary {
+  color: var(--brand-text);
+  font-weight: 600;
+}
+#app .action-dock [data-action=history] i { background-image: url("img3d/clock.webp"); }
+#app .action-dock [data-action=safety] i { background-image: url("img3d/shield.webp"); }
+#app .action-dock [data-action=open-guardian] i { background-image: url("img3d/plane.webp"); }
+#app .action-dock [data-action=check] i { background-image: url("img3d/search.webp"); }
+
+/* Account card thumbnail becomes the rendered card */
+#app .card-thumbnail {
+  width: 72px;
+  height: 52px;
+  overflow: visible;
+  border-radius: 0;
+  background: url("img3d/card.webp") center / contain no-repeat;
+  box-shadow: none;
+}
+#app .card-thumbnail::before,
+#app .card-thumbnail::after {
+  content: none;
+}
+#app .card-thumbnail img {
+  display: none;
+}
+
+/* Home tiles */
+#app .week-summary,
+#app .wallet-protection {
+  position: relative;
+}
+#app .week-summary::after,
+#app .wallet-protection::after {
+  content: "";
+  position: absolute;
+  background: center / contain no-repeat;
+  pointer-events: none;
+}
+#app .week-summary::after {
+  top: 12px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
+  background-image: url("img3d/chart.webp");
+}
+#app .wallet-protection::after {
+  right: 10px;
+  bottom: 10px;
+  width: 56px;
+  height: 56px;
+  background-image: url("img3d/shield.webp");
+}
+#app .week-summary > b {
+  max-width: calc(100% - 44px);
+}
+#app .wallet-protection > small {
+  max-width: calc(100% - 40px);
+}
+#app .wallet-protection {
+  padding-bottom: 54px;
+}
+
+/* Protection screen */
+#app .guard-actions button::before {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 56px;
+  background: center / contain no-repeat;
+}
+#app .guard-actions [data-action=call-transfer]::before { background-image: url("img3d/phone.webp"); }
+#app .guard-actions [data-action=family]::before { background-image: url("img3d/family.webp"); }
+#app .guard-actions button:first-child {
+  background: linear-gradient(160deg, #fff7e6 0%, #ffffff 70%);
+}
+#app .safety-list i {
+  background: var(--fill) center / 30px no-repeat;
+}
+#app .safety-list [data-action=call] i { background-image: url("img3d/phone.webp"); }
+#app .safety-list [data-action=scan] i { background-image: url("img3d/chat.webp"); }
+#app .safety-list [data-action=gateway] i { background-image: url("img3d/search.webp"); }
+#app .safety-list [data-action=callbacks] i { background-image: url("img3d/phone.webp"); }
+#app .safety-list [data-action=report] i { background-image: url("img3d/warning.webp"); }
+#app .safety-list [data-action=reports] i { background-image: url("img3d/clock.webp"); }
+#app .guardian-ident i {
+  background: #e8f4ff url("img3d/plane.webp") center / 30px no-repeat;
+}
+
+/* Analytics */
+#app .metric-cash > div::before {
+  content: "";
+  flex: none;
+  width: 34px;
+  height: 34px;
+  background: url("img3d/coins.webp") center / contain no-repeat;
+}
+#app .metric-cash.outgoing > div::before {
+  background-image: url("img3d/transfer.webp");
+}
+
+/* Pause, call check and sign-in get a hero object */
+#app .pause-clock {
+  position: relative;
+  padding-right: 96px;
+}
+#app .pause-clock::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 78px;
+  height: 78px;
+  background: url("img3d/clock.webp") center / contain no-repeat;
+}
+#app .guard-state {
+  position: relative;
+}
+#app .guard-state > h1 {
+  padding-right: 84px;
+}
+#app .guard-state::after {
+  content: "";
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 64px;
+  height: 64px;
+  background: url("img3d/phone.webp") center / contain no-repeat;
+}
+#app .entry.sign-in .sign-heading {
+  position: relative;
+  padding-right: 92px;
+  overflow: visible;
+}
+#app .entry.sign-in .sign-heading::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 0;
+  background: url("img3d/shield.webp") center / contain no-repeat;
+  box-shadow: none;
+  transform: translateY(-50%);
+}
+
+/* Service note above the profile title reads as an info chip, not stray text. */
+#app[data-screen=settings] main > .hint:first-child {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--elev-1);
+  color: var(--ink-2);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+#app[data-screen=settings] main > .hint:first-child::before {
+  content: "";
+  flex: none;
+  width: 30px;
+  height: 30px;
+  background: url("img3d/lock.webp") center / contain no-repeat;
+}

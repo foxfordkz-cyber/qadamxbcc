@@ -28,6 +28,10 @@ const paths = {
   cases: "M3 7h18v13H3z M8 7V4h8v3",
   system: "M2 12h5l3-7 4 14 3-7h5",
   call: "m5 3 4 5-2 3c2 3 3 4 6 6l3-2 5 4c-1 5-6 3-10 0S2 10 2 6z",
+  message: "M4 5h16v11H9l-5 4z M8 9h8 M8 12h5",
+  family: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6 M16.5 4.5a3 3 0 0 1 0 6 M18 14c2.2.6 3.5 2.6 3.5 5",
+  search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z M20.5 20.5 16 16",
+  report: "M5 21V4h11l-1.5 4L16 12H5 M9 7.5v1",
 };
 export const icon = (k) =>
   '<svg aria-hidden="true" viewBox="0 0 24 24" class="wi"><path d="' +
@@ -91,7 +95,8 @@ export function walletUI({ T, E, amount, when, button, status }) {
             "</i><span><strong>" +
             E(r.counterparty) +
             "</strong><small>" +
-            E(when(r.created_at)) +
+            // Grouped rows already sit under a date heading, so they show only the time.
+            E(group && day ? ledgerInstant(r.created_at).time : when(r.created_at)) +
             '</small></span><span class="right"><strong>' +
             (r.status === "approved" ? (incoming ? "+" : "−") : "") +
             amount(r.amount) +
@@ -104,10 +109,32 @@ export function walletUI({ T, E, amount, when, button, status }) {
       "</div>"
     );
   }
-  function card(a, hidden) {
-    return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance" aria-pressed="${hidden}" aria-label="${T("Скрыть или показать баланс", "Балансты жасыру немесе көрсету")}">${icon("eye")}</button></div>
-      <div class="q-balance"><small>${T("Баланс учебной карты", "Оқу картасының балансы")}</small><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong></div>
-      <div class="card-foot">${cardThumbnail}<div><b>${T("Карта Saq Bol", "Saq Bol картасы")}</b><span>•••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</span></div></div></article>`;
+  function card(a, hidden, dock = "") {
+    return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance">${hidden ? T("Показать баланс", "Балансты көрсету") : T("Скрыть баланс", "Балансты жасыру")}</button></div>
+      <div class="card-row">${cardThumbnail}<div class="q-balance"><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><small>${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</small></div></div>${dock}</article>`;
+  }
+  // Anti-fraud tips shown as stories; each opens an existing protection screen.
+  function stories() {
+    const tips = [
+      ["call", "call", T("Звонят «из банка»?", "«Банктен» қоңырау ма?")],
+      ["scan", "message", T("Проверь сообщение", "Хабарламаны тексер")],
+      ["family", "family", T("Семейный щит", "Отбасы қорғанысы")],
+      ["gateway", "search", T("Проверь получателя", "Алушыны тексер")],
+      ["report", "report", T("Сообщить об обмане", "Алаяқтықты хабарлау")],
+    ];
+    return `<nav class="tip-stories" aria-label="${T("Советы по безопасности", "Қауіпсіздік кеңестері")}">${tips
+      .map(([act, ic, text], i) => `<button class="story s${i}" data-action="${act}"><span>${text}</span><i aria-hidden="true">${icon(ic)}</i></button>`)
+      .join("")}</nav>`;
+  }
+  // Decorative split of the week's money flow; widths are SVG attributes, so no inline styles are needed.
+  function flowBar(stats, hidden) {
+    const inc = Math.max(0, Number(stats.incoming) || 0), out = Math.max(0, Number(stats.outgoing) || 0);
+    const total = inc + out;
+    const solid = (cls) => `<svg class="flow-bar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="8" rx="4" class="${cls}"/></svg>`;
+    if (hidden || !total) return solid("empty");
+    if (!inc || !out) return solid(inc ? "in" : "out");
+    const a = Math.max(6, Math.min(94, (inc / total) * 100));
+    return `<svg class="flow-bar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width="${(a - 1.5).toFixed(1)}" height="8" rx="4" class="in"/><rect x="${(a + 1.5).toFixed(1)}" width="${(100 - a - 1.5).toFixed(1)}" height="8" rx="4" class="out"/></svg>`;
   }
   function home(a, ledger, stats, hidden, pending, offline=false) {
     if (!a) return button("retry-home", T("Счёт недоступен · Повторить","Шот қолжетімсіз · Қайталау"),"secondary") + (ledger ? rows(ledger.items) : "");
@@ -116,7 +143,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
       ["safety", T("Защита", "Қорғаныс")],
       offline ? ["check", T("Проверка","Тексеру")] : ["open-guardian", "Telegram"],
     ];
-    const greet = `<header class="wallet-greeting"><h1><button class="profile-entry" data-action="settings" aria-label="${T("Открыть профиль", "Профильді ашу")} · ${E(a.display_name)}"><span class="avatar" aria-hidden="true">${E(initials(a.display_name))}</span><span><small>${T("Добрый день", "Қайырлы күн")}</small><strong>${E(a.display_name)}</strong></span></button></h1><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button>${offline?"":`<button data-action="inbox" aria-label="${T("Уведомления", "Хабарламалар")}">${icon("bell")}</button>`}</header>`;
+    const greet = `<header class="wallet-greeting"><h1><button class="profile-entry" data-action="settings" aria-label="${T("Открыть профиль", "Профильді ашу")} · ${E(a.display_name)}"><span class="avatar" aria-hidden="true">${E(initials(a.display_name))}</span><span><strong>${E(a.display_name)}</strong><small><b>saq bol</b>${T("Учебный счёт", "Оқу шоты")}</small></span></button></h1><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button>${offline?"":`<button data-action="inbox" aria-label="${T("Уведомления", "Хабарламалар")}">${icon("bell")}</button>`}</header>`;
     const links = actions
       .map(
         ([k, n]) =>
@@ -135,10 +162,10 @@ export function walletUI({ T, E, amount, when, button, status }) {
           `<button data-payee="${E(r.phone)}"><i class="person p${i}">${E(initials(r.name))}</i><span>${E(r.name)}</span></button>`,
       )
       .join("");
+    const dock = '<div class="action-dock"><button class="transfer-primary" data-action="transfer">'+icon("transfer")+'<span>'+T("Перевести","Аудару")+'</span></button><div class="wallet-quick">'+links+'</div></div>';
     return (
-      greet +
-      '<div class="wallet-dashboard"><div class="wallet-overview"><div class="wallet-account">'+card(a, hidden) +
-      '<div class="action-dock"><button class="transfer-primary" data-action="transfer">'+icon("transfer")+'<span>'+T("Перевести","Аудару")+'</span></button><div class="wallet-quick">'+links+'</div></div>' +
+      greet + (offline ? "" : stories()) +
+      '<div class="wallet-dashboard"><div class="wallet-overview"><div class="wallet-account">'+card(a, hidden, dock) +
       (pending
         ? button(
             "recover",
@@ -149,15 +176,14 @@ export function walletUI({ T, E, amount, when, button, status }) {
       (pause || call
         ? '<div class="wallet-checks">' + pause + call + "</div>"
         : "") +
-      '</div><aside class="wallet-companion"><section class="wallet-protection">' +
-      heading(T("Под вашим контролем", "Өз бақылауыңызда"), icon("safety")) +
-      '<p>'+T("Если торопят с переводом — сделайте паузу. Проверьте сообщение или обратитесь к близкому.", "Аударымға асықтырса — кідіріңіз. Хабарламаны тексеріңіз немесе жақыныңызға хабарласыңыз.")+'</p>'+little("safety", T("Открыть защиту", "Қорғанысты ашу"))+'</section>'+
-      (stats ? `<button class="week-summary" data-action="analytics"><span>${T("Расходы за неделю", "Апталық шығыс")}<strong>${hidden ? "•••••• ₸" : amount(stats.outgoing)}</strong></span>${icon("analytics")}${icon("arrow")}</button>`
+      '</div><aside class="wallet-companion">' +
+      (stats ? `<button class="week-summary" data-action="analytics"><b>${T("Моя аналитика", "Менің талдауым")}</b><small>${T("Расходы за неделю", "Апталық шығыс")}</small><strong>${hidden ? "•••••• ₸" : amount(stats.outgoing)}</strong>${flowBar(stats, hidden)}</button>`
         : button("retry-summary",T("Сводка недоступна · Повторить","Жиынтық қолжетімсіз · Қайталау"),"secondary"))+
+      `<button class="wallet-protection" data-action="safety"><b>${T("Под защитой", "Қорғауда")}</b><small>${T("Пауза при звонке и проверка получателя", "Қоңырау кезіндегі кідіріс пен алушыны тексеру")}</small><span class="guard-dots" aria-hidden="true">${icon("safety")}${icon("call")}${icon("family")}</span></button>` +
       '</aside></div><div class="wallet-activity"><section class="wallet-section wallet-recent">' +
       heading(T("Последние операции","Соңғы операциялар"),little("history",T("Все","Барлығы"))) +
       (ledger ? rows(ledger.items.slice(0,3)) : button("retry-home",T("Обновить историю","Тарихты жаңарту"),"secondary")) +
-      '</section><section class="wallet-section wallet-recipients">'+heading(T("Получатели","Алушылар")) +
+      '</section><section class="wallet-section wallet-recipients">'+heading(T("Кому перевести","Кімге аударамыз")) +
       (people ? '<div class="people">'+people+'</div>' : '<p class="empty">'+T("Учебные получатели пока не добавлены.","Оқу алушылары әзірге қосылмаған.")+'</p>') +
       "</section></div></div>"
     );
@@ -196,9 +222,12 @@ export function walletUI({ T, E, amount, when, button, status }) {
     return (
       "<h1>" +
       T("Операции", "Операциялар") +
-      '</h1><form id="ledger-filter" class="ledger-filter"><label>' +
+      '</h1><form id="ledger-filter" class="ledger-filter"><label class="search-field"><span class="sr-only">' +
       T("Поиск по имени или ID", "Аты немесе ID бойынша іздеу") +
-      '<input name="q" maxlength="128" value="' +
+      "</span>" + icon("search") +
+      '<input name="q" maxlength="128" placeholder="' +
+      T("Поиск по имени или ID", "Аты немесе ID бойынша іздеу") +
+      '" value="' +
       E(s.q) +
       '"></label><div><select name="status" aria-label="' +
       T("Статус", "Күй") +
