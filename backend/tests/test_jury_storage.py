@@ -165,6 +165,7 @@ async def test_room_contact_can_approve_only_its_own_request(
         assert (await client.get(CONTACT_INBOX)).status_code == 403
         assert "Запросов пока нет" in (await contact.get(CONTACT_INBOX + "?lang=ru")).text
         access = await sign_in(client, "client_demo", "customer fixture")
+        opening_balance = (await client.get(BASE + "/account", headers=access)).json()["balance"]
         policy = BASE + "/protection/second-confirmation"
         config = (await client.get(policy, headers=access)).json()
         assert len(config["contacts"]) == 1
@@ -211,6 +212,33 @@ async def test_room_contact_can_approve_only_its_own_request(
         assert suspect is not None
         assert (await contact.post(suspect[1], headers=origin)).status_code == 303
         assert "О подозрении сообщили" in (await contact.get(CONTACT_INBOX + "?lang=ru")).text
+        officer = await sign_in(client, "admin_demo", "officer fixture")
+        cases = BASE + "/api/integrations/guardian/soc/cases"
+        for _ in range(30):
+            rows = (await client.get(cases, headers=officer)).json()["items"]
+            if rows:
+                break
+            await asyncio.sleep(1)
+        assert len(rows) == 1
+        case = rows[0]
+        assert case["source"] == "guardian_signal"
+        response = await client.post(
+            cases + "/" + case["id"] + "/actions",
+            headers={**officer, "Idempotency-Key": str(uuid.uuid4())},
+            json={
+                "expected_version": case["version"],
+                "action": "transition",
+                "state": "CLOSED",
+                "reason": "confirmed_fraud",
+            },
+        )
+        assert response.is_success, response.text
+        resolution = (
+            await client.get(BASE + "/reports/" + case["report_id"] + "/callback", headers=access)
+        ).json()["resolution"]
+        assert resolution["operation"]["transaction_id"] == held.json()["transaction_id"]
+        assert resolution["outcome"] == "confirmed_fraud"
+        assert resolution["balance"] == opening_balance
         path = BASE + "/api/trusted-contacts/" + config["contacts"][0]["id"]
         assert (await client.delete(path, headers=access)).status_code == 200
         assert "Запросов пока нет" in (await contact.get(CONTACT_INBOX + "?lang=ru")).text
