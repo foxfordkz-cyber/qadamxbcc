@@ -5,9 +5,9 @@ let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
 import { walletUI, icon, cardThumbnail, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
-import { shortcuts, familyView, checkView, packetContent, secondConfirmationView, secondSettingsView } from "./guardian.mjs";
+import { familyView, checkView, packetContent, secondConfirmationView, secondSettingsView } from "./guardian.mjs";
 import { packetView } from "./packet.mjs";
-import { canConfirmPayee, checkPayee, needsCallAnswer, payeeFields, payeeVerdict, phoneNumber, submissionContext } from "./payee-check.mjs";
+import { canConfirmPayee, checkPayee, manualPhoneField, needsCallAnswer, payeeDetailFields, payeeVerdict, phoneNumber, submissionContext } from "./payee-check.mjs";
 import { readScreenshot } from "./screenshot.mjs";
 import * as identity from "./identity.mjs";
 import { PUBLIC_DEMO, openExternal } from "./native.mjs";
@@ -116,6 +116,7 @@ function clearVisible() {
 import { SAMPLE } from "./soc-sample.mjs";
 import { Gateway, gatewayOrigin, remainingSeconds } from "./gateway.mjs";
 import { installBackHandler } from "./native.mjs";
+import { currentTheme, toggleTheme } from "./theme-mode.mjs";
 
 const root = document.querySelector("#app");
 const E = (value) =>
@@ -366,7 +367,8 @@ async function open(next, id, remember=true) {
     } else if(next==="analytics") data=await gateway.request("/wallet/analytics?days="+walletDays);
     else if(next==="socAnalytics")data=await gateway.request("/wallet/soc?days="+socDays+"&include_policy=true");
     else if(next==="incoming")data=await gateway.request("/wallet/incoming/"+id);
-    else if(product && next==="safety") [account,circle]=await Promise.all([gateway.request("/account"),api("trusted-contacts")]);
+    else if(product && next==="safety") [account,circle,summary]=await Promise.all([gateway.request("/account"),api("trusted-contacts"),
+      summary ? Promise.resolve(summary) : gateway.request("/wallet/analytics?days=7").catch(e=>{if(e.status===401)throw e;return null;})]);
     else if (next === "family") {
       const [family, second] = await Promise.all([
         gateway.request("/protection/family"),
@@ -484,7 +486,7 @@ async function readReport(session,id) {
   return Promise.all([session.api(path),session.api(path+"/history"),questions,callback]);
 }
 function loginView() {
-  if (product) {
+  if (product && webWallet) {
     const photograph = juryWallet ? "alatau" : "facade";
     const place = juryWallet ? T("Комната жюри", "Қазылар бөлмесі") : T("Кошелёк команды", "Команда әмияны");
     const otherEntrance = juryWallet
@@ -506,6 +508,18 @@ function loginView() {
     <button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти","Кіру")}</button></form>
     <div class="access-footer">${webWallet && document.documentElement.hasAttribute("data-install")?'<a href="install/">'+T("Установить на Android","Android жүйесіне орнату")+'</a>':""}${webWallet ? '<a href="https://saq-bol-bcc.zerdeliportald.workers.dev/">'+T("На главную Saq Bol","Saq Bol басты беті")+'</a>' : button("web-client",T("Веб-клиент","Веб-клиент"),"text-button")+button("offline",T("Офлайн-обзор","Офлайн шолу"),"text-button")}</div></div></section>`;
   }
+  if (product) return `<section class="sign-hero"><p class="sign-brand"><img src="mark.svg" alt="">Saq Bol × BCC</p><p class="sign-slogan">${T("Ваши деньги под защитой","Ақшаңыз қорғауда")}</p><i class="art art-card" aria-hidden="true"></i><i class="art art-shield" aria-hidden="true"></i></section>
+    <section class="entry sign-in"><div class="sign-heading"><div><h1>${T("Вход в кабинет","Кабинетке кіру")}</h1><small>${T("Ваши деньги. Под вашей защитой.","Ақшаңыз. Сіздің қорғауыңызда.")}</small></div></div>
+    ${restoreFailed ? button("restore-access",T("Восстановить сессию","Сессияны қалпына келтіру"),"secondary") : ""}
+    <form id="personal-login" class="form-stack">
+    ${feedbackView()}
+    <label><span class="sr-only">${T("Логин","Логин")}</span><input name="login" type="text" value="${E(loginName)}" placeholder="${T("Логин","Логин")}" autocomplete="username" required maxlength="64" autocapitalize="none" spellcheck="false"></label>
+    <label><span class="sr-only">${T("Пароль","Құпиясөз")}</span><span class="password-field"><input type="password" name="password" placeholder="${T("Пароль","Құпиясөз")}" required minlength="1" maxlength="128" autocomplete="current-password">
+    <button type="button" data-action="show-password" aria-pressed="false">${T("Показать","Көрсету")}</button></span></label>
+    <label class="remember-choice"><input type="checkbox" name="remember" ${rememberLogin?"checked":""}><span>${T("Запомнить меня","Мені есте сақтау")}</span></label>
+    <button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти","Кіру")}</button></form>
+    ${webWallet && document.documentElement.hasAttribute("data-install")?'<a class="install-link" href="install/">'+T("Установить на Android","Android жүйесіне орнату")+'</a>':""}<div class="sign-footer"><a class="access-switch" href="https://saq-bol-jury.onrender.com/">${T("Вход для жюри","Қазылар кабинеті")}</a>${button("web-client",T("Открыть веб-клиент","Веб-клиентті ашу"),"text-button")}${button("offline",T("Офлайн-обзор","Офлайн шолу"),"text-button")}</div></section>
+    <p class="screen-foot">${T("Учебный прототип · Только синтетические данные","Оқу прототипі · Тек синтетикалық деректер")}</p>`;
   return `${title(T("Всё начинается с тебя", "Бәрі сенен басталады"), T("Выбери свою роль и войди на тестовый стенд.", "Рөліңді таңдап, тест стендіне кір."))}<div class="role-choice"><button data-role="client" aria-pressed="${chosenRole === "client"}">${T("Клиент", "Клиент")}<small>${T("Свои переводы и защита", "Өз аударымдарың мен қорғаныс")}</small></button><button data-role="admin" aria-pressed="${chosenRole === "admin"}">${T("Сотрудник SOC", "SOC қызметкері")}<small>${T("Мониторинг и расследования", "Мониторинг пен тексеру")}</small></button><button data-role="platform_admin" aria-pressed="${chosenRole === "platform_admin"}">${T("Администратор платформы","Платформа әкімшісі")}<small>${T("Доступ сотрудников и нагрузка","Қызметкерлер рұқсаты мен жүктеме")}</small></button></div><section class="paper login-card"><form id="login-form" class="form-stack" autocomplete="off">${input("origin", T("Адрес тестового сервера", "Тест серверінің мекенжайы"), loginOrigin, "text", 'required inputmode="url" placeholder="127.0.0.1:18001"')}${input("code", T("Код доступа твоей роли", "Өз рөліңнің кіру коды"), "", "password", 'required minlength="24" maxlength="128" autocomplete="off" spellcheck="false"')}<button class="primary" type="submit" ${loading ? "disabled" : ""}>${T("Войти", "Кіру")} →</button></form><p class="fine">${T("Код выдаёт владелец тестового стенда. Роль проверяет сервер. Это отдельный тестовый код, не пароль банка.", "Кодты тест стендінің иесі береді. Рөлді сервер тексереді. Бұл банк құпиясөзі емес, бөлек тест коды.")}</p></section>${button("offline", T("Попробовать без сервера", "Серверсіз байқап көру"), "secondary")}`;
 }
 function transactionRows(items, soc = false) {
@@ -582,7 +596,7 @@ const presetValues = {
   },
 };
 function transferSteps(review=false) {
-  return `<ol class="transfer-steps"><li ${review ? "" : 'aria-current="step"'}>01 · ${T("Реквизиты", "Деректемелер")}</li><li ${review ? 'aria-current="step"' : ""}>02 · ${T("Проверка", "Тексеру")}</li><li>03 · ${T("Результат", "Нәтиже")}</li></ol>`;
+  return `<ol class="transfer-steps"><li ${review ? 'class="done"' : 'aria-current="step"'}><b>01</b> ${T("Реквизиты", "Деректемелер")}</li><li ${review ? 'aria-current="step"' : ""}><b>02</b> ${T("Проверка", "Тексеру")}</li><li><b>03</b> ${T("Результат", "Нәтиже")}</li></ol>`;
 }
 function readTransferDraft(fields) {
   const manual = fields.get("recipient_phone") === "manual";
@@ -602,19 +616,48 @@ function readTransferDraft(fields) {
     },
   };
 }
+// On-screen amount keypad. A trailing decimal point is kept aside because a number input drops it.
+function pressAmountKey(key) {
+  const field = key.form?.elements.namedItem("amount");
+  if (!field) return;
+  const typed = field.dataset.typed;
+  let text = typed && typed.replace(/\.$/, "") === field.value ? typed : field.value;
+  const k = key.dataset.key;
+  if (k === "back") text = text.slice(0, -1);
+  else if (k === ".") { if (!text.includes(".")) text = (text || "0") + "."; }
+  else {
+    const [whole, fraction] = text.split(".");
+    if (fraction !== undefined ? fraction.length >= 2 : whole.length >= 9) return;
+    text = text === "0" ? k : text + k;
+  }
+  field.dataset.typed = text;
+  field.value = text.endsWith(".") ? text.slice(0, -1) : text;
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+}
 function transferView() {
   if (pending)
     return `${title(T("Сначала проверь предыдущий запрос", "Алдыңғы сұрауды тексер"))}${button("recover", T("Проверить статус", "Күйін тексеру"))}${button("abandon", T("Безопасно закрыть запрос", "Сұрауды қауіпсіз жабу"), "secondary")}`;
   const hidden = balanceHidden();
-  if (product && !presetMode) return title(T("Новый перевод","Жаңа аударым")) + transferSteps() + `<div class="from-account">${cardThumbnail}<span><small>${T("Со счёта","Шоттан")}</small><strong>Saq Bol · •••• ${hidden ? "••••" : E(account?.card_last4 || "••••")}</strong><small>${T("Остаток на счёте", "Шоттағы қалдық")} · ${hidden ? "•••••• ₸" : account ? amount(account.balance) : "—"}</small></span></div><section class="paper transfer-sheet"><form id="transfer-form" class="form-stack">
-    <label>${T("Учебный получатель","Оқу аударымын алушы")}<select required name="recipient_phone"><option value="">${T("Выбери получателя","Алушыны таңда")}</option>
+  if (product && !presetMode) {
+    const chosen = account?.recipients?.find(r => !draft?.payee?.manual && r.phone === draft?.recipient_phone);
+    const letters = chosen ? String(chosen.name).trim().split(/\s+/).slice(0, 2).map(w => Array.from(w)[0] || "").join("").toUpperCase() : "";
+    // Keys are input buttons so the form keeps a single submit button.
+    const keys = ["1","2","3","4","5","6","7","8","9",",","0","⌫"].map(k => `<input type="button" data-key="${k === "," ? "." : k === "⌫" ? "back" : k}" value="${k}" aria-label="${k === "⌫" ? T("Стереть","Өшіру") : k === "," ? T("Запятая","Үтір") : k}">`).join("");
+    return title(T("Новый перевод","Жаңа аударым")) + transferSteps() + `<form id="transfer-form" class="form-stack transfer-sheet">
+    <div class="recipient-card"><i class="person" aria-hidden="true">${E(letters)}</i><label>${T("Получатель","Алушы")}<select required name="recipient_phone"><option value="">${T("Выбери получателя","Алушыны таңда")}</option>
     ${(account?.recipients ?? []).map(r => `<option value="${E(r.phone)}" ${!draft?.payee?.manual && draft?.recipient_phone === r.phone ? "selected" : ""}>${E(r.name)}</option>`).join("")}
-    <option value="manual" ${draft?.payee?.manual ? "selected" : ""}>${T("Ввести номер телефона", "Телефон нөмірін енгізу")}</option></select></label>
-    ${payeeFields(draft,T,E)}
-    ${input("amount",T("Сумма, ₸","Сома, ₸"), draft?.amount ?? "", "number", 'required min="0.01" max="999999999" step="0.01" inputmode="decimal"')}
+    <option value="manual" ${draft?.payee?.manual ? "selected" : ""}>${T("Ввести номер телефона", "Телефон нөмірін енгізу")}</option></select></label></div>
+    ${manualPhoneField(draft,T,E)}
+    <label class="amount-field"><span>${T("Сумма","Сома")}</span><input name="amount" type="number" value="${E(draft?.amount ?? "")}" placeholder="0" required min="0.01" max="999999999" step="0.01" inputmode="decimal"></label>
     <div class="amount-choices" role="group" aria-label="${T("Выбрать сумму перевода", "Аударым сомасын таңдау")}">${[5000, 10000, 25000].map(value => `<input type="button" data-quick-amount="${value}" value="${amount(value)}">`).join("")}</div>
-    <label class="tick-field"><input type="checkbox" name="active_call" ${draft?.context?.active_call ? "checked" : ""}>${T("Мне сейчас по телефону говорят перевести деньги","Маған телефон арқылы ақша аударуды айтып жатыр")}</label><small class="fine">${T("Отметка будет сохранена для этого перевода.","Бұл белгі осы аударымға сақталады.")}</small>
-    <button class="primary">${T("Проверить реквизиты","Деректемелерді тексеру")}</button></form></section>${button("presets",T("Демонстрационные сценарии","Демонстрациялық сценарийлер"),"secondary")}`;
+    <p class="field-caption">${T("Со счёта","Шоттан")}</p><div class="from-account">${cardThumbnail}<span><strong>${T("Карта Saq Bol","Saq Bol картасы")} · ${hidden ? "••••" : E(account?.card_last4 || "••••")}</strong><small>${hidden ? "•••••• ₸" : account ? amount(account.balance) : "—"}</small></span></div>
+    ${payeeDetailFields(draft,T,E)}
+    <label class="tick-field"><input type="checkbox" name="active_call" ${draft?.context?.active_call ? "checked" : ""}>${T("Мне сейчас по телефону говорят перевести деньги","Маған телефон арқылы ақша аударуды айтып жатыр")}</label>
+    <p class="safe-hint"><i class="art art-lock" aria-hidden="true"></i>${T("Проверим перевод до отправки","Аударымды жібермес бұрын тексереміз")}</p>
+    <div class="keypad" role="group" aria-label="${T("Ввод суммы","Соманы енгізу")}">${keys}</div>
+    <button class="primary">${T("Проверить реквизиты","Деректемелерді тексеру")}</button></form>
+    <p class="screen-foot">${T("Учебный перевод · Деньги не списываются","Оқу аударымы · Ақша шешілмейді")}</p>${button("presets",T("Демонстрационные сценарии","Демонстрациялық сценарийлер"),"secondary")}`;
+  }
   const value = draft ?? presetValues.normal;
   return `${title(T("Новый тестовый перевод", "Жаңа тест аударымы"), T("Сумму и признаки анализирует сервер: ML, частота операций и связи получателя.", "Сома мен белгілерді сервер талдайды: ML, әрекет жиілігі және алушы байланыстары."))}<div class="filter-row">${Object.keys(
     presetValues,
@@ -661,16 +704,32 @@ const callAnswers = {
   no_request: ["Нет, меня не просили", "Жоқ, ешкім сұраған жоқ"],
 };
 function callQuestion() {
-  return `<fieldset class="call-question"><legend>${T("Вас по телефону попросили сделать именно этот перевод?", "Осы аударымды жасауды сізден телефон арқылы сұрады ма?")}</legend>
+  return `<fieldset class="call-question choice-cards"><legend>${T("Вас по телефону попросили сделать именно этот перевод?", "Осы аударымды жасауды сізден телефон арқылы сұрады ма?")}</legend>
     ${Object.entries(callAnswers).map(([value, labels]) => `<label class="tick-field"><input type="radio" name="call_pressure_answer" value="${value}" ${draft.callAnswer === value ? "checked" : ""}>${T(...labels)}</label>`).join("")}</fieldset>`;
+}
+// What the client told us before sending. The server makes the actual decision after submission.
+function preliminaryRisk() {
+  const signals = [];
+  if (draft.context.active_call || draft.context.payment_requested_after_call || ["on_call", "after_call"].includes(draft.callAnswer))
+    signals.push(T("Вы сообщили о звонке", "Сіз қоңырау туралы хабарладыңыз"));
+  if (draft.payee?.manual) signals.push(T("Номер введён вручную", "Нөмір қолмен енгізілді"));
+  if (["close", "mismatch"].includes(data?.status)) signals.push(T("Имя совпало не полностью", "Аты толық сәйкес емес"));
+  const level = Math.min(2, signals.length);
+  const names = [T("Низкий", "Төмен"), T("Средний", "Орташа"), T("Высокий", "Жоғары")];
+  return `<section class="risk-card level-${level}"><header><b>${T("Риск перевода", "Аударым тәуекелі")}</b><strong>${names[level]}</strong></header>
+    <div class="risk-scale" aria-hidden="true"><i></i><i></i><i></i></div><div class="risk-labels" aria-hidden="true">${names.map(n => `<span>${n}</span>`).join("")}</div>
+    ${signals.length ? `<ul class="risk-chips">${signals.map(x => `<li>${E(x)}</li>`).join("")}</ul>` : `<p>${T("Особых сигналов нет", "Ерекше белгілер жоқ")}</p>`}
+    <small>${T("Предварительно. Итоговое решение примет сервер.", "Алдын ала. Түпкі шешімді сервер қабылдайды.")}</small><i class="art art-warning" aria-hidden="true"></i></section>`;
 }
 function reviewView() {
   const ask = needsCallAnswer(draft, data, account?.supports_call_question);
-  const callRequest = ask ? callQuestion() : draft.context.active_call ? "" : `<label class="tick-field"><input type="checkbox" name="payment_requested_after_call" ${draft.context.payment_requested_after_call ? "checked" : ""}>${T("В только что завершившемся звонке меня попросили сделать этот перевод","Жаңа ғана аяқталған қоңырауда менен осы аударымды жасауды сұрады")}</label>`;
+  const callRequest = ask ? callQuestion() : draft.context.active_call ? "" : `<label class="tick-field">${'<input type="checkbox" name="payment_requested_after_call" ' + (draft.context.payment_requested_after_call ? "checked" : "") + ">"}${T("В только что завершившемся звонке меня попросили сделать этот перевод","Жаңа ғана аяқталған қоңырауда менен осы аударымды жасауды сұрады")}</label>`;
   const checked = draft.payee ? payeeVerdict(data,draft.payee.bank,T,E) : "";
   const name = draft.payee ? data?.display_name : account?.recipients?.find(r => r.phone === draft.recipient_phone)?.name;
   const disabled = (draft.payee && !canConfirmPayee(data)) || (ask && !draft.callAnswer);
-  return `${title(T("Подтверди тестовый перевод", "Тест аударымын раста"))}${transferSteps(true)}<section class="paper transfer-review"><p>${T("Тестовый получатель", "Тест алушысы")}</p><h2>${E(name || draft.recipient_phone)}</h2>${name ? "<small>"+E(draft.recipient_phone)+"</small>" : ""}<div class="amount">${amount(draft.amount)}</div><p>${T("Перевод между учебными счетами", "Оқу шоттары арасындағы аударым")}</p>${callRequest}</section>${checked}${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"secondary")}${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"),"primary",disabled ? "disabled" : "")}`;
+  const bank = draft.payee?.bank === "other" ? T("Другой банк", "Басқа банк") : "Bank CenterCredit";
+  const last4 = balanceHidden() ? "••••" : E(account?.card_last4 || "••••");
+  return `${title(T("Проверка перевода", "Аударымды тексеру"))}${transferSteps(true)}${product ? preliminaryRisk() : ""}<section class="paper transfer-review"><i class="art art-transfer" aria-hidden="true"></i><h2>${E(name || draft.recipient_phone)}</h2><small>${bank} · ${E(draft.recipient_phone)}</small><div class="amount">${amount(draft.amount)}</div><p>${T("Комиссия 0 ₸", "Комиссия 0 ₸")} · ${T("С карты", "Картадан")} •••• ${last4}</p></section>${callRequest}${checked}<p class="fine">${T("Ответ поможет защитить вас от мошенников.", "Жауабыңыз сізді алаяқтардан қорғауға көмектеседі.")}</p>${button("submit-transfer", T("Подтвердить перевод", "Аударымды растау"),"primary",disabled ? "disabled" : "")}${button("edit-transfer",T("Изменить данные","Деректерді өзгерту"),"text-button")}<p class="screen-foot">${T("Учебный сценарий · Деньги не списываются", "Оқу сценарийі · Ақша шешілмейді")}</p>`;
 }
 const questions = [
   [
@@ -741,10 +800,11 @@ function coolingReceipt(tx, admin) {
     ? canConfirm ? T("Перейти к подтверждению", "Растауға өту") : T("Проверить и изменить ответы", "Жауаптарды тексеру және өзгерту")
     : T("Пройти опрос", "Сауалнамадан өту");
   const coSign = family && !admin ? secondConfirmationView(family, T, when) : "";
-  return `<section class="paper hold-card"><div class="pause-clock"><span class="eyebrow">${T("Время на проверку", "Тексеру уақыты")}</span><h2>${T("Защитная пауза", "Қорғаныс кідірісі")}</h2><div class="timer" id="countdown" role="timer">${timerText()}</div></div>
+  return `<section class="paper hold-card"><div class="pause-clock"><span class="eyebrow">${T("Осталось до повторной проверки", "Қайта тексеруге дейін")}</span><h2 class="sr-only">${T("Защитная пауза", "Қорғаныс кідірісі")}</h2>
+    <div class="pause-ring"><div class="timer" id="countdown" role="timer">${timerText()}</div><small>${T("минут до проверки", "минут қалды")}</small><i class="art art-clock" aria-hidden="true"></i></div></div>
     ${product && !admin && data?.transaction_id===tx.transaction_id && data?.review_report_id ? `<button class="secondary" data-object="report" data-object-id="${E(data.review_report_id)}">${T("Открыть дело и переписку","Іс пен хат алмасуды ашу")}</button>` : product && !admin ? button("request-review",T("Это мой перевод · запросить проверку","Бұл менің аударымым · тексеруді сұрау"),"secondary") : ""}
     ${family?.state==="expired" ? "<p>"+T("Контакт не ответил вовремя. Деньги на счёте. Откройте обращение, чтобы увидеть ответ сотрудника.", "Сенімді адам уақытында жауап бермеді. Ақша шотта. Қызметкердің жауабын көру үшін өтінішті ашыңыз.")+"</p>" : ""}
-    <div class="pause-next"><p>${T("По истечении таймера деньги останутся на счёте. Для перевода потребуется ваше подтверждение.", "Таймер аяқталғанда ақша шотта қалады. Аудару үшін сіздің растауыңыз қажет.")}</p>
+    <div class="pause-next"><p class="pause-calm">${T("Не спешите. Мошенники всегда торопят", "Асықпаңыз. Алаяқтар әрқашан асықтырады")}</p><p>${T("По истечении таймера деньги останутся на счёте. Для перевода потребуется ваше подтверждение.", "Таймер аяқталғанда ақша шотта қалады. Аудару үшін сіздің растауыңыз қажет.")}</p>
     ${saved && !admin ? `<details><summary>${T("Сохранённые ответы", "Сақталған жауаптар")}</summary>${questions.map(([key, ru, kk]) => `<p>${T(ru,kk)} <strong>${saved[key] ? T("Да","Иә") : T("Нет","Жоқ")}</strong></p>`).join("")}</details>` : ""}
     ${coSign}${admin ? "" : `<div class="inline-actions">${button("questionnaire",reviewLabel)}${button("cancel-confirm",T("Отменить перевод","Аударымды тоқтату"),"secondary")}</div>`}</div></section>`;
 }
@@ -766,6 +826,24 @@ function officerCallEvidence(tx) {
     <p>${E(statement)}</p>${log ? `<p>${T("Журнал исходящих звонков банка","Банктің шығыс қоңыраулар журналы")} ·
       ${log.outbound_call_listed ? T("Запись найдена","Жазба бар") : T("Запись не найдена","Жазба жоқ")} · ${when(log.checked_at)}</p>` : ""}</section>`;
 }
+// 3D marker for a decision reason, chosen from its machine code.
+function reasonArt(reason) {
+  const code = String(reason?.code || "") + " " + String(reason?.layer || "");
+  if (/call|phone|voice/i.test(code)) return "phone";
+  if (/recipient|payee|new|first|graph|mule|hub/i.test(code)) return "search";
+  if (/amount|avg|average|deviation|velocity|balance|deposit/i.test(code)) return "coins";
+  if (/ml|model/i.test(code)) return "chart";
+  if (/device|session|login|remote/i.test(code)) return "lock";
+  return "warning";
+}
+// Remaining share of the protective pause, drawn by the CSS ring.
+function paintPauseRing() {
+  const ring = document.querySelector(".pause-ring");
+  if (!ring || !validClock(evaluation)) return;
+  const start = Date.parse(evaluation.created_at);
+  const total = Math.max(60, Number.isFinite(start) ? (Date.parse(evaluation.cooling_off_until) - start) / 1000 : 900);
+  ring.style.setProperty("--left", String(Math.max(0, Math.min(1, remainingSeconds(evaluation, receivedAt) / total))));
+}
 function detailView() {
   if (!evaluation) return "";
   const tx = evaluation,
@@ -782,10 +860,11 @@ function detailView() {
       : receiptPacket.reports.length ? receiptPacket.reports.map(r=>r.id+" · "+label(r.state)).join(", ")
       : T("Связанных обращений нет.","Байланысты өтініш жоқ.");
     const service = '<section class="paper"><h2>'+T("Обращение в SOC","SOC-қа өтініш")+'</h2><p>'+E(serviceState)+'</p></section>';
-    return title(status(tx.status),tx[lang==="ru"?"headline_ru":"headline_kk"])+
-      `<section class="paper receipt"><div class="receipt-status">${wallet.badge(tx.status)}</div><div class="amount">${amount(tx.amount)}</div><dl class="receipt-party"><dt>${T("Создан","Жасалған уақыты")}</dt><dd>${E(when(tx.created_at))}</dd><dt>${T("Получатель", "Алушы")}</dt><dd><strong>${E(tx.recipient?.display_name)}</strong><span>${E(tx.recipient?.iban_masked)}</span></dd></dl><p class="funds-outcome"><strong>${T("Состояние денег","Қаражат күйі")}</strong><br>${E(moneyOutcome(tx.status))}</p></section>`+hold+
-      (reasons.length?'<section class="paper"><h2>'+T("Что учла проверка","Тексеруде ескерілген белгілер")+'</h2>'+reasons.map(r=>'<p>'+E(r[lang==="ru"?"reason_ru":"reason_kk"])+'</p>').join("")+'</section>':"")+contact+service+
-      '<p class="break-id">'+E(tx.transaction_id)+'</p>'+button("refresh-detail",T("Обновить статус","Күйін жаңарту"),"secondary");
+    return '<section class="detail-hero">'+title(status(tx.status),tx[lang==="ru"?"headline_ru":"headline_kk"])+
+      `<section class="paper receipt"><div class="receipt-status">${wallet.badge(tx.status)}</div><div class="amount">${amount(tx.amount)}</div><p class="receipt-to">${E(tx.recipient?.display_name)}</p><dl class="receipt-party"><dt>${T("Создан","Жасалған уақыты")}</dt><dd>${E(when(tx.created_at))}</dd><dt>${T("Получатель", "Алушы")}</dt><dd><strong>${E(tx.recipient?.display_name)}</strong><span>${E(tx.recipient?.iban_masked)}</span></dd></dl><p class="funds-outcome"><strong>${T("Состояние денег","Қаражат күйі")}</strong><br>${E(moneyOutcome(tx.status))}</p></section></section>`+hold+
+      (reasons.length?'<section class="paper why-list"><h2>'+(held?T("Почему сработала защита","Қорғаныс неге іске қосылды"):T("Что учла проверка","Тексеруде ескерілген белгілер"))+'</h2>'+reasons.map(r=>'<div class="why"><i class="art art-'+reasonArt(r)+'" aria-hidden="true"></i><span>'+E(r[lang==="ru"?"reason_ru":"reason_kk"])+'</span><b class="tick" aria-hidden="true"></b></div>').join("")+'</section>':"")+contact+service+
+      '<p class="break-id">'+E(tx.transaction_id)+'</p>'+button("refresh-detail",T("Обновить статус","Күйін жаңарту"),"secondary")+
+      (held?'<p class="screen-foot">'+T("Деньги ещё не отправлены · Учебный режим","Ақша әлі жіберілген жоқ · Оқу режимі")+'</p>':"");
   }
   return `${title(status(tx.status), tx[lang === "ru" ? "headline_ru" : "headline_kk"])}<section class="paper"><div class="amount">${amount(tx.amount)}</div><p>${E(tx.recipient?.display_name)} · ${E(tx.recipient?.iban_masked)}</p><div class="risk-meter"><progress max="100" value="${Number(tx.risk_score)}" aria-label="${T("Оценка риска", "Тәуекел бағасы")}"></progress></div><div class="analysis-grid"><dl><dt>${T("Риск", "Тәуекел")}</dt><dd>${Number(tx.risk_score)} / 100</dd></dl><dl><dt>ML</dt><dd>${tx.ml_score == null ? "—" : Number(tx.ml_score).toFixed(1)} / 100</dd></dl></div><p class="fine">${T("Это оценки модели, не вероятность доказанного мошенничества.", "Бұл модель бағасы, дәлелденген алаяқтық ықтималдығы емес.")}</p></section>${tx.status === "cooling_off" ? coolingReceipt(tx, admin) : ""}<section class="paper"><h2>${T("Почему такое решение", "Шешім себептері")}</h2>${reasons.length ? reasons.map((r) => `<div class="reason"><h3>${E(r[lang === "ru" ? "reason_ru" : "reason_kk"])}</h3><p>${E(r.layer)} · ${E(r.code)} · ${Number(r.score_delta) >= 0 ? "+" : ""}${Number(r.score_delta)}</p></div>`).join("") : `<p>${T("Дополнительные правила не сработали.", "Қосымша ережелер іске қосылған жоқ.")}</p>`}</section><section class="paper"><h2>${T("Как объясняет модель", "Модель түсіндірмесі")}</h2><p class="fine">${E(tx.ml_model_version)} · ${E(tx.ml_explanation_method)}</p>${contributors
     .slice(0, 8)
@@ -849,18 +928,33 @@ function safetyView() {
     ],
   ];
   if(product){
-    const symbols={scan:"safety",call:"call",callbacks:"call",report:"cases",reports:"history",gateway:"system"};
-    const groups = [
-      [T("Проверки", "Тексерулер"), ["call", "scan", "gateway"]],
-      [T("Связь с отделом безопасности", "Қауіпсіздік бөлімімен байланыс"), ["callbacks", "report", "reports"]],
+    const p = wallet.protection(summary, account);
+    const verified = (circle?.contacts || []).filter(c => c.state === "CONTACT_VERIFIED").length;
+    const live = account?.active_pause
+      ? `<button class="live-banner" data-detail="${E(account.active_pause)}"><i class="pulse" aria-hidden="true"></i><b>${T("Перевод на паузе — не спешите","Аударым кідіртілді — асықпаңыз")}</b><small>${T("Не сообщайте коды и пароли","Кодтар мен құпиясөздерді айтпаңыз")}</small></button>`
+      : account?.pending_call
+      ? `<button class="live-banner" data-call-id="${E(account.pending_call)}"><i class="pulse" aria-hidden="true"></i><b>${T("Был звонок — проверьте перевод","Қоңырау болды — аударымды тексеріңіз")}</b><small>${T("Не сообщайте коды и пароли","Кодтар мен құпиясөздерді айтпаңыз")}</small></button>`
+      : "";
+    const tools = [
+      ["call", "phone", T("Звонок","Қоңырау"), T("Банк мне звонит? Журнал звонков","Банк қоңырау шалды ма? Журнал")],
+      ["scan", "chat", T("Сообщение","Хабарлама"), T("Ссылка, текст или скриншот","Сілтеме, мәтін не скриншот")],
+      ["gateway", "search", T("Получатель","Алушы"), T("Проверьте до отправки денег","Ақша жібермес бұрын тексеріңіз")],
+      ["family", "family", T("Семейный щит","Отбасы қорғанысы"), T("Поддержка близких в один шаг","Жақындардың қолдауы бір қадамда")],
+      ["contacts", "plane", "Telegram", T("Круг доверия","Сенім шеңбері") + (circle ? " · " + verified + " / " + (account?.contact_limit ?? "—") : "")],
+      ["report", "warning", T("Сообщить об обмане","Алаяқтықты хабарлау"), T("Расскажите, что произошло","Не болғанын айтыңыз")],
     ];
-    return title(T("Защита","Қорғаныс")) + groups.map(([name, keys]) => {
-      const actions = keys.map(key => {
-        const [, label, description] = cards.find(([id]) => id === key);
-        return `<button data-action="${key}"><i>${icon(symbols[key])}</i><span><strong>${E(label)}</strong><small>${E(description)}</small></span>${icon("arrow")}</button>`;
-      }).join("");
-      return `<section class="safety-list"><h2>${name}</h2>${actions}</section>`;
-    }).join("");
+    const service = [
+      ["callbacks", "phone", T("Связь с сотрудником","Қызметкермен байланыс"), T("Приглашения по вашим делам","Істеріңіз бойынша шақырулар")],
+      ["reports", "clock", T("Мои обращения","Менің өтініштерім"), T("История и отметка оператора","Тарих пен оператор белгісі")],
+      ["call-transfer", "transfer", T("Перевод во время звонка","Қоңырау кезіндегі аударым"), T("Перевод с отметкой о звонке","Қоңырау белгісі бар аударым")],
+    ];
+    return `<section class="safety-hero"><h1 tabindex="-1">${T("Защита","Қорғаныс")}</h1><p>${T("Спокойствие — под контролем","Тыныштық — бақылауда")}</p>` +
+      `<strong>${E(p.title)}</strong>${p.checks ? `<span>${E(p.checks)}</span>` : ""}<i class="art art-shield" aria-hidden="true"></i></section>` +
+      live + `<h2 class="section-title">${T("Инструменты защиты","Қорғаныс құралдары")}</h2><div class="tool-grid">` +
+      tools.map(([act, art, name, sub], i) => `<button class="tool t${i}" data-action="${act}"><i class="art art-${art}" aria-hidden="true"></i><b>${name}</b><small>${E(sub)}</small></button>`).join("") +
+      `</div><section class="safety-list"><h2>${T("Связь с отделом безопасности","Қауіпсіздік бөлімімен байланыс")}</h2>` +
+      service.map(([act, art, name, sub]) => `<button data-action="${act}"><i class="art art-${art}" aria-hidden="true"></i><span><strong>${name}</strong><small>${sub}</small></span>${icon("arrow")}</button>`).join("") +
+      `</section><p class="screen-foot">${T("Учебные проверки · Без реальных данных","Оқу тексерулері · Нақты деректерсіз")}</p>`;
   }
   return `${title(T("Защита", "Қорғаныс"))}<div class="action-list">${cards.map(([key, label, sub]) => `<button data-action="${key}">${label}<small>${sub}</small></button>`).join("")}</div>`;
 }
@@ -1005,7 +1099,27 @@ function roleTitle() {
   if (gateway.role==="admin") return T("Сотрудник SOC","SOC қызметкері");
   return E(account?.display_name || T("Клиент","Клиент"));
 }
+function settingsRow(action, art, label, trailing = "", attributes = "") {
+  return `<button class="settings-row" data-action="${action}" ${attributes} ${loading ? "disabled" : ""}><i class="art art-${art}" aria-hidden="true"></i><span>${E(label)}</span>${trailing || '<b class="chevron" aria-hidden="true"></b>'}</button>`;
+}
 function settingsView() {
+  if (product && gateway.role === "client") {
+    const name = account?.display_name || T("Клиент","Клиент");
+    const letters = String(name).trim().split(/\s+/).slice(0, 2).map(w => Array.from(w)[0] || "").join("").toUpperCase();
+    const dark = currentTheme() === "dark";
+    const toggle = `<b class="switch" aria-hidden="true"></b>`;
+    return `<section class="profile-hero"><h1 tabindex="-1">${T("Профиль","Профиль")}</h1><span class="profile-avatar" aria-hidden="true">${E(letters)}<i></i></span><h2>${E(name)}</h2><p class="profile-pill"><b>saq bol</b> · ${T("Учебный счёт","Оқу шоты")}</p></section>` +
+      `<section class="settings-group"><h2>${T("Безопасность","Қауіпсіздік")}</h2>` +
+      settingsRow("remember-settings", "lock", gateway.remember ? T("Сохранённый вход включён","Сақталған кіру қосулы") : T("Сохранённый вход выключен","Сақталған кіру өшірулі")) +
+      settingsRow("contacts", "family", T("Мои согласия","Келісімдерім")) +
+      settingsRow("inbox", "shield", T("Сообщения безопасности","Қауіпсіздік хабарламалары")) + `</section>` +
+      `<section class="settings-group"><h2>${T("Приложение","Қолданба")}</h2>` +
+      settingsRow("language", "lang", T("Язык · Русский / ҚАЗ","Тіл · Қазақша / РУС")) +
+      settingsRow("theme", "moon", T("Тёмная тема","Қараңғы тақырып"), toggle, `role="switch" aria-checked="${dark}"`) +
+      settingsRow("open-guardian", "plane", T("Открыть Telegram-бот","Telegram-ботты ашу")) + `</section>` +
+      button("logout",T("Выйти","Шығу"),"secondary") +
+      `<p class="screen-foot">Saq Bol × BCC 2.9 · ${T("Учебный стенд","Оқу стенді")}</p>`;
+  }
   if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.9 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
     button("remember-settings",gateway.remember ? T("Сохранённый вход включён · Изменить","Сақталған кіру қосулы · Өзгерту") : T("Сохранённый вход выключен · Изменить","Сақталған кіру өшірулі · Өзгерту"),"secondary") +
     button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
@@ -1135,7 +1249,8 @@ function render() {
   const navPage=nav.some(([key])=>key===page)?page:
     (gateway?.role==="admin"?({case:"cases",reports:"cases",reportDetail:"cases",gateway:"system"}[page]||"home"):
     ({detail:"history",incoming:"history",callbacks:"safety",contacts:"safety",scan:"safety",call:"safety",family:"safety",guard:"safety",report:"safety",reports:"safety",reportDetail:"safety",invite:"safety",questionnaire:"history",confirmCancel:"history"}[page]||"home"));
-  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>${product && page === "login" ? "Saq Bol × BCC" : "saq bol"}</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && page === "settings" ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${product && page === "login" ? "" : feedbackView()}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
+  root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>${product && page === "login" ? "Saq Bol × BCC" : "saq bol"}</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && page === "settings" ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${product && page === "login" ? "" : feedbackView()}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key==="history"&&gateway?.role==="client"?"transfer":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
+  paintPauseRing();
   if (product) {
     if(workspaceRead?.pending.size && ["home","staff","cases"].includes(page)) {
       const marker=document.createElement("p");
@@ -1162,15 +1277,11 @@ function render() {
     root.querySelector(".demo-strip")?.remove();
     root.querySelector(".role-tag")?.remove();
     const back = root.querySelector(".back");
-    if (["login","home"].includes(page)) back.remove();
-    if (gateway?.token && page!=="home") root.querySelector(".topbar").insertAdjacentHTML("beforeend",
+    // Main tabs are reached from the bottom navigation, so they show no back arrow or profile shortcut.
+    if (["login","home","history","safety","analytics"].includes(page)) back.remove();
+    // Clients reach the profile from the bottom navigation; staff roles keep the shortcut.
+    if (gateway?.token && gateway.role !== "client" && !["home","settings"].includes(page)) root.querySelector(".topbar").insertAdjacentHTML("beforeend",
       `<button data-action="settings" class="profile-button" aria-label="${T("Профиль","Профиль")}">${icon("settings")}</button>`);
-    if (page === "settings" && gateway?.role === "client")
-      root.querySelector("main").insertAdjacentHTML("beforeend",button("inbox",T("Сообщения безопасности","Қауіпсіздік хабарламалары"),"secondary"));
-    if (page === "safety") {
-      const section=root.querySelector("main");
-      section.querySelector(".heading")?.insertAdjacentHTML("afterend",shortcuts(T)+wallet.telegram(account,circle));
-    }
 
     if (page === "scan") {
       const form=root.querySelector("#scan-form");
@@ -1303,7 +1414,7 @@ root.addEventListener("click", async (event) => {
     await perform(identity.openBankDialer);
     return;
   }
-  const b = event.target.closest("button, input[data-quick-amount]");
+  const b = event.target.closest("button, input[data-quick-amount], input[data-key]");
   if (!b || loading) return;
   if (b.dataset.quickAmount && page === "transfer") {
     const field = b.form?.elements.namedItem("amount");
@@ -1313,6 +1424,7 @@ root.addEventListener("click", async (event) => {
     }
     return;
   }
+  if (b.dataset.key && page === "transfer") { pressAmountKey(b); return; }
   if(b.dataset.days){const value=Number(b.dataset.days);if(gateway.role==="admin")socDays=value;else walletDays=value;selectedDay=null;await open(page);return;}
   if(b.dataset.chartStep){stepChart(root,Number(b.dataset.chartStep));return;}
   if(b.dataset.chartDay){selectedDay=data.series.findIndex(v=>v.day===b.dataset.chartDay);render();root.querySelector('[data-chart-day="'+b.dataset.chartDay+'"]')?.focus({preventScroll:true});return;}
@@ -1552,6 +1664,7 @@ root.addEventListener("click", async (event) => {
     await open(act);
     return;
   }
+  if (act === "theme") { toggleTheme(); render(); return; }
   if (act === "language") {
     const transferForm = root.querySelector("#transfer-form");
     if (page === "transfer" && transferForm) draft = readTransferDraft(new FormData(transferForm));
@@ -1623,7 +1736,7 @@ root.addEventListener("click", async (event) => {
     await open("detail", selectedId);
     return;
   }
-  if (act === "transfer") {
+  if (act === "transfer" || act === "new-recipient") {
     presetMode = false; draft = product ? null : structuredClone(presetValues.normal);
     await open("transfer");
     return;
@@ -1958,6 +2071,7 @@ setInterval(() => {
   const timer = document.querySelector("#countdown");
   if (timer) {
     timer.textContent = timerText();
+    paintPauseRing();
     if (timer.textContent === "00:00" && !loading) {
       if (page === "questionnaire" && step === questions.length && timer.dataset.expired === "false") render();
       if (product && page === "detail" && expiryChecked !== selectedId) {
@@ -1984,6 +2098,7 @@ if (product) void restoreSession();
 root.addEventListener("change", event => {
 
   if (event.target.name === "remember") rememberLogin=event.target.checked;
+  if (event.target.name === "direction" && event.target.form?.id === "ledger-filter") event.target.form.requestSubmit();
   if (page === "transfer" && event.target.name === "recipient_phone") {
     const manualField = root.querySelector("[data-manual-phone]");
     if (manualField) {
@@ -2002,8 +2117,8 @@ root.addEventListener("change", event => {
   if (page === "review" && draft && event.target.name === "call_pressure_answer" &&
       Object.hasOwn(callAnswers, event.target.value) && needsCallAnswer(draft, data, account?.supports_call_question)) {
     draft.callAnswer = event.target.value;
-    const confirm = root.querySelector('[data-action="submit-transfer"]');
-    if (confirm) confirm.disabled = false;
+    render();
+    root.querySelector('[name="call_pressure_answer"]:checked')?.focus();
   }
 });
 root.addEventListener("input", event => {

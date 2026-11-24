@@ -2,6 +2,8 @@
 if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
     && typeof Object.hasOwn === "function" && typeof structuredClone === "function"
     && typeof Array.prototype.at === "function") {
+  // Apply the saved light/dark choice before the first screen renders.
+  void import("./theme-mode.mjs").then(m => m.loadTheme()).catch(() => {});
   const offline = new URLSearchParams(location.search).get("offline") === "1";
   if (offline) {
     void import("./mobile.mjs");
