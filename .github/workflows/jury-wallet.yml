@@ -12,6 +12,10 @@ on:
       - "backend/scripts/mobile_ephemeral.py"
       - "backend/scripts/jury_wallet.py"
       - "backend/app/mobile_gateway/jury_rooms.py"
+      - "backend/app/mobile_gateway/jury_results.py"
+      - "backend/scripts/payee_followup_replay.py"
+      - "docs/evidence/scenario_stand.json"
+      - "frontend/src/lib/scenario-signals.json"
       - "backend/app/mobile_gateway/passwords.py"
       - "android-app/package*.json"
       - "android-app/scripts/build-wallet.mjs"
@@ -102,5 +106,20 @@ jobs:
           QADAM_JURY_E2E: "1"
           QADAM_JURY_ORIGIN: http://127.0.0.1:18003
         run: npm run test:ui -- tests/browser/jury-rooms.spec.mjs
+      - name: Verify packaged jury evidence and paired evaluation
+        run: |
+          python3 - <<'PY'
+          import urllib.request
+          base = "http://127.0.0.1:18003/jury/results"
+          with urllib.request.urlopen(base, timeout=20) as response:
+              page = response.read().decode()
+          assert "120" in page and "family-rent-twin" in page
+          for scenario in ("market-reservation", "family-rent-twin"):
+              request = urllib.request.Request(base + "/pair?scenario=" + scenario, data=b"")
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  page = response.read().decode()
+              assert page.count("<section>") == 2
+              assert ("одинаковые признаки" in page) == scenario.endswith("-twin")
+          PY
       - if: always()
         run: docker compose -f docker-compose.jury.yml down --remove-orphans
