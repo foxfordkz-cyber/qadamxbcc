@@ -54,7 +54,9 @@ html[data-product] {
   --r-ctl: 20px;
   --gutter: 20px;
   --bleed: calc(-1 * var(--gutter));
-  --safe-top-pad: env(safe-area-inset-top, 0px);
+  /* Capacitor provides --safe-area-inset-*; browsers fall back to env(). */
+  --safe-top-pad: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom-pad: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
 
   /* Names used by earlier layers. */
   --pine: var(--brand);
@@ -114,6 +116,7 @@ body {
 }
 #app .shell {
   position: relative;
+  padding-top: 0;
   background: var(--bg);
   color: var(--ink);
 }
@@ -255,7 +258,7 @@ body {
 }
 
 #app main {
-  padding: calc(56px + var(--safe-top-pad)) var(--gutter) calc(120px + env(safe-area-inset-bottom));
+  padding: calc(56px + var(--safe-top-pad)) var(--gutter) calc(120px + var(--safe-bottom-pad));
 }
 #app[data-actor=guest] main {
   padding-bottom: 32px;
@@ -631,6 +634,7 @@ body {
 }
 #app .entry.sign-in .sign-footer {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   gap: 4px;
   margin: 0;
@@ -2497,7 +2501,7 @@ body {
   #app .connected-nav,
   #app .bottom-nav {
     left: 50%;
-    bottom: calc(14px + env(safe-area-inset-bottom));
+    bottom: calc(14px + var(--safe-bottom-pad));
     display: flex !important;
     align-items: center;
     gap: 2px;
