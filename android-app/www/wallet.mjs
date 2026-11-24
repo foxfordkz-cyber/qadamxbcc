@@ -58,98 +58,94 @@ export function walletUI({ T, E, amount, when, button, status }) {
     " " +
     icon("arrow") +
     "</button>";
-  const mark = (s) =>
-    ({ approved: "✓", cooling_off: "◷", blocked: "⊘", cancelled: "×" })[s] ||
-    "·";
-  const badge = (s) =>
-    '<span class="wb ' + E(s) + '">' + mark(s) + " " + E(status(s)) + "</span>";
+  const badge = (s) => '<span class="wb ' + E(s) + '">' + E(status(s)) + "</span>";
+  const RU_MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+  const KK_MONTHS = ["қаңтар","ақпан","наурыз","сәуір","мамыр","маусым","шілде","тамыз","қыркүйек","қазан","қараша","желтоқсан"];
+  const dayKey = (offsetDays = 0) => ledgerInstant(new Date(Date.now() - offsetDays * 86400000).toISOString())?.day;
+  // "Сегодня" / "Вчера" for the two latest days, otherwise "24 ноября".
+  function dayLabel(day, withDate) {
+    const m = Number(day.slice(5, 7)) - 1, d = Number(day.slice(8, 10));
+    const date = d + " " + T(RU_MONTHS[m] || "", KK_MONTHS[m] || "");
+    const near = day === dayKey(0) ? T("Сегодня", "Бүгін") : day === dayKey(1) ? T("Вчера", "Кеше") : "";
+    if (!near) return withDate ? date : shortDate(day);
+    return withDate ? near + ", " + date : near;
+  }
+  const plain = (v) => amount(v).replace(/\s?₸$/, "");
+  function row(r, group) {
+    const local = ledgerInstant(r.created_at), incoming = r.direction === "incoming";
+    const time = local ? local.time : "";
+    const sub = group
+      ? (incoming ? T("Поступление", "Түсім") : T("Перевод", "Аударым")) + " · " + time
+      : local ? dayLabel(local.day, false) + ", " + time : when(r.created_at);
+    return '<button class="ledger-row" ' + (incoming ? "data-incoming" : "data-detail") + '="' + E(r.transaction_id) + '">' +
+      '<i class="flow ' + (incoming ? "credit" : "") + '" aria-hidden="true">' + E(initials(r.counterparty)) + "</i>" +
+      "<span><strong>" + E(r.counterparty) + "</strong><small>" + E(sub) + "</small></span>" +
+      '<span class="right"><strong>' + (r.status === "approved" ? (incoming ? "+" : "−") : "") + amount(r.amount) + "</strong>" + badge(r.status) + "</span></button>";
+  }
   function rows(items, group = false) {
     if (!items?.length)
-      return (
-        '<p class="empty">' +
-        T("Операций по этим условиям нет.", "Бұл шарттарға сай операция жоқ.") +
-        "</p>"
-      );
-    let last = "";
-    return (
-      '<div class="ledger">' +
-      items
-        .map((r) => {
-          const day = ledgerInstant(r.created_at)?.day || "",
-            incoming = r.direction === "incoming";
-          const h =
-            group && day !== last
-              ? '<h3 class="day-title">' + shortDate(day) + "</h3>"
-              : "";
-          last = day;
-          return (
-            h +
-            '<button class="ledger-row" ' +
-            (incoming ? "data-incoming" : "data-detail") +
-            '="' +
-            E(r.transaction_id) +
-            '"><i class="flow ' +
-            (incoming ? "credit" : "") +
-            '">' +
-            icon(r.direction) +
-            "</i><span><strong>" +
-            E(r.counterparty) +
-            "</strong><small>" +
-            // Grouped rows already sit under a date heading, so they show only the time.
-            E(group && day ? ledgerInstant(r.created_at).time : when(r.created_at)) +
-            '</small></span><span class="right"><strong>' +
-            (r.status === "approved" ? (incoming ? "+" : "−") : "") +
-            amount(r.amount) +
-            "</strong>" +
-            badge(r.status) +
-            "</span></button>"
-          );
-        })
-        .join("") +
-      "</div>"
-    );
+      return '<p class="empty">' + T("Операций по этим условиям нет.", "Бұл шарттарға сай операция жоқ.") + "</p>";
+    if (!group) return '<div class="ledger">' + items.map((r) => row(r, false)).join("") + "</div>";
+    // History: one card per day with the day's executed totals.
+    const days = [];
+    for (const r of items) {
+      const day = ledgerInstant(r.created_at)?.day || "";
+      if (!days.length || days.at(-1).day !== day) days.push({ day, items: [] });
+      days.at(-1).items.push(r);
+    }
+    return '<div class="ledger">' + days.map(({ day, items: list }) => {
+      const done = list.filter((r) => r.status === "approved");
+      const out = done.filter((r) => r.direction !== "incoming").reduce((t, r) => t + Number(r.amount || 0), 0);
+      const inc = done.filter((r) => r.direction === "incoming").reduce((t, r) => t + Number(r.amount || 0), 0);
+      const totals = [out ? "−" + plain(out) : "", inc ? "+" + plain(inc) : ""].filter(Boolean).join(" / ");
+      return '<section class="day-group"><header class="day-title"><h3>' + E(day ? dayLabel(day, true) : "—") + "</h3>" +
+        (totals ? "<span>" + totals + " ₸</span>" : "") + '</header><div class="day-rows">' + list.map((r) => row(r, true)).join("") + "</div></section>";
+    }).join("") + "</div>";
   }
-  function card(a, hidden, dock = "") {
-    return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance">${hidden ? T("Показать баланс", "Балансты көрсету") : T("Скрыть баланс", "Балансты жасыру")}</button></div>
-      <div class="card-row">${cardThumbnail}<div class="q-balance"><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><small>${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</small></div></div>${dock}</article>`;
+  const checks = (n) => n + " " + T(n % 10 === 1 && n % 100 !== 11 ? "проверка" : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? "проверки" : "проверок", "тексеру");
+  // Share of the week's operations that passed without a pause or a block.
+  function protection(stats, a) {
+    const total = Math.max(0, Number(stats?.count) || 0);
+    const flagged = Math.min(total, (Number(stats?.paused) || 0) + (Number(stats?.blocked) || 0));
+    return {
+      known: !!stats,
+      pct: total ? Math.round((100 * (total - flagged)) / total) : 100,
+      checks: checks(total) + " " + T("за неделю", "аптасына"),
+      calm: !a?.active_pause && !a?.pending_call,
+    };
   }
-  // Anti-fraud tips shown as stories; each opens an existing protection screen.
+  function protectionCard(stats, a) {
+    const p = protection(stats, a);
+    return `<button class="protection-index" data-action="safety"><b>${p.known ? T("Индекс защиты", "Қорғаныс индексі") + " " + p.pct + "%" : T("Защита включена", "Қорғаныс қосулы")}</b>` +
+      `${p.known ? `<span>${E(p.checks)}</span>` : ""}<small>${p.calm ? T("Всё спокойно", "Бәрі тыныш") : T("Есть перевод на проверке", "Тексерілетін аударым бар")}</small>` +
+      `<i class="art art-shield" aria-hidden="true"></i><i class="ring" aria-hidden="true"></i></button>`;
+  }
+  function card(a, hidden) {
+    return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance">${icon("eye")}<span>${hidden ? T("Показать баланс", "Балансты көрсету") : T("Скрыть баланс", "Балансты жасыру")}</span></button></div>
+      <div class="q-balance"><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><small>${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</small></div><i class="art art-card" aria-hidden="true"></i></article>`;
+  }
+  // Anti-fraud tips; each opens an existing protection screen.
   function stories() {
     const tips = [
-      ["call", "call", T("Звонят «из банка»?", "«Банктен» қоңырау ма?")],
-      ["scan", "message", T("Проверь сообщение", "Хабарламаны тексер")],
+      ["call", "phone", T("Звонят «из банка»?", "«Банктен» қоңырау ма?")],
+      ["scan", "chat", T("Проверь сообщение", "Хабарламаны тексер")],
       ["family", "family", T("Семейный щит", "Отбасы қорғанысы")],
       ["gateway", "search", T("Проверь получателя", "Алушыны тексер")],
-      ["report", "report", T("Сообщить об обмане", "Алаяқтықты хабарлау")],
+      ["report", "warning", T("Сообщить об обмане", "Алаяқтықты хабарлау")],
     ];
-    return `<nav class="tip-stories" aria-label="${T("Советы по безопасности", "Қауіпсіздік кеңестері")}">${tips
-      .map(([act, ic, text], i) => `<button class="story s${i}" data-action="${act}"><span>${text}</span><i aria-hidden="true">${icon(ic)}</i></button>`)
-      .join("")}</nav>`;
-  }
-  // Decorative split of the week's money flow; widths are SVG attributes, so no inline styles are needed.
-  function flowBar(stats, hidden) {
-    const inc = Math.max(0, Number(stats.incoming) || 0), out = Math.max(0, Number(stats.outgoing) || 0);
-    const total = inc + out;
-    const solid = (cls) => `<svg class="flow-bar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="8" rx="4" class="${cls}"/></svg>`;
-    if (hidden || !total) return solid("empty");
-    if (!inc || !out) return solid(inc ? "in" : "out");
-    const a = Math.max(6, Math.min(94, (inc / total) * 100));
-    return `<svg class="flow-bar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width="${(a - 1.5).toFixed(1)}" height="8" rx="4" class="in"/><rect x="${(a + 1.5).toFixed(1)}" width="${(100 - a - 1.5).toFixed(1)}" height="8" rx="4" class="out"/></svg>`;
+    return `<section class="wallet-tips"><h2>${T("Полезно знать", "Білген жөн")}</h2><nav class="tip-stories" aria-label="${T("Советы по безопасности", "Қауіпсіздік кеңестері")}">${tips
+      .map(([act, art, text], i) => `<button class="story s${i}" data-action="${act}"><i class="art art-${art}" aria-hidden="true"></i><span>${text}</span></button>`)
+      .join("")}</nav></section>`;
   }
   function home(a, ledger, stats, hidden, pending, offline=false) {
     if (!a) return button("retry-home", T("Счёт недоступен · Повторить","Шот қолжетімсіз · Қайталау"),"secondary") + (ledger ? rows(ledger.items) : "");
     const actions = [
-      ["history", T("История", "Тарих")],
-      ["safety", T("Защита", "Қорғаныс")],
-      offline ? ["check", T("Проверка","Тексеру")] : ["open-guardian", "Telegram"],
+      ["history", "clock", T("История", "Тарих")],
+      ["safety", "shield", T("Защита", "Қорғаныс")],
+      offline ? ["check", "search", T("Проверка","Тексеру")] : ["open-guardian", "plane", "Telegram"],
     ];
-    const greet = `<header class="wallet-greeting"><h1><button class="profile-entry" data-action="settings" aria-label="${T("Открыть профиль", "Профильді ашу")} · ${E(a.display_name)}"><span class="avatar" aria-hidden="true">${E(initials(a.display_name))}</span><span><strong>${E(a.display_name)}</strong><small><b>saq bol</b>${T("Учебный счёт", "Оқу шоты")}</small></span></button></h1><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button>${offline?"":`<button data-action="inbox" aria-label="${T("Уведомления", "Хабарламалар")}">${icon("bell")}</button>`}</header>`;
-    const links = actions
-      .map(
-        ([k, n]) =>
-          `<button data-action="${k}"><i>${icon(k === "open-guardian" ? "guardian" : k)}</i><span>${n}</span></button>`,
-      )
-      .join("");
+    const greet = `<header class="wallet-greeting"><h1><button class="profile-entry" data-action="settings" aria-label="${T("Открыть профиль", "Профильді ашу")} · ${E(a.display_name)}"><span class="avatar" aria-hidden="true">${E(initials(a.display_name))}</span><span><strong>${E(a.display_name)}</strong><small>saq bol · ${T("Учебный счёт", "Оқу шоты")}</small></span></button></h1><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button>${offline?"":`<button data-action="inbox" aria-label="${T("Уведомления", "Хабарламалар")}">${icon("bell")}</button>`}</header>`;
+    const links = actions.map(([k, art, n]) => `<button data-action="${k}"><i class="art art-${art}" aria-hidden="true"></i><span>${n}</span></button>`).join("");
     const pause = a.active_pause
       ? `<button class="wallet-check" data-detail="${E(a.active_pause)}">${icon("history")}<span>${T("Перевод на проверке", "Аударым тексерілуде")}</span>${icon("arrow")}</button>`
       : "";
@@ -157,34 +153,29 @@ export function walletUI({ T, E, amount, when, button, status }) {
       ? `<button class="wallet-check" data-call-id="${E(a.pending_call)}">${icon("call")}<span>${T("Проверка после звонка", "Қоңыраудан кейінгі тексеру")}</span>${icon("arrow")}</button>`
       : "";
     const people = a.recipients
-      .map(
-        (r, i) =>
-          `<button data-payee="${E(r.phone)}"><i class="person p${i}">${E(initials(r.name))}</i><span>${E(r.name)}</span></button>`,
-      )
+      .map((r, i) => `<button data-payee="${E(r.phone)}"><i class="person p${i % 4}" aria-hidden="true">${E(initials(r.name))}</i><span class="sr-only">${E(r.name)}</span></button>`)
       .join("");
-    const dock = '<div class="action-dock"><button class="transfer-primary" data-action="transfer">'+icon("transfer")+'<span>'+T("Перевести","Аудару")+'</span></button><div class="wallet-quick">'+links+'</div></div>';
+    const dock = '<div class="action-dock"><button class="transfer-primary" data-action="transfer"><i class="art art-transfer" aria-hidden="true"></i><span>'+T("Перевести","Аудару")+'</span></button><div class="wallet-quick">'+links+'</div></div>';
     return (
-      greet + (offline ? "" : stories()) +
-      '<div class="wallet-dashboard"><div class="wallet-overview"><div class="wallet-account">'+card(a, hidden, dock) +
+      `<section class="home-hero">${greet}${card(a, hidden)}</section>` +
+      '<div class="wallet-dashboard"><div class="wallet-overview"><div class="wallet-account">' + dock +
       (pending
-        ? button(
-            "recover",
-            T("Проверить незавершённый запрос", "Аяқталмаған сұрауды тексеру"),
-          ) +
+        ? button("recover", T("Проверить незавершённый запрос", "Аяқталмаған сұрауды тексеру")) +
           button("abandon", T("Закрыть запрос", "Сұрауды жабу"), "secondary")
         : "") +
-      (pause || call
-        ? '<div class="wallet-checks">' + pause + call + "</div>"
-        : "") +
-      '</div><aside class="wallet-companion">' +
-      (stats ? `<button class="week-summary" data-action="analytics"><b>${T("Моя аналитика", "Менің талдауым")}</b><small>${T("Расходы за неделю", "Апталық шығыс")}</small><strong>${hidden ? "•••••• ₸" : amount(stats.outgoing)}</strong>${flowBar(stats, hidden)}</button>`
-        : button("retry-summary",T("Сводка недоступна · Повторить","Жиынтық қолжетімсіз · Қайталау"),"secondary"))+
-      `<button class="wallet-protection" data-action="safety"><b>${T("Под защитой", "Қорғауда")}</b><small>${T("Пауза при звонке и проверка получателя", "Қоңырау кезіндегі кідіріс пен алушыны тексеру")}</small><span class="guard-dots" aria-hidden="true">${icon("safety")}${icon("call")}${icon("family")}</span></button>` +
-      '</aside></div><div class="wallet-activity"><section class="wallet-section wallet-recent">' +
+      (pause || call ? '<div class="wallet-checks">' + pause + call + "</div>" : "") +
+      '</div><aside class="wallet-companion">' + protectionCard(stats, a) + "</aside></div>" +
+      '<div class="wallet-activity">' + (offline ? "" : stories()) +
+      '<section class="wallet-section wallet-recent">' +
       heading(T("Последние операции","Соңғы операциялар"),little("history",T("Все","Барлығы"))) +
       (ledger ? rows(ledger.items.slice(0,3)) : button("retry-home",T("Обновить историю","Тарихты жаңарту"),"secondary")) +
-      '</section><section class="wallet-section wallet-recipients">'+heading(T("Кому перевести","Кімге аударамыз")) +
-      (people ? '<div class="people">'+people+'</div>' : '<p class="empty">'+T("Учебные получатели пока не добавлены.","Оқу алушылары әзірге қосылмаған.")+'</p>') +
+      "</section>" +
+      (stats
+        ? `<button class="week-summary" data-action="analytics"><span>${T("Моя аналитика", "Менің талдауым")}</span><i class="art art-chart" aria-hidden="true"></i><strong>${hidden ? "•••••• ₸" : amount(stats.outgoing)}</strong></button>`
+        : button("retry-summary",T("Сводка недоступна · Повторить","Жиынтық қолжетімсіз · Қайталау"),"secondary")) +
+      `<p class="fine">${T("Все данные учебные", "Барлық дерек оқу үшін")}</p>` +
+      '<section class="wallet-section wallet-recipients">' + heading(T("Кому перевести","Кімге аударамыз")) +
+      (people ? '<div class="people">' + people + `<button class="people-add" data-action="new-recipient" aria-label="${T("Новый перевод", "Жаңа аударым")}">+</button></div>` : '<p class="empty">'+T("Учебные получатели пока не добавлены.","Оқу алушылары әзірге қосылмаған.")+'</p>') +
       "</section></div></div>"
     );
   }
@@ -205,116 +196,74 @@ export function walletUI({ T, E, amount, when, button, status }) {
       )
       .join("") +
     "</div>";
-  const options = (values, current) =>
-    values
-      .map(
-        ([v, label]) =>
-          '<option value="' +
-          E(v) +
-          '" ' +
-          (v === current ? "selected" : "") +
-          ">" +
-          E(label) +
-          "</option>",
-      )
-      .join("");
   function history(d, s) {
-    return (
-      "<h1>" +
-      T("Операции", "Операциялар") +
-      '</h1><form id="ledger-filter" class="ledger-filter"><label class="search-field"><span class="sr-only">' +
-      T("Поиск по имени или ID", "Аты немесе ID бойынша іздеу") +
-      "</span>" + icon("search") +
-      '<input name="q" maxlength="128" placeholder="' +
-      T("Поиск по имени или ID", "Аты немесе ID бойынша іздеу") +
-      '" value="' +
-      E(s.q) +
-      '"></label><div><select name="status" aria-label="' +
-      T("Статус", "Күй") +
-      '">' +
-      options(
-        [
-          ["", T("Все статусы", "Барлық күй")],
-          ...["approved", "cooling_off", "blocked", "cancelled"].map((k) => [
-            k,
-            status(k),
-          ]),
-        ],
-        s.status,
-      ) +
-      '</select><select name="direction" aria-label="' +
-      T("Направление", "Бағыт") +
-      '">' +
-      options(
-        [
-          ["", T("Оба направления", "Екі бағыт")],
-          ["outgoing", T("Исходящие", "Шығыс")],
-          ["incoming", T("Входящие", "Кіріс")],
-        ],
-        s.direction,
-      ) +
-      '</select></div><button class="secondary">' +
-      T("Применить", "Қолдану") +
-      "</button></form>" +
-      (s.day || s.days
-        ? '<button class="w-link" data-action="clear-period">' +
-          E(
-            s.day
-              ? s.day +
-                  (s.through && s.through !== s.day ? " – " + s.through : "")
-              : s.days + " " + T("дн.", "күн"),
-          ) +
+    const dir = (v, label) =>
+      `<label class="segment"><input type="radio" name="direction" value="${v}" ${(s.direction || "") === v ? "checked" : ""}><span>${label}</span></label>`;
+    const filters = [
+      s.status ? `<button class="w-link chip-clear" data-action="clear-period">${E(status(s.status))} ×</button>` : "",
+      s.day || s.days
+        ? '<button class="w-link chip-clear" data-action="clear-period">' +
+          E(s.day ? s.day + (s.through && s.through !== s.day ? " – " + s.through : "") : s.days + " " + T("дн.", "күн")) +
           " ×</button>"
-        : "") +
+        : "",
+    ].join("");
+    return (
+      "<h1>" + T("Операции", "Операциялар") + "</h1>" +
+      '<form id="ledger-filter" class="ledger-filter"><label class="search-field"><span class="sr-only">' +
+      T("Поиск по имени или ID", "Аты немесе ID бойынша іздеу") + "</span>" + icon("search") +
+      '<input name="q" type="search" maxlength="128" placeholder="' + T("Имя или ID операции", "Аты немесе операция ID") + '" value="' + E(s.q) + '"></label>' +
+      '<input type="hidden" name="status" value="' + E(s.status || "") + '">' +
+      '<div class="segments direction" role="radiogroup" aria-label="' + T("Направление", "Бағыт") + '">' +
+      dir("", T("Все", "Барлығы")) + dir("outgoing", T("Исходящие", "Шығыс")) + dir("incoming", T("Входящие", "Кіріс")) +
+      '</div><button class="sr-only" type="submit">' + T("Применить", "Қолдану") + "</button></form>" +
+      (filters ? '<div class="active-filters">' + filters + "</div>" : "") +
       rows(d?.items, true) +
-      (d?.offset
-        ? button("prev", T("Предыдущие", "Алдыңғысы"), "secondary")
-        : "") +
-      (d?.has_more ? button("next", T("Дальше", "Келесі"), "secondary") : "")
+      (d?.offset ? button("prev", T("Предыдущие", "Алдыңғысы"), "secondary") : "") +
+      (d?.has_more ? button("next", T("Дальше", "Келесі"), "secondary") : "") +
+      '<p class="screen-foot">' + T("Показаны операции учебного счёта", "Оқу шотының операциялары көрсетілген") + "</p>"
     );
+  }
+  // Incoming vs outgoing share as a ring; segments are SVG attributes, so no inline styles are needed.
+  function donut(inc, out) {
+    const total = inc + out;
+    const outPct = total ? Math.max(out ? 2 : 0, Math.min(out && inc ? 98 : 100, (out / total) * 100)) : 0;
+    const inPct = total ? 100 - outPct : 0;
+    const gap = outPct && inPct ? 1.2 : 0;
+    const seg = (cls, len, start) => len > 0
+      ? `<circle class="${cls}" cx="21" cy="21" r="15.915" pathLength="100" stroke-dasharray="${Math.max(0, len - gap).toFixed(2)} ${(100 - Math.max(0, len - gap)).toFixed(2)}" stroke-dashoffset="${(25 - start).toFixed(2)}"/>`
+      : "";
+    return `<svg class="donut" viewBox="0 0 42 42" aria-hidden="true"><circle class="track" cx="21" cy="21" r="15.915"/>${seg("out", outPct, 0)}${seg("in", inPct, outPct)}</svg>`;
+  }
+  function periodLabel(d) {
+    const first = d.series?.[0]?.day, last = d.series?.at(-1)?.day;
+    if (!first || !last) return "";
+    const [fy, fm, fd] = first.split("-").map(Number), [ly, lm, ld] = last.split("-").map(Number);
+    const month = (m) => T(RU_MONTHS[m - 1] || "", KK_MONTHS[m - 1] || "");
+    const range = fm === lm && fy === ly ? fd + "–" + ld + " " + month(lm) : fd + " " + month(fm) + " – " + ld + " " + month(lm);
+    return T("За ", "") + range;
   }
   function analytics(d, index) {
     if (!d) return "";
-    const metrics = [
-      ["incoming", T("Поступления", "Кіріс"), d.incoming],
-      ["outgoing", T("Расходы", "Шығыс"), d.outgoing],
-    ];
-    const cards = metrics
-      .map(
-        ([k, n, v]) =>
-          `<div class="metric-cash ${k}"><div>${icon(k)}<small>${n}</small></div><strong>${amount(v)}</strong></div>`,
-      )
-      .join("");
+    const inc = Math.max(0, Number(d.incoming) || 0), out = Math.max(0, Number(d.outgoing) || 0);
     const counts = [
       ["", d.count, T("Всего операций", "Барлық операциялар")],
       ["cooling_off", d.paused, T("На проверке", "Тексерілуде")],
       ["blocked", d.blocked, T("Отклонены", "Қабылданбады")],
     ];
     return (
-      "<h1>" +
-      T("Аналитика", "Аналитика") +
-      "</h1>" +
-      periods(d.days) +
-      '<div class="analytics-layout"><div class="cash-metrics">' +
-      cards +
-      '</div><section class="wallet-insight"><h2>' +
-      T("Движение денег", "Ақша қозғалысы") +
-      "</h2>" +
-      cashPlot(d, d.series[index]?.day, { T, E, amount, icon }) +
-      "</section></div>" +
+      "<h1>" + T("Аналитика", "Аналитика") + "</h1>" + periods(d.days) +
+      `<section class="money-summary"><div><small>${T("Поступления", "Кіріс")}</small><strong class="in">${amount(d.incoming)}</strong></div>` +
+      `<div><small>${T("Расходы", "Шығыс")}</small><strong>${amount(d.outgoing)}</strong></div><small class="period">${E(periodLabel(d))}</small><i class="art art-coins" aria-hidden="true"></i></section>` +
+      `<section class="donut-card"><h2>${T("Движение денег", "Ақша қозғалысы")}</h2><div class="donut-wrap">${donut(inc, out)}<p><strong>${amount(d.outgoing)}</strong><small>${T("Всего расходов", "Барлық шығыс")}</small></p></div>` +
+      `<ul class="donut-legend"><li class="out"><span>${T("Расходы", "Шығыс")}</span><b>${amount(d.outgoing)}</b></li><li class="in"><span>${T("Поступления", "Кіріс")}</span><b>${amount(d.incoming)}</b></li></ul>` +
+      `<p class="fine">${T("Перевод на проверке не включён в расходы", "Тексерудегі аударым шығысқа кірмейді")}</p></section>` +
+      '<section class="wallet-insight"><h2>' + T("Расходы по дням", "Күндер бойынша шығыс") + "</h2>" +
+      cashPlot(d, d.series[index]?.day, { T, E, amount, icon }) + "</section>" +
       heading(T("Операции за период", "Кезеңдегі операциялар")) +
       '<div class="count-list">' +
-      counts
-        .map(
-          ([k, v, n]) =>
-            `<button data-drill-status="${k}"><span>${n}</span><strong>${v}</strong>${icon("arrow")}</button>`,
-        )
-        .join("") +
+      counts.map(([k, v, n]) => `<button data-drill-status="${k}"><span>${n}</span><strong>${v}</strong>${icon("arrow")}</button>`).join("") +
       '</div><p class="hint">' +
-      T(
-        "В суммы входят проведённые операции. Календарь по времени Казахстана.",
-        "Сомаға орындалған операциялар кіреді. Күндер Қазақстан уақытымен.",
-      ) +
+      T("В суммы входят проведённые операции. Календарь по времени Казахстана.", "Сомаға орындалған операциялар кіреді. Күндер Қазақстан уақытымен.") +
       "</p>"
     );
   }
@@ -393,5 +342,5 @@ export function walletUI({ T, E, amount, when, button, status }) {
       <div class="guardian-count"><span>${T("Согласие получено", "Келісім берілді")}</span><b>${contacts ? verified : "—"} / ${a?.contact_limit ?? "—"}</b></div>
       <div class="guardian-links">${a?.guardian_username ? button("open-guardian", T("Открыть Telegram", "Telegram ашу")) : ""}${button("contacts", T("Доверенный круг", "Сенімді адамдар"), "secondary")}</div><small>${a && !a.guardian_username ? T("Адрес бота на стенде не настроен.", "Стендте боттың мекенжайы бапталмаған.") : channel}</small></section>`;
   }
-  return { home, history, analytics, soc, telegram, rows, badge, periods };
+  return { home, history, analytics, soc, telegram, rows, badge, periods, protection, protectionCard };
 }

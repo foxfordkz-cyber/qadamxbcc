@@ -28,14 +28,22 @@ export async function checkPayee(draft, api, recipients = [], supportsCallQuesti
   }
 }
 
-export function payeeFields(draft, T, E) {
+export function manualPhoneField(draft, T, E) {
   const p = draft?.payee;
   return `<label data-manual-phone ${p?.manual ? "" : "hidden"}>${T("Телефон получателя", "Алушының телефоны")}
-    <input type="tel" name="manual_phone" autocomplete="off" maxlength="24" ${p?.manual ? "required" : "disabled"} value="${E(p?.manual ? draft.recipient_phone : "")}"></label>
-    <label>${T("Банк получателя", "Алушының банкі")}<select name="payee_bank">
+    <input type="tel" name="manual_phone" autocomplete="off" maxlength="24" ${p?.manual ? "required" : "disabled"} value="${E(p?.manual ? draft.recipient_phone : "")}"></label>`;
+}
+
+export function payeeDetailFields(draft, T, E) {
+  const p = draft?.payee;
+  return `<label class="bank-field">${T("Банк получателя", "Алушының банкі")}<select name="payee_bank">
       <option value="bcc">Bank CenterCredit</option><option value="other" ${p?.bank === "other" ? "selected" : ""}>${T("Другой банк", "Басқа банк")}</option></select></label>
     <label>${T("Ожидаемое имя получателя (необязательно)", "Алушының күтілетін аты (міндетті емес)")}
       <input name="payee_name" autocomplete="off" maxlength="80" value="${E(p?.expectedName || "")}"></label>`;
+}
+
+export function payeeFields(draft, T, E) {
+  return manualPhoneField(draft, T, E) + payeeDetailFields(draft, T, E);
 }
 
 const labels = {

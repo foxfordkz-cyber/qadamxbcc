@@ -12,8 +12,7 @@
     "apk": "npm run sync && cd android && ./gradlew assembleDebug",
     "pretest": "npm run vendor",
     "preview": "node scripts/serve.mjs",
-    "test:ui": "playwright test",
-    "illustrations": "node scripts/illustrations/render.mjs"
+    "test:ui": "playwright test"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
@@ -30,7 +29,6 @@
     "@capacitor/assets": "^4.0.0",
     "@capacitor/cli": "^8.6.2",
     "@playwright/test": "^1.58.2",
-    "sharp": "^0.35.5",
-    "three": "^0.170.0"
+    "sharp": "^0.35.5"
   }
 }
