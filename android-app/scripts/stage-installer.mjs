@@ -14,7 +14,7 @@ if (typeof packageVersion !== "string" || !/^\d+\.\d+\.\d+$/.test(packageVersion
 const version = packageVersion.replace(/\.0$/, "");
 const base = `Saq-Bol-Android-${version}`;
 const apkName = `${base}.apk`;
-const canonical = await readOptional("team.json");
+const canonical = await readOptional("current.json");
 if (canonical !== null) {
   const record = JSON.parse(canonical);
   if (record.version !== version || record.package !== "kz.qadamx.bccshield.demo" ||

@@ -5,7 +5,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { LanguageSwitch } from "@/components/language-switch";
 import { LocaleProvider, useLocale } from "@/lib/i18n";
 import release from "../../../../public/downloads/current.json";
-import team from "../../../../public/downloads/team.json";
+import legacy from "../../../../public/downloads/legacy-website-2.9.json";
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -35,15 +35,15 @@ function Installer() {
     </section>
     <section className="installer-help">
       <h2>{kk ? "Орнату" : "Установка"}</h2>
-      <p>{kk ? "Телефоныңызда жүктелген APK файлын ашып, Android сұрауын растаңыз. Сайттан бұрын орнатылған қолданба жаңартылады." : "Откройте скачанный APK на телефоне и подтвердите установку в Android. Если вы уже устанавливали кошелёк с сайта, он обновится поверх прежнего."}</p>
+      <p>{kk ? "Телефоныңызда жүктелген APK файлын ашып, Android сұрауын растаңыз. Командалық нұсқа орнатылса, деректер сақталады." : "Откройте скачанный APK на телефоне и подтвердите установку в Android. Если установлен командный кошелёк, обновление сохранит его данные."}</p>
       <details><summary>{kk ? "Кіру экраны ашылмаса" : "Если не появился экран входа"}</summary>
         <p>{kk ? "Google Play арқылы Android System WebView мен Chrome қолданбаларын жаңартып, әмиянды қайта ашыңыз. Командалық тіркелгімен браузерден де кіруге болады." : "Обновите Android System WebView и Chrome через Google Play и снова откройте кошелёк. В командный аккаунт также можно войти из браузера."}</p>
         <a href="https://saq-bol-mobile.onrender.com/wallet/">{kk ? "Командалық әмиянды ашу" : "Открыть командный кошелёк"}</a>
       </details>
       <details><summary>{kk ? "APK файлын тексеру" : "Проверить файл APK"}</summary><p>SHA-256</p><code>{release.apk_sha256}</code></details>
-      <details><summary>{kk ? "Honor телефонындағы командалық нұсқаны жаңарту" : "Обновить командную сборку для Honor"}</summary>
-        <p>{kk ? "Командадан бұрын APK алған қатысушыларға арналған." : "Для участников, которые раньше установили APK от команды."}</p>
-        <a download href={base + team.url}>{kk ? "Командалық APK жүктеу" : "Скачать командный APK"} {team.version} · {team.package}</a>
+      <details><summary>{kk ? "Сайттың бұрынғы нұсқасы орнатылған ба?" : "Уже установлен прежний кошелёк с сайта?"}</summary>
+        <p>{kk ? "Жаңа дизайн командалық қолданбада. Бұрынғы сайт нұсқасы бөлек орнатылған күйінде қалады." : "Новый дизайн доступен в командном приложении. Прежняя версия с сайта сохраняется отдельно."}</p>
+        <a download href={base + legacy.url}>{kk ? "Бұрынғы APK" : "Прежний APK"} · {legacy.version} ({legacy.versionCode})</a>
       </details>
       <a className="installer-browser" href="https://saq-bol-jury.onrender.com/">{kk ? "Қазылар әмиянын браузерде ашу" : "Открыть кошелёк жюри в браузере"}<ArrowUpRight aria-hidden size={17} /></a>
     </section>

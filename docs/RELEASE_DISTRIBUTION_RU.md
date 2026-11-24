@@ -4,8 +4,10 @@
 
 | Где установлен предыдущий APK | Манифест | Пакет | Предыдущая сборка | Версия 2.9 |
 | --- | --- | --- | --- | --- |
-| Основной сайт | [current.json](../frontend/public/downloads/current.json) | `kz.qadamx.bccshield.website` | 2.7, код 13 или 2.9, коды 14–15 | Код 16 |
-| Командный кошелёк, включая Honor | [team.json](../frontend/public/downloads/team.json) | `kz.qadamx.bccshield.demo` | 2.7, код 10, 2.8, код 11 или 2.9, код 13 | Код 14 |
+| Основная кнопка сайта и Honor | [current.json](../frontend/public/downloads/current.json), [team.json](../frontend/public/downloads/team.json) | `kz.qadamx.bccshield.demo` | Предыдущая командная сборка | Код 22 |
+| Ранее установленная версия сайта | [legacy-website-2.9.json](../frontend/public/downloads/legacy-website-2.9.json) | `kz.qadamx.bccshield.website` | Предыдущая версия сайта | Код 16 |
+
+Build 22 с дизайном Айданы собран из `aba72791fbe8ec02b17ffefffd7fb49ff67153ac`. Его SHA-256 — `83d2f7366a47a24b22904261602e729963a949697c17dca7fc050e5d3d7b48b5`. На Honor X6 файл в Download прочитан обратно по MTP, контрольная сумма совпала. Владелец телефона подтвердил установку и номер 22 в профиле. При наличии прежнего приложения с суффиксом .website новая командная версия устанавливается рядом с ним.
 
 Для установки требуется Android 7.0 (API 24) или новее. Для входа и запросов к серверу нужен обновлённый Android System WebView или Chrome с движком Chromium версии 103 или новее. Сборка с сайта показывает подсказку об обновлении и ссылку на кошелёк в браузере, пока интерфейс не загрузился. На телефоне с более старым WebView командная сборка 14 может открыться без формы входа. В этом случае обновите WebView или откройте [командный веб-кошелёк](https://saq-bol-mobile.onrender.com/wallet/) в актуальном браузере.
 
@@ -19,11 +21,11 @@
 npm.cmd --prefix android-app ci
 npm.cmd --prefix android-app run sync
 Push-Location android-app/android
-.\gradlew.bat assembleWebsite
+.\gradlew.bat assembleShowcase
 Pop-Location
-$sdkTools = Join-Path $env:ANDROID_HOME 'build-tools/36.1.0'
+$sdkTools = Join-Path $env:ANDROID_HOME 'build-tools/36.0.0'
 $source = git rev-parse HEAD
-python android-app/scripts/stage-showcase.py android-app/android/app/build/outputs/apk/website/app-website.apk --channel website --source $source --sdk-tools $sdkTools --date (Get-Date -Format yyyy-MM-dd)
+python android-app/scripts/stage-showcase.py android-app/android/app/build/outputs/apk/showcase/app-showcase.apk --channel team --source $source --sdk-tools $sdkTools --date (Get-Date -Format yyyy-MM-dd)
 python android-app/scripts/verify-release.py --apksigner (Join-Path $sdkTools 'apksigner.bat')
 ```
 
