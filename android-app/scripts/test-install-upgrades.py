@@ -123,8 +123,8 @@ def main():
     adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
     adb("shell", "wm", "dismiss-keyguard")
     for channel, manifest, archive in [
-        ("website", "current.json", DOWNLOADS / "Saq-Bol-Android-2.7.apk"),
-        ("team", "team.json", ROOT / "deliverables/android/Saq-Bol-Android-2.7.apk"),
+        ("website", "legacy-website-2.9.json", DOWNLOADS / "Saq-Bol-Android-2.7.apk"),
+        ("team", "current.json", ROOT / "deliverables/android/Saq-Bol-Android-2.7.apk"),
     ]:
         old = json.loads(archive.with_suffix(".json").read_bytes())
         new = json.loads((DOWNLOADS / manifest).read_bytes())
