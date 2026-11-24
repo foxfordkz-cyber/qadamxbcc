@@ -1,6 +1,7 @@
 import uuid
 from datetime import timedelta
 from decimal import Decimal
+from html import escape
 
 import pytest
 from fastapi import FastAPI
@@ -18,6 +19,7 @@ from app.mobile_gateway.hold_review import escalate_due
 from app.mobile_gateway.jury_results import router
 from app.models import Transaction
 from app.models.family_approval import FamilyApproval
+from scripts.payee_followup_replay import PAIRS, evaluate_arm
 from tests.test_mobile_gateway import ADMIN_CODE, OWNER, login
 from tests.test_mobile_gateway import mobile_world as mobile_world
 from tests.test_second_confirmation import ANSWERS, API, SETTINGS, contact, evaluate
@@ -37,6 +39,32 @@ def test_jury_evidence():
         assert "Мақұлданды" in pair.text
         assert "Кідіріс" in pair.text
         assert "96 000" in pair.text
+
+
+async def test_each_jury_pair_is_selectable_and_shows_the_engine_evidence():
+    app = FastAPI()
+    app.include_router(router)
+    with TestClient(app) as http:
+        menu = http.get("/jury/results").text
+        for pair in PAIRS:
+            if pair != PAIRS[0]:
+                assert f'formaction="/jury/results/pair?scenario={pair.name}"' in menu
+            response = http.post("/jury/results/pair", params={"scenario": pair.name})
+            assert response.status_code == 200
+            sections = response.text.split("<section>")[1:]
+            assert len(sections) == 2
+            assert ("одинаковые признаки" in response.text) == (pair.honest == pair.fraud)
+            for fraud, section in zip((False, True), sections, strict=True):
+                arm = pair.fraud if fraud else pair.honest
+                result = await evaluate_arm(pair, fraud)
+                expected = {"approved": "Одобрено", "cooling_off": "Пауза", "blocked": "Блок"}
+                assert f"<h3>{expected[result.decision.value]}" in section
+                assert ("<dd>Иә / Да</dd>" in section) == arm.requested
+                assert ("Первый перевод</dd>" in section) == (arm.prior == 0)
+                for reason in result.reasons:
+                    assert escape(reason.reason_ru) in section
+                    assert escape(reason.reason_kk) in section
+        assert http.post("/jury/results/pair?scenario=unknown").status_code == 404
 
 
 @pytest.mark.parametrize("trigger", ["appeal", "deadline", "suspicion"])

@@ -10,7 +10,7 @@ from typing import TypedDict, cast
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
-from scripts.payee_followup_replay import PAIRS, evaluate_arm
+from scripts.payee_followup_replay import PAIRS, Arm, Pair, evaluate_arm
 
 router = APIRouter(prefix="/jury/results", default_response_class=HTMLResponse)
 gate = asyncio.Semaphore(1)
@@ -19,6 +19,47 @@ labels = {
     "approved": "Одобрено / Мақұлданды",
     "blocked": "Блок / Бұғатталды",
 }
+
+pair_titles = {
+    "market-reservation": "Маркетплейстегі бронь / Бронь на маркетплейсе",
+    "family-travel": "Жолға көмек / Помощь на поездку",
+    "market-delivery": "Жеткізу / Доставка",
+    "family-rent-twin": "Пәтерақы / Аренда жилья",
+    "market-tools": "Құрал-сайман / Покупка инструментов",
+    "family-first": "Туысқа алғашқы аударым / Первый перевод родственнику",
+    "market-first": "Алғашқы сатып алу / Первая покупка",
+    "family-unreported-twin": "Отбасына көмек / Помощь семье",
+    "market-no-call-twin": "Сатушыға алғашқы төлем / Первый платёж продавцу",
+    "family-small-twin": "Шағын аударым / Небольшой перевод семье",
+    "market-old-payee": "Таныс сатушы / Знакомый продавец",
+    "family-gift": "Сыйлық / Подарок близкому",
+}
+
+
+def tenge(value: int) -> str:
+    return f"{value:,} ₸".replace(",", " ")
+
+
+def pair_button(pair: Pair) -> str:
+    return (
+        f'<button formaction="/jury/results/pair?scenario={pair.name}">'
+        f"{escape(pair_titles[pair.name])}<br><b>{tenge(pair.amount)}</b></button>"
+    )
+
+
+def input_history(arm: Arm) -> str:
+    prior = (
+        f"{tenge(arm.prior)} · {arm.hours_ago} сағ бұрын / ч назад"
+        if arm.prior
+        else "Алғашқы аударым / Первый перевод"
+    )
+    answer = "Иә / Да" if arm.requested else "Жоқ / Нет"
+    return (
+        f"<dl><dt>Алушыға бұрын аударылған / Предыдущий платёж получателю</dt><dd>{prior}</dd>"
+        "<dt>Клиент осы аударымды телефонмен сұрағанын хабарлады ма? / "
+        "Клиент сообщил, что его попросили об этом переводе по телефону?</dt>"
+        f"<dd>{answer}</dd></dl>"
+    )
 
 
 def page(content: str) -> str:
@@ -32,7 +73,9 @@ section,details{background:white;border-radius:16px;padding:16px;margin:12px 0}
 summary,button{cursor:pointer}
 button{padding:12px;border:0;border-radius:10px;background:#075b46;color:white;
 font:inherit}
-.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
+.pair,.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));
+gap:12px}.choices{margin-top:12px}.choices button{text-align:left}
+dt{color:#435e53}dd{margin:2px 0 12px;font-weight:650}
 a{color:#075b46}</style>
 <a href="/jury">← Қазылар әмияны / Кошелёк жюри</a>"""
         + content
@@ -101,32 +144,47 @@ async def results() -> str:
     return page(
         body + '<form method="post" action="/jury/results/pair">'
         "<h2>Неге тоқтады? / Почему остановился перевод?</h2>"
-        "<p>96 000 ₸ · Маркетплейстегі бронь / Бронь на маркетплейсе.</p>"
-        "<button>Екеуін тексеру / Проверить оба перевода</button></form>"
+        "<p>Бірдей сомадағы екі аударымды салыстырыңыз. / "
+        "Выберите пару и сравните два перевода на одну сумму.</p>"
+        + f"<p>{escape(pair_titles[PAIRS[0].name])} · {tenge(PAIRS[0].amount)}</p>"
+        + "<button>Екеуін тексеру / Проверить оба перевода</button>"
+        + "<details><summary>Басқа жұпты таңдау / Выбрать другую пару</summary>"
+        + '<div class="choices">'
+        + "".join(pair_button(pair) for pair in PAIRS[1:])
+        + "</div></details></form>"
     )
 
 
 @router.post("/pair")
-async def pair_result() -> str:
-    pair = PAIRS[0]
+async def pair_result(scenario: str = PAIRS[0].name) -> str:
+    pair = next((item for item in PAIRS if item.name == scenario), None)
+    if pair is None:
+        raise HTTPException(404, "scenario_not_found")
     if gate.locked():
         raise HTTPException(429, "stand_busy", headers={"Retry-After": "2"})
-    amount = format(pair.amount, ",").replace(",", " ")
     body = (
-        f"<h1>{amount} ₸ · Бронь на маркетплейсе / Маркетплейстегі бронь</h1>"
-        "<p>В обоих случаях этому получателю уже перевели 1 200 ₸ два часа назад. "
-        "Екі жағдайда да осы алушыға екі сағат бұрын 1 200 ₸ аударылды.</p><div class=pair>"
+        f"<h1>{escape(pair_titles[pair.name])}</h1>"
+        f"<p>Аударым сомасы / Сумма каждого перевода: <b>{tenge(pair.amount)}</b><br>"
+        f"Жіберушінің орташа аударымы / Средний перевод отправителя: {tenge(pair.average)}</p>"
     )
+    if pair.honest == pair.fraud:
+        body += (
+            "<p>Екі оқиғаның белгілері бірдей. Осы деректермен оларды ажырату мүмкін емес. / "
+            "В этих двух историях движок видит "
+            "одинаковые признаки. По ним различить истории невозможно.</p>"
+        )
+    body += '<div class="pair">'
     async with gate:
         for fraud in (False, True):
             decision = await evaluate_arm(pair, fraud)
             story = (
-                "Клиент сообщил о просьбе по телефону / Клиент телефондағы өтінішті хабарлады"
+                "Алаяқтық сценарий / Мошеннический сценарий"
                 if fraud
-                else "Обычная покупка / Қалыпты сатып алу"
+                else "Қалыпты аударым / Обычный перевод"
             )
             body += (
-                f"<section><h2>{story}</h2><strong>{labels[decision.decision.value]}</strong><ul>"
+                f"<section><h2>{story}</h2>{input_history(pair.fraud if fraud else pair.honest)}"
+                f"<h3>{labels[decision.decision.value]}</h3><ul>"
             )
             for reason in decision.reasons:
                 body += f"<li>{escape(reason.reason_ru)} / {escape(reason.reason_kk)}</li>"
