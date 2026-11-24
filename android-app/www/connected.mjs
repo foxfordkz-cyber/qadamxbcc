@@ -10,7 +10,7 @@ import { packetView } from "./packet.mjs";
 import { canConfirmPayee, checkPayee, manualPhoneField, needsCallAnswer, payeeDetailFields, payeeVerdict, phoneNumber, submissionContext } from "./payee-check.mjs";
 import { readScreenshot } from "./screenshot.mjs";
 import * as identity from "./identity.mjs";
-import { PUBLIC_DEMO, openExternal } from "./native.mjs";
+import { PUBLIC_DEMO, openExternal, installedBuild } from "./native.mjs";
 const product = document.documentElement.hasAttribute("data-product");
 let initializingAccount = product;
 let rememberLogin = true, restoreFailed = false;
@@ -1102,7 +1102,14 @@ function roleTitle() {
 function settingsRow(action, art, label, trailing = "", attributes = "") {
   return `<button class="settings-row" data-action="${action}" ${attributes} ${loading ? "disabled" : ""}><i class="art art-${art}" aria-hidden="true"></i><span>${E(label)}</span>${trailing || '<b class="chevron" aria-hidden="true"></b>'}</button>`;
 }
+let appInfo = null;
+void installedBuild().then(info => {
+  appInfo = info;
+  if (info && page === "settings") render();
+}).catch(() => {});
+
 function settingsView() {
+  const edition = appInfo ? E(appInfo.version) + " · " + T("Сборка", "Жинақ") + " " + E(appInfo.build) : "2.9";
   if (product && gateway.role === "client") {
     const name = account?.display_name || T("Клиент","Клиент");
     const letters = String(name).trim().split(/\s+/).slice(0, 2).map(w => Array.from(w)[0] || "").join("").toUpperCase();
@@ -1118,9 +1125,9 @@ function settingsView() {
       settingsRow("theme", "moon", T("Тёмная тема","Қараңғы тақырып"), toggle, `role="switch" aria-checked="${dark}"`) +
       settingsRow("open-guardian", "plane", T("Открыть Telegram-бот","Telegram-ботты ашу")) + `</section>` +
       button("logout",T("Выйти","Шығу"),"secondary") +
-      `<p class="screen-foot">Saq Bol × BCC 2.9 · ${T("Учебный стенд","Оқу стенді")}</p>`;
+      `<p class="screen-foot">Saq Bol × BCC ${edition} · ${T("Учебный стенд","Оқу стенді")}</p>`;
   }
-  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC 2.9 · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
+  if (product) return title(T("Профиль","Профиль")) + `<section class="profile-sheet"><i>${icon("settings")}</i><div><h2>${roleTitle()}</h2>${gateway.role==="client"?"<p>"+accountLabel()+"</p>":""}<small>Saq Bol × BCC ${edition} · ${T("Учебный стенд","Оқу стенді")}</small></div></section>` +
     button("remember-settings",gateway.remember ? T("Сохранённый вход включён · Изменить","Сақталған кіру қосулы · Өзгерту") : T("Сохранённый вход выключен · Изменить","Сақталған кіру өшірулі · Өзгерту"),"secondary") +
     button("language",T("Язык · Русский","Тіл · Қазақша"),"secondary") +
     (gateway.role === "client" ? button("contacts",T("Мои согласия","Келісімдерім"),"secondary")+button("open-guardian",T("Открыть Telegram-бот","Telegram-ботты ашу"),"secondary") : "") + button("logout",T("Выйти","Шығу"));
