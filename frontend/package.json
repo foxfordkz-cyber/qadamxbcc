@@ -16,6 +16,7 @@
     "build:cloudflare": "vite build && next typegen",
     "test:cloudflare": "node scripts/test-cloudflare.mjs",
     "preview:cloudflare": "vite preview",
+    "predeploy:cloudflare": "tsx scripts/check-published-release.ts",
     "deploy:cloudflare": "wrangler deploy",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
