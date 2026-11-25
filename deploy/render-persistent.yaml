@@ -1,4 +1,6 @@
-# Review and approve billed resources before applying.
+# Review and approve billed resources AND a full verified source backup before applying.
+# This cutover template targets the existing service: do NOT apply to temporary production.
+# For separate staging use render-staging-existing.yaml, which creates no database resources.
 # Existing Cloudflare site stays in place. Route its client/SOC links to /wallet/.
 services:
   - type: web
@@ -6,7 +8,7 @@ services:
     runtime: docker
     region: oregon
     plan: 0.5c-512mb
-    branch: feature/bekzat-persistent-release
+    branch: integration/final-build24
     autoDeployTrigger: "off"
     dockerContext: .
     dockerfilePath: ./backend/Dockerfile.persistent
@@ -32,13 +34,15 @@ services:
         sync: false
       - key: BCC_MOBILE_ADMIN_HASH
         sync: false
+      - key: BCC_MOBILE_PLATFORM_HASH
+        sync: false
 
   - type: worker
     name: saq-bol-guardian
     runtime: docker
     region: oregon
     plan: 0.5c-512mb
-    branch: feature/bekzat-persistent-release
+    branch: integration/final-build24
     autoDeployTrigger: "off"
     numInstances: 1
     dockerContext: .
@@ -77,7 +81,7 @@ envVarGroups:
       - key: BCC_ENVIRONMENT
         value: demo
       - key: BCC_BOOTSTRAP_DEMO
-        value: "true"
+        value: "false"
       - key: BCC_INTEGRATIONS_ENABLED
         value: "true"
       - key: BCC_INTEGRATIONS_ENVIRONMENT
@@ -85,4 +89,5 @@ envVarGroups:
       - key: BCC_INTEGRATIONS_TELEGRAM_MODE
         value: fake
       - key: BCC_INTEGRATIONS_SIGNING_KEY
-        generateValue: true
+        # Reuse the existing protected signing key during cutover.
+        sync: false

@@ -50,9 +50,7 @@ def main() -> None:
             else "; storage rehearsal not requested"
         )
     )
-    print(
-        "This does not certify public persistence, live Telegram or a physical Android run."
-    )
+    print("This does not certify public persistence, live Telegram or a physical Android run.")
 
 
 if __name__ == "__main__":

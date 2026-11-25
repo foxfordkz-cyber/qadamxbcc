@@ -12,10 +12,15 @@ on:
       - deliverables/android/Saq-Bol-Android-2.7.json
       - backend/scripts/start-persistent.sh
       - deploy/render-persistent.yaml
+      - deploy/render-staging-existing.yaml
       - .github/workflows/persistent-deployment.yml
       - backend/app/mobile_gateway/**
       - backend/scripts/verify_persistent_release.py
       - backend/scripts/rehearse_release_storage.py
+      - backend/scripts/rehearsal_guardian.py
+      - backend/scripts/native_rehearsal_storage.py
+      - backend/scripts/check_native_storage.py
+      - backend/tests/test_guardian_postgres.py
       - backend/scripts/import_mobile_snapshot.py
       - backend/tests/test_mobile_snapshot_import.py
       - android-app/**
@@ -64,9 +69,10 @@ jobs:
           import json, urllib.request, yaml, jsonschema
           with urllib.request.urlopen("https://render.com/schema/render.yaml.json", timeout=30) as r:
               schema = json.load(r)
-          with open("deploy/render-persistent.yaml") as f:
-              config = yaml.safe_load(f)
-          jsonschema.Draft7Validator(schema).validate(config)
+          for path in ("deploy/render-persistent.yaml", "deploy/render-staging-existing.yaml"):
+              with open(path) as f:
+                  config = yaml.safe_load(f)
+              jsonschema.Draft7Validator(schema).validate(config)
           PY
       - name: Check entrypoint and reject temporary storage
         run: |

@@ -58,7 +58,7 @@ jobs:
         run: |
           uv run --no-sync python -m scripts.verify_merged_migrations
           uv run --no-sync python -m scripts.verify_case_migrations
-          uv run --no-sync pytest --junitxml=../.local-checks/backend-postgres.xml -ra tests/integrations tests/test_postgres_concurrency.py tests/test_recipient_flag_postgres.py tests/test_active_hold_postgres.py tests/test_postgres_linked_returns.py
+          uv run --no-sync pytest --junitxml=../.local-checks/backend-postgres.xml -ra tests/integrations tests/test_postgres_concurrency.py tests/test_recipient_flag_postgres.py tests/test_active_hold_postgres.py tests/test_postgres_linked_returns.py tests/test_guardian_postgres.py
       - name: Measure bounded velocity snapshots with real Redis
         working-directory: backend
         run: |

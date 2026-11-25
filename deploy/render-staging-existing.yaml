@@ -1,0 +1,43 @@
+# REVIEW-ONLY: a NEW isolated staging service, never an update to saq-bol-mobile.
+# Supply an EXISTING isolated PostgreSQL database and Redis. No paid resource is created here.
+# Run Alembic/explicit bootstrap privately before starting API; Free has no pre-deploy job.
+services:
+  - type: web
+    name: saq-bol-mobile-staging
+    runtime: docker
+    plan: free
+    branch: integration/final-build24
+    autoDeployTrigger: "off"
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile.persistent
+    dockerCommand: sh scripts/start-persistent.sh api
+    healthCheckPath: /ready
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: BCC_REDIS_URL
+        sync: false
+      - key: BCC_ENVIRONMENT
+        value: demo
+      - key: BCC_BOOTSTRAP_DEMO
+        value: "false"
+      - key: BCC_MOBILE_ENABLED
+        value: "true"
+      - key: BCC_MOBILE_AUTH_MODE
+        value: password
+      - key: BCC_MOBILE_CLIENT_HASH
+        sync: false
+      - key: BCC_MOBILE_ADMIN_HASH
+        sync: false
+      - key: BCC_MOBILE_PLATFORM_HASH
+        sync: false
+      - key: BCC_INTEGRATIONS_ENABLED
+        value: "true"
+      - key: BCC_INTEGRATIONS_ENVIRONMENT
+        value: test
+      - key: BCC_INTEGRATIONS_TELEGRAM_MODE
+        value: fake
+      - key: BCC_INTEGRATIONS_SIGNING_KEY
+        sync: false
+      - key: BCC_MOBILE_TELEGRAM_USERNAME
+        value: bekzat_bcc_shield_test_bot

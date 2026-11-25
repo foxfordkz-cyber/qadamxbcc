@@ -1,5 +1,6 @@
 """Run migrations, compare a full PostgreSQL restore, then restart a local mobile API twice."""
 
+import argparse
 import json
 import os
 import secrets
@@ -7,6 +8,7 @@ import socket
 import subprocess
 import sys
 import time
+import uuid
 from collections.abc import Mapping
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -14,6 +16,7 @@ from typing import BinaryIO
 
 from app.mobile_gateway.passwords import encode
 from scripts import verify_persistent_release as api
+from scripts.native_rehearsal_storage import NativeStorage
 
 
 def run(*args: str, env: Mapping[str, str] | None = None, stdin: BinaryIO | None = None) -> bytes:
@@ -27,6 +30,13 @@ def port() -> int:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--native",
+        action="store_true",
+        help="Use isolated Linux/WSL PostgreSQL 16 and Redis instead of Docker",
+    )
+    options = parser.parse_args()
     suffix = secrets.token_hex(5)
     pg, kv = "qadam-pg-" + suffix, "qadam-kv-" + suffix
     password = secrets.token_hex(20)
@@ -51,6 +61,14 @@ def main() -> None:
     credentials = {k: secrets.token_urlsafe(24) for k in users}
     for k, pwd in credentials.items():
         env["BCC_MOBILE_" + k.upper() + "_HASH"] = encode(pwd)
+    native = NativeStorage(pgport, kvport) if options.native else None
+    print("Storage runtime:", "Linux/WSL native" if native else "Docker", flush=True)
+
+    def pg_run(command: str, *args: str, stdin: BinaryIO | None = None) -> bytes:
+        if native:
+            return native.pg(command, *args, stdin=stdin)
+        return run("docker", "exec", *(["-i"] if stdin else []), pg, command, *args, stdin=stdin)
+
     created = []
     process = None
     with TemporaryDirectory(prefix="qadam-release-") as tmp:
@@ -77,34 +95,38 @@ def main() -> None:
             p.wait(timeout=30)
 
         try:
-            for name, args in [
-                (
-                    pg,
-                    [
-                        "-p",
-                        f"127.0.0.1:{pgport}:5432",
-                        "-e",
-                        "POSTGRES_PASSWORD=" + password,
-                        "-e",
-                        "POSTGRES_DB=practice",
-                        "postgres:16-alpine",
-                    ],
-                ),
-                (kv, ["-p", f"127.0.0.1:{kvport}:6379", "redis:7-alpine"]),
-            ]:
-                run("docker", "run", "--rm", "-d", "--name", name, *args)
-                created.append(name)
-            for _ in range(60):
-                if (
-                    subprocess.run(
-                        ["docker", "exec", pg, "pg_isready", "-U", "postgres"], capture_output=True
-                    ).returncode
-                    == 0
-                ):
-                    break
-                time.sleep(1)
+            if native:
+                native.start(password)
+            else:
+                for name, args in [
+                    (
+                        pg,
+                        [
+                            "-p",
+                            f"127.0.0.1:{pgport}:5432",
+                            "-e",
+                            "POSTGRES_PASSWORD=" + password,
+                            "-e",
+                            "POSTGRES_DB=practice",
+                            "postgres:16-alpine",
+                        ],
+                    ),
+                    (kv, ["-p", f"127.0.0.1:{kvport}:6379", "redis:7-alpine"]),
+                ]:
+                    run("docker", "run", "--rm", "-d", "--name", name, *args)
+                    created.append(name)
+                for _ in range(60):
+                    if (
+                        subprocess.run(
+                            ["docker", "exec", pg, "pg_isready", "-U", "postgres"],
+                            capture_output=True,
+                        ).returncode
+                        == 0
+                    ):
+                        break
+                    time.sleep(1)
             run(sys.executable, "-m", "alembic", "upgrade", "head", env=env)
-            run("docker", "exec", pg, "createdb", "-U", "postgres", "qadam_import_rehearsal")
+            pg_run("createdb", "-U", "postgres", "qadam_import_rehearsal")
             import_url = env["BCC_DATABASE_URL"].rsplit("/", 1)[0] + "/qadam_import_rehearsal"
             import_env = {
                 **env,
@@ -149,6 +171,14 @@ asyncio.run(prepare())""",
                 for k, u in users.items()
             }
             token = sessions["client"]
+            member = json.loads(
+                run(sys.executable, "-m", "scripts.rehearsal_guardian", "prepare", env=env)
+            )
+            api.request(
+                "/mobile/v1/protection/second-confirmation",
+                token,
+                {"action": "enable", "contact_id": member["contact_id"]},
+            )
             paths = ["/mobile/v1/account", "/mobile/v1/wallet/operations"]
             ids: list[str] = []
             for phone, amt, active, expected in [
@@ -177,6 +207,31 @@ asyncio.run(prepare())""",
                     first = attempt
                 ids.append(tx)
             held_path = "/mobile/v1/protection/" + ids[1]
+            guardian = json.loads(
+                run(sys.executable, "-m", "scripts.rehearsal_guardian", "signal", ids[1], env=env)
+            )
+            rid = guardian["case_id"]
+            assert api.request(held_path + "/review", token, {})["report_id"] == rid
+            case_path = "/mobile/v1/api/integrations/guardian/soc/cases/" + rid
+            case = api.request(case_path, sessions["admin"])
+            api.request(
+                case_path + "/actions",
+                sessions["admin"],
+                {
+                    "expected_version": case["version"],
+                    "action": "transition",
+                    "state": "CLOSED",
+                    "reason": "confirmed_fraud",
+                },
+                {"Idempotency-Key": str(uuid.uuid4())},
+            )
+            receipt_path = "/mobile/v1/reports/" + rid + "/callback"
+            receipt = api.request(receipt_path, token)
+            assert receipt["resolution"]["operation"]["transaction_id"] == ids[1]
+            assert receipt["resolution"]["balance"] == api.request(paths[0], token)["balance"]
+            paths.append(receipt_path)
+            before_case = api.request(case_path, sessions["admin"])
+            print("PASS Fake Guardian: ACK, suspicion, replay, one case, SOC reply", flush=True)
             api.request(held_path + "/end", token, {})
             api.request(held_path + "/answer", token, {"answer": "pressure"})
             cancelled = api.request(held_path + "/packet", token)
@@ -187,11 +242,25 @@ asyncio.run(prepare())""",
                 )
             api.expect_status("/mobile/v1/api/soc/feed", 403, token)
             before = [api.request(path, token) for path in paths]
-            for _ in range(2):
+            for restart_number in range(1, 3):
                 stop(process)
                 process = start()
                 api.ready()
                 assert [api.request(path, token) for path in paths] == before
+                assert api.request(case_path, sessions["admin"]) == before_case
+                assert (
+                    json.loads(
+                        run(
+                            sys.executable,
+                            "-m",
+                            "scripts.rehearsal_guardian",
+                            "verify",
+                            ids[1],
+                            env=env,
+                        )
+                    )
+                    == guardian
+                )
                 assert (
                     api.request("/mobile/v1/api/transfers/evaluate", token, first["body"])[
                         "transaction_id"
@@ -205,43 +274,27 @@ asyncio.run(prepare())""",
                     ("platform", "platform_admin"),
                 ]:
                     assert api.request("/mobile/v1/session", sessions[key])["role"] == role
+                print(
+                    f"PASS restart {restart_number}: sessions, balances, IDs, Guardian, case "
+                    "and replay unchanged",
+                    flush=True,
+                )
             stop(process)
             process = None
-            run(
-                "docker",
-                "exec",
-                pg,
-                "pg_dump",
-                "-U",
-                "postgres",
-                "-Fc",
-                "-f",
-                "/tmp/practice.dump",
-                "practice",
-            )
             backup = Path(tmp) / "practice.dump"
-            run("docker", "cp", pg + ":/tmp/practice.dump", str(backup))
-            run("docker", "exec", pg, "createdb", "-U", "postgres", "restorecheck")
+            if native:
+                native.backup(backup)
+            else:
+                pg_run("pg_dump", "-U", "postgres", "-Fc", "-f", "/tmp/practice.dump", "practice")
+                run("docker", "cp", pg + ":/tmp/practice.dump", str(backup))
+            pg_run("createdb", "-U", "postgres", "restorecheck")
             with backup.open("rb") as f:
-                run(
-                    "docker",
-                    "exec",
-                    "-i",
-                    pg,
-                    "pg_restore",
-                    "--exit-on-error",
-                    "-U",
-                    "postgres",
-                    "-d",
-                    "restorecheck",
-                    stdin=f,
+                pg_run(
+                    "pg_restore", "--exit-on-error", "-U", "postgres", "-d", "restorecheck", stdin=f
                 )
 
             def query(database: str, sql: str) -> bytes:
-                return run(
-                    "docker",
-                    "exec",
-                    pg,
+                return pg_run(
                     "psql",
                     "-U",
                     "postgres",
@@ -327,6 +380,8 @@ asyncio.run(prepare())""",
         finally:
             if process is not None and process.poll() is None:
                 stop(process)
+            if native:
+                native.close()
             for name in reversed(created):
                 subprocess.run(["docker", "stop", name], stdout=subprocess.DEVNULL)
 

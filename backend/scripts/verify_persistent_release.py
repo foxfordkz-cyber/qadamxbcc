@@ -21,8 +21,10 @@ def docker(*args: str) -> str:
     return subprocess.check_output(["docker", *args], text=True).strip()
 
 
-def request(path: str, token: str = "", body: Any = None) -> Any:
-    headers = {"Content-Type": "application/json"}
+def request(
+    path: str, token: str = "", body: Any = None, extra_headers: dict[str, str] | None = None
+) -> Any:
+    headers = {"Content-Type": "application/json", **(extra_headers or {})}
     if token:
         headers["Authorization"] = "Bearer " + token
     req = urllib.request.Request(
@@ -30,7 +32,8 @@ def request(path: str, token: str = "", body: Any = None) -> Any:
         data=json.dumps(body).encode() if body is not None else None,
         headers=headers,
     )
-    with urllib.request.urlopen(req, timeout=10) as response:
+    # Acceptance runs on shared/low-memory runners; this is not a latency benchmark.
+    with urllib.request.urlopen(req, timeout=30) as response:
         return json.load(response)
 
 

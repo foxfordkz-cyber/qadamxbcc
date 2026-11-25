@@ -34,9 +34,9 @@ test("platform navigation uses only aggregate endpoints, reports a stale change 
     }
     return {status:403,json:{}};
   });
-  await expect(page.locator(".desk-stats")).toContainText("≤ 50 мс");
+  await expect(page.getByRole("main")).toContainText("≤ 50 мс");
   await page.locator("summary").click();
-  await expect(page.locator(".desk-table tbody tr")).toContainText("20:00");
+  await expect(page.getByRole("rowheader", {name:"20:00", exact:true})).toBeVisible();
   await expect(page.locator("nav [data-nav]")).toHaveCount(3);
   await page.locator("[data-nav=staff]").click();
   page.once("dialog",dialog=>dialog.accept());
@@ -44,7 +44,9 @@ test("platform navigation uses only aggregate endpoints, reports a stale change 
   await expect(page.getByRole("alert")).toBeVisible();
   await page.locator("[data-action=reload-screen]").click();
   await expect(page.locator("[data-staff]")).toHaveText("Восстановить доступ");
+  await page.locator("nav [data-nav=settings]").click();
   await page.locator("[data-action=language]:visible").first().click();
+  await page.locator("nav [data-nav=staff]").click();
   await expect(page.locator("[data-staff]")).toHaveText("Рұқсатты қалпына келтіру");
   expect(requests.every(path=>path.startsWith("/admin/"))).toBe(true);
 });

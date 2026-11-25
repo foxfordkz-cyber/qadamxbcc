@@ -137,16 +137,19 @@ test("sign-in can recover from a service outage without granting a role early", 
     await page.locator("#personal-login [type=submit]").click();
   }
   await submit();
-  await expect(page.getByRole("alert")).toContainText("Сервис входа");
+  await expect(page.getByRole("alert")).toContainText("Сервис входа", {timeout:15000});
+  // An explicit 503 permits exactly one bounded login retry after five seconds.
+  expect(attempts).toBe(2);
   await expect(page.locator("[data-nav]")).toHaveCount(0);
   status = 401;
   await submit();
   await expect(page.getByRole("alert")).toContainText(
     "Неверный логин или пароль",
   );
+  expect(attempts).toBe(3); // A rejected password must not be retried.
   status = 200;
   await submit();
   await expect(page.locator(".q-card")).toBeVisible();
   await expect(page.locator("[data-nav=cases]")).toHaveCount(0);
-  expect(attempts).toBe(3);
+  expect(attempts).toBe(4);
 });
