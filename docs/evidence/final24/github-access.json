@@ -1,0 +1,13 @@
+{
+  "main": {
+    "http": 200,
+    "sha": "ebb065fd85ea1313ec35fa383f3b41ba12184afe",
+    "protected": false
+  },
+  "protection": {
+    "http": 404
+  },
+  "rules": {
+    "http": 403
+  }
+}

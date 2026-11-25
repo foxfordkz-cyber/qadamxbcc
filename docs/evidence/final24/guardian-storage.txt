@@ -1,0 +1,67 @@
+Storage runtime: Linux/WSL native
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001, initial schema: accounts, transactions, risk_events, graph_edges
+INFO  [alembic.runtime.migration] Running upgrade 0001 -> 0002_trusted_contacts, Consent, persistent delivery queue and minimal integration audit.
+INFO  [alembic.runtime.migration] Running upgrade 0002_trusted_contacts -> 0003_external_checks, Durable synthetic enrichment and request idempotency.
+INFO  [alembic.runtime.migration] Running upgrade 0002_trusted_contacts -> 0002a_notification_retry, Durable scheduling without rewriting any already-applied migration.
+INFO  [alembic.runtime.migration] Running upgrade 0003_external_checks, 0002a_notification_retry -> 0003a_retry_gateway_merge, Join independently published gateway and notification-retry histories.
+INFO  [alembic.runtime.migration] Running upgrade 0003_external_checks -> 0004_integration_runs, Durable off-path orchestration jobs.
+INFO  [alembic.runtime.migration] Running upgrade 0004_integration_runs, 0003a_retry_gateway_merge -> 0004a_retry_stack_merge, Join the existing orchestration head with the retry/gateway merge.
+INFO  [alembic.runtime.migration] Running upgrade 0004a_retry_stack_merge -> 0005_contact_preferences, Explicit per-contact preferences; no broadcast policy.
+INFO  [alembic.runtime.migration] Running upgrade 0005_contact_preferences -> 0006_guardian_reports, Seven-day demo report content and owned idempotency.
+INFO  [alembic.runtime.migration] Running upgrade 0006_guardian_reports -> 0007_guardian_cases, Independent synthetic SOC cases and content retention.
+INFO  [alembic.runtime.migration] Running upgrade 0001 -> 0002, Durable evaluation audit, idempotency and cooling lifecycle.
+INFO  [alembic.runtime.migration] Running upgrade 0002 -> 0003, Durable approved-transfer projections and abandoned client request tombstones.
+INFO  [alembic.runtime.migration] Running upgrade 0003, 0007_guardian_cases -> 0008_core_integration_merge, Join the published core lifecycle and integration histories without rewriting either.
+INFO  [alembic.runtime.migration] Running upgrade 0008_core_integration_merge -> 0009_mobile_protection, Customer family preferences and advisory answers after a call.
+INFO  [alembic.runtime.migration] Running upgrade 0008_core_integration_merge -> 0009_recipient_flags, Versioned, audited SOC recipient flags.
+INFO  [alembic.runtime.migration] Running upgrade 0009_recipient_flags -> 0010_linked_returns, Link a single scored refund and its client review to the incoming payment.
+INFO  [alembic.runtime.migration] Running upgrade 0010_linked_returns -> 0011_temporal_flow, Index settlement time within a sender's transfer history for on-demand SOC traces.
+INFO  [alembic.runtime.migration] Running upgrade 0011_temporal_flow, 0009_mobile_protection -> 0012_mobile_core_merge, Join the Android protection branch and the core transfer history.
+INFO  [alembic.runtime.migration] Running upgrade 0012_mobile_core_merge -> 0013_staff_access, Keep staff access versions and their audit trail in the same row.
+INFO  [alembic.runtime.migration] Running upgrade 0013_staff_access -> 0014_family_approval, Opt-in family approval and immutable terms for each held transfer.
+INFO  [alembic.runtime.migration] Running upgrade 0014_family_approval -> 0015_transfer_key, Store WebAuthn public keys and signed transfer intent evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0015_transfer_key -> 0016_dispute_history, Backfill the fast-path marker for customers with an incoming-payment dispute.
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001, initial schema: accounts, transactions, risk_events, graph_edges
+INFO  [alembic.runtime.migration] Running upgrade 0001 -> 0002_trusted_contacts, Consent, persistent delivery queue and minimal integration audit.
+INFO  [alembic.runtime.migration] Running upgrade 0002_trusted_contacts -> 0003_external_checks, Durable synthetic enrichment and request idempotency.
+INFO  [alembic.runtime.migration] Running upgrade 0002_trusted_contacts -> 0002a_notification_retry, Durable scheduling without rewriting any already-applied migration.
+INFO  [alembic.runtime.migration] Running upgrade 0003_external_checks, 0002a_notification_retry -> 0003a_retry_gateway_merge, Join independently published gateway and notification-retry histories.
+INFO  [alembic.runtime.migration] Running upgrade 0003_external_checks -> 0004_integration_runs, Durable off-path orchestration jobs.
+INFO  [alembic.runtime.migration] Running upgrade 0004_integration_runs, 0003a_retry_gateway_merge -> 0004a_retry_stack_merge, Join the existing orchestration head with the retry/gateway merge.
+INFO  [alembic.runtime.migration] Running upgrade 0004a_retry_stack_merge -> 0005_contact_preferences, Explicit per-contact preferences; no broadcast policy.
+INFO  [alembic.runtime.migration] Running upgrade 0005_contact_preferences -> 0006_guardian_reports, Seven-day demo report content and owned idempotency.
+INFO  [alembic.runtime.migration] Running upgrade 0006_guardian_reports -> 0007_guardian_cases, Independent synthetic SOC cases and content retention.
+INFO  [alembic.runtime.migration] Running upgrade 0001 -> 0002, Durable evaluation audit, idempotency and cooling lifecycle.
+INFO  [alembic.runtime.migration] Running upgrade 0002 -> 0003, Durable approved-transfer projections and abandoned client request tombstones.
+INFO  [alembic.runtime.migration] Running upgrade 0003, 0007_guardian_cases -> 0008_core_integration_merge, Join the published core lifecycle and integration histories without rewriting either.
+INFO  [alembic.runtime.migration] Running upgrade 0008_core_integration_merge -> 0009_mobile_protection, Customer family preferences and advisory answers after a call.
+INFO  [alembic.runtime.migration] Running upgrade 0008_core_integration_merge -> 0009_recipient_flags, Versioned, audited SOC recipient flags.
+INFO  [alembic.runtime.migration] Running upgrade 0009_recipient_flags -> 0010_linked_returns, Link a single scored refund and its client review to the incoming payment.
+INFO  [alembic.runtime.migration] Running upgrade 0010_linked_returns -> 0011_temporal_flow, Index settlement time within a sender's transfer history for on-demand SOC traces.
+INFO  [alembic.runtime.migration] Running upgrade 0011_temporal_flow, 0009_mobile_protection -> 0012_mobile_core_merge, Join the Android protection branch and the core transfer history.
+INFO  [alembic.runtime.migration] Running upgrade 0012_mobile_core_merge -> 0013_staff_access, Keep staff access versions and their audit trail in the same row.
+INFO  [alembic.runtime.migration] Running upgrade 0013_staff_access -> 0014_family_approval, Opt-in family approval and immutable terms for each held transfer.
+INFO  [alembic.runtime.migration] Running upgrade 0014_family_approval -> 0015_transfer_key, Store WebAuthn public keys and signed transfer intent evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0015_transfer_key -> 0016_dispute_history, Backfill the fast-path marker for customers with an incoming-payment dispute.
+.....                                                                    [100%]
+INFO:     Started server process [7812]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:10802 (Press CTRL+C to quit)
+PASS Fake Guardian: ACK, suspicion, replay, one case, SOC reply
+INFO:     Started server process [5456]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:10802 (Press CTRL+C to quit)
+PASS restart 1: sessions, balances, IDs, Guardian, case and replay unchanged
+INFO:     Started server process [12372]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:10802 (Press CTRL+C to quit)
+PASS restart 2: sessions, balances, IDs, Guardian, case and replay unchanged
+PASS: three roles, three decisions, two API restarts, same tokens and ledger, idempotent replay, full PostgreSQL restore
+Native rehearsal services stopped; private artifacts retained in /tmp/saq-rehearsal.hPholZ

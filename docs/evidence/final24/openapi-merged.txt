@@ -1,0 +1,3 @@
+OpenAPI ecosystem contract: PASS
+<venv>\Lib\site-packages\fastapi\openapi\utils.py:295: UserWarning: Duplicate Operation ID proxy_mobile_v1_api__path__patch for function proxy at <checkout>\backend\app\mobile_gateway\app.py
+  warnings.warn(message, stacklevel=1)

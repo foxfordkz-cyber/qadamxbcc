@@ -1,0 +1,12 @@
+✔ a website update cannot roll the public Android release backwards (9.5683ms)
+✔ different bytes cannot silently reuse a published Android version (0.6938ms)
+✔ release verification rejects malformed or incompatible signing identities (0.6101ms)
+✔ an unchanged release or a newer signed build can accompany a website update (0.51ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1588.7622

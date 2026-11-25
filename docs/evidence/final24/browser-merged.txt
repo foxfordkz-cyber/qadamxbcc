@@ -1,0 +1,183 @@
+
+> bcc-shield-android@2.9.0 test:ui
+> playwright test --reporter=line
+
+
+[WebServer] (node:5136) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 45 tests using 1 worker
+
+
+
+(node:15740) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:15740) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[1/45] tests\browser\audit.spec.mjs:69:1 › a held receipt opens its own conversation and reuses it on return
+[2/45] tests\browser\audit.spec.mjs:82:1 › light and dark wallet retain the same held transfer and review action
+[3/45] tests\browser\audit.spec.mjs:103:1 › dashboard hierarchy, hidden amounts and RU/KK fit phone and desktop at large text
+[4/45] tests\browser\audit.spec.mjs:133:1 › summary failure leaves the card and ledger available and supports retry
+[5/45] tests\browser\audit.spec.mjs:141:1 › profile shortcut returns to the wallet and a quick amount survives a language switch
+[6/45] tests\browser\audit.spec.mjs:165:1 › both edit and toolbar Back retain the transfer draft
+[7/45] tests\browser\audit.spec.mjs:178:1 › changed bank and mismatched expected name remove the previous recipient confirmation
+[8/45] tests\browser\audit.spec.mjs:197:1 › a saved wallet contact can be checked and paid only after the matching directory response
+[9/45] tests\browser\audit.spec.mjs:218:1 › the payer reports a request from an ended call for the reviewed draft only
+  1) tests\browser\audit.spec.mjs:218:1 › the payer reports a request from an ended call for the reviewed draft only
+
+    Error: route.fetch: read ECONNRESET
+    Call log:
+      - → GET http://127.0.0.1:4173/
+        - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36
+        - accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+        - accept-encoding: gzip,deflate,br
+        - accept-language: en-US
+        - upgrade-insecure-requests: 1
+        - sec-ch-ua: "Chromium";v="158", "Not.A/Brand";v="24", "Google Chrome";v="158"
+        - sec-ch-ua-mobile: ?0
+        - sec-ch-ua-platform: "Windows"
+
+
+      10 |   await page.route("https://wallet.test/**",async route=>{
+      11 |     const u=new URL(route.request().url());
+    > 12 |     if(!u.pathname.startsWith("/mobile/v1/")) return route.fulfill({response:await route.fetch({url:new URL(u.pathname,baseURL).href})});
+         |                                                                                          ^
+      13 |     const path=u.pathname.slice(11);
+      14 |     let status=200, json={};
+      15 |     if(path==="compatibility")return route.fulfill({json:{api_major:1,minimum_android_build:0}});
+        at <checkout>\android-app\tests\browser\audit.spec.mjs:12:90
+
+    Error: page.goto: net::ERR_NAME_NOT_RESOLVED at https://wallet.test/
+    Call log:
+      - navigating to "https://wallet.test/", waiting until "load"
+
+
+      61 |   });
+      62 |   await page.addInitScript(()=>localStorage.setItem("qadam.language","ru"));
+    > 63 |   await page.goto("https://wallet.test/");
+         |              ^
+      64 |   await page.locator("[name=login]").fill("client_demo");
+      65 |   await page.locator("[name=password]").fill("fixture");
+      66 |   await page.locator("#personal-login [type=submit]").click();
+        at enter (<checkout>\android-app\tests\browser\audit.spec.mjs:63:14)
+        at <checkout>\android-app\tests\browser\audit.spec.mjs:219:20
+
+    Error Context: test-results\audit-the-payer-reports-a--74cff-for-the-reviewed-draft-only\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\audit-the-payer-reports-a--74cff-for-the-reviewed-draft-only\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\audit-the-payer-reports-a--74cff-for-the-reviewed-draft-only\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+(node:2260) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2260) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[10/45] tests\browser\audit.spec.mjs:236:1 › borderline review asks one bilingual question before any submission
+  2) tests\browser\audit.spec.mjs:236:1 › borderline review asks one bilingual question before any submission
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('[data-action=transfer]')
+
+
+      237 |   const fixture={supportsCallQuestion:true};
+      238 |   await enter(page,baseURL,fixture);
+    > 239 |   await page.locator("[data-action=transfer]").click();
+          |                                                ^
+      240 |   await page.locator("[name=recipient_phone]").selectOption("+77010000002");
+      241 |   await page.locator("[name=amount]").fill("25000");
+      242 |   await page.locator("#transfer-form button").click();
+        at <checkout>\android-app\tests\browser\audit.spec.mjs:239:48
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\audit-borderline-review-as-b4702-stion-before-any-submission\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\audit-borderline-review-as-b4702-stion-before-any-submission\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\audit-borderline-review-as-b4702-stion-before-any-submission\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\audit-borderline-review-as-b4702-stion-before-any-submission\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+(node:2528) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2528) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[11/45] tests\browser\audit.spec.mjs:259:1 › Scam Check keeps edited text on failure, locale change and retry until cleared
+[12/45] tests\browser\audit.spec.mjs:275:1 › switching a report from operation A to B preserves A and submits B
+[13/45] tests\browser\audit.spec.mjs:290:1 › desktop wallet navigation uses a vertical list of readable labels
+[14/45] tests\browser\audit.spec.mjs:303:1 › a new security event appears in the open inbox without a manual reload
+[15/45] tests\browser\audit.spec.mjs:313:1 › client can open pending questions, case updates and the exact family-approved transfer in kk and ru
+[16/45] tests\browser\audit.spec.mjs:349:1 › an unavailable or slow security inbox leaves the client wallet usable
+[17/45] tests\browser\audit.spec.mjs:365:1 › home refreshes security updates without frequent inbox reads or stale transfer shortcuts
+[18/45] tests\browser\mobile.spec.mjs:9:1 › an older WebView can open the same team account in a browser
+[19/45] tests\browser\mobile.spec.mjs:19:1 › welcome exposes personal sign-in and explains unavailable deployment
+[20/45] tests\browser\mobile.spec.mjs:37:3 › offline everyday persists once, without network effects
+[21/45] tests\browser\mobile.spec.mjs:37:3 › offline pressure persists once, without network effects
+[22/45] tests\browser\mobile.spec.mjs:37:3 › offline network persists once, without network effects
+[23/45] tests\browser\mobile.spec.mjs:64:1 › offline questionnaire clears answers and never claims safety
+[24/45] tests\browser\mobile.spec.mjs:83:1 › clear history requires confirmation and retains language
+[25/45] tests\browser\mobile.spec.mjs:96:1 › narrow and large-text layouts stay within the viewport
+[26/45] tests\browser\mobile.spec.mjs:119:1 › blocked storage is announced without a blank screen
+[27/45] tests\browser\mobile.spec.mjs:133:1 › live role gate is server-derived and errors do not trigger demo fallback
+[28/45] tests\browser\network.spec.mjs:2:1 › fit and zoom keep every node reachable on phone and presentation widths
+[29/45] tests\browser\screenshot.spec.mjs:3:1 › Cyrillic screenshot OCR runs from packaged assets
+[30/45] tests\browser\service-desk.spec.mjs:22:1 › platform navigation uses only aggregate endpoints, reports a stale change and rereads employee access
+[31/45] tests\browser\service-desk.spec.mjs:53:1 › customer can explicitly retry a failed reply without duplicating consent or opening a dialer
+[32/45] tests\browser\service-desk.spec.mjs:86:1 › saved answers survive navigation and delayed saving never releases a transfer
+[33/45] tests\browser\service-desk.spec.mjs:127:1 › cancellation reviews the current receipt and reconciles a lost acknowledgement
+[34/45] tests\browser\soc-refresh.spec.mjs:10:33 › SOC 393: same receipt, graph evidence and role cleanup
+[35/45] tests\browser\soc-refresh.spec.mjs:10:33 › SOC 1440: same receipt, graph evidence and role cleanup
+[36/45] tests\browser\wallet.spec.mjs:3:1 › the team sign-in adapts its photo and links directly to jury rooms
+[37/45] tests\browser\wallet.spec.mjs:25:1 › wallet card and chart remain usable at phone widths
+[38/45] tests\browser\wallet.spec.mjs:81:1 › sign-in can recover from a service outage without granting a role early
+
+
+(node:17644) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17644) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[39/45] tests\browser\jury-rooms.spec.mjs:33:1 › a juror can freeze personal CSV predictions before grading and switch language without losing the run
+[40/45] tests\browser\jury-rooms.spec.mjs:65:1 › a client shares just the selected message category with the officer for one report
+[41/45] tests\browser\jury-rooms.spec.mjs:112:1 › a juror can select a saved recipient and an officer can inspect the same prepared case
+[42/45] tests\browser\jury-rooms.spec.mjs:180:1 › a disputed incoming payment reserves its amount and its saved statement follows the officer's decision
+[43/45] tests\browser\jury-rooms.spec.mjs:258:1 › jurors can invite colleagues without sharing transfers, metrics or employee permissions with another room
+[44/45] tests\browser\roles-live.spec.mjs:58:1 › three personal accounts share a protected case and separate operational metrics
+
+
+(node:17080) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:17080) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[45/45] tests\browser\live.spec.mjs:5:1 › real PostgreSQL/Redis: client, ML cooling, SOC graph and report lifecycle
+  2 failed
+    tests\browser\audit.spec.mjs:218:1 › the payer reports a request from an ended call for the reviewed draft only
+    tests\browser\audit.spec.mjs:236:1 › borderline review asks one bilingual question before any submission
+  7 skipped
+  36 passed (11.9m)

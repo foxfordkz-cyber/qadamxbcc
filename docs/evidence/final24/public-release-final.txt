@@ -1,0 +1,1 @@
+PASS: public current/team, download page and downloaded APK remain build 24

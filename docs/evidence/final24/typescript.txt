@@ -1,0 +1,6 @@
+
+> bcc-shield-frontend@1.0.0 typecheck
+> next typegen && tsc --noEmit
+
+Generating route types...
+✓ Types generated successfully

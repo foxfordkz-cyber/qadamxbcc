@@ -1,0 +1,8 @@
+{
+  "date": "2026-11-25",
+  "qr_decoded_url": "https://saq-bol-bcc.zerdeliportald.workers.dev/download/android/",
+  "download_page_http": 200,
+  "soc_redirect_http": 307,
+  "soc_redirect": "https://saq-bol-mobile.onrender.com/soc/",
+  "physical_camera_scan": false
+}

@@ -1,0 +1,31 @@
+........................................................................ [  8%]
+................s......................................ss...........s... [ 17%]
+..........................................s..................sssssss.... [ 26%]
+...................................................ss................... [ 34%]
+.....................s...........................................ssss... [ 43%]
+........................................................................ [ 52%]
+......................................................................s. [ 60%]
+s.s.s.s.s............................................................... [ 69%]
+...............................................................s........ [ 78%]
+...............................ssssss...ss.............................. [ 86%]
+........................................................................ [ 95%]
+....................................                                     [100%]
+============================== warnings summary ===============================
+..\..\final-readiness\backend\.venv\Lib\site-packages\fastapi\testclient.py:1
+  <venv>\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/test_ecosystem_contract.py::test_openapi_contract_matches_committed_client_boundary
+  <venv>\Lib\site-packages\fastapi\openapi\utils.py:295: UserWarning: Duplicate Operation ID proxy_mobile_v1_api__path__get for function proxy at <checkout>\backend\app\mobile_gateway\app.py
+    warnings.warn(message, stacklevel=1)
+
+tests/test_migrations.py::test_upgrade_matches_models_and_downgrades
+  <checkout>\backend\tests\test_migrations.py:35: SAWarning: Skipped unsupported reflection of expression-based index ix_tx_sender_status_settlement
+    diff: list[Any] = compare_metadata(ctx, Base.metadata)
+
+tests/test_migrations.py::test_upgrade_matches_models_and_downgrades
+  <venv>\Lib\site-packages\alembic\ddl\impl.py:859: UserWarning: autogenerate skipping metadata-specified expression-based index 'ix_tx_sender_status_settlement'; dialect 'sqlite' under SQLAlchemy 2.1.8 can't reflect these indexes so they can't be compared
+    util.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+794 passed, 34 skipped, 4 warnings in 1202.16s (0:20:02)

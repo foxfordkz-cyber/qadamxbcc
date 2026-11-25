@@ -1,0 +1,17 @@
+{
+  "origin": "https://saq-bol-mobile.onrender.com",
+  "three_roles_login": true,
+  "client_soc_http": 403,
+  "platform_soc_http": 403,
+  "officer_staff_http": 403,
+  "platform_staff_http": 200,
+  "historical_transaction": "28e43557-b7b6-4584-8397-e3e8104f9944",
+  "historical_client_http": 404,
+  "historical_soc_matches": 0,
+  "current_balance": "4785900.00",
+  "current_operation_count": 12,
+  "ephemeral_store": true,
+  "telegram": "fake_enabled",
+  "compatibility_http": 404,
+  "mutations": "login only; no transfers, restart, deployment or credential changes"
+}

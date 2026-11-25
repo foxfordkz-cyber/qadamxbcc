@@ -1,0 +1,35 @@
+[INEFFECTIVE_DYNAMIC_IMPORT] ../../jury-outcomes/frontend/node_modules/vinext/dist/shims/default-global-error.js is dynamically imported by \0virtual:vite-rsc/client-references but also statically imported by ../../jury-outcomes/frontend/node_modules/vinext/dist/server/app-ssr-entry.js, ../../jury-outcomes/frontend/node_modules/vinext/dist/shims/error-boundary.js, dynamic import will not move module into another chunk.
+
+[plugin rsc:inject-async-local-storage] [SOURCEMAP_BROKEN] Sourcemap is likely to be incorrect: a plugin (rsc:inject-async-local-storage) was used to transform files, but didn't generate a sourcemap for the transformation. Consult the plugin documentation for help: https://rolldown.rs/guide/troubleshooting#warning-sourcemap-is-likely-to-be-incorrect
+
+[plugin rsc:inject-async-local-storage] [SOURCEMAP_BROKEN] Sourcemap is likely to be incorrect: a plugin (rsc:inject-async-local-storage) was used to transform files, but didn't generate a sourcemap for the transformation. Consult the plugin documentation for help: https://rolldown.rs/guide/troubleshooting#warning-sourcemap-is-likely-to-be-incorrect
+
+[plugin rsc:virtual:vite-rsc/assets-manifest] [SOURCEMAP_BROKEN] Sourcemap is likely to be incorrect: a plugin (rsc:virtual:vite-rsc/assets-manifest) was used to transform files, but didn't generate a sourcemap for the transformation. Consult the plugin documentation for help: https://rolldown.rs/guide/troubleshooting#warning-sourcemap-is-likely-to-be-incorrect
+
+✓ built in 15.77s
+
+  Route (app)
+  ┌ ƒ /
+  ├ λ /api/v1/:path+
+  ├ λ /api/v1/integrations/:path+
+  ├ λ /api/v1/trusted-circle/:transactionId
+  ├ λ /api/v1/trusted-circle/members
+  ├ λ /api/v1/trusted-circle/report-signals
+  ├ λ /api/v1/trusted-circle/session
+  ├ ? /download/android
+  ├ λ /health
+  ├ ƒ /mobile
+  ├ λ /mobile/link
+  ├ ƒ /pitch
+  └ ƒ /soc
+
+  λ API  ƒ Dynamic  ? Unknown
+
+  ? Some routes could not be classified. vinext currently uses static analysis
+    and cannot detect dynamic API usage (headers(), cookies(), etc.) at build time.
+    Automatic classification will be improved in a future release.
+
+  Build complete.
+
+Generating route types...
+✓ Types generated successfully

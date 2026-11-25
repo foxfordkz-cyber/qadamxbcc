@@ -36,7 +36,7 @@ def main() -> None:
                 "pytest",
                 "-q",
                 "--basetemp=.pytest_native_tmp",
-                "--junitxml=../native-storage-results.xml",
+                "--junitxml=../.local-checks/native-storage-results.xml",
                 "tests/test_postgres_concurrency.py",
                 "tests/test_postgres_linked_returns.py",
                 "tests/test_recipient_flag_postgres.py",

@@ -1,0 +1,44 @@
+
+> bcc-shield-frontend@1.0.0 build
+> next build --webpack
+
+▲ Next.js 16.4.6 (webpack)
+✓ Running next.config.ts took 760ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 91s
+  Running TypeScript ...
+  Finished TypeScript in 112s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/6) ...
+  Generating static pages using 11 workers (1/6)
+  Generating static pages using 11 workers (2/6)
+  Generating static pages using 11 workers (4/6)
+✓ Generating static pages using 11 workers (6/6) in 2.9s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /api/v1/[...path]
+├ ƒ /api/v1/integrations/[...path]
+├ ƒ /api/v1/trusted-circle/[transactionId]
+├ ƒ /api/v1/trusted-circle/members
+├ ƒ /api/v1/trusted-circle/report-signals
+├ ƒ /api/v1/trusted-circle/session
+├ ○ /apple-icon.png
+├ ○ /download/android
+├ ƒ /health
+├ ○ /icon.svg
+├ ○ /manifest.webmanifest
+├ ƒ /mobile
+├ ƒ /mobile/link
+├ ƒ /pitch
+└ ƒ /soc
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

@@ -1,0 +1,10 @@
+{
+  "bot": "bekzat_bcc_shield_test_bot",
+  "identity_matches": true,
+  "private_enrollment_present": true,
+  "webhook_present": false,
+  "pending_updates": 0,
+  "sent_messages": 0,
+  "updates_consumed": 0,
+  "polling_started": false
+}

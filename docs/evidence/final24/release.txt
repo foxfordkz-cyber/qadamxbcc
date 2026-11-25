@@ -1,0 +1,14 @@
+Picked up JAVA_TOOL_OPTIONS: -Xmx256m
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by org.conscrypt.NativeLibraryUtil in an unnamed module (file:/C:/Users/user/AppData/Local/Android/Sdk/build-tools/36.0.0/lib/apksigner.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+Picked up JAVA_TOOL_OPTIONS: -Xmx256m
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by org.conscrypt.NativeLibraryUtil in an unnamed module (file:/C:/Users/user/AppData/Local/Android/Sdk/build-tools/36.0.0/lib/apksigner.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+website: kz.qadamx.bccshield.website 2.9 build 16, SHA-256 and 31 UI files match a1c93d11c2fd71473f8e30c26a2c3616e4103675.
+team: kz.qadamx.bccshield.demo 2.9 build 24, SHA-256 and 40 UI files match 24e51149210c8fd4bc96815b457d2b7d55d7e537.
