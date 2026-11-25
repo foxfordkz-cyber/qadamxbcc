@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="kk">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Saq Bol · CSV</title>
+  <link rel="icon" href="/jury/visuals/mark.svg">
+  <link rel="stylesheet" href="/jury/visuals/fonts/onest.css">
+  <link rel="stylesheet" href="/jury/visuals/rooms.css">
+  <link rel="stylesheet" href="/jury/visuals/trial.css">
+  <script src="/jury/visuals/room-language.js" defer></script>
+  <script src="/jury/visuals/trial.js" defer></script>
+</head>
+<body>
+<header class="mast"><b>Saq Bol <span>× BCC</span></b><button id="room-language" type="button" hidden>РУС</button></header>
+<main class="trial">
+  <a href="/jury">← <span lang="kk">Қазылар бөлмесі</span><span lang="ru">Комната жюри</span></a>
+  <h1><span lang="kk">Өз аударымдарыңызды тексеріңіз</span><span lang="ru">Проверьте свои переводы</span></h1>
+  <p><span lang="kk">Қоңырау кезінде таныс адамға жасалған ойдан шығарылған аударымдарды CSV форматында жүктеңіз. Жүйе екі модельдің болжамын бекіткенше жауаптарды өзіңізде сақтаңыз.</span><span lang="ru">Загрузите вымышленные переводы знакомому во время звонка. Правильные ответы оставьте у себя, пока система не зафиксирует прогнозы обеих моделей.</span></p>
+  <div class="templates">
+    <a href="/jury/trial/example/cases" download><span lang="kk">Аударымдар үлгісі</span><span lang="ru">Пример операций</span></a>
+    <a href="/jury/trial/example/labels" download><span lang="kk">Жауаптар үлгісі</span><span lang="ru">Пример ответов</span></a>
+  </div>
+  <p><span lang="kk">32 жолға дейін, UTF-8, үтірмен бөлінген. Әр жолға лақап ID беріңіз. Аты-жөнін, карта және телефон нөмірлерін енгізбеңіз.</span><span lang="ru">До 32 строк, UTF-8, разделитель — запятая. Дайте каждой строке условный ID. Используйте учебные данные без имён, номеров карт и телефонов.</span></p>
+  <form action="/jury/start/trial" method="post" id="start" hidden>
+    <button><span lang="kk">Жеке сынақты бастау</span><span lang="ru">Открыть личную проверку</span></button>
+  </form>
+  <section id="workspace" hidden>
+    <h2><span lang="kk">Операциялар</span><span lang="ru">Операции</span></h2>
+    <label for="cases"><span lang="kk">Аударымдар CSV файлы</span><span lang="ru">CSV с переводами</span></label>
+    <input id="cases" type="file" accept=".csv,text/csv">
+    <div id="preview" aria-live="polite"></div>
+    <button id="freeze" type="button" disabled><span lang="kk">Жарамды жолдардың болжамын бекіту</span><span lang="ru">Зафиксировать прогноз по принятым строкам</span></button>
+    <section id="saved" hidden>
+      <h2><span lang="kk">Бекітілген болжам</span><span lang="ru">Зафиксированный прогноз</span></h2>
+      <p><span lang="kk">Файлды жүктеп, SHA-256 мәнін жауап берушіге көрсетіңіз.</span><span lang="ru">Скачайте прогноз и передайте его SHA-256 автору примеров.</span></p>
+      <code id="hash"></code><br><a id="download" download><span lang="kk">Болжамды жүктеу</span><span lang="ru">Скачать прогноз</span></a>
+      <label for="labels"><span lang="kk">Қабылданған ID үшін жауаптар CSV файлы</span><span lang="ru">CSV с ответами для принятых ID</span></label>
+      <input id="labels" type="file" accept=".csv,text/csv">
+      <div id="grades" aria-live="polite"></div>
+    </section>
+  </section>
+  <div id="feedback" role="status"></div>
+</main></body></html>

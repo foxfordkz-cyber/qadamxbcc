@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { money, useLocale } from "@/lib/i18n";
 import trial from "@/lib/familiar-call-trial.json";
+import wallets from "@/lib/connected-wallet.json";
 import { ShadowCallPanel } from "./shadow-call";
 import styles from "./model-trial.module.css";
 
@@ -66,5 +67,8 @@ export function ModelTrial() {
         contributors: trial.example.contributors,
       }} />
     </details>
+    <a className={styles.verdict} href={new URL("jury/trial", wallets.juryUrl).href}>
+      {kk ? "Өз CSV файлыңызды тексеру →" : "Проверить свой CSV в комнате жюри →"}
+    </a>
   </section>;
 }

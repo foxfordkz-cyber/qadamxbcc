@@ -1,0 +1,13 @@
+.trial { display:block; max-width:52rem; margin:0 auto; padding:clamp(18px,4vw,48px); }
+.trial h1 {font-size:clamp(28px,5vw,46px);}
+.trial h2 {font-size:1.34rem;margin:1.4rem 0 .5rem;}
+.trial label {display:block;font-weight:650;margin:12px 0 5px;}
+.trial input {max-width:100%;font:inherit;padding:6px 0;}
+.trial button {color:white;background:#076647;margin:8px 0;}
+.trial button:disabled {background:#e1e6e1;color:#59645e;cursor:default;}
+.trial code {display:block;font-size:.9rem;}
+.trial .templates {display:flex;gap:20px;flex-wrap:wrap;}
+.trial table {border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;}
+.trial td,.trial th {text-align:start;padding:9px 4px;border-bottom:1px solid #d6dcd4;}
+.trial table caption {text-align:start;font-weight:650;}
+.trial #feedback {color:#8c3f0b;}

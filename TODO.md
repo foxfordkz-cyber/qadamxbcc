@@ -20,4 +20,5 @@
 - [x] **T15: Disputed incoming funds.** Reserve the reported credit only, preserve the available balance, review and appeal a dispute, and verify signed case statements against the current status.
 - [x] **T16: First-hour response queue.** Let officers prioritize the oldest unanswered reports and measure the time to the first audited staff action.
 - [x] **T17: Familiar-payee call model.** Trained an explainable specialist, validated paired decisions against v3, published trial errors in Kazakh and Russian, and shipped officer observations and a blinded evaluation runner. The incumbent remains the decision model.
+- [x] **T18: Browser blind trial.** Preview anonymous CSV cases, freeze both model predictions in a jury room and grade them against independently supplied labels.
 - [ ] **Bank acceptance gates (external dependencies).** Customer/account authorization, authoritative device/deposit feeds, payment outbox adapter, real-data ML validation, SSO/MFA, immutable audit, HA/load testing and policy approval. See `docs/PILOT.md`; these require bank systems and sign-off, not synthetic demo credentials.

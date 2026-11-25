@@ -5,12 +5,12 @@ import asyncio
 import csv
 import hashlib
 import json
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from io import StringIO
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.ml.familiar import ARTIFACT, VERSION, familiar_router
 from app.ml.model import MODEL_PATH, MODEL_VERSION, get_model
@@ -24,8 +24,8 @@ Decision = Literal["approved", "cooling_off", "blocked"]
 class Case(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     case_id: CaseId
-    amount_kzt: float = Field(gt=0)
-    usual_amount_kzt: float = Field(gt=0)
+    amount_kzt: float = Field(ge=0.01, le=1_000_000_000)
+    usual_amount_kzt: float = Field(ge=0.01, le=1_000_000_000)
     recipient_characters: int | None = Field(default=None, ge=0, le=128)
     typing_ms: int | None = Field(default=None, ge=0, le=3_600_000)
     hesitation_ms: int | None = Field(default=None, ge=0, le=300_000)
@@ -57,27 +57,66 @@ def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def read_csv[M: BaseModel](data: bytes, schema: type[M]) -> dict[str, M]:
-    reader = csv.DictReader(StringIO(data.decode("utf-8-sig"), newline=""))
+@dataclass(frozen=True)
+class RowIssue:
+    line: int
+    code: str
+    field: str = ""
+
+
+def inspect_csv[M: BaseModel](
+    data: bytes, schema: type[M], max_rows: int | None = None
+) -> tuple[dict[str, M], list[RowIssue]]:
+    reader = csv.DictReader(StringIO(data.decode("utf-8-sig"), newline=""), strict=True)
     headers = reader.fieldnames or []
     if sorted(headers) != sorted(schema.model_fields):
         raise ValueError(f"Expected CSV columns: {', '.join(schema.model_fields)}")
     result: dict[str, M] = {}
-    for row in reader:
-        if None in row:
-            raise ValueError(f"Unexpected extra columns on line {reader.line_num}")
-        item = schema.model_validate({k: None if v == "" else v for k, v in row.items()})
+    first: dict[str, int] = {}
+    issues: dict[int, RowIssue] = {}
+    for count, row in enumerate(reader, 1):
+        if max_rows is not None and count > max_rows:
+            raise ValueError("row_limit")
+        line = reader.line_num
         key = row["case_id"]
-        if key in result:
-            raise ValueError(f"Duplicate case_id on line {reader.line_num}")
+        if key and key in first:
+            issues[first[key]] = RowIssue(first[key], "duplicate", "case_id")
+            issues[line] = RowIssue(line, "duplicate", "case_id")
+            result.pop(key, None)
+            continue
+        first[key] = line
+        if None in row or None in row.values():
+            issues[line] = RowIssue(line, "columns")
+            continue
+        try:
+            item = schema.model_validate({k: None if v == "" else v for k, v in row.items()})
+        except ValidationError as exc:
+            issues[line] = RowIssue(line, "field", str(exc.errors()[0]["loc"][0]))
+            continue
         result[key] = item
-    if not result:
+    if not result and not issues:
         raise ValueError("Empty CSV")
+    return result, sorted(issues.values(), key=lambda issue: issue.line)
+
+
+def read_csv[M: BaseModel](data: bytes, schema: type[M]) -> dict[str, M]:
+    try:
+        result, issues = inspect_csv(data, schema)
+    except csv.Error as exc:
+        raise ValueError("Malformed CSV") from exc
+    if issues:
+        issue = issues[0]
+        kind = "Duplicate case_id" if issue.code == "duplicate" else "Invalid CSV row"
+        raise ValueError(f"{kind} on line {issue.line}")
     return result
 
 
 async def freeze(data: bytes) -> FrozenRun:
     cases = read_csv(data, Case)
+    return await freeze_cases(data, cases)
+
+
+async def freeze_cases(data: bytes, cases: dict[str, Case]) -> FrozenRun:
     incumbent = get_model()
     candidate = familiar_router(incumbent)
     base = scenarios()[0]
