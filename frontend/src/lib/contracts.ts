@@ -87,6 +87,7 @@ export interface Evaluation extends Decision, MLDetails {
 export interface AbandonResult { request_id: string; status: "abandoned" | "processed"; evaluation?: Evaluation | null; server_time: string }
 export interface Party { id: string; full_name: string; iban: string }
 export interface FeedItem extends MLDetails {
+  shadow_call?: ShadowCall;
   transaction_id: string; created_at: string; status: Status; risk_score: number;
   updated_at?: string;
   amount: string | number; currency: string; latency_ms: number; sender: Party; recipient: Party;
@@ -155,9 +156,19 @@ export const evaluationResponseSchema = mlResponseSchema.extend({
 }).passthrough();
 const abandonResponseSchema = z.object({ request_id: z.uuid(), status: z.enum(["abandoned", "processed"]), evaluation: evaluationResponseSchema.nullable().optional(), server_time: z.iso.datetime({ offset: true }) }).refine(value => value.status !== "processed" || !!value.evaluation);
 const partySchema = z.object({ id: z.uuid(), full_name: z.string(), iban: z.string() });
+const shadowCallSchema = z.object({
+  model_version: z.string(), score: z.number().min(0).max(100),
+  review_threshold: z.number().min(0).max(100), review_suggested: z.boolean(),
+  contributors: z.array(z.object({
+    feature: z.string(), value: z.number(), contribution: z.number(),
+    label_kk: z.string(), label_ru: z.string(),
+  })).max(4),
+});
+export type ShadowCall = z.infer<typeof shadowCallSchema>;
 const feedResponseSchema = z.object({
   server_time: z.iso.datetime({ offset: true }),
   items: z.array(mlResponseSchema.extend({
+    shadow_call: shadowCallSchema.optional(),
     transaction_id: z.uuid(), created_at: z.iso.datetime({ offset: true }), updated_at: z.iso.datetime({ offset: true }).optional(),
     status: statusSchema, risk_score: z.number().min(0).max(100), amount: z.union([z.string(), z.number()]),
     currency: z.string(), latency_ms: z.number().nonnegative(), sender: partySchema, recipient: partySchema,

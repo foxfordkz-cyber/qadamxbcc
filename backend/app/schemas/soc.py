@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.ml.features import ExplanationMethod
 from app.models import TransactionStatus
 from app.schemas.transfers import (
     BankCallEvidence,
@@ -53,6 +54,14 @@ class FeedParty(BaseModel):
     iban: str
 
 
+class ShadowCall(BaseModel):
+    model_version: str
+    score: float = Field(ge=0, le=100)
+    review_threshold: float = Field(ge=0, le=100)
+    review_suggested: bool
+    contributors: list[MLContributorOut] = Field(max_length=4)
+
+
 class FeedItem(BaseModel):
     transaction_id: uuid.UUID
     created_at: datetime
@@ -78,8 +87,9 @@ class FeedItem(BaseModel):
     verification_answers: CoolingQuestionnaire | None = None
     ml_score: float | None = None
     ml_base_score: float | None = None
+    shadow_call: ShadowCall | None = Field(None, exclude_if=lambda value: value is None)
     ml_model_version: str | None = None
-    ml_explanation_method: Literal["tree_path_probability"] | None = None
+    ml_explanation_method: ExplanationMethod | None = None
     ml_contributors: list[MLContributorOut] = Field(default_factory=list)
     layer_latency_ms: dict[str, float] = Field(default_factory=dict)
     velocity: dict[str, dict[str, dict[str, float]]] = Field(default_factory=dict)

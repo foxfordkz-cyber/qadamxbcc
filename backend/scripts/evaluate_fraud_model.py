@@ -31,6 +31,7 @@ from app.ml.model import (
     MODEL_VERSION,
     FraudModel,
     Prediction,
+    RiskScorer,
     load_model,
 )
 from app.ml.training import SEED, synthetic_data
@@ -319,7 +320,12 @@ def scenarios() -> tuple[Scenario, ...]:
 
 
 async def evaluate_scenario(
-    scenario: Scenario, variant: Variant, model: FraudModel | None = None
+    scenario: Scenario,
+    variant: Variant,
+    model: RiskScorer | None = None,
+    *,
+    include_version: bool = False,
+    include_contributors: bool = False,
 ) -> dict[str, Any]:
     redis = fakeredis.FakeAsyncRedis()
     graph = GraphStore()
@@ -382,6 +388,12 @@ async def evaluate_scenario(
             evaluation = await engine.evaluate(ctx)
         return {
             "status": evaluation.decision.value,
+            **({"model_version": evaluation.ml_model_version} if include_version else {}),
+            **(
+                {"contributors": [asdict(c) for c in evaluation.ml_contributors]}
+                if include_contributors
+                else {}
+            ),
             "risk_score": evaluation.score,
             "ml_score": evaluation.ml_score if variant != "without_ml" else None,
             "reason_codes": [reason.code for reason in evaluation.reasons],

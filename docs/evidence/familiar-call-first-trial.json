@@ -1,0 +1,283 @@
+{
+  "baseline_version": "bcc-synthetic-rf-v3",
+  "candidate_version": "bcc-familiar-call-lr-v1",
+  "artifact_sha256": "705efdfd18edbb6a30722b2196a330fc09e2a369a0372511e50c3a56663d484b",
+  "training_sessions": 18000,
+  "threshold": 48.0,
+  "demo_gate_passed": false,
+  "cohorts": {
+    "historical": {
+      "size": 640,
+      "specialist": 514,
+      "fallback_changes": 0,
+      "hard_blocks_added": 0,
+      "baseline": {
+        "caught": 168,
+        "missed": 88,
+        "false_pauses": 123,
+        "honest_approved": 261
+      },
+      "candidate": {
+        "caught": 172,
+        "missed": 84,
+        "false_pauses": 100,
+        "honest_approved": 284
+      },
+      "groups": {
+        "dictated": {
+          "baseline": {
+            "caught": 87,
+            "missed": 41,
+            "false_pauses": 0,
+            "honest_approved": 0
+          },
+          "candidate": {
+            "caught": 90,
+            "missed": 38,
+            "false_pauses": 0,
+            "honest_approved": 0
+          }
+        },
+        "careful_legitimate": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 42,
+            "honest_approved": 86
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 18,
+            "honest_approved": 110
+          }
+        },
+        "everyday_call": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 128
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 128
+          }
+        },
+        "ambiguous_pair": {
+          "baseline": {
+            "caught": 81,
+            "missed": 47,
+            "false_pauses": 81,
+            "honest_approved": 47
+          },
+          "candidate": {
+            "caught": 82,
+            "missed": 46,
+            "false_pauses": 82,
+            "honest_approved": 46
+          }
+        }
+      },
+      "seed": 20261217
+    },
+    "fresh": {
+      "size": 1280,
+      "specialist": 1012,
+      "fallback_changes": 0,
+      "hard_blocks_added": 0,
+      "baseline": {
+        "caught": 324,
+        "missed": 188,
+        "false_pauses": 232,
+        "honest_approved": 536
+      },
+      "candidate": {
+        "caught": 342,
+        "missed": 170,
+        "false_pauses": 204,
+        "honest_approved": 564
+      },
+      "groups": {
+        "dictated": {
+          "baseline": {
+            "caught": 163,
+            "missed": 93,
+            "false_pauses": 0,
+            "honest_approved": 0
+          },
+          "candidate": {
+            "caught": 171,
+            "missed": 85,
+            "false_pauses": 0,
+            "honest_approved": 0
+          }
+        },
+        "careful_legitimate": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 71,
+            "honest_approved": 185
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 33,
+            "honest_approved": 223
+          }
+        },
+        "everyday_call": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 256
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 256
+          }
+        },
+        "ambiguous_pair": {
+          "baseline": {
+            "caught": 161,
+            "missed": 95,
+            "false_pauses": 161,
+            "honest_approved": 95
+          },
+          "candidate": {
+            "caught": 171,
+            "missed": 85,
+            "false_pauses": 171,
+            "honest_approved": 85
+          }
+        }
+      },
+      "seed": 92071
+    },
+    "missing": {
+      "size": 640,
+      "specialist": 383,
+      "fallback_changes": 0,
+      "hard_blocks_added": 0,
+      "baseline": {
+        "caught": 165,
+        "missed": 91,
+        "false_pauses": 121,
+        "honest_approved": 263
+      },
+      "candidate": {
+        "caught": 162,
+        "missed": 94,
+        "false_pauses": 106,
+        "honest_approved": 278
+      },
+      "groups": {
+        "dictated": {
+          "baseline": {
+            "caught": 86,
+            "missed": 42,
+            "false_pauses": 0,
+            "honest_approved": 0
+          },
+          "candidate": {
+            "caught": 81,
+            "missed": 47,
+            "false_pauses": 0,
+            "honest_approved": 0
+          }
+        },
+        "careful_legitimate": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 42,
+            "honest_approved": 86
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 25,
+            "honest_approved": 103
+          }
+        },
+        "everyday_call": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 128
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 128
+          }
+        },
+        "ambiguous_pair": {
+          "baseline": {
+            "caught": 79,
+            "missed": 49,
+            "false_pauses": 79,
+            "honest_approved": 49
+          },
+          "candidate": {
+            "caught": 81,
+            "missed": 47,
+            "false_pauses": 81,
+            "honest_approved": 47
+          }
+        }
+      },
+      "seed": 34307
+    }
+  },
+  "controls": {
+    "size": 12,
+    "specialist": 1,
+    "fallback_changes": 0,
+    "hard_blocks_added": 0,
+    "baseline": {
+      "caught": 5,
+      "missed": 0,
+      "false_pauses": 2,
+      "honest_approved": 5
+    },
+    "candidate": {
+      "caught": 5,
+      "missed": 0,
+      "false_pauses": 2,
+      "honest_approved": 5
+    },
+    "groups": {
+      "panel": {
+        "baseline": {
+          "caught": 5,
+          "missed": 0,
+          "false_pauses": 2,
+          "honest_approved": 5
+        },
+        "candidate": {
+          "caught": 5,
+          "missed": 0,
+          "false_pauses": 2,
+          "honest_approved": 5
+        }
+      }
+    }
+  },
+  "no_call_controls": {
+    "size": 8205,
+    "changed_predictions": 0
+  },
+  "model_p95_ms": {
+    "specialist": 0.0341,
+    "fallback": 0.1613
+  }
+}

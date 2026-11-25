@@ -14,6 +14,8 @@ import { countBlockedHubs } from "@/lib/feed-summary";
 import { useSocPoll } from "./use-soc-poll";
 import { CaseInspector } from "./case-inspector";
 import { ScenarioResults } from "./scenario-results";
+import { ModelTrial } from "./model-trial";
+import { ShadowCallPanel } from "./shadow-call";
 import { TraceAnchorPicker } from "./trace-anchor-picker";
 import { TransferStory } from "./transfer-story";
 import { MobileQr } from "./mobile-qr";
@@ -97,6 +99,11 @@ export function SocDashboard({ tourEnabled, liveLedger, initialSelection, revisi
   const inspectedId = mode === "cases" ? caseTransactionId : selection;
   const detail = useSocPoll<Evaluation>(restored && inspectedId ? `transfers/${inspectedId}` : null, revision + refresh, mode === "cases" ? 30_000 : 3000);
   const selected = detail.data;
+  const selectedRow = items.find(item => item.transaction_id === inspectedId);
+  const retrieveObservation = restored && inspectedId && selected?.transaction_id === inspectedId
+    && selected.context?.active_call && !selectedRow && !stage;
+  const historical = useSocPoll<Feed>(retrieveObservation ? socFeedPath("all", inspectedId, 0) : null, revision + refresh, 60_000);
+  const observation = (selectedRow ?? historical.data?.items.find(item => item.transaction_id === inspectedId))?.shadow_call;
   const graph = useSocPoll<Graph>(selected ? `soc/graph/${selected.recipient.id}?depth=${graphDepth}` : null, revision + refresh, mode === "cases" ? 30_000 : 6000);
   const stats = feed.data?.stats;
   const pagination = feed.data?.pagination;
@@ -172,9 +179,9 @@ export function SocDashboard({ tourEnabled, liveLedger, initialSelection, revisi
         {graph.data ? <NetworkGraph graph={graph.data} streaming={streaming} evidence={liveLedger && !readOnly && selected && selected.transaction_id === inspectedId && selected.recipient.id === graph.data.center
           ? { anchor: selected.transaction_id, onReceipt: id => { setSelection(id); setMode("transfers"); } } : undefined} /> : <p className="empty">{t(selected ? "refreshing" : "select")}</p>}</section>
       <section className="panel analysis-panel" aria-labelledby="analysis-title"><div className="panel-heading"><div><h2 id="analysis-title"><BrainCircuit size={18} />{t("analysisPanel")}</h2><p className="panel-subtitle">{t("caseSnapshotHint")}</p></div></div>
-        <div className="analysis-body">{selected && selected.transaction_id === inspectedId ? <><div className="analysis-score"><Gauge score={selected.risk_score} /><div><Badge status={selected.status} /><p className="result-headline">{lang === "kk" ? selected.headline_kk : selected.headline_ru}</p></div></div><MLInspector details={selected} reasons={selected.reasons} /><Explain kk={selected.reasons_kk} ru={selected.reasons_ru} /></> : <p className="empty">{t("analysisEmpty")}</p>}</div></section>
+        <div className="analysis-body">{selected && selected.transaction_id === inspectedId ? <><div className="analysis-score"><Gauge score={selected.risk_score} /><div><Badge status={selected.status} /><p className="result-headline">{lang === "kk" ? selected.headline_kk : selected.headline_ru}</p></div></div><MLInspector details={selected} reasons={selected.reasons} />{observation && <ShadowCallPanel observation={observation} />}<Explain kk={selected.reasons_kk} ru={selected.reasons_ru} /></> : <p className="empty">{t("analysisEmpty")}</p>}</div></section>
       <CaseInspector traceRevision={traceFocus && traceFocus.id === inspectedId ? traceFocus.revision : 0} detail={selected} loading={detail.loading} error={detail.error} receivedAt={detail.receivedAt} selectedId={inspectedId} onReview={onReview} onSelectReceipt={id => { setSelection(id); setMode("transfers"); }} readOnly={readOnly} busy={busy} onRetry={() => setRefresh(value => value + 1)} />
     </div>}
-    {!stage && <ScenarioResults />}
+    {!stage && <><ScenarioResults /><ModelTrial /></>}
   </div>;
 }

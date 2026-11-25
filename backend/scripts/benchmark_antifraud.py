@@ -10,17 +10,18 @@ import json
 import statistics
 import time
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from redis.asyncio import Redis
 
-from app.ml.features import Features
-from app.ml.model import get_model
 from app.services.antifraud import AntifraudEngine, TransferContext
 from app.services.graph import GraphStore
 
 
-async def benchmark(samples: int = 500, redis_url: str | None = None) -> dict[str, float | str]:
+async def benchmark(
+    samples: int = 500, redis_url: str | None = None, *, familiar_calls: bool = False
+) -> dict[str, float | str]:
     if samples < 2:
         raise ValueError("At least two measured samples are required")
     if redis_url:
@@ -35,9 +36,7 @@ async def benchmark(samples: int = 500, redis_url: str | None = None) -> dict[st
         prefix = uuid.uuid4().hex
         for i in range(300):
             graph.add_transfer(f"{prefix}s{i % 40}", f"{prefix}r{i % 25}", 1000 + i)
-        engine = AntifraudEngine(redis, graph)
-        model = get_model()
-        features = Features(active_call=True, paste_detected=True, amount_ratio=8)
+        engine = AntifraudEngine(redis, graph, observe_familiar_calls=True)
         ml_times: list[float] = []
         engine_times: list[float] = []
         for i in range(samples + 30):
@@ -52,18 +51,37 @@ async def benchmark(samples: int = 500, redis_url: str | None = None) -> dict[st
                 active_call=i % 3 == 0,
                 pasted_recipient=i % 4 == 0,
             )
+            if familiar_calls:
+                payer, recipient = f"{prefix}f{i}", f"{prefix}k{i}"
+                graph.add_transfer(payer, recipient, 25000)
+                ctx = replace(
+                    ctx,
+                    sender_id=payer,
+                    recipient_id=recipient,
+                    device_id=payer,
+                    occurred_at=ctx.occurred_at.replace(hour=9),
+                    active_call=True,
+                    pasted_recipient=False,
+                    typing_duration_ms=9500,
+                    recipient_input_length=12,
+                    hesitation_ms=4000,
+                    hesitation_count=2,
+                )
             start = time.perf_counter_ns()
-            model.score(features)
-            ml_ms = (time.perf_counter_ns() - start) / 1_000_000
-            start = time.perf_counter_ns()
-            await engine.evaluate(ctx)
+            evaluated = await engine.evaluate(ctx)
             engine_ms = (time.perf_counter_ns() - start) / 1_000_000
+            if familiar_calls and evaluated.shadow_prediction is None:
+                raise RuntimeError("Familiar-call benchmark missed the observation path")
             if i >= 30:
-                ml_times.append(ml_ms)
+                ml_times.append(evaluated.layer_latency_ms["ml"])
                 engine_times.append(engine_ms)
         return {
             "scope": "single-request warmed scoring; HTTP and SQL persistence excluded",
-            "workload": "40 senders, 25 recipients; 300 initial transfer updates; short histories",
+            "workload": (
+                "Independent known-payee calls with browser measurements; both models scored"
+                if familiar_calls
+                else "40 senders, 25 recipients; 300 initial transfer updates"
+            ),
             "redis": "real" if redis_url else "fakeredis",
             "samples": float(samples),
             "quantiles": "inclusive linear interpolation",
@@ -80,8 +98,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--redis-url")
     parser.add_argument("--samples", type=int, default=500)
+    parser.add_argument("--familiar-calls", action="store_true")
     args = parser.parse_args()
-    result = asyncio.run(benchmark(samples=args.samples, redis_url=args.redis_url))
+    result = asyncio.run(
+        benchmark(args.samples, args.redis_url, familiar_calls=args.familiar_calls)
+    )
     print(json.dumps(result, indent=2))
     if float(result["ml_p95_ms"]) >= 2 or float(result["engine_p95_ms"]) >= 15:
         raise SystemExit("Latency budget exceeded")

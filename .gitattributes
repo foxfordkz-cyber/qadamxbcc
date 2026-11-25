@@ -1,5 +1,6 @@
 * text=auto
 *.sh text eol=lf
+/backend/app/ml/familiar_call.json text eol=lf
 /deliverables/android/*.apk binary
 /frontend/public/downloads/*.apk binary
 /deliverables/android/*.apk.sha256 text eol=lf

@@ -20,7 +20,6 @@ from sqlalchemy.orm import selectinload
 from app.db.locks import serialize_sender, serialized_identity
 from app.integrations.models import ContactNotification
 from app.integrations.telegram.schemas import NotificationState
-from app.ml.model import MODEL_VERSION
 from app.models import (
     AbandonedRequest,
     Account,
@@ -726,7 +725,19 @@ class TransferService:
                 outbound_call_listed=bank_check.verified,
                 checked_at=datetime.fromisoformat(bank_check.checked_at),
             )
-        tx.evaluation_snapshot = response.model_dump(mode="json")
+        decision_snapshot = response.model_dump(mode="json")
+        shadow = evaluation.shadow_prediction
+        if shadow is not None and shadow.review_threshold is not None:
+            # The officer feed reads this immutable observation. Customer response
+            # schemas also filter it out on retries and historical detail reads.
+            decision_snapshot["shadow_call"] = {
+                "model_version": shadow.model_version,
+                "score": round(shadow.score, 4),
+                "review_threshold": shadow.review_threshold,
+                "review_suggested": shadow.score >= shadow.review_threshold,
+                "contributors": [asdict(item) for item in shadow.contributors],
+            }
+        tx.evaluation_snapshot = decision_snapshot
         self.session.add(tx)
         if protected is not None:
             await self.session.flush()
@@ -763,7 +774,8 @@ class TransferService:
             risk_score=ev.score,
             ml_score=ev.ml_score,
             ml_base_score=ev.ml_base_score,
-            ml_model_version=MODEL_VERSION,
+            ml_model_version=ev.ml_model_version,
+            ml_explanation_method=ev.ml_explanation_method,
             ml_contributors=[
                 MLContributorOut(
                     feature=c.feature,
@@ -1008,7 +1020,8 @@ class TransferService:
                     "status": evaluation.decision.value,
                     "ml_score": evaluation.ml_score,
                     "ml_base_score": evaluation.ml_base_score,
-                    "ml_model_version": MODEL_VERSION,
+                    "ml_model_version": evaluation.ml_model_version,
+                    "ml_explanation_method": evaluation.ml_explanation_method,
                     "ml_contributors": [asdict(c) for c in evaluation.ml_contributors],
                     "reasons": [asdict(r) for r in evaluation.reasons],
                     "velocity": evaluation.velocity.as_dict(),

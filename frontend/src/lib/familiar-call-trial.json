@@ -1,0 +1,324 @@
+{
+  "baseline_version": "bcc-synthetic-rf-v3",
+  "candidate_version": "bcc-familiar-call-lr-v2",
+  "artifact_sha256": "a0d01a591f55ef2695530a56230a5dc8b15482ab2b0f46a4424fc137345f0476",
+  "training_sessions": 18000,
+  "threshold": 46.0,
+  "synthetic_gate_passed": false,
+  "serving_mode": "observation",
+  "cohorts": {
+    "historical": {
+      "size": 640,
+      "specialist": 514,
+      "fallback_changes": 0,
+      "hard_blocks_added": 0,
+      "baseline": {
+        "caught": 168,
+        "missed": 88,
+        "false_pauses": 123,
+        "honest_approved": 261
+      },
+      "candidate": {
+        "caught": 176,
+        "missed": 80,
+        "false_pauses": 103,
+        "honest_approved": 281
+      },
+      "groups": {
+        "dictated": {
+          "baseline": {
+            "caught": 87,
+            "missed": 41,
+            "false_pauses": 0,
+            "honest_approved": 0
+          },
+          "candidate": {
+            "caught": 93,
+            "missed": 35,
+            "false_pauses": 0,
+            "honest_approved": 0
+          }
+        },
+        "careful_legitimate": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 42,
+            "honest_approved": 86
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 20,
+            "honest_approved": 108
+          }
+        },
+        "everyday_call": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 128
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 128
+          }
+        },
+        "ambiguous_pair": {
+          "baseline": {
+            "caught": 81,
+            "missed": 47,
+            "false_pauses": 81,
+            "honest_approved": 47
+          },
+          "candidate": {
+            "caught": 83,
+            "missed": 45,
+            "false_pauses": 83,
+            "honest_approved": 45
+          }
+        }
+      },
+      "seed": 20261217
+    },
+    "fresh": {
+      "size": 1280,
+      "specialist": 1045,
+      "fallback_changes": 0,
+      "hard_blocks_added": 0,
+      "baseline": {
+        "caught": 339,
+        "missed": 173,
+        "false_pauses": 242,
+        "honest_approved": 526
+      },
+      "candidate": {
+        "caught": 330,
+        "missed": 182,
+        "false_pauses": 206,
+        "honest_approved": 562
+      },
+      "groups": {
+        "dictated": {
+          "baseline": {
+            "caught": 173,
+            "missed": 83,
+            "false_pauses": 0,
+            "honest_approved": 0
+          },
+          "candidate": {
+            "caught": 162,
+            "missed": 94,
+            "false_pauses": 0,
+            "honest_approved": 0
+          }
+        },
+        "careful_legitimate": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 76,
+            "honest_approved": 180
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 38,
+            "honest_approved": 218
+          }
+        },
+        "everyday_call": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 256
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 256
+          }
+        },
+        "ambiguous_pair": {
+          "baseline": {
+            "caught": 166,
+            "missed": 90,
+            "false_pauses": 166,
+            "honest_approved": 90
+          },
+          "candidate": {
+            "caught": 168,
+            "missed": 88,
+            "false_pauses": 168,
+            "honest_approved": 88
+          }
+        }
+      },
+      "seed": 72491
+    },
+    "missing": {
+      "size": 640,
+      "specialist": 392,
+      "fallback_changes": 0,
+      "hard_blocks_added": 0,
+      "baseline": {
+        "caught": 144,
+        "missed": 112,
+        "false_pauses": 117,
+        "honest_approved": 267
+      },
+      "candidate": {
+        "caught": 149,
+        "missed": 107,
+        "false_pauses": 106,
+        "honest_approved": 278
+      },
+      "groups": {
+        "dictated": {
+          "baseline": {
+            "caught": 72,
+            "missed": 56,
+            "false_pauses": 0,
+            "honest_approved": 0
+          },
+          "candidate": {
+            "caught": 74,
+            "missed": 54,
+            "false_pauses": 0,
+            "honest_approved": 0
+          }
+        },
+        "careful_legitimate": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 45,
+            "honest_approved": 83
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 31,
+            "honest_approved": 97
+          }
+        },
+        "everyday_call": {
+          "baseline": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 128
+          },
+          "candidate": {
+            "caught": 0,
+            "missed": 0,
+            "false_pauses": 0,
+            "honest_approved": 128
+          }
+        },
+        "ambiguous_pair": {
+          "baseline": {
+            "caught": 72,
+            "missed": 56,
+            "false_pauses": 72,
+            "honest_approved": 56
+          },
+          "candidate": {
+            "caught": 75,
+            "missed": 53,
+            "false_pauses": 75,
+            "honest_approved": 53
+          }
+        }
+      },
+      "seed": 78157
+    }
+  },
+  "controls": {
+    "size": 12,
+    "specialist": 1,
+    "fallback_changes": 0,
+    "hard_blocks_added": 0,
+    "baseline": {
+      "caught": 5,
+      "missed": 0,
+      "false_pauses": 2,
+      "honest_approved": 5
+    },
+    "candidate": {
+      "caught": 5,
+      "missed": 0,
+      "false_pauses": 2,
+      "honest_approved": 5
+    },
+    "groups": {
+      "panel": {
+        "baseline": {
+          "caught": 5,
+          "missed": 0,
+          "false_pauses": 2,
+          "honest_approved": 5
+        },
+        "candidate": {
+          "caught": 5,
+          "missed": 0,
+          "false_pauses": 2,
+          "honest_approved": 5
+        }
+      }
+    }
+  },
+  "no_call_controls": {
+    "size": 8205,
+    "changed_predictions": 0
+  },
+  "model_p95_ms": {
+    "specialist": 0.0391,
+    "fallback": 0.1586
+  },
+  "example": {
+    "amount": 42310.25,
+    "incumbent_score": 93.6039,
+    "incumbent_risk": 38,
+    "ml_uplift": 13,
+    "pause_floor": 40,
+    "incumbent_status": "approved",
+    "candidate_score": 64.9641,
+    "candidate_suggests_review": true,
+    "contributors": [
+      {
+        "feature": "typing_speed_cps",
+        "value": 0.25,
+        "contribution": 29.520845379313954,
+        "label_kk": "\u0422\u0435\u0440\u0443 \u0436\u044b\u043b\u0434\u0430\u043c\u0434\u044b\u0493\u044b",
+        "label_ru": "\u0421\u043a\u043e\u0440\u043e\u0441\u0442\u044c \u0432\u0432\u043e\u0434\u0430"
+      },
+      {
+        "feature": "hesitation_count",
+        "value": 4.0,
+        "contribution": 17.524054755399725,
+        "label_kk": "\u041a\u0456\u0434\u0456\u0440\u0456\u0441\u0442\u0435\u0440 \u0441\u0430\u043d\u044b",
+        "label_ru": "\u0427\u0438\u0441\u043b\u043e \u043f\u0430\u0443\u0437"
+      },
+      {
+        "feature": "amount_ratio",
+        "value": 1.05775625,
+        "contribution": -3.790271770211732,
+        "label_kk": "\u0421\u043e\u043c\u0430\u043d\u044b\u04a3 \u04d9\u0434\u0435\u0442\u0442\u0435\u0433\u0456 \u0441\u043e\u043c\u0430\u0493\u0430 \u049b\u0430\u0442\u044b\u043d\u0430\u0441\u044b",
+        "label_ru": "\u041e\u0442\u043d\u043e\u0448\u0435\u043d\u0438\u0435 \u0441\u0443\u043c\u043c\u044b \u043a \u043e\u0431\u044b\u0447\u043d\u043e\u0439"
+      },
+      {
+        "feature": "hesitation_ms",
+        "value": 9500.0,
+        "contribution": 0.08347509037615762,
+        "label_kk": "\u041a\u0456\u0434\u0456\u0440\u0456\u0441 \u04b1\u0437\u0430\u049b\u0442\u044b\u0493\u044b",
+        "label_ru": "\u0414\u043b\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c \u043f\u0430\u0443\u0437"
+      }
+    ]
+  }
+}

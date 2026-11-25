@@ -1,0 +1,3 @@
+case_id,amount_kzt,usual_amount_kzt,recipient_characters,typing_ms,hesitation_ms,hesitation_count
+example_A,18500,30000,12,5400,0,0
+example_B,80000,25000,12,33000,12500,4
