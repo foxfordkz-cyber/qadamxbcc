@@ -2,9 +2,10 @@
 
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from redis.exceptions import RedisError
-from sqlalchemy import and_, exists, func, select
+from sqlalchemy import and_, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import ColumnElement
@@ -113,6 +114,9 @@ class ReturnService:
                     original_id=identity,
                     received_at=at,
                     amount=amount,
+                    restricted_amount=amount
+                    if review_state(record) in ("reported", "appealed", "upheld")
+                    else Decimal("0.00"),
                     payer=OriginalPayer(display_name=mask_name(name), iban_masked=mask_iban(iban)),
                     review_state=review_state(record),
                     can_appeal=bool(
@@ -175,8 +179,7 @@ class ReturnService:
             except RedisError as exc:
                 scoring_error = exc
         async with serialized_identity(self.session, original_id):
-            if body.action == "return_to_sender":
-                await serialize_sender(self.session, self.owner)
+            await serialize_sender(self.session, self.owner)
             original = await self._original(original_id)
             record = await self.session.get(PaymentReturn, original.id) or PaymentReturn(
                 original_id=original.id
@@ -196,6 +199,9 @@ class ReturnService:
                 if record.refund_transaction_id:
                     raise ConflictError("return_already_initiated")
                 record.reported_at = now
+                await self.session.execute(
+                    update(Account).where(Account.id == self.owner).values(has_dispute_history=True)
+                )
                 self._event(original, "RETURN_REDIRECT_REPORTED", "customer_report", now)
                 self.session.add(record)
                 await self.session.commit()
@@ -213,6 +219,7 @@ class ReturnService:
         self, original_id: uuid.UUID, body: ReturnReview, actor: str
     ) -> IncomingPayment:
         async with serialized_identity(self.session, original_id):
+            await serialize_sender(self.session, self.owner)
             original = await self._original(original_id)
             record = await self.session.get(PaymentReturn, original.id)
             if record is None or not record.reported_at:

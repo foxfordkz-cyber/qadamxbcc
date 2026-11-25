@@ -4,6 +4,7 @@ import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
 import { canUseTransferKey, verifyWithDevice } from "./transfer-key.mjs";
+import { disputeView } from "./dispute.mjs";
 import { walletUI, icon, cardThumbnail, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
 import { familyView, checkView, packetContent, secondConfirmationView, secondSettingsView } from "./guardian.mjs";
@@ -19,6 +20,7 @@ let receiptPacket = null;
 let deviceReceipt = null;
 let partnerSignal = null;
 let graphAnchor = null;
+let dispute = null, certificate = null, certificateCheck = null, disputeQueue = null;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
 const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""});
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
@@ -110,6 +112,7 @@ function clearVisible() {
   scanText=""; reportChoice=false; drafts=readDrafts(null);
   workspaceRead=null; lastRead=null;
   deviceReceipt = partnerSignal = graphAnchor = null;
+  dispute = certificate = certificateCheck = disputeQueue = null;
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
   callbackView=queueSnapshot=callbackAttempt=null;
@@ -185,6 +188,23 @@ const title = (heading, intro = "") =>
 const input = (name, label, value = "", type = "text", extra = "") =>
   `<label>${E(label)}<input name="${name}" type="${type}" value="${E(value)}" ${extra}></label>`;
 const api = (...args) => gateway.api(...args);
+
+document.addEventListener("change", async event => {
+  const input = event.target;
+  if (!input.matches?.("[data-dispute-file]") || !dispute?.statement || !input.files?.[0]) return;
+  const file = input.files[0], id = dispute.statement.original_id;
+  await perform(async () => {
+    if (file.size > 8192) { certificateCheck = {authentic:false}; return; }
+    let parsed;
+    try { parsed = JSON.parse(await file.text()); }
+    catch { certificateCheck = {authentic:false}; return; }
+    try { certificateCheck=await gateway.request("/wallet/disputes/"+id+"/verify","POST",parsed); }
+    catch (err) {
+      if (err.status !== 422) throw err;
+      certificateCheck={authentic:false};
+    }
+  });
+});
 const errText = (code) =>
   ({
     0: T(
@@ -225,7 +245,9 @@ const errText = (code) =>
     ),
   })[code] ?? T("Не удалось выполнить действие.", "Әрекет орындалмады.");
 let failureState = null;
-function failureText({status,login,offline,mutation,report}) {
+function failureText({status,login,offline,mutation,report,code}) {
+  if (code === "disputed_amount_reserved") return T("Эта сумма затрагивает спорное зачисление. Проверьте доступный остаток.",
+    "Бұл сома даулы түсімді қамтиды. Қолжетімді қалдықты тексеріңіз.");
   return offline ? T("Нет интернета. Подключись и попробуй снова.", "Интернет жоқ. Қосылып, қайта көр.")
       : login && status === 401 ? (juryWallet
         ? T("Неверный логин или пароль. Сверьте данные своей роли в комнате жюри.", "Логин немесе құпиясөз қате. Қазылар бөлмесінен өз рөліңіздің деректерін тексеріңіз.")
@@ -252,7 +274,7 @@ async function perform(task) {
         caseEvents = (await api("integrations/guardian/soc/cases/" + id + "/history")).items;
       } catch { data = null; }
     }
-    failureState = {status:failure.status,login:page==="login",report:page==="report",offline:!navigator.onLine,mutation:mutationOutcome};
+    failureState = {status:failure.status,code:failure.code,login:page==="login",report:page==="report",offline:!navigator.onLine,mutation:mutationOutcome};
     error = failureText(failureState);
     if (failure.status === 401 && page !== "login") {
       if (product) await identity.write("session", null);
@@ -303,6 +325,7 @@ async function readWorkspace(next) {
     if(query)params.set("q",query);
     panel("feed",()=>g.api("soc/feed?"+params),v=>{data=v});
   } else if(next==="cases") {
+    if(juryWallet) panel("disputes",()=>g.request("/wallet/disputes"),v=>{disputeQueue=v;});
     panel("cases",()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),v=>{data=v});
     panel("queue",()=>g.api("integrations/guardian/soc/cases/analytics"),v=>{queueSnapshot=v});
   } else {
@@ -331,6 +354,7 @@ async function open(next, id, remember=true) {
   const samePage=page===next;
   workspaceRead=null;
   receiptPacket=null;
+  dispute = certificate = certificateCheck = null;
   lastRead={page:next,id};
   if (next==="confirmCancel") evaluation = null;
   page = next;
@@ -375,7 +399,12 @@ async function open(next, id, remember=true) {
       }
     } else if(next==="analytics") data=await gateway.request("/wallet/analytics?days="+walletDays);
     else if(next==="socAnalytics")data=await gateway.request("/wallet/soc?days="+socDays+"&include_policy=true");
-    else if(next==="incoming")data=await gateway.request("/wallet/incoming/"+id);
+    else if(next==="incoming"){
+      data=await gateway.request("/wallet/incoming/"+id);
+      if (juryWallet) dispute = await gateway.request("/wallet/disputes/"+id).catch(e => {
+        if (e.status === 404) return null; throw e;
+      });
+    }
     else if(product && next==="safety") [account,circle,summary]=await Promise.all([gateway.request("/account"),api("trusted-contacts"),
       summary ? Promise.resolve(summary) : gateway.request("/wallet/analytics?days=7").catch(e=>{if(e.status===401)throw e;return null;})]);
     else if (next === "family") {
@@ -403,6 +432,11 @@ async function open(next, id, remember=true) {
       const detail = await g.api("transfers/"+id);
       if (!current()) return;
       accept(detail);
+      if (juryWallet && g.role === "admin") {
+        void g.request("/wallet/disputes/"+id).then(value => {
+          if (current()) { dispute=value; render(); }
+        }).catch(() => {});
+      }
       if (juryWallet && (g.role === "admin" || account?.transfer_key_enrolled)) {
         void g.request("/protection/transfer-key/receipts/"+id).then(proof => {
           if (current()) { deviceReceipt = {id, ...proof}; render(); }
@@ -1217,7 +1251,8 @@ const screens = {
   callbacks:()=>desk.callbacks(data),
   analytics:()=>wallet.analytics(data,selectedDay),
   socAnalytics:()=>wallet.soc(data,true),
-  incoming:()=>data?'<h1>'+T("Входящий перевод","Кіріс аударым")+'</h1><section class="paper"><h2>+'+amount(data.amount)+'</h2><p>'+E(data.counterparty)+'</p>'+wallet.badge(data.status)+'<p>'+when(data.created_at)+'</p><small>'+E(data.transaction_id)+'</small></section>':"",
+  incoming:()=>data?'<h1>'+T("Входящий перевод","Кіріс аударым")+'</h1><section class="paper"><h2>+'+amount(data.amount)+'</h2><p>'+E(data.counterparty)+'</p>'+wallet.badge(data.status)+'<p>'+when(data.created_at)+'</p><small>'+E(data.transaction_id)+'</small></section>'+
+    disputeView(dispute,"client",certificate,certificateCheck,T,E,amount,button):"",
   family: () => familyView(data,T,button,when) + secondSettingsView(data?.second,T,button,when,amount,E,webWallet),
   guard: () => checkView(data,T,button,when,label),
   packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Скачать пакет инцидента · PDF","Оқиға құжаттарын жүктеу · PDF")) : "",
@@ -1234,7 +1269,7 @@ const screens = {
   detail: () => detailView() + (deviceReceipt?.id === selectedId && deviceReceipt?.verified
     ? '<section class="paper"><strong>' + T("Клиент подтвердил перевод ключом устройства", "Клиент аударымды құрылғы кілтімен растады") + '</strong><p>' +
       E(ledgerTime(deviceReceipt.verified_at)) + " · " + amount(deviceReceipt.amount) + '</p></section>' : "") +
-    (evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation) : ""),
+    (evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation)+disputeView(dispute,"admin",certificate,certificateCheck,T,E,amount,button) : ""),
   questionnaire: questionnaireView,
   safety: safetyView,
   scan: scanView,
@@ -1244,7 +1279,10 @@ const screens = {
   graph: graphView,
   timeline: timelineView,
   system: systemView,
-  cases: casesView,
+  cases: () => casesView() + (!juryWallet || !disputeQueue?.items?.length ? "" :
+    '<section class="paper"><h2>'+T("Спорные зачисления на проверке", "Тексеріліп жатқан даулы түсімдер")+'</h2>'+
+    disputeQueue.items.map(r=>'<button class="graph-record" data-detail="'+E(r.id)+'"><strong>'+amount(r.amount)+'</strong><small>'+E(when(r.at))+' · '+E(r.id.slice(-8))+'</small></button>').join("")+
+    (disputeQueue.has_more?'<small>'+T("Последние 25 обращений", "Соңғы 25 өтініш")+'</small>':"")+'</section>'),
   case: () => caseView() + (juryWallet && data?.id ? partnerSignalView() : ""),
   enrichment: enrichmentView,
   gateway: gatewayView,
@@ -1820,6 +1858,28 @@ root.addEventListener("click", async (event) => {
     });
     return;
   }
+  if (act?.startsWith("dispute-") && ["incoming","detail"].includes(page) && dispute?.statement) {
+    const id = dispute.statement.original_id, base = "/wallet/disputes/"+id;
+    await perform(async () => {
+      if (act === "dispute-certificate") {
+        certificate = await gateway.request(base+"/statement");
+        certificateCheck = null;
+        const href = URL.createObjectURL(new Blob([JSON.stringify(certificate,null,2)],{type:"application/json"}));
+        const link = document.createElement("a");
+        link.href=href; link.download="Saq-Bol-"+id+".json"; link.click();
+        setTimeout(()=>URL.revokeObjectURL(href),1000);
+      } else if (act === "dispute-verify" && certificate) {
+        certificateCheck = await gateway.request(base+"/verify","POST",certificate);
+      } else if (["dispute-clear","dispute-uphold"].includes(act) && gateway.role === "admin") {
+        dispute = await gateway.request(base+"/review","POST",{decision:act==="dispute-clear"?"clear":"uphold",stage:dispute.stage,confirmed:true});
+        certificateCheck = null;
+      } else if (["dispute-report","dispute-appeal"].includes(act) && gateway.role === "client") {
+        dispute=await gateway.request(base+"/report","POST",{action:act==="dispute-report"?"report_redirect":"appeal",confirmed:true});
+        account=await gateway.request("/account"); certificateCheck=null;
+      }
+    });
+    return;
+  }
   if (act === "query-partner-signal" && page === "case" && gateway?.role === "admin") {
     const id = data.id;
     await perform(async () => {
@@ -1854,7 +1914,7 @@ root.addEventListener("click", async (event) => {
       try {
         value = await api("transfers/evaluate", "POST", payment);
       } catch (failure) {
-        if (failure.status === 428) {
+        if (failure.status === 428 || failure.code === "disputed_amount_reserved") {
           mutationOutcome = false;
           await savePending("");
           account = await gateway.request("/account");

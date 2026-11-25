@@ -21,6 +21,7 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
+    false,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -79,6 +80,9 @@ class Account(Base):
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False)
     flag_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     flag_updated_at: Mapped[datetime | None] = mapped_column()
+    has_dispute_history: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false()
+    )
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     __table_args__ = (

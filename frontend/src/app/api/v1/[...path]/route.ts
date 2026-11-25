@@ -144,6 +144,10 @@ async function handle(request: NextRequest, context: RouteContext) {
     });
     if (response.status >= 300 && response.status < 400) return json({ error: "apiError" }, 502);
     if (!response.ok) {
+      if ((evaluate || resolve || linked) && response.status === 409) {
+        const failure = await response.json().catch(() => null);
+        if (failure?.detail === "disputed_amount_reserved") return json({error:"disputedAmountReserved"},409);
+      }
       if (recipientFlag && [404, 409].includes(response.status)) {
         const value: unknown = await response.json().catch(() => null);
         const code = value && typeof value === "object" && "detail" in value ? value.detail : null;

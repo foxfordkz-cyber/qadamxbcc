@@ -120,7 +120,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
   }
   function card(a, hidden) {
     return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance">${icon("eye")}<span>${hidden ? T("Показать баланс", "Балансты көрсету") : T("Скрыть баланс", "Балансты жасыру")}</span></button></div>
-      <div class="q-balance"><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><small>${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</small></div><i class="art art-card" aria-hidden="true"></i></article>`;
+      <div class="q-balance"><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><small>${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</small>${!hidden && Number(a.disputed_kzt)>0 ? "<small>"+T("Доступно", "Қолжетімді")+" "+amount(a.available_kzt)+"</small>" : ""}</div><i class="art art-card" aria-hidden="true"></i></article>`;
   }
   // Anti-fraud tips; each opens an existing protection screen.
   function stories() {

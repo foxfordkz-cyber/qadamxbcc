@@ -18,10 +18,10 @@ from app.integrations.cases.schemas import CaseOut, State
 from app.mobile_gateway.app import IdentityDep
 from app.mobile_gateway.protection import client
 from app.models import Account, Transaction, TransactionStatus
+from app.services.demo_funds import posted_balance
 from app.services.soc import LATENCY_SAMPLE_LIMIT
 
 KZ = timezone(timedelta(hours=5))
-OPENING = Decimal("5000000.00")
 T = Transaction
 Direction = Literal["incoming", "outgoing"]
 
@@ -59,15 +59,7 @@ def day_column(db: AsyncSession) -> Any:
 
 
 async def balance(db: AsyncSession, owner: UUID) -> str:
-    incoming, outgoing = (
-        await db.execute(
-            select(
-                total_amount(received(owner)),
-                total_amount(and_(sent(owner), T.status == TransactionStatus.APPROVED)),
-            ).where(or_(T.sender_id == owner, T.recipient_id == owner))
-        )
-    ).one()
-    return money(OPENING + Decimal(incoming) - Decimal(outgoing))
+    return money(await posted_balance(db, owner))
 
 
 def operation(tx: Transaction, name: str, owner: UUID) -> dict[str, Any]:

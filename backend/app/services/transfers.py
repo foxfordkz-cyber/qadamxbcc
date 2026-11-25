@@ -45,7 +45,7 @@ from app.schemas.transfers import (
     TransferEvaluateRequest,
     TransferEvaluateResponse,
 )
-from app.services import explain, family_approval
+from app.services import demo_funds, explain, family_approval
 from app.services.antifraud import (
     ACTIVE_HOLD_RULE,
     AMOUNT_SPIKE_RATIO,
@@ -319,10 +319,23 @@ class TransferService:
         return transfer_detail(tx, tx.recipient, minutes=self.engine.cooling_off_minutes)
 
     async def _get_account(self, account_id: uuid.UUID) -> Account:
-        account = await self.session.get(Account, account_id)
+        account = await self.session.get(Account, account_id, populate_existing=True)
         if account is None:
             raise NotFoundError(f"account {account_id} not found")
         return account
+
+    async def _check_disputed_funds(self, sender: Account, debit: Decimal) -> None:
+        if not sender.has_dispute_history:
+            return
+        reserved = await demo_funds.disputed_total(self.session, sender.id)
+        if not reserved:
+            return
+        # A pilot with an imported dispute requires an authoritative bank balance.
+        if not self.engine.use_virtual_wallet:
+            raise ConflictError("disputed_amount_reserved")
+        available = await demo_funds.posted_balance(self.session, sender.id) - reserved
+        if debit > available:
+            raise ConflictError("disputed_amount_reserved")
 
     async def _resolve_recipient(
         self, req: TransferEvaluateRequest, sender: Account
@@ -633,6 +646,7 @@ class TransferService:
     ) -> TransferEvaluateResponse:
         sender = await self._get_account(req.sender_id)
         recipient, ctx, bank_check = await self._scoring_context(req, tx_id, sender)
+        await self._check_disputed_funds(sender, req.amount)
 
         evaluation = await self.engine.evaluate(ctx)
 
@@ -911,6 +925,9 @@ class TransferService:
                         raise ConflictError("family_approval_expired")
                     if approval not in {"none", "confirmed"}:
                         raise ConflictError("family_approval_required")
+                    await self._check_disputed_funds(
+                        await self._get_account(tx.sender_id), tx.amount
+                    )
                     # A completed hold and clean questionnaire may override behavioral
                     # friction, but never current hard-blocking network evidence.
                     kk, ru = explain.render("QUESTIONNAIRE_PASSED")

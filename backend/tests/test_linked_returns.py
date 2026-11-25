@@ -12,7 +12,7 @@ from app.api.v1 import returns
 from app.core.config import Settings
 from app.main import create_app
 from app.models import Account, PaymentReturn, Transaction, TransactionStatus
-from tests.test_api import API, DAY, World
+from tests.test_api import API, CLEAN, DAY, World
 from tests.test_api import world as world
 from tests.test_recipient_flags import resources
 from tests.test_service_boundaries import SOC_KEY, TRANSFER_KEY, pilot
@@ -104,6 +104,87 @@ async def test_return_report_appeal_and_private_review(
     async with world.sessions() as session:
         assert await session.scalar(select(func.count()).select_from(Transaction)) == 1
     assert (await world.client.post(url, json=RETURN)).json()["refund_status"] == "approved"
+
+
+async def test_restrict_only_disputed_credits_and_restore_spendable_after_clear(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services.demo_funds import disputed_total, posted_balance
+
+    original = await payment(world, monkeypatch)
+    owner = uuid.UUID(world.id("alice"))
+    url = f"{API}/returns/{original}"
+    for _ in range(2):
+        assert (await world.client.post(url, json=REPORT)).status_code == 200
+    async with world.sessions() as db:
+        assert await disputed_total(db, owner) == Decimal("18500")
+        available = (await posted_balance(db, owner)) - Decimal("18500")
+    body = {
+        "sender_id": str(owner),
+        "recipient_id": world.id("bob"),
+        "amount": str(available + Decimal("0.01")),
+    }
+    refused = await world.client.post(f"{API}/transfers/evaluate", json=body)
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == "disputed_amount_reserved"
+    paid = await world.evaluate("alice", "bob", 1100, occurred_at=DAY.isoformat())
+    assert paid["status"] == "approved"
+    action = f"{API}/soc/returns/{original}/review"
+    assert (
+        await world.client.post(
+            action, json={"decision": "clear", "stage": "reported", "confirmed": True}
+        )
+    ).status_code == 200
+    async with world.sessions() as db:
+        assert await disputed_total(db, owner) == 0
+        assert (await posted_balance(db, owner)) == available + Decimal("18500") - Decimal("1100")
+    assert (await world.client.post(f"{API}/transfers/evaluate", json=body)).status_code == 200
+
+
+async def previous_debit(world: World, amount: str) -> None:
+    async with world.sessions() as db:
+        db.add(
+            Transaction(
+                sender_id=world.acc["alice"].id,
+                recipient_id=world.acc["dana"].id,
+                amount=Decimal(amount),
+                status=TransactionStatus.APPROVED,
+                device_id="seed",
+                created_at=DAY - timedelta(days=2),
+            )
+        )
+        await db.commit()
+
+
+async def test_recheck_available_funds_before_releasing_a_held_payment(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    incoming = await payment(world, monkeypatch)
+    held = await world.evaluate(
+        "alice",
+        "scammer",
+        900_000,
+        context={"active_call": True, "from_deposit": True},
+        occurred_at=DAY.isoformat(),
+    )
+    assert held["status"] == "cooling_off"
+    await previous_debit(world, "4101000.00")
+    assert (await world.client.post(f"{API}/returns/{incoming}", json=REPORT)).is_success
+    await world.expire_hold(held["transaction_id"])
+    path = f"{API}/transfers/{held['transaction_id']}/resolve-cooling"
+    blocked = await world.client.post(path, json={"answers": CLEAN})
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"] == "disputed_amount_reserved"
+    assert (await world.client.get(f"{API}/transfers/{held['transaction_id']}")).json()[
+        "status"
+    ] == "cooling_off"
+    assert (
+        await world.client.post(
+            f"{API}/soc/returns/{incoming}/review",
+            json={"decision": "clear", "stage": "reported", "confirmed": True},
+        )
+    ).is_success
+    assert (await world.client.post(path, json={"answers": CLEAN})).json()["status"] == "approved"
 
 
 async def assert_concurrent_returns(world: World, monkeypatch: pytest.MonkeyPatch) -> None:

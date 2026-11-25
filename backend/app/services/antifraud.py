@@ -245,6 +245,7 @@ class AntifraudEngine:
         cooling_off_minutes: int = 15,
         allow_demo_overrides: bool = True,
         allow_model_training: bool = True,
+        use_virtual_wallet: bool = True,
     ) -> None:
         self.graph = graph
         self.redis = redis
@@ -252,6 +253,7 @@ class AntifraudEngine:
         self._tz = ZoneInfo(timezone)
         self.cooling_off_minutes = cooling_off_minutes
         self.allow_demo_overrides = allow_demo_overrides
+        self.use_virtual_wallet = use_virtual_wallet
         self._pending_settlements: dict[str, TransferContext] = {}
         self.synchronizer: Callable[[], Awaitable[None]] | None = None
         # Pilot startup validates the prebuilt artifact; it never silently trains

@@ -6388,6 +6388,12 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Amount"
           },
+          "restricted_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Restricted Amount",
+            "default": "0.00"
+          },
           "currency": {
             "type": "string",
             "const": "KZT",

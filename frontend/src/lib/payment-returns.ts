@@ -24,6 +24,7 @@ export const paymentSchema = z
       iban_masked: z.string().regex(/^KZ\*\* •••• [A-Z0-9]{4}$/),
     }),
     review_state: reviewState,
+    restricted_amount: z.string().regex(/^\d+(?:\.\d{1,2})?$/).optional(),
     can_appeal: z.boolean(),
     refund_transaction_id: z.uuid().nullable(),
     refund_status: z.enum(["approved", "cooling_off", "blocked", "cancelled"]).nullable(),

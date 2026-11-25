@@ -178,6 +178,9 @@ export function IncomingReturns({
             {payment.review_state !== "none" && (
               <p className="safety-result" role="status">
                 {t(payment.review_state)}
+                {payment.restricted_amount && Number(payment.restricted_amount) > 0 && <small>
+                  {lang === "kk" ? "Осы түсім бойынша резервте" : "Зарезервировано по этому зачислению"} · {money(payment.restricted_amount, lang)}
+                </small>}
               </p>
             )}
             {payment.refund_status ? (

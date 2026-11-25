@@ -429,6 +429,14 @@ def create_mobile_app(
         if result.status_code >= 400:
             # Core validation may echo arbitrary inputs; do not forward raw error bodies.
             data = json.dumps({"detail": f"mobile_core_{result.status_code}"}).encode()
+            if result.status_code == 409:
+                with suppress(ValueError):
+                    error = result.json()
+                    if (
+                        isinstance(error, dict)
+                        and error.get("detail") == "disputed_amount_reserved"
+                    ):
+                        data = b'{"detail":"disputed_amount_reserved"}'
         elif path == "integrations/guardian/scam-check":
             # Translate the detected codes once, without resubmitting the customer's text.
             review = ScamCheckResult.model_validate_json(data)

@@ -23,6 +23,7 @@ from app.mobile_gateway.security_inbox import owner_inbox
 from app.mobile_gateway.wallet import balance
 from app.models import Account, RiskEvent, Transaction, TransactionStatus
 from app.schemas.transfers import TransferEvaluateRequest
+from app.services.demo_funds import disputed_total
 from app.services.transfers import TransferService
 
 
@@ -133,6 +134,12 @@ def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
         customer = await session.get(Account, principal.subject)
         if customer is None:
             raise HTTPException(404, "account_not_found")
+        posted = await balance(session, principal.subject)
+        restricted = (
+            await disputed_total(session, principal.subject)
+            if customer.has_dispute_history
+            else Decimal(0)
+        )
         return {
             "display_name": customer.full_name,
             "supports_call_question": True,
@@ -145,7 +152,9 @@ def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
                 app.state.transfer_key_origin and await session.get(TransferKey, principal.subject)
             ),
             "card_last4": customer.iban[-4:],
-            "balance": await balance(session, principal.subject),
+            "balance": posted,
+            "disputed_kzt": format(restricted, ".2f"),
+            "available_kzt": format(max(Decimal(0), Decimal(posted) - restricted), ".2f"),
             "guardian_username": app.state.guardian_username or None,
             "telegram_mode": app.state.telegram_mode,
             "contact_limit": CONTACT_LIMIT,

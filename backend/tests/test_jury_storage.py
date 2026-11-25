@@ -137,6 +137,51 @@ async def test_room_key_and_signed_partner_advisory(
         assert next_report["challenge"] != report["challenge"]
 
 
+async def test_original_credit_certificate_and_review(
+    rooms: Path, connect: Callable[[int], Redis]
+) -> None:
+    storage = jury_storage(rooms, connect)
+    async with (
+        storage.history_room(1) as room,
+        AsyncClient(transport=ASGITransport(app=room), base_url="http://localhost:18003") as http,
+    ):
+        owner = await sign_in(http, "client_demo", "customer fixture")
+        staff = await sign_in(http, "admin_demo", "officer fixture")
+        payments = (
+            await http.get(BASE + "/wallet/operations?direction=incoming", headers=owner)
+        ).json()["items"]
+        identity = payments[0]["transaction_id"]
+        route = BASE + f"/wallet/disputes/{identity}"
+        assert (
+            await http.post(
+                route + "/report",
+                json={"action": "report_redirect", "confirmed": True},
+                headers=owner,
+            )
+        ).status_code == 200
+        receipt = (await http.get(route + "/statement", headers=owner)).json()
+        assert receipt["statement"]["restricted_amount"] == receipt["statement"]["original_amount"]
+        assert (await http.post(route + "/verify", json=receipt, headers=staff)).json() == {
+            "authentic": True,
+            "current": True,
+        }
+        changed = {**receipt, "statement": {**receipt["statement"], "restricted_amount": "0.00"}}
+        unsigned = {**receipt, "statement": {**receipt["statement"], "extra_claim": "unknown"}}
+        assert (await http.post(route + "/verify", json=unsigned, headers=staff)).status_code == 422
+        assert (await http.post(route + "/verify", json=changed, headers=staff)).json() == {
+            "authentic": False,
+            "current": False,
+        }
+        decision = {"decision": "clear", "stage": "reported", "confirmed": True}
+        assert (await http.post(route + "/review", json=decision, headers=owner)).status_code == 403
+        closed = (await http.post(route + "/review", json=decision, headers=staff)).json()
+        assert closed["statement"]["restricted_amount"] == "0.00"
+        assert (await http.post(route + "/verify", json=receipt, headers=owner)).json() == {
+            "authentic": True,
+            "current": False,
+        }
+
+
 async def sign_in(http: AsyncClient, login: str, password: str) -> dict[str, str]:
     reply = await http.post(BASE + "/auth/login", json={"login": login, "password": password})
     assert reply.status_code == 200
