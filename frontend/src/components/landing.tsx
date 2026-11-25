@@ -63,7 +63,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
       <div className="public-mast">
         <a className="public-brand" href="#overview" aria-label="Saq Bol × BCC"><BrandMark /><strong>Saq Bol <span>× BCC</span></strong></a>
         <div className="public-tools"><LanguageSwitch />
-          <a className="public-signin" href={wallets.juryUrl}>{L("access")}<ArrowRight size={18} aria-hidden="true" /></a>
+          <a className="public-signin" href={wallets.url}>{L("access")}<ArrowRight size={18} aria-hidden="true" /></a>
           <button className="public-menu-toggle" type="button" aria-label={L("menu")} aria-controls="public-nav" aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}>
             {menuOpen ? <X size={21} /> : <Menu size={21} />}
           </button>
