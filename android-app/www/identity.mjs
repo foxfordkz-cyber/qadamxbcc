@@ -49,7 +49,15 @@ async function getGateway() {
 export async function signIn(login, password, remember = true) {
   const gateway = await getGateway();
   gateway.remember = remember;
-  const result = await gateway.request("/auth/login","POST",{login,password});
+  // One retry for an explicit gateway failure; an unanswered login already waits up to two minutes.
+  let result;
+  for (let attempt = 0; ; attempt++) {
+    try { result = await gateway.request("/auth/login","POST",{login,password}); break; }
+    catch (e) {
+      if (attempt >= 1 || !(e instanceof GatewayError) || ![502, 503, 504].includes(e.status)) throw e;
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
   if (!isWalletRole(result.role) || (!web && typeof result.token !== "string") ||
       typeof result.subject !== "string") throw new GatewayError(502);
   gateway.role = result.role; gateway.token = web ? "cookie" : result.token; gateway.subject=result.subject;

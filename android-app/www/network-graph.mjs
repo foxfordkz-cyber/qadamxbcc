@@ -24,6 +24,7 @@ export function graphCamera(svg) {
     const width=size/zoom;
     x=clamp(x,left,left+size-width); y=clamp(y,top,top+size-width);
     svg.setAttribute("viewBox",[x,y,width,width].join(" "));
+    camera.onchange?.();
   };
   const center=(cx,cy)=>{x=cx-size/zoom/2;y=cy-size/zoom/2;draw();};
   svg.onpointerdown=e=>{if(zoom>1) {drag={id:e.pointerId,x:e.clientX,y:e.clientY,originX:x,originY:y};moved=false;}};
@@ -42,9 +43,12 @@ export function graphCamera(svg) {
     const dirs={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]};
     if(dirs[e.key]){e.preventDefault();x+=dirs[e.key][0];y+=dirs[e.key][1];draw();}
   };
-  return {
+  const camera = {
+    level(){return zoom;},
+    shrink(){const midX=x+size/zoom/2,midY=y+size/zoom/2;zoom=Math.max(1,zoom/1.6);center(midX,midY);},
     fit(){zoom=1;x=left;y=top;draw();},
     enlarge(){const midX=x+size/zoom/2,midY=y+size/zoom/2;zoom=Math.min(4,zoom*1.6);center(midX,midY);},
     focus(circle){if(circle && zoom>1)center(Number(circle.getAttribute("cx")),Number(circle.getAttribute("cy")));}
   };
+  return camera;
 }

@@ -117,6 +117,7 @@ import { SAMPLE } from "./soc-sample.mjs";
 import { Gateway, gatewayOrigin, remainingSeconds } from "./gateway.mjs";
 import { installBackHandler } from "./native.mjs";
 import { currentTheme, toggleTheme } from "./theme-mode.mjs";
+import { socUI } from "./soc-ui.mjs";
 
 const root = document.querySelector("#app");
 const E = (value) =>
@@ -294,7 +295,7 @@ async function readWorkspace(next) {
     if(query)params.set("q",query);
     panel("feed",()=>g.api("soc/feed?"+params),v=>{data=v});
   } else if(next==="cases") {
-    panel("cases",()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),v=>{data=v});
+    panel("cases",()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),v=>{data=v;socCasesAt=soc.time(Date.now(),false);});
     panel("queue",()=>g.api("integrations/guardian/soc/cases/analytics"),v=>{queueSnapshot=v});
   } else {
     panel(next,()=>g.request(next==="staff"?"/admin/staff":"/admin/metrics"),v=>{data=v});
@@ -1230,6 +1231,88 @@ function feedbackView() {
   return alert + `<div class="busy-banner" role="status"><span class="spinner"></span>${message}</div>`;
 }
 
+function socGraphControls() {
+  const svg=root.querySelector(".graph");
+  camera=graphCamera(svg);
+  const nodes=data.nodes ?? [], edges=data.edges ?? [];
+  const level=root.querySelector("#graph-zoom-level");
+  const showZoom=()=>{if(level)level.textContent=Math.round(camera.level()*100)+" %";};
+  camera.onchange=showZoom;showZoom();
+  let selection=0;
+  const sourceRows=async(node,recipient,position=0)=>{
+    const target=root.querySelector("#graph-records"), ticket=++selection;
+    target.replaceChildren();if(!node)return;
+    target.textContent=T("Загружаем операции…","Операциялар жүктелуде…");
+    try{
+      const q=new URLSearchParams({node,offset:String(position)});
+      if(recipient)q.set("recipient",recipient);
+      const batch=await gateway.request("/wallet/graph-operations?"+q);
+      if(ticket!==selection||!target.isConnected)return;
+      target.innerHTML='<h3>'+T("Операции в журнале","Журналдағы операциялар")+'</h3>'+
+        (batch.items.map(tx=>'<button class="graph-record" data-detail="'+E(tx.transaction_id)+'"><strong>'+amount(tx.amount)+'</strong><span>'+E(status(tx.status))+' · '+E(when(tx.created_at))+'</span></button>').join("")||'<p>'+T("Для этой связи операций в журнале нет.","Бұл байланыс бойынша журналда операциялар жоқ.")+'</p>');
+      for(const [show,next,text] of [[position>0,position-20,T("Назад","Артқа")],[batch.has_more,position+20,T("Далее","Әрі қарай")]]){
+        if(show){const b=document.createElement("button");b.className="secondary";b.textContent=text;b.onclick=()=>sourceRows(node,recipient,next);target.append(b);}
+      }
+    }catch(e){if(ticket===selection && target.isConnected)target.textContent=errText(e.status);}
+  };
+  const selectNode=i=>{
+    const n=nodes[i];
+    void sourceRows(n?.id);
+    camera.focus(root.querySelectorAll(".graph circle")[i]);
+    [...root.querySelectorAll(".graph g")].forEach((g,j)=>g.classList.toggle("focused-node",String(j)===String(i)));
+    root.querySelectorAll("[data-node-index]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.nodeIndex===String(i))));
+    root.querySelector("#node-detail").textContent=n?T("Выбран","Таңдалды")+": "+n.data.label+' · '+T("входящие / исходящие","кіріс / шығыс")+' '+n.data.in_degree+' / '+n.data.out_degree:'';
+  };
+  root.querySelectorAll(".graph g").forEach((g,i)=>g.onclick=()=>selectNode(i));
+  root.querySelectorAll("[data-node-index]").forEach(b=>b.onclick=e=>{e.stopPropagation();selectNode(Number(b.dataset.nodeIndex));});
+  root.querySelector("#edge-focus").onchange=e=>{
+    const edge=edges.find(v=>v.id===e.target.value);
+    void sourceRows(edge?.data.edge_type==="transfer"?edge.source:null,edge?.target);
+    for(const l of root.querySelectorAll(".graph line")) l.classList.toggle("selected-edge", l.dataset.edge===edge?.id);
+    root.querySelector("#edge-detail").textContent=edge?(edge.data.edge_type==="transfer"?T("Переводы","Аударымдар"):T("Общее устройство","Ортақ құрылғы"))+" · "+edge.data.tx_count:"";
+  };
+}
+// SOC workspace (staff role "admin"): redesigned screens. Client and platform roles keep their views.
+const soc=socUI({T,E,amount,status,label,caseState,lang:()=>lang,loading:()=>loading,days:()=>socDays,moneyOutcome});
+const socMode=()=>product && ["admin","platform_admin"].includes(gateway?.role) && !!gateway?.token;
+const platformMode=()=>socMode() && gateway.role==="platform_admin";
+let socCasesAt="";
+{
+  const legacy={...screens};
+  const own={
+    home:()=>soc.home({summary,feed:data,filter,query,offset,projector}),
+    detail:()=>evaluation?soc.detail(evaluation,{timer:timerText(),callEvidence:officerCallEvidence(evaluation)}):"",
+    cases:()=>soc.cases({data,queue:queueSnapshot,filter:caseFilter,offset:caseOffset,caseState,states:caseStates,updated:socCasesAt}),
+    graph:()=>data?soc.graph(data):"",
+    socAnalytics:()=>soc.analytics(data),
+    system:()=>soc.system(data),
+    settings:()=>soc.profile({remember:gateway.remember,dark:currentTheme()==="dark",origin:gateway.origin,edition:appInfo ? appInfo.version+" · "+T("Сборка","Жинақ")+" "+appInfo.build : "2.9"}),
+    case:()=>{
+      if(!data)return "";
+      const open=!["RESOLVED","CLOSED"].includes(data.state);
+      const actions=(open?`<form id="case-note" class="form-stack"><label>${T("Заметка аналитика","Талдаушы жазбасы")}<textarea name="note" required minlength="10" maxlength="500"></textarea></label><button>${T("Сохранить заметку","Жазбаны сақтау")}</button></form>`:"")+
+        (["owner_demo","guardian_timeout","guardian_signal"].includes(data.source) && ["IN_REVIEW","ESCALATED"].includes(data.state)?button("case-information",T("Спросить, что требовал звонящий","Қоңырау шалушының талабын сұрау"),"secondary"):"")+
+        (data.assignee!=="demo_analyst_a" && open?button("case-assign",T("Назначить на себя","Өзіме тағайындау"),"secondary"):"")+
+        (caseEvidence?.transaction_id && !(caseTransaction && caseTransaction.transaction_id===caseEvidence.transaction_id)?'<button class="secondary" data-detail="'+E(caseEvidence.transaction_id)+'">'+T("Связанная операция","Байланысты операция")+'</button>':"");
+      const linked=caseTransaction && caseTransaction.transaction_id===caseEvidence?.transaction_id;
+      return soc.caseView({data,events:caseEvents.map(e=>({...e,outcome:desk.outcomeLabel(e.reason)})),
+        tx:linked?caseTransaction:null,evidence:linked?caseEvidence:null,network:linked?caseNetwork:null,
+        actions,closeForm:desk.closeCase(data),callback:desk.officerCallback(data,callbackView)});
+    },
+  };
+  for(const key of Object.keys(screens)){
+    screens[key]=()=>{
+      if(!socMode())return legacy[key]();
+      if(platformMode()){
+        if(key==="home")return soc.metrics(data);
+        if(key==="staff")return soc.staff(data);
+        if(key==="settings")return soc.profile({remember:gateway.remember,dark:currentTheme()==="dark",origin:gateway.origin,platform:true,edition:appInfo ? appInfo.version+" · "+T("Сборка","Жинақ")+" "+appInfo.build : "2.9"});
+        return soc.plain((legacy[key]??loginView)());
+      }
+      return own[key]?own[key]():soc.plain((legacy[key]??loginView)());
+    };
+  }
+}
 function render() {
   const homeNoticesExpanded = page === "home" && root.querySelector(".more-security")?.open;
   document.documentElement.lang = lang;
@@ -1256,6 +1339,13 @@ function render() {
   const navPage=nav.some(([key])=>key===page)?page:
     (gateway?.role==="admin"?({case:"cases",reports:"cases",reportDetail:"cases",gateway:"system"}[page]||"home"):
     ({detail:"history",incoming:"history",callbacks:"safety",contacts:"safety",scan:"safety",call:"safety",family:"safety",guard:"safety",report:"safety",reports:"safety",reportDetail:"safety",invite:"safety",questionnaire:"history",confirmCancel:"history"}[page]||"home"));
+  if(socMode()){
+    const cs=summary?.case_states||{};
+    const openCases=platformMode()?0:page==="cases"&&queueSnapshot?.by_state?["NEW","IN_REVIEW","NEEDS_INFORMATION","ESCALATED"].reduce((a,k)=>a+(queueSnapshot.by_state[k]||0),0):
+      Object.entries(cs).filter(([k])=>!["RESOLVED","CLOSED"].includes(k)).reduce((a,[,v])=>a+v,0);
+    const banners=`${error ? `<div class="error-banner" role="alert">${E(error)}</div>` : ""}${loading ? `<div class="busy-banner" role="status"><span class="spinner"></span>${T("Получаем данные…", "Деректер алынуда…")}</div>` : ""}`;
+    root.innerHTML=soc.shell({page,navPage,nav,body:(screens[page] ?? loginView)(),banners,openCases,dark:currentTheme()==="dark",back:backStack.length>0,platform:platformMode()});
+  } else
   root.innerHTML = `<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${T("Назад", "Артқа")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>${product && page === "login" ? "Saq Bol × BCC" : "saq bol"}</span></div><span class="role-tag">${gateway?.role ? roleTitle() : "Android"}</span><button class="text-button" data-action="language">${lang === "ru" ? "ҚАЗ" : "РУС"}</button></header><div class="demo-strip ${gateway?.token ? "connected-strip" : ""}">${gateway?.token ? T("Учебный сервер · синтетические данные", "Оқу сервері · синтетикалық деректер") : T("Saq Bol × BCC · Клиент и SOC","Saq Bol × BCC · Клиент және SOC")}</div><main>${gateway?.ephemeralStore && page === "settings" ? `<p class="hint">${T("После перезапуска учебного сервера история и сеансы сбрасываются.", "Оқу сервері қайта іске қосылғанда тарих пен кіру сеанстары тазартылады.")}</p>` : ""}${product && page === "login" ? "" : feedbackView()}${(screens[page] ?? loginView)()}</main>${gateway?.token ? `<nav class="bottom-nav connected-nav" aria-label="${T("Навигация", "Навигация")}">${nav.map(([key, mark, label]) => `<button data-nav="${key}" aria-current="${(product?navPage:page) === key ? "page" : "false"}" ${loading ? "disabled" : ""}><b aria-hidden="true">${product ? icon(key==="socAnalytics"?"analytics":key==="history"&&gateway?.role==="client"?"transfer":key) : mark}</b><span>${label}</span></button>`).join("")}</nav>` : ""}</div>`;
   paintPauseRing();
   if (product) {
@@ -1280,14 +1370,14 @@ function render() {
       root.querySelector("main").insertAdjacentHTML("afterbegin",button("callbacks",
         T("Отдел антифрода ждёт ответа","Антифрод бөлімі жауап күтуде")+" · "+awaitingReplyCount,"secondary"));
     if(error && lastRead?.page===page && gateway?.token && !loading)root.querySelector(".error-banner")?.insertAdjacentHTML("beforeend",button("reload-screen",T("Обновить экран","Экранды жаңарту"),"secondary"));
-    if (gateway?.role==="admin" && page==="home") root.querySelector("main").insertAdjacentHTML("afterbegin",button("projector",projector?T("Обычный вид","Қалыпты көрініс"):T("Режим проектора","Проектор режимі"),"projector-switch",'aria-pressed="'+projector+'"'));
+    if (gateway?.role==="admin" && page==="home" && !socMode()) root.querySelector("main").insertAdjacentHTML("afterbegin",button("projector",projector?T("Обычный вид","Қалыпты көрініс"):T("Режим проектора","Проектор режимі"),"projector-switch",'aria-pressed="'+projector+'"'));
     root.querySelector(".demo-strip")?.remove();
     root.querySelector(".role-tag")?.remove();
     const back = root.querySelector(".back");
     // Main tabs are reached from the bottom navigation, so they show no back arrow or profile shortcut.
     if (["login","home","history","safety","analytics"].includes(page)) back.remove();
     // Clients reach the profile from the bottom navigation; staff roles keep the shortcut.
-    if (gateway?.token && gateway.role !== "client" && !["home","settings"].includes(page)) root.querySelector(".topbar").insertAdjacentHTML("beforeend",
+    if (gateway?.token && gateway.role !== "client" && !socMode() && !["home","settings"].includes(page)) root.querySelector(".topbar").insertAdjacentHTML("beforeend",
       `<button data-action="settings" class="profile-button" aria-label="${T("Профиль","Профиль")}">${icon("settings")}</button>`);
 
     if (page === "scan") {
@@ -1337,7 +1427,8 @@ function render() {
       form.elements.description.value = reportDraft.description;
       form.elements.consent.checked = reportDraft.consent;
     }
-    if (page === "graph" && data) {
+    if (page === "graph" && data && socMode()) socGraphControls();
+    if (page === "graph" && data && !socMode()) {
       camera=graphCamera(root.querySelector(".graph"));
       const nodes = data.nodes ?? [], edges = data.edges ?? [];
       const controls = `<div class="inline-actions">${button("graph-zoom",T("Увеличить","Үлкейту"),"secondary")}${button("graph-fit",T("Вместить","Сыйғызу"),"secondary")}${button("graph-full",T("На весь экран","Толық экран"),"secondary")}</div>
@@ -1382,7 +1473,7 @@ function render() {
         root.querySelector("#edge-detail").textContent = edge ? (edge.data.edge_type==="transfer" ? T("Переводы","Аударымдар") : T("Общее устройство","Ортақ құрылғы"))+" · "+edge.data.tx_count : "";
       };
     }
-    if(page==="case" && gateway?.role==="admin" && data?.id && caseTransaction && caseTransaction.transaction_id===caseEvidence?.transaction_id){
+    if(page==="case" && gateway?.role==="admin" && !socMode() && data?.id && caseTransaction && caseTransaction.transaction_id===caseEvidence?.transaction_id){
       const panel=document.createElement("section");
       panel.className="paper case-investigation";
       panel.innerHTML='<div><h2>'+T("Операция по делу","Іске қатысты операция")+'</h2><strong class="amount">'+amount(caseTransaction.amount)+'</strong><p>'+E(caseTransaction.recipient.display_name)+'</p>'+wallet.badge(caseTransaction.status)+'<p>'+E(moneyOutcome(caseTransaction.status))+'</p></div>'+
@@ -1391,7 +1482,11 @@ function render() {
         (caseNetwork?'<div>'+graphView(caseNetwork,true)+'<button class="secondary" data-graph="'+E(caseTransaction.recipient.id)+'">'+T("Исследовать связи","Байланыстарды зерттеу")+'</button></div>':"");
       root.querySelector("main .paper")?.after(panel);
     }
-    if (page === "case" && data) root.querySelector("main").insertAdjacentHTML("beforeend",
+    if (page === "cases" && socMode()) {
+      const field=root.querySelector("[data-case-search]");
+      if(field)field.oninput=()=>{const q=field.value.trim().toLowerCase();for(const c of root.querySelectorAll(".sx-case"))c.hidden=!!q&&!c.dataset.search.includes(q);};
+    }
+    if (page === "case" && data && !socMode()) root.querySelector("main").insertAdjacentHTML("beforeend",
       `<section class="paper case-rail"><h2>${T("История дела","Іс тарихы")}</h2>${caseEvents.map(e => `<p>${E(e[lang === "ru" ? "description_ru" : "description_kk"])} · ${when(e.timestamp)} ${desk.outcomeLabel(e.reason)}</p>`).join("")}</section>` +
       (!["RESOLVED","CLOSED"].includes(data.state) ? `<form id="case-note" class="form-stack paper"><label>${T("Заметка аналитика","Талдаушы жазбасы")}<textarea name="note" required minlength="10" maxlength="500"></textarea></label><button>${T("Сохранить","Сақтау")}</button></form>` : "") +
       (caseEvidence?.transaction_id?'<button class="secondary" data-detail="'+E(caseEvidence.transaction_id)+'">'+T("Связанная операция","Байланысты операция")+'</button>':"") +
@@ -1498,6 +1593,8 @@ root.addEventListener("click", async (event) => {
     await open("case", b.dataset.case);
     return;
   }
+  if (b.hasAttribute("data-case-state") && socMode()) {caseFilter=b.dataset.caseState;caseOffset=0;await open("cases");return;}
+  if (b.dataset.nodeIndex!==undefined) return;
   if (b.hasAttribute("data-filter")) {
     filter = b.dataset.filter;
     offset = 0;
@@ -1687,6 +1784,7 @@ root.addEventListener("click", async (event) => {
     render();
     return;
   }
+  if (act === "graph-shrink") { camera?.shrink(); return; }
   if (act === "graph-fit" || act === "graph-zoom") {
     if (act === "graph-fit") camera?.fit(); else camera?.enlarge(); return;
   }

@@ -34,6 +34,9 @@ function Installer() {
       </figure>
     </section>
     <section className="installer-help">
+      <h2>{kk ? "Телефон және ноутбук — бір операция" : "Телефон и ноутбук — одна операция"}</h2>
+      <p>{kk ? "Бұл APK мен төмендегі кабинет бір оқу серверіне қосылған. Телефонда client_demo, ноутбукта admin_demo арқылы кіріңіз. SOC тізімінен телефондағы түбіртектің операция нөмірін іздеңіз." : "Этот APK и кабинет ниже подключены к одному учебному серверу. На телефоне войдите как client_demo, на ноутбуке — admin_demo. Найдите в ленте SOC номер операции из квитанции телефона."}</p>
+      <a className="installer-browser" href="https://saq-bol-mobile.onrender.com/soc/">{kk ? "Осы APK-ның SOC кабинетін ашу" : "Открыть SOC для этого APK"}<ArrowUpRight aria-hidden size={17} /></a>
       <h2>{kk ? "Орнату" : "Установка"}</h2>
       <p>{kk ? "Телефоныңызда жүктелген APK файлын ашып, Android сұрауын растаңыз. Командалық нұсқа орнатылса, деректер сақталады." : "Откройте скачанный APK на телефоне и подтвердите установку в Android. Если установлен командный кошелёк, обновление сохранит его данные."}</p>
       <details><summary>{kk ? "Кіру экраны ашылмаса" : "Если не появился экран входа"}</summary>
@@ -45,7 +48,7 @@ function Installer() {
         <p>{kk ? "Жаңа дизайн командалық қолданбада. Бұрынғы сайт нұсқасы бөлек орнатылған күйінде қалады." : "Новый дизайн доступен в командном приложении. Прежняя версия с сайта сохраняется отдельно."}</p>
         <a download href={base + legacy.url}>{kk ? "Бұрынғы APK" : "Прежний APK"} · {legacy.version} ({legacy.versionCode})</a>
       </details>
-      <a className="installer-browser" href="https://saq-bol-jury.onrender.com/">{kk ? "Қазылар әмиянын браузерде ашу" : "Открыть кошелёк жюри в браузере"}<ArrowUpRight aria-hidden size={17} /></a>
+      <a className="installer-browser" href="https://saq-bol-jury.onrender.com/">{kk ? "Бөлек қазылар бөлмесі · деректері басқа" : "Отдельная комната жюри · другие данные"}<ArrowUpRight aria-hidden size={17} /></a>
     </section>
   </main>;
 }
