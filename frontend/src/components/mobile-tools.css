@@ -36,6 +36,9 @@
 .circle-list li { padding: .65rem 0; border-bottom: 1px solid #cfddd6; }
 .circle-list b, .circle-list small, .safety-result small { display: block; overflow-wrap: anywhere; }
 .safety-result { background: #eef6f1; border-radius: .75rem; padding: .85rem; color: #193e30; }
+.safety-result mark { color: #402e08; background: #ffedaf; border-radius: .2rem; padding-inline: .12rem; overflow-wrap: anywhere; }
+.signal-share fieldset label:has(select) { display: grid; }
+.signal-share select { width: 100%; min-width: 0; min-height: 44px; padding: .45rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong); border-radius: .5rem; font: inherit; }
 .safety-result code { display: block; overflow-wrap: anywhere; user-select: all; margin-block: .5rem; }
 .mobile-tool button:focus-visible, .phone-tabbar button:focus-visible { outline: 3px solid #00734f; outline-offset: 2px; }
 .phone-frame .phone-tabbar { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); }

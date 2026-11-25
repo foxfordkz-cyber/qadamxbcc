@@ -51,6 +51,8 @@ CLIENT_PATHS = [
     ("PATCH", rf"trusted-contacts/{UUID_PATTERN}/preferences"),
     ("GET", rf"trusted-contacts/transactions/{UUID_PATTERN}/notifications"),
     ("GET", r"integrations/guardian/reports"),
+    ("GET", r"integrations/guardian/report-signals"),
+    ("POST", rf"integrations/guardian/reports/{UUID_PATTERN}/message-signal"),
     ("POST", r"integrations/guardian/reports"),
     ("GET", rf"integrations/guardian/reports/{UUID_PATTERN}(?:/history)?"),
     ("GET", rf"integrations/guardian/reports/{UUID_PATTERN}/information-requests"),

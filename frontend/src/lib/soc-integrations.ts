@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { privateStorySchema } from "./transfer-story";
+import { signalCodes } from "./message-check";
 
 const id = z.uuid();
 const timestamp = z.iso.datetime({ offset: true });
@@ -51,6 +52,7 @@ const recipientLedgerSchema = z.object({
 export const caseEvidenceSchema = z.object({
   case_id: id.optional(), report_available: z.boolean(), transaction_id: id.nullable(),
   recipient_ledger: recipientLedgerSchema.nullish(), report_events: z.array(auditSchema).max(20), advisory_only: z.literal(true),
+  message_signals: z.array(z.enum(signalCodes)).max(4).optional(),
 });
 export const caseExportSchema = z.object({ category, state, source, created_at: timestamp,
   events: z.array(z.object({ code: z.string(), state, timestamp })).max(500), demonstration_only: z.literal(true) });

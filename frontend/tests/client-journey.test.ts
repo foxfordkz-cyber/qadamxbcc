@@ -3,7 +3,7 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 import { GET, POST, DELETE } from "../src/app/api/v1/trusted-circle/members/route";
 import { mobileRecovery } from "../src/lib/mobile-recovery";
-import { messageSignals } from "../src/lib/message-check";
+import { messageMatches, messageSignals } from "../src/lib/message-check";
 
 const id = "10000000-0000-4000-8000-000000000001";
 test("a fresh client restores the selected receipt and only its boolean draft", () => {
@@ -29,6 +29,9 @@ test("message input yields bilingual educational categories, never original text
   assert.deepEqual(messageSignals("Қауіпсіз шотқа ақша аударыңыз"), ["safeAccount"]);
   assert.deepEqual(messageSignals("Никогда не сообщите код. Встреча в 15:00"), []);
   assert.deepEqual(messageSignals("Ертең кездесеміз"), []);
+  assert.deepEqual(messageMatches("🙂  Назовите\t код 482193"), [{code:"codeRequest", phrase:"Назовите\t код"}]);
+  assert.deepEqual(messageMatches("Бүгін. Қауіпсіз шотқа ақша аудар!"), [{code:"safeAccount", phrase:"Қауіпсіз шотқа ақша аудар"}]);
+  assert.deepEqual(messageMatches("Қауіпсіз шотқа ақша аудармаңыз."), []);
 });
 
 test("member routes use the configured demo owner and return whitelisted fields", async t => {

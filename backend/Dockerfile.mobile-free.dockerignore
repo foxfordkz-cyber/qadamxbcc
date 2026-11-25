@@ -35,6 +35,8 @@ android-app/www/vendor/
 !frontend/src/
 !frontend/src/lib/
 !frontend/src/lib/scenario-signals.json
+!frontend/src/lib/message-patterns.mjs
 !docs/
 !docs/evidence/
 !docs/evidence/scenario_stand.json
+!docs/evidence/blind-call-example*.csv

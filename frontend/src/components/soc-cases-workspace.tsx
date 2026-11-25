@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, Clock3, Download, FileText, History, LoaderCircle, MessageSquare, Plus, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
 import { api, ApiError } from "@/lib/contracts";
 import { useLocale } from "@/lib/i18n";
+import { mobileText } from "@/lib/mobile-copy";
 import { randomId } from "@/lib/secure-fallback";
 import { caseActionSchema, openCaseSchema, type CaseAction, type CaseAnalytics, type CaseEvidence, type CaseExport, type CaseOut, type CasePage, type ContentPage, type EventPage } from "@/lib/soc-integrations";
 import { caseText, type SocCaseMessage } from "@/lib/soc-case-copy";
@@ -360,6 +361,8 @@ export function SocCasesWorkspace({ revision, onSelectTransaction }: Props) {
         <div className="case-export"><button type="button" className="secondary case-export-download" aria-describedby="case-export-hint" disabled={busy || unresolved || throttled || exporting || detailLoading || !!detailError} onClick={() => void downloadExport()}>{exporting ? <LoaderCircle size={15} className="animate-spin" /> : <Download size={15} />}{c("exportCase")}</button><p id="case-export-hint" className="soc-case-scope">{c("exportHint")}</p></div>
         {evidence.data?.transaction_id ? <button type="button" className="soc-case-transfer" onClick={() => transactionCallback.current?.(evidence.data!.transaction_id)}>{c("relatedTransfer")}<code>{evidence.data.transaction_id}</code><ArrowRight size={15} /></button> : !evidence.loading && !evidence.error && <p className="soc-case-scope">{c("noTransfer")}</p>}{showError(evidence.error)}
         {evidence.data?.transaction_id && <section className="case-recipient-ledger"><h3><History size={17} />{c("ledgerTitle")}</h3>
+          {!!evidence.data.message_signals?.length && <div><strong>{lang === "kk" ? "Клиент бөліскен хабарлама белгілері" : "Признаки сообщения, которыми поделился клиент"}</strong>
+            <ul>{evidence.data.message_signals.map(code => <li key={code}>{mobileText(lang, code)}</li>)}</ul></div>}
           {evidence.data.recipient_ledger ? <>
             <p className="soc-case-scope">{c("ledgerScope")}</p>
             <small>{date(evidence.data.recipient_ledger.from_time)} — {date(evidence.data.recipient_ledger.before_time)}</small>

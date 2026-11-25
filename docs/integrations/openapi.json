@@ -2438,6 +2438,96 @@
         }
       }
     },
+    "/api/v1/integrations/guardian/report-signals": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian demo reports"
+        ],
+        "summary": "Selectable Reports",
+        "operationId": "selectable_reports_api_v1_integrations_guardian_report_signals_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReportOption"
+                  },
+                  "type": "array",
+                  "title": "Response Selectable Reports Api V1 Integrations Guardian Report Signals Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/integrations/guardian/reports/{report_id}/message-signal": {
+      "post": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian demo reports"
+        ],
+        "summary": "Consent Signal",
+        "operationId": "consent_signal_api_v1_integrations_guardian_reports__report_id__message_signal_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/integrations/guardian/reports": {
       "post": {
         "tags": [
@@ -5142,6 +5232,19 @@
             "type": "array",
             "title": "Report Events"
           },
+          "message_signals": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "bankClaim",
+                "safeAccount",
+                "secrecy",
+                "codeRequest"
+              ]
+            },
+            "type": "array",
+            "title": "Message Signals"
+          },
           "advisory_only": {
             "type": "boolean",
             "title": "Advisory Only",
@@ -5154,7 +5257,8 @@
           "report_available",
           "transaction_id",
           "recipient_ledger",
-          "report_events"
+          "report_events",
+          "message_signals"
         ],
         "title": "EvidenceOut"
       },
@@ -7954,6 +8058,26 @@
         ],
         "title": "RecipientLedger"
       },
+      "ReportOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at"
+        ],
+        "title": "ReportOption"
+      },
       "ReportOut": {
         "properties": {
           "id": {
@@ -8501,6 +8625,57 @@
           "contributors"
         ],
         "title": "ShadowCall"
+      },
+      "SignalInput": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "bankClaim",
+              "safeAccount",
+              "secrecy",
+              "codeRequest"
+            ],
+            "title": "Category"
+          },
+          "consent": {
+            "type": "boolean",
+            "const": true,
+            "title": "Consent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "category",
+          "consent"
+        ],
+        "title": "SignalInput"
+      },
+      "SignalReceipt": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "bankClaim",
+              "safeAccount",
+              "secrecy",
+              "codeRequest"
+            ],
+            "title": "Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_id",
+          "category"
+        ],
+        "title": "SignalReceipt"
       },
       "SimulatedUpdate": {
         "properties": {

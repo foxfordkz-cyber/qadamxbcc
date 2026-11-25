@@ -32,6 +32,7 @@ class Room:
     context: AbstractAsyncContextManager[ASGIApp]
     last_used: float
     active: int = 0
+    trial_forecast: bytes | None = None
     contact_invite: str = field(default_factory=lambda: secrets.token_urlsafe(32))
     contact_session: str = field(default_factory=lambda: secrets.token_urlsafe(32))
 
@@ -227,6 +228,9 @@ def landing(
         f'<button type="submit">{submit}</button></form>'
         + "</div>"
         + '<p><a href="/jury/results">Неге тоқтады? · Почему остановлен перевод?</a></p>'
+        + '<p><a href="/jury/trial">'
+        + bilingual("Өз CSV файлыңызды тексеру", "Проверить свой CSV")
+        + "</a></p>"
         + _PUBLIC_LOGINS
         + shared
         + '<p class="room-expiry">'
@@ -263,8 +267,8 @@ def same_origin(request: Request) -> bool:
     return request.headers.get("origin") == f"{scheme}://{request.url.netloc}"
 
 
-def enter(request: Request, key: str) -> Response:
-    response = redirect("/wallet/")
+def enter(request: Request, key: str, destination: str = "/wallet/") -> Response:
+    response = redirect(destination)
     if request.cookies.get(ROOM_COOKIE) != key:
         response.delete_cookie(WEB_COOKIE, secure=True, httponly=True, samesite="strict")
     response.set_cookie(ROOM_COOKIE, key, secure=True, httponly=True, samesite="lax")
@@ -301,8 +305,10 @@ def create_jury_app(
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     from app.mobile_gateway.jury_results import router
+    from app.mobile_gateway.jury_trial import install_trial
 
     app.include_router(router)
+    install_trial(app, pool)
     app.mount("/jury/visuals", StaticFiles(directory=WEB_ASSETS / "media", check_dir=False))
 
     @app.api_route("/health", methods=["GET", "HEAD"])
@@ -329,7 +335,9 @@ def create_jury_app(
                 history_available=history_factory is not None,
             )
 
-    async def start_room(request: Request, room_factory: Factory) -> Response:
+    async def start_room(
+        request: Request, room_factory: Factory, destination: str = "/wallet/"
+    ) -> Response:
         if not same_origin(request):
             return JSONResponse(
                 {"detail": "same_origin_required"},
@@ -339,7 +347,7 @@ def create_jury_app(
         current = request.cookies.get(ROOM_COOKIE)
         with pool.borrow(current) as room:
             if room and current:
-                return enter(request, current)
+                return enter(request, current, destination)
         try:
             key = await pool.create(factory=room_factory)
         except Exception:
@@ -354,7 +362,11 @@ def create_jury_app(
             )
             response.headers["Retry-After"] = "60"
             return response
-        return enter(request, key)
+        return enter(request, key, destination)
+
+    @app.post("/jury/start/trial")
+    async def start_trial(request: Request) -> Response:
+        return await start_room(request, factory, "/jury/trial")
 
     @app.post("/jury/start")
     async def start(request: Request) -> Response:

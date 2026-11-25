@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Clock3, GitCompareArrows } from "lucide-react";
 import { accounts, collectionReplay, readReplaySelection, replayPostings, type ReplayAccount, type ReplayPosting, type ReplaySnapshot } from "@/lib/collection-replay";
 import { money, useLocale } from "@/lib/i18n";
 import { Badge } from "./risk";
+import { SettlementTrial } from "./settlement-trial";
 import styles from "./collection-comparison.module.css";
 
 const last = collectionReplay.checkpoints.length - 1;
@@ -103,6 +104,7 @@ export function CollectionComparison() {
             `На каждый счёт поступило ${money(checkpoint.a.received, lang)}. Число отправителей — ${checkpoint.a.senders}. Исходящих переводов пока нет.`)}
       </div>
       <div className={styles.pair}>{accounts.map(account => <SnapshotCard key={account} index={index} account={account} snapshot={checkpoint[account]} />)}</div>
+      <SettlementTrial />
     </div>
   </details>;
 }

@@ -30,6 +30,7 @@ from app.integrations.cases.schemas import (
     InformationOut,
     OpenCase,
 )
+from app.integrations.message_signals import EVENTS, SignalCode, attached
 from app.integrations.models import GuardianReport, IntegrationAudit
 from app.integrations.security import ConfigDep, PrincipalDep, require_role
 from app.integrations.telegram.schemas import AuditOut
@@ -188,6 +189,7 @@ class EvidenceOut(BaseModel):
     transaction_id: uuid.UUID | None
     recipient_ledger: RecipientLedger | None
     report_events: list[AuditOut]
+    message_signals: list[SignalCode]
     advisory_only: bool = True
 
 
@@ -204,12 +206,10 @@ async def evidence(
     available = (
         report is not None and report.expires_at > utcnow() and report.description is not None
     )
-    events = await session.scalars(
-        select(IntegrationAudit)
-        .where(IntegrationAudit.resource_id == row.report_id)
-        .order_by(IntegrationAudit.created_at)
-        .limit(20)
-    )
+    query = select(IntegrationAudit).where(IntegrationAudit.resource_id == row.report_id)
+    if not available:
+        query = query.where(IntegrationAudit.event.not_in(EVENTS.values()))
+    events = await session.scalars(query.order_by(IntegrationAudit.created_at).limit(20))
     tx_id = report.transaction_id if report and available and report.contact_id is None else None
     ledger = await recipient_ledger(session, tx_id, report.owner_id) if tx_id and report else None
     return EvidenceOut(
@@ -218,6 +218,7 @@ async def evidence(
         transaction_id=tx_id if ledger is not None else None,
         recipient_ledger=ledger,
         report_events=[AuditOut.model_validate(e) for e in events],
+        message_signals=await attached(session, report) if report and available else [],
     )
 
 

@@ -231,6 +231,8 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 
 | Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
 |---|---|---|---|---|---|
+| `GET` | `/api/v1/integrations/guardian/report-signals` | Bearer | — | список `ReportOption` | 200 |
+| `POST` | `/api/v1/integrations/guardian/reports/{report_id}/message-signal` | Bearer | `SignalInput` | `SignalReceipt` | 200, 422 |
 | `POST` | `/api/v1/integrations/guardian/reports` | Bearer + Idempotency-Key | `ReportRequest` | `ReportOut` | 201, 422 |
 | `GET` | `/api/v1/integrations/guardian/reports` | Bearer | — | список `ReportOut` | 200, 422 |
 | `GET` | `/api/v1/integrations/guardian/reports/{report_id}` | Bearer | — | `ReportOut` | 200, 422 |

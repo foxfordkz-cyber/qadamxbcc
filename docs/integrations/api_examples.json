@@ -989,6 +989,7 @@
       "transaction_id": null,
       "recipient_ledger": null,
       "report_events": [],
+      "message_signals": [],
       "advisory_only": true
     }
   },
@@ -1070,6 +1071,45 @@
     "response": {
       "request_id": "00000000-0000-4000-8000-000000000012",
       "received": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/integrations/guardian/report-signals",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {},
+    "query_parameters": {},
+    "request": null,
+    "status": 200,
+    "response": [
+      {
+        "id": "00000000-0000-4000-8000-000000000010",
+        "created_at": "2026-11-25T09:00:00Z"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/integrations/guardian/reports/{report_id}/message-signal",
+    "role": "owner",
+    "headers": {
+      "Authorization": "Bearer <operator-issued-owner-capability>"
+    },
+    "path_parameters": {
+      "report_id": "00000000-0000-4000-8000-000000000010"
+    },
+    "query_parameters": {},
+    "request": {
+      "category": "codeRequest",
+      "consent": true
+    },
+    "status": 200,
+    "response": {
+      "report_id": "00000000-0000-4000-8000-000000000010",
+      "category": "codeRequest"
     }
   },
   {

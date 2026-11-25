@@ -5,7 +5,8 @@ import { z } from "zod";
 import { api } from "@/lib/contracts";
 import { useLocale } from "@/lib/i18n";
 import { mobileText } from "@/lib/mobile-copy";
-import { messageSignals, type MessageSignal } from "@/lib/message-check";
+import { messageMatches, type SignalMatch } from "@/lib/message-check";
+import { AttachMessageSignal } from "./attach-message-signal";
 import { BankLinkCheck } from "./bank-link-check";
 
 const guideSchema = z.object({
@@ -18,7 +19,7 @@ export function MessageCheck() {
   const { lang, t } = useLocale();
   const m = (key: Parameters<typeof mobileText>[1]) => mobileText(lang, key);
   const [input, setInput] = useState("");
-  const [signals, setSignals] = useState<MessageSignal[] | null>(null);
+  const [signals, setSignals] = useState<SignalMatch[] | null>(null);
   const [guide, setGuide] = useState<Guide | null>(null);
   const [failed, setFailed] = useState(false);
   const [reload, setReload] = useState(0);
@@ -32,7 +33,7 @@ export function MessageCheck() {
     return () => controller.abort();
   }, [reload]);
   return <section className="mobile-tool">
-    <form onSubmit={event => { event.preventDefault(); setSignals(messageSignals(input)); setInput(""); setAnswers({}); }}>
+    <form onSubmit={event => { event.preventDefault(); setSignals(messageMatches(input)); setInput(""); setAnswers({}); }}>
       <label htmlFor="message-check-text">{m("inputMessage")}</label>
       <textarea id="message-check-text" maxLength={2000} rows={4} autoComplete="off" spellCheck={false} value={input}
         onChange={event => { setInput(event.target.value); setSignals(null); setAnswers({}); }} />
@@ -41,9 +42,15 @@ export function MessageCheck() {
     </form>
     {signals && <div className="safety-result" role="status">
       <strong>{m(signals.length ? "flagged" : "noFlags")}</strong>
-      {signals.length > 0 && <ul>{signals.map(key => <li key={key}>{m(key)}</li>)}</ul>}
+      {signals.length > 0 && <ul>{signals.map(({code, phrase}) => <li key={code}>
+        <mark>{phrase}</mark><br />{m(code)}</li>)}</ul>}
       <p>{guide ? guide[lang === "kk" ? "advice_kk" : "advice_ru"] : m("advice")}</p>
     </div>}
+    {!!signals?.length && <>
+      <button type="button" className="secondary" onClick={() => { setSignals(null); setAnswers({}); }}>
+        {lang === "kk" ? "Нәтижені тазарту" : "Очистить результат"}</button>
+      <AttachMessageSignal codes={signals.map(item => item.code)} />
+    </>}
     <BankLinkCheck />
     {guide && <details><summary>{m("questions")}</summary>{guide.questions.map(q => <fieldset key={q.field}>
       <legend>{q[lang]}</legend>{[true, false].map(value => <label key={String(value)}>
