@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 
+// A reload can leave image/module routes in flight when the assertion completes.
+test.afterEach(async ({page}) => { await page.unrouteAll({behavior:"ignoreErrors"}); });
+
 const ids = ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"];
 const items = ids.map((id,i)=>({transaction_id:id, counterparty:["Алия","Арман"][i],amount:"12500",status:"approved",direction:"outgoing",created_at:"2026-11-20T10:00:00Z"}));
 
