@@ -24,6 +24,8 @@ class MobileSettings(BaseSettings):
     officer_id: uuid.UUID = uuid.UUID("00000000-0000-4000-8000-000000000099")
     platform_id: uuid.UUID = uuid.UUID("00000000-0000-4000-8000-000000000098")
     session_seconds: int = Field(1800, ge=60, le=3600)
+    # Zero preserves every existing APK. Raise only after a supported migration window.
+    minimum_android_build: int = Field(0, ge=0)
     cors_origins: list[str] = ["https://localhost", "http://127.0.0.1:4173"]
 
     @model_validator(mode="after")

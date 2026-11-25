@@ -1,4 +1,7 @@
 {
+  "apiOrigin": "https://saq-bol-mobile.onrender.com",
   "url": "https://saq-bol-mobile.onrender.com/wallet/",
+  "socUrl": "https://saq-bol-mobile.onrender.com/soc/",
+  "platformUrl": "https://saq-bol-mobile.onrender.com/wallet/",
   "juryUrl": "https://saq-bol-jury.onrender.com/"
 }

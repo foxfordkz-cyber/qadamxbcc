@@ -1,0 +1,3837 @@
+{
+  "api_major": 1,
+  "core": {
+    "components": {
+      "schemas": {
+        "AskInformation": {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "request_information",
+              "title": "Action",
+              "type": "string"
+            },
+            "expected_version": {
+              "minimum": 1.0,
+              "title": "Expected Version",
+              "type": "integer"
+            },
+            "question": {
+              "enum": [
+                "caller_request",
+                "remote_access",
+                "secrecy_pressure"
+              ],
+              "title": "Question",
+              "type": "string"
+            }
+          },
+          "required": [
+            "expected_version",
+            "action",
+            "question"
+          ],
+          "title": "AskInformation",
+          "type": "object"
+        },
+        "Assign": {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "assign",
+              "title": "Action",
+              "type": "string"
+            },
+            "assignee": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "demo_analyst_a",
+                    "demo_analyst_b"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Assignee"
+            },
+            "expected_version": {
+              "minimum": 1.0,
+              "title": "Expected Version",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "expected_version",
+            "action",
+            "assignee"
+          ],
+          "title": "Assign",
+          "type": "object"
+        },
+        "BankCallEvidence": {
+          "properties": {
+            "checked_at": {
+              "format": "date-time",
+              "title": "Checked At",
+              "type": "string"
+            },
+            "outbound_call_listed": {
+              "title": "Outbound Call Listed",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "outbound_call_listed",
+            "checked_at"
+          ],
+          "title": "BankCallEvidence",
+          "type": "object"
+        },
+        "CaseOut": {
+          "properties": {
+            "assignee": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "demo_analyst_a",
+                    "demo_analyst_b"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Assignee"
+            },
+            "category": {
+              "enum": [
+                "impersonation",
+                "safe_account",
+                "remote_access",
+                "other"
+              ],
+              "title": "Category",
+              "type": "string"
+            },
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "demonstration_only": {
+              "const": true,
+              "default": true,
+              "title": "Demonstration Only",
+              "type": "boolean"
+            },
+            "expires_at": {
+              "format": "date-time",
+              "title": "Expires At",
+              "type": "string"
+            },
+            "id": {
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            },
+            "report_id": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            },
+            "source": {
+              "enum": [
+                "owner_demo",
+                "trusted_contact",
+                "guardian_timeout",
+                "guardian_signal"
+              ],
+              "title": "Source",
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "NEW",
+                "IN_REVIEW",
+                "NEEDS_INFORMATION",
+                "ESCALATED",
+                "RESOLVED",
+                "CLOSED"
+              ],
+              "title": "State",
+              "type": "string"
+            },
+            "status_since": {
+              "format": "date-time",
+              "title": "Status Since",
+              "type": "string"
+            },
+            "version": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "report_id",
+            "source",
+            "category",
+            "state",
+            "assignee",
+            "version",
+            "created_at",
+            "status_since",
+            "expires_at"
+          ],
+          "title": "CaseOut",
+          "type": "object"
+        },
+        "CasePage": {
+          "properties": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/CaseOut"
+              },
+              "title": "Items",
+              "type": "array"
+            },
+            "next_cursor": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Cursor"
+            }
+          },
+          "required": [
+            "items",
+            "next_cursor"
+          ],
+          "title": "CasePage",
+          "type": "object"
+        },
+        "Categorize": {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "categorize",
+              "title": "Action",
+              "type": "string"
+            },
+            "category": {
+              "enum": [
+                "impersonation",
+                "safe_account",
+                "remote_access",
+                "other"
+              ],
+              "title": "Category",
+              "type": "string"
+            },
+            "expected_version": {
+              "minimum": 1.0,
+              "title": "Expected Version",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "expected_version",
+            "action",
+            "category"
+          ],
+          "title": "Categorize",
+          "type": "object"
+        },
+        "ContactOut": {
+          "properties": {
+            "alias": {
+              "default": "",
+              "title": "Alias",
+              "type": "string"
+            },
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "id": {
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            },
+            "language": {
+              "title": "Language",
+              "type": "string"
+            },
+            "notifications_enabled": {
+              "default": true,
+              "title": "Notifications Enabled",
+              "type": "boolean"
+            },
+            "state": {
+              "$ref": "#/components/schemas/ContactState"
+            }
+          },
+          "required": [
+            "id",
+            "state",
+            "language",
+            "created_at"
+          ],
+          "title": "ContactOut",
+          "type": "object"
+        },
+        "ContactState": {
+          "enum": [
+            "CONTACT_NOT_CONFIGURED",
+            "CONTACT_PENDING_CONSENT",
+            "CONTACT_VERIFIED",
+            "CONTACT_REVOKED"
+          ],
+          "title": "ContactState",
+          "type": "string"
+        },
+        "ContactsOut": {
+          "properties": {
+            "contacts": {
+              "items": {
+                "$ref": "#/components/schemas/ContactOut"
+              },
+              "title": "Contacts",
+              "type": "array"
+            },
+            "state": {
+              "$ref": "#/components/schemas/ContactState"
+            }
+          },
+          "required": [
+            "state",
+            "contacts"
+          ],
+          "title": "ContactsOut",
+          "type": "object"
+        },
+        "CoolingQuestionnaire": {
+          "additionalProperties": false,
+          "description": "Anti-scam check shown during the cooling-off period (questions mirror real scam scripts).",
+          "properties": {
+            "asked_to_keep_secret_or_install_app": {
+              "description": "You were told to keep it secret or install a remote-access app",
+              "title": "Asked To Keep Secret Or Install App",
+              "type": "boolean"
+            },
+            "asked_to_move_to_safe_account": {
+              "description": "You were asked to move money to a 'safe account'",
+              "title": "Asked To Move To Safe Account",
+              "type": "boolean"
+            },
+            "caller_claims_bank_or_police": {
+              "description": "Someone calling claims to be from a bank, police or KNB",
+              "title": "Caller Claims Bank Or Police",
+              "type": "boolean"
+            },
+            "initiated_by_customer": {
+              "description": "You decided to make this transfer yourself",
+              "title": "Initiated By Customer",
+              "type": "boolean"
+            },
+            "knows_recipient_personally": {
+              "description": "You personally know the recipient",
+              "title": "Knows Recipient Personally",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "caller_claims_bank_or_police",
+            "asked_to_move_to_safe_account",
+            "asked_to_keep_secret_or_install_app",
+            "initiated_by_customer",
+            "knows_recipient_personally"
+          ],
+          "title": "CoolingQuestionnaire",
+          "type": "object"
+        },
+        "FeedItem": {
+          "properties": {
+            "active_call": {
+              "title": "Active Call",
+              "type": "boolean"
+            },
+            "amount": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "title": "Amount",
+              "type": "string"
+            },
+            "bank_call_evidence": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BankCallEvidence"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "context": {
+              "$ref": "#/components/schemas/TransferContextIn"
+            },
+            "cooling_until": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cooling Until"
+            },
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "currency": {
+              "title": "Currency",
+              "type": "string"
+            },
+            "from_deposit": {
+              "title": "From Deposit",
+              "type": "boolean"
+            },
+            "is_new_device": {
+              "title": "Is New Device",
+              "type": "boolean"
+            },
+            "is_new_recipient": {
+              "title": "Is New Recipient",
+              "type": "boolean"
+            },
+            "latency_ms": {
+              "title": "Latency Ms",
+              "type": "number"
+            },
+            "layer_latency_ms": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "title": "Layer Latency Ms",
+              "type": "object"
+            },
+            "ml_base_score": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ml Base Score"
+            },
+            "ml_contributors": {
+              "items": {
+                "$ref": "#/components/schemas/MLContributorOut"
+              },
+              "title": "Ml Contributors",
+              "type": "array"
+            },
+            "ml_explanation_method": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tree_path_probability",
+                    "linear_probability_contributions"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ml Explanation Method"
+            },
+            "ml_model_version": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ml Model Version"
+            },
+            "ml_score": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ml Score"
+            },
+            "reasons": {
+              "items": {
+                "$ref": "#/components/schemas/RiskReasonOut"
+              },
+              "title": "Reasons",
+              "type": "array"
+            },
+            "recipient": {
+              "$ref": "#/components/schemas/FeedParty"
+            },
+            "recipient_graph": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              },
+              "title": "Recipient Graph",
+              "type": "object"
+            },
+            "resolved_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resolved At"
+            },
+            "risk_score": {
+              "title": "Risk Score",
+              "type": "integer"
+            },
+            "sender": {
+              "$ref": "#/components/schemas/FeedParty"
+            },
+            "shadow_call": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ShadowCall"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "$ref": "#/components/schemas/TransactionStatus"
+            },
+            "transaction_id": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            },
+            "updated_at": {
+              "format": "date-time",
+              "title": "Updated At",
+              "type": "string"
+            },
+            "velocity": {
+              "additionalProperties": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "type": "number"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "title": "Velocity",
+              "type": "object"
+            },
+            "verification_answers": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CoolingQuestionnaire"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "transaction_id",
+            "created_at",
+            "updated_at",
+            "status",
+            "risk_score",
+            "amount",
+            "currency",
+            "latency_ms",
+            "sender",
+            "recipient",
+            "active_call",
+            "from_deposit",
+            "is_new_device",
+            "is_new_recipient",
+            "cooling_until",
+            "resolved_at",
+            "reasons",
+            "context"
+          ],
+          "title": "FeedItem",
+          "type": "object"
+        },
+        "FeedPagination": {
+          "properties": {
+            "has_more": {
+              "title": "Has More",
+              "type": "boolean"
+            },
+            "limit": {
+              "maximum": 200.0,
+              "minimum": 1.0,
+              "title": "Limit",
+              "type": "integer"
+            },
+            "offset": {
+              "maximum": 100000.0,
+              "minimum": 0.0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "total_filtered": {
+              "minimum": 0.0,
+              "title": "Total Filtered",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "total_filtered",
+            "offset",
+            "limit",
+            "has_more"
+          ],
+          "title": "FeedPagination",
+          "type": "object"
+        },
+        "FeedParty": {
+          "properties": {
+            "full_name": {
+              "title": "Full Name",
+              "type": "string"
+            },
+            "iban": {
+              "title": "Iban",
+              "type": "string"
+            },
+            "id": {
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "full_name",
+            "iban"
+          ],
+          "title": "FeedParty",
+          "type": "object"
+        },
+        "FeedResponse": {
+          "properties": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/FeedItem"
+              },
+              "title": "Items",
+              "type": "array"
+            },
+            "pagination": {
+              "$ref": "#/components/schemas/FeedPagination"
+            },
+            "server_time": {
+              "format": "date-time",
+              "title": "Server Time",
+              "type": "string"
+            },
+            "stats": {
+              "$ref": "#/components/schemas/FeedStats"
+            }
+          },
+          "required": [
+            "server_time",
+            "items",
+            "stats",
+            "pagination"
+          ],
+          "title": "FeedResponse",
+          "type": "object"
+        },
+        "FeedStats": {
+          "properties": {
+            "approved": {
+              "default": 0,
+              "title": "Approved",
+              "type": "integer"
+            },
+            "avg_latency_ms": {
+              "default": 0.0,
+              "title": "Avg Latency Ms",
+              "type": "number"
+            },
+            "blocked": {
+              "default": 0,
+              "title": "Blocked",
+              "type": "integer"
+            },
+            "blocked_amount": {
+              "default": "0",
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "title": "Blocked Amount",
+              "type": "string"
+            },
+            "blocked_hubs": {
+              "default": 0,
+              "title": "Blocked Hubs",
+              "type": "integer"
+            },
+            "cancelled": {
+              "default": 0,
+              "title": "Cancelled",
+              "type": "integer"
+            },
+            "cancelled_amount": {
+              "default": "0",
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "title": "Cancelled Amount",
+              "type": "string"
+            },
+            "cooling_off": {
+              "default": 0,
+              "title": "Cooling Off",
+              "type": "integer"
+            },
+            "held_amount": {
+              "default": "0",
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "title": "Held Amount",
+              "type": "string"
+            },
+            "latency_sample_limit": {
+              "default": 500,
+              "title": "Latency Sample Limit",
+              "type": "integer"
+            },
+            "latency_sample_size": {
+              "default": 0,
+              "maximum": 500.0,
+              "minimum": 0.0,
+              "title": "Latency Sample Size",
+              "type": "integer"
+            },
+            "max_latency_ms": {
+              "default": 0.0,
+              "title": "Max Latency Ms",
+              "type": "number"
+            },
+            "p95_latency_ms": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "P95 Latency Ms"
+            },
+            "submission_limits": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SubmissionLimits"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "total": {
+              "default": 0,
+              "title": "Total",
+              "type": "integer"
+            }
+          },
+          "title": "FeedStats",
+          "type": "object"
+        },
+        "HTTPValidationError": {
+          "properties": {
+            "detail": {
+              "items": {
+                "$ref": "#/components/schemas/ValidationError"
+              },
+              "title": "Detail",
+              "type": "array"
+            }
+          },
+          "title": "HTTPValidationError",
+          "type": "object"
+        },
+        "HealthDetails": {
+          "properties": {
+            "cache_seconds": {
+              "const": 5,
+              "default": 5,
+              "title": "Cache Seconds",
+              "type": "integer"
+            },
+            "checked_at": {
+              "format": "date-time",
+              "title": "Checked At",
+              "type": "string"
+            },
+            "database": {
+              "enum": [
+                "ok",
+                "unavailable"
+              ],
+              "title": "Database",
+              "type": "string"
+            },
+            "gateway": {
+              "enum": [
+                "disabled",
+                "mock_ready"
+              ],
+              "title": "Gateway",
+              "type": "string"
+            },
+            "last_successful_processing": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last Successful Processing"
+            },
+            "queue": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/QueueCounts"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "real_provider_probed": {
+              "const": false,
+              "default": false,
+              "title": "Real Provider Probed",
+              "type": "boolean"
+            },
+            "redis": {
+              "enum": [
+                "ok",
+                "unavailable"
+              ],
+              "title": "Redis",
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "ok",
+                "degraded"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "telegram": {
+              "enum": [
+                "disabled",
+                "fake_enabled",
+                "test_enabled"
+              ],
+              "title": "Telegram",
+              "type": "string"
+            },
+            "worker": {
+              "enum": [
+                "ok",
+                "not_seen",
+                "unknown"
+              ],
+              "title": "Worker",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "checked_at",
+            "database",
+            "redis",
+            "worker",
+            "telegram",
+            "gateway",
+            "queue",
+            "last_successful_processing"
+          ],
+          "title": "HealthDetails",
+          "type": "object"
+        },
+        "InvitationOut": {
+          "properties": {
+            "contact": {
+              "$ref": "#/components/schemas/ContactOut"
+            },
+            "expires_at": {
+              "format": "date-time",
+              "title": "Expires At",
+              "type": "string"
+            },
+            "invitation_token": {
+              "title": "Invitation Token",
+              "type": "string"
+            }
+          },
+          "required": [
+            "contact",
+            "invitation_token",
+            "expires_at"
+          ],
+          "title": "InvitationOut",
+          "type": "object"
+        },
+        "InviteRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "language": {
+              "default": "ru",
+              "enum": [
+                "ru",
+                "kk"
+              ],
+              "title": "Language",
+              "type": "string"
+            },
+            "owner_consent": {
+              "const": true,
+              "title": "Owner Consent",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "owner_consent"
+          ],
+          "title": "InviteRequest",
+          "type": "object"
+        },
+        "MLContributorOut": {
+          "properties": {
+            "contribution": {
+              "description": "Signed probability points, before blending; not SHAP",
+              "title": "Contribution",
+              "type": "number"
+            },
+            "feature": {
+              "title": "Feature",
+              "type": "string"
+            },
+            "label_kk": {
+              "title": "Label Kk",
+              "type": "string"
+            },
+            "label_ru": {
+              "title": "Label Ru",
+              "type": "string"
+            },
+            "value": {
+              "title": "Value",
+              "type": "number"
+            }
+          },
+          "required": [
+            "feature",
+            "value",
+            "contribution",
+            "label_kk",
+            "label_ru"
+          ],
+          "title": "MLContributorOut",
+          "type": "object"
+        },
+        "Note": {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "note",
+              "title": "Action",
+              "type": "string"
+            },
+            "body": {
+              "maxLength": 500,
+              "minLength": 10,
+              "title": "Body",
+              "type": "string"
+            },
+            "expected_version": {
+              "minimum": 1.0,
+              "title": "Expected Version",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "expected_version",
+            "body",
+            "action"
+          ],
+          "title": "Note",
+          "type": "object"
+        },
+        "OpenCase": {
+          "additionalProperties": false,
+          "properties": {
+            "report_id": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "report_id"
+          ],
+          "title": "OpenCase",
+          "type": "object"
+        },
+        "PartyOut": {
+          "properties": {
+            "display_name": {
+              "title": "Display Name",
+              "type": "string"
+            },
+            "iban_masked": {
+              "title": "Iban Masked",
+              "type": "string"
+            },
+            "id": {
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "display_name",
+            "iban_masked"
+          ],
+          "title": "PartyOut",
+          "type": "object"
+        },
+        "QueueCounts": {
+          "properties": {
+            "notifications_delayed": {
+              "title": "Notifications Delayed",
+              "type": "integer"
+            },
+            "notifications_failed": {
+              "title": "Notifications Failed",
+              "type": "integer"
+            },
+            "notifications_queued": {
+              "title": "Notifications Queued",
+              "type": "integer"
+            },
+            "runs_pending": {
+              "title": "Runs Pending",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "notifications_queued",
+            "notifications_delayed",
+            "notifications_failed",
+            "runs_pending"
+          ],
+          "title": "QueueCounts",
+          "type": "object"
+        },
+        "ReportOut": {
+          "properties": {
+            "category": {
+              "enum": [
+                "impersonation",
+                "safe_account",
+                "remote_access",
+                "other"
+              ],
+              "title": "Category",
+              "type": "string"
+            },
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "demonstration_only": {
+              "const": true,
+              "default": true,
+              "title": "Demonstration Only",
+              "type": "boolean"
+            },
+            "description": {
+              "title": "Description",
+              "type": "string"
+            },
+            "expires_at": {
+              "format": "date-time",
+              "title": "Expires At",
+              "type": "string"
+            },
+            "id": {
+              "format": "uuid",
+              "title": "Id",
+              "type": "string"
+            },
+            "source": {
+              "enum": [
+                "owner_demo",
+                "trusted_contact",
+                "guardian_timeout",
+                "guardian_signal"
+              ],
+              "title": "Source",
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "SUBMITTED",
+                "DEMO_ACKNOWLEDGED"
+              ],
+              "title": "State",
+              "type": "string"
+            },
+            "transaction_id": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Transaction Id"
+            }
+          },
+          "required": [
+            "id",
+            "source",
+            "category",
+            "description",
+            "transaction_id",
+            "state",
+            "created_at",
+            "expires_at"
+          ],
+          "title": "ReportOut",
+          "type": "object"
+        },
+        "ReportRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "category": {
+              "enum": [
+                "impersonation",
+                "safe_account",
+                "remote_access",
+                "other"
+              ],
+              "title": "Category",
+              "type": "string"
+            },
+            "confirmed_demo_submission": {
+              "const": true,
+              "title": "Confirmed Demo Submission",
+              "type": "boolean"
+            },
+            "description": {
+              "maxLength": 500,
+              "minLength": 10,
+              "title": "Description",
+              "type": "string"
+            },
+            "transaction_id": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Transaction Id"
+            }
+          },
+          "required": [
+            "category",
+            "description",
+            "confirmed_demo_submission"
+          ],
+          "title": "ReportRequest",
+          "type": "object"
+        },
+        "ResolveCoolingRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "answers": {
+              "$ref": "#/components/schemas/CoolingQuestionnaire"
+            },
+            "save_only": {
+              "default": false,
+              "title": "Save Only",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "answers"
+          ],
+          "title": "ResolveCoolingRequest",
+          "type": "object"
+        },
+        "RiskReasonOut": {
+          "properties": {
+            "code": {
+              "title": "Code",
+              "type": "string"
+            },
+            "evidence": {
+              "additionalProperties": true,
+              "title": "Evidence",
+              "type": "object"
+            },
+            "layer": {
+              "title": "Layer",
+              "type": "string"
+            },
+            "reason_kk": {
+              "title": "Reason Kk",
+              "type": "string"
+            },
+            "reason_ru": {
+              "title": "Reason Ru",
+              "type": "string"
+            },
+            "score_delta": {
+              "title": "Score Delta",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "code",
+            "layer",
+            "score_delta",
+            "reason_kk",
+            "reason_ru"
+          ],
+          "title": "RiskReasonOut",
+          "type": "object"
+        },
+        "ShadowCall": {
+          "properties": {
+            "contributors": {
+              "items": {
+                "$ref": "#/components/schemas/MLContributorOut"
+              },
+              "maxItems": 4,
+              "title": "Contributors",
+              "type": "array"
+            },
+            "model_version": {
+              "title": "Model Version",
+              "type": "string"
+            },
+            "review_suggested": {
+              "title": "Review Suggested",
+              "type": "boolean"
+            },
+            "review_threshold": {
+              "maximum": 100.0,
+              "minimum": 0.0,
+              "title": "Review Threshold",
+              "type": "number"
+            },
+            "score": {
+              "maximum": 100.0,
+              "minimum": 0.0,
+              "title": "Score",
+              "type": "number"
+            }
+          },
+          "required": [
+            "model_version",
+            "score",
+            "review_threshold",
+            "review_suggested",
+            "contributors"
+          ],
+          "title": "ShadowCall",
+          "type": "object"
+        },
+        "SubmissionLimits": {
+          "properties": {
+            "active": {
+              "title": "Active",
+              "type": "integer"
+            },
+            "cooldown_seconds": {
+              "title": "Cooldown Seconds",
+              "type": "integer"
+            },
+            "limit": {
+              "title": "Limit",
+              "type": "integer"
+            },
+            "rejected": {
+              "title": "Rejected",
+              "type": "integer"
+            },
+            "window_seconds": {
+              "title": "Window Seconds",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "active",
+            "rejected",
+            "limit",
+            "window_seconds",
+            "cooldown_seconds"
+          ],
+          "title": "SubmissionLimits",
+          "type": "object"
+        },
+        "TimelineEvent": {
+          "properties": {
+            "category": {
+              "enum": [
+                "core",
+                "contact",
+                "gateway",
+                "orchestration"
+              ],
+              "title": "Category",
+              "type": "string"
+            },
+            "code": {
+              "title": "Code",
+              "type": "string"
+            },
+            "correlation_id": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Correlation Id"
+            },
+            "description_kk": {
+              "title": "Description Kk",
+              "type": "string"
+            },
+            "description_ru": {
+              "title": "Description Ru",
+              "type": "string"
+            },
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "importance": {
+              "enum": [
+                "information",
+                "attention"
+              ],
+              "title": "Importance",
+              "type": "string"
+            },
+            "source": {
+              "enum": [
+                "persisted_core",
+                "integration_audit"
+              ],
+              "title": "Source",
+              "type": "string"
+            },
+            "timestamp": {
+              "format": "date-time",
+              "title": "Timestamp",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "timestamp",
+            "category",
+            "importance",
+            "code",
+            "correlation_id",
+            "description_ru",
+            "description_kk",
+            "source"
+          ],
+          "title": "TimelineEvent",
+          "type": "object"
+        },
+        "TimelinePage": {
+          "properties": {
+            "advisory_only": {
+              "const": true,
+              "default": true,
+              "title": "Advisory Only",
+              "type": "boolean"
+            },
+            "as_of": {
+              "format": "date-time",
+              "title": "As Of",
+              "type": "string"
+            },
+            "events": {
+              "items": {
+                "$ref": "#/components/schemas/TimelineEvent"
+              },
+              "title": "Events",
+              "type": "array"
+            },
+            "next_cursor": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Cursor"
+            },
+            "transaction_id": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "transaction_id",
+            "as_of",
+            "events",
+            "next_cursor"
+          ],
+          "title": "TimelinePage",
+          "type": "object"
+        },
+        "TransactionStatus": {
+          "enum": [
+            "approved",
+            "cooling_off",
+            "blocked",
+            "cancelled"
+          ],
+          "title": "TransactionStatus",
+          "type": "string"
+        },
+        "TransferContextIn": {
+          "additionalProperties": false,
+          "description": "Client-side signals captured by the BCC mobile app at the moment of transfer.",
+          "properties": {
+            "active_call": {
+              "default": false,
+              "description": "A phone call is active during the transfer",
+              "title": "Active Call",
+              "type": "boolean"
+            },
+            "bank_call_check_id": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "«Is the bank calling me?» check made during this call; a negative answer from the bank's log raises risk",
+              "title": "Bank Call Check Id"
+            },
+            "call_pressure_answer": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "on_call",
+                    "after_call",
+                    "no_request"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Explicit customer answer about this payment; omission means unknown.",
+              "title": "Call Pressure Answer"
+            },
+            "duress": {
+              "default": false,
+              "description": "Silent alarm: the client held the confirm button. The transfer is blocked and the screen stays calm so a fraudster nearby does not notice.",
+              "title": "Duress",
+              "type": "boolean"
+            },
+            "from_deposit": {
+              "default": false,
+              "description": "Funds were just withdrawn from a deposit",
+              "title": "From Deposit",
+              "type": "boolean"
+            },
+            "hesitation_count": {
+              "default": 0,
+              "maximum": 100.0,
+              "minimum": 0.0,
+              "title": "Hesitation Count",
+              "type": "integer"
+            },
+            "hesitation_ms": {
+              "anyOf": [
+                {
+                  "maximum": 300000.0,
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Measured cumulative pauses; never inferred from hesitation_count",
+              "title": "Hesitation Ms"
+            },
+            "is_new_device": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Override; by default derived from the sender's registered device",
+              "title": "Is New Device"
+            },
+            "is_new_recipient": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Override; by default derived from the transfer graph",
+              "title": "Is New Recipient"
+            },
+            "pasted_recipient": {
+              "default": false,
+              "title": "Pasted Recipient",
+              "type": "boolean"
+            },
+            "payment_requested_after_call": {
+              "default": false,
+              "description": "The customer reports that the caller specifically requested this payment during a call that has just ended. An ended call by itself does not set this field.",
+              "title": "Payment Requested After Call",
+              "type": "boolean"
+            },
+            "recipient_input_length": {
+              "anyOf": [
+                {
+                  "maximum": 128.0,
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Measured typed characters; needed with duration to compute characters/sec",
+              "title": "Recipient Input Length"
+            },
+            "typing_duration_ms": {
+              "anyOf": [
+                {
+                  "maximum": 3600000.0,
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Typing Duration Ms"
+            }
+          },
+          "title": "TransferContextIn",
+          "type": "object"
+        },
+        "TransferEvaluateRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0.0,
+                  "maximum": 1000000000.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                  "type": "string"
+                }
+              ],
+              "title": "Amount"
+            },
+            "context": {
+              "$ref": "#/components/schemas/TransferContextIn"
+            },
+            "currency": {
+              "default": "KZT",
+              "pattern": "^KZT$",
+              "title": "Currency",
+              "type": "string"
+            },
+            "device_id": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Device Id"
+            },
+            "occurred_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Event time (demo presets use it to replay night transfers)",
+              "title": "Occurred At"
+            },
+            "recipient_iban": {
+              "anyOf": [
+                {
+                  "pattern": "^KZ[0-9A-Z]{18}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recipient Iban"
+            },
+            "recipient_id": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recipient Id"
+            },
+            "recipient_phone": {
+              "anyOf": [
+                {
+                  "pattern": "^\\+7\\d{10}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recipient Phone"
+            },
+            "request_id": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Request Id"
+            },
+            "sender_id": {
+              "format": "uuid",
+              "title": "Sender Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "sender_id",
+            "amount"
+          ],
+          "title": "TransferEvaluateRequest",
+          "type": "object"
+        },
+        "TransferEvaluateResponse": {
+          "properties": {
+            "amount": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "title": "Amount",
+              "type": "string"
+            },
+            "bank_call_evidence": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/BankCallEvidence"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "context": {
+              "$ref": "#/components/schemas/TransferContextIn"
+            },
+            "cooling_off_until": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cooling Off Until"
+            },
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "headline_kk": {
+              "title": "Headline Kk",
+              "type": "string"
+            },
+            "headline_ru": {
+              "title": "Headline Ru",
+              "type": "string"
+            },
+            "is_new_device": {
+              "title": "Is New Device",
+              "type": "boolean"
+            },
+            "is_new_recipient": {
+              "title": "Is New Recipient",
+              "type": "boolean"
+            },
+            "latency_ms": {
+              "title": "Latency Ms",
+              "type": "number"
+            },
+            "layer_latency_ms": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "title": "Layer Latency Ms",
+              "type": "object"
+            },
+            "ml_base_score": {
+              "anyOf": [
+                {
+                  "maximum": 100.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ml Base Score"
+            },
+            "ml_contributors": {
+              "items": {
+                "$ref": "#/components/schemas/MLContributorOut"
+              },
+              "title": "Ml Contributors",
+              "type": "array"
+            },
+            "ml_explanation_method": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tree_path_probability",
+                    "linear_probability_contributions"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "tree_path_probability",
+              "title": "Ml Explanation Method"
+            },
+            "ml_model_version": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ml Model Version"
+            },
+            "ml_score": {
+              "anyOf": [
+                {
+                  "maximum": 100.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ml Score"
+            },
+            "reasons": {
+              "items": {
+                "$ref": "#/components/schemas/RiskReasonOut"
+              },
+              "title": "Reasons",
+              "type": "array"
+            },
+            "reasons_kk": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Reasons Kk",
+              "type": "array"
+            },
+            "reasons_ru": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Reasons Ru",
+              "type": "array"
+            },
+            "recipient": {
+              "$ref": "#/components/schemas/PartyOut"
+            },
+            "recipient_graph": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              },
+              "title": "Recipient Graph",
+              "type": "object"
+            },
+            "red_flags": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Red Flags",
+              "type": "array"
+            },
+            "resolved_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resolved At"
+            },
+            "risk_score": {
+              "maximum": 100.0,
+              "minimum": 0.0,
+              "title": "Risk Score",
+              "type": "integer"
+            },
+            "server_time": {
+              "format": "date-time",
+              "title": "Server Time",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/components/schemas/TransactionStatus"
+            },
+            "transaction_id": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            },
+            "updated_at": {
+              "format": "date-time",
+              "title": "Updated At",
+              "type": "string"
+            },
+            "velocity": {
+              "additionalProperties": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "type": "number"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              "title": "Velocity",
+              "type": "object"
+            },
+            "verification_answers": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CoolingQuestionnaire"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "transaction_id",
+            "created_at",
+            "updated_at",
+            "status",
+            "risk_score",
+            "ml_contributors",
+            "headline_kk",
+            "headline_ru",
+            "reasons",
+            "reasons_kk",
+            "reasons_ru",
+            "latency_ms",
+            "layer_latency_ms",
+            "cooling_off_until",
+            "is_new_recipient",
+            "is_new_device",
+            "recipient",
+            "velocity",
+            "recipient_graph",
+            "amount",
+            "context",
+            "server_time"
+          ],
+          "title": "TransferEvaluateResponse",
+          "type": "object"
+        },
+        "Transition": {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "transition",
+              "title": "Action",
+              "type": "string"
+            },
+            "expected_version": {
+              "minimum": 1.0,
+              "title": "Expected Version",
+              "type": "integer"
+            },
+            "reason": {
+              "enum": [
+                "review_started",
+                "needs_followup",
+                "review_complete",
+                "duplicate",
+                "reopened",
+                "confirmed_fraud",
+                "legitimate_transfer",
+                "insufficient_evidence"
+              ],
+              "title": "Reason",
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "NEW",
+                "IN_REVIEW",
+                "NEEDS_INFORMATION",
+                "ESCALATED",
+                "RESOLVED",
+                "CLOSED"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          "required": [
+            "expected_version",
+            "action",
+            "state",
+            "reason"
+          ],
+          "title": "Transition",
+          "type": "object"
+        },
+        "ValidationError": {
+          "properties": {
+            "ctx": {
+              "title": "Context",
+              "type": "object"
+            },
+            "input": {
+              "title": "Input"
+            },
+            "loc": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "title": "Location",
+              "type": "array"
+            },
+            "msg": {
+              "title": "Message",
+              "type": "string"
+            },
+            "type": {
+              "title": "Error Type",
+              "type": "string"
+            }
+          },
+          "required": [
+            "loc",
+            "msg",
+            "type"
+          ],
+          "title": "ValidationError",
+          "type": "object"
+        }
+      }
+    },
+    "paths": {
+      "/api/v1/integrations/guardian/reports": {
+        "get": {
+          "operationId": "list_reports_api_v1_integrations_guardian_reports_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "default": 20,
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "items": {
+                      "$ref": "#/components/schemas/ReportOut"
+                    },
+                    "title": "Response List Reports Api V1 Integrations Guardian Reports Get",
+                    "type": "array"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "List Reports",
+          "tags": [
+            "advisory orchestration",
+            "Guardian demo reports"
+          ]
+        },
+        "post": {
+          "operationId": "submit_api_v1_integrations_guardian_reports_post",
+          "parameters": [
+            {
+              "in": "header",
+              "name": "idempotency-key",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "title": "Idempotency-Key",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ReportOut"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Submit",
+          "tags": [
+            "advisory orchestration",
+            "Guardian demo reports"
+          ]
+        }
+      },
+      "/api/v1/integrations/guardian/soc/cases": {
+        "get": {
+          "operationId": "list_cases_api_v1_integrations_guardian_soc_cases_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "default": 20,
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "cursor",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "maxLength": 500,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Cursor"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CasePage"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "List Cases",
+          "tags": [
+            "advisory orchestration",
+            "Guardian synthetic SOC cases"
+          ]
+        },
+        "post": {
+          "operationId": "create_api_v1_integrations_guardian_soc_cases_post",
+          "parameters": [
+            {
+              "in": "header",
+              "name": "Idempotency-Key",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "title": "Idempotency-Key",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenCase"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CaseOut"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Create",
+          "tags": [
+            "advisory orchestration",
+            "Guardian synthetic SOC cases"
+          ]
+        }
+      },
+      "/api/v1/integrations/guardian/soc/cases/{case_id}/actions": {
+        "post": {
+          "operationId": "action_api_v1_integrations_guardian_soc_cases__case_id__actions_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "case_id",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "title": "Case Id",
+                "type": "string"
+              }
+            },
+            {
+              "in": "header",
+              "name": "Idempotency-Key",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "title": "Idempotency-Key",
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "assign": "#/components/schemas/Assign",
+                      "categorize": "#/components/schemas/Categorize",
+                      "note": "#/components/schemas/Note",
+                      "request_information": "#/components/schemas/AskInformation",
+                      "transition": "#/components/schemas/Transition"
+                    },
+                    "propertyName": "action"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Transition"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Assign"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Categorize"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Note"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AskInformation"
+                    }
+                  ],
+                  "title": "Body"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CaseOut"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Action",
+          "tags": [
+            "advisory orchestration",
+            "Guardian synthetic SOC cases"
+          ]
+        }
+      },
+      "/api/v1/integrations/health/details": {
+        "get": {
+          "operationId": "integration_health_details_api_v1_integrations_health_details_get",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HealthDetails"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Integration Health Details",
+          "tags": [
+            "advisory orchestration"
+          ]
+        }
+      },
+      "/api/v1/integrations/soc/transactions/{transaction_id}/timeline": {
+        "get": {
+          "operationId": "incident_timeline_api_v1_integrations_soc_transactions__transaction_id__timeline_get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "transaction_id",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "title": "Transaction Id",
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "default": 50,
+                "maximum": 100,
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "cursor",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "maxLength": 1024,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Cursor"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/TimelinePage"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Incident Timeline",
+          "tags": [
+            "advisory orchestration"
+          ]
+        }
+      },
+      "/api/v1/soc/feed": {
+        "get": {
+          "description": "Searchable SOC window; offset pages are not a snapshot or lossless event cursor.",
+          "operationId": "soc_feed_api_v1_soc_feed_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "default": 50,
+                "maximum": 200,
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "offset",
+              "required": false,
+              "schema": {
+                "default": 0,
+                "maximum": 100000,
+                "minimum": 0,
+                "title": "Offset",
+                "type": "integer"
+              }
+            },
+            {
+              "description": "Party name substring or exact transaction UUID",
+              "in": "query",
+              "name": "q",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "maxLength": 128,
+                    "pattern": "^[^\\x00]*$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Party name substring or exact transaction UUID",
+                "title": "Q"
+              }
+            },
+            {
+              "description": "Rows updated after this time; not a lossless cursor",
+              "in": "query",
+              "name": "since",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Rows updated after this time; not a lossless cursor",
+                "title": "Since"
+              }
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/TransactionStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Status"
+              }
+            },
+            {
+              "in": "query",
+              "name": "min_score",
+              "required": false,
+              "schema": {
+                "default": 0,
+                "maximum": 100,
+                "minimum": 0,
+                "title": "Min Score",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "alerts_only",
+              "required": false,
+              "schema": {
+                "default": false,
+                "title": "Alerts Only",
+                "type": "boolean"
+              }
+            },
+            {
+              "in": "header",
+              "name": "X-BCC-SOC-Key",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "X-Bcc-Soc-Key"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/FeedResponse"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Soc Feed",
+          "tags": [
+            "soc"
+          ]
+        }
+      },
+      "/api/v1/transfers/evaluate": {
+        "post": {
+          "description": "Score once per request_id; retries replay the original persisted evaluation.",
+          "operationId": "evaluate_transfer_api_v1_transfers_evaluate_post",
+          "parameters": [
+            {
+              "in": "header",
+              "name": "X-BCC-API-Key",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "X-Bcc-Api-Key"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferEvaluateRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/TransferEvaluateResponse"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Evaluate Transfer",
+          "tags": [
+            "transfers"
+          ]
+        }
+      },
+      "/api/v1/transfers/{transaction_id}": {
+        "get": {
+          "description": "Recover current lifecycle, original ML explanations and saved verification answers.",
+          "operationId": "transfer_detail_api_v1_transfers__transaction_id__get",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "transaction_id",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "title": "Transaction Id",
+                "type": "string"
+              }
+            },
+            {
+              "in": "header",
+              "name": "X-BCC-API-Key",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "X-Bcc-Api-Key"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/TransferEvaluateResponse"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Transfer Detail",
+          "tags": [
+            "transfers"
+          ]
+        }
+      },
+      "/api/v1/transfers/{transaction_id}/resolve-cooling": {
+        "post": {
+          "description": "Save answers; release only after the deadline and explicit clean verification.",
+          "operationId": "resolve_cooling_api_v1_transfers__transaction_id__resolve_cooling_post",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "transaction_id",
+              "required": true,
+              "schema": {
+                "format": "uuid",
+                "title": "Transaction Id",
+                "type": "string"
+              }
+            },
+            {
+              "in": "header",
+              "name": "X-BCC-API-Key",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "X-Bcc-Api-Key"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveCoolingRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/TransferEvaluateResponse"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Resolve Cooling",
+          "tags": [
+            "transfers"
+          ]
+        }
+      },
+      "/api/v1/trusted-contacts": {
+        "get": {
+          "operationId": "contacts_api_v1_trusted_contacts_get",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ContactsOut"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Contacts",
+          "tags": [
+            "trusted contacts (advisory)"
+          ]
+        },
+        "post": {
+          "operationId": "invite_api_v1_trusted_contacts_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteRequest"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/InvitationOut"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Invite",
+          "tags": [
+            "trusted contacts (advisory)"
+          ]
+        }
+      }
+    }
+  },
+  "mobile": {
+    "components": {
+      "schemas": {
+        "AccountView": {
+          "additionalProperties": true,
+          "properties": {
+            "active_pause": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active Pause"
+            },
+            "balance": {
+              "title": "Balance",
+              "type": "string"
+            },
+            "card_last4": {
+              "title": "Card Last4",
+              "type": "string"
+            },
+            "contact_limit": {
+              "title": "Contact Limit",
+              "type": "integer"
+            },
+            "currency": {
+              "const": "KZT",
+              "title": "Currency",
+              "type": "string"
+            },
+            "display_name": {
+              "title": "Display Name",
+              "type": "string"
+            },
+            "held": {
+              "title": "Held",
+              "type": "string"
+            },
+            "recipients": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Recipients",
+              "type": "array"
+            },
+            "telegram_bot": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Telegram Bot"
+            },
+            "telegram_mode": {
+              "title": "Telegram Mode",
+              "type": "string"
+            }
+          },
+          "required": [
+            "display_name",
+            "card_last4",
+            "balance",
+            "held",
+            "currency",
+            "active_pause",
+            "recipients",
+            "contact_limit",
+            "telegram_mode",
+            "telegram_bot"
+          ],
+          "title": "AccountView",
+          "type": "object"
+        },
+        "AuditEntry": {
+          "properties": {
+            "actor": {
+              "format": "uuid",
+              "title": "Actor",
+              "type": "string"
+            },
+            "at": {
+              "format": "date-time",
+              "title": "At",
+              "type": "string"
+            },
+            "enabled": {
+              "title": "Enabled",
+              "type": "boolean"
+            },
+            "subject": {
+              "format": "uuid",
+              "title": "Subject",
+              "type": "string"
+            },
+            "version": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "subject",
+            "actor",
+            "at",
+            "enabled",
+            "version"
+          ],
+          "title": "AuditEntry",
+          "type": "object"
+        },
+        "HTTPValidationError": {
+          "properties": {
+            "detail": {
+              "items": {
+                "$ref": "#/components/schemas/ValidationError"
+              },
+              "title": "Detail",
+              "type": "array"
+            }
+          },
+          "title": "HTTPValidationError",
+          "type": "object"
+        },
+        "MinuteBucket": {
+          "properties": {
+            "minute": {
+              "format": "date-time",
+              "title": "Minute",
+              "type": "string"
+            },
+            "rate_limited": {
+              "default": 0,
+              "title": "Rate Limited",
+              "type": "integer"
+            },
+            "requests": {
+              "default": 0,
+              "title": "Requests",
+              "type": "integer"
+            },
+            "server_errors": {
+              "default": 0,
+              "title": "Server Errors",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "minute"
+          ],
+          "title": "MinuteBucket",
+          "type": "object"
+        },
+        "MobileCompatibility": {
+          "properties": {
+            "api_major": {
+              "const": 1,
+              "default": 1,
+              "title": "Api Major",
+              "type": "integer"
+            },
+            "minimum_android_build": {
+              "title": "Minimum Android Build",
+              "type": "integer"
+            },
+            "transaction_statuses": {
+              "items": {
+                "$ref": "#/components/schemas/TransactionStatus"
+              },
+              "title": "Transaction Statuses",
+              "type": "array"
+            },
+            "update_url": {
+              "const": "https://saq-bol-bcc.zerdeliportald.workers.dev/download/android/",
+              "default": "https://saq-bol-bcc.zerdeliportald.workers.dev/download/android/",
+              "title": "Update Url",
+              "type": "string"
+            }
+          },
+          "required": [
+            "minimum_android_build",
+            "transaction_statuses"
+          ],
+          "title": "MobileCompatibility",
+          "type": "object"
+        },
+        "PasswordLogin": {
+          "additionalProperties": false,
+          "properties": {
+            "login": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Login",
+              "type": "string"
+            },
+            "password": {
+              "format": "password",
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Password",
+              "type": "string",
+              "writeOnly": true
+            }
+          },
+          "required": [
+            "login",
+            "password"
+          ],
+          "title": "PasswordLogin",
+          "type": "object"
+        },
+        "StaffCard": {
+          "properties": {
+            "enabled": {
+              "title": "Enabled",
+              "type": "boolean"
+            },
+            "login": {
+              "const": "admin_demo",
+              "default": "admin_demo",
+              "title": "Login",
+              "type": "string"
+            },
+            "role": {
+              "const": "officer",
+              "default": "officer",
+              "title": "Role",
+              "type": "string"
+            },
+            "subject": {
+              "format": "uuid",
+              "title": "Subject",
+              "type": "string"
+            },
+            "version": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "subject",
+            "enabled",
+            "version"
+          ],
+          "title": "StaffCard",
+          "type": "object"
+        },
+        "StaffOverview": {
+          "properties": {
+            "audit": {
+              "items": {
+                "$ref": "#/components/schemas/AuditEntry"
+              },
+              "title": "Audit",
+              "type": "array"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/StaffCard"
+              },
+              "title": "Items",
+              "type": "array"
+            }
+          },
+          "required": [
+            "items",
+            "audit"
+          ],
+          "title": "StaffOverview",
+          "type": "object"
+        },
+        "TransactionStatus": {
+          "enum": [
+            "approved",
+            "cooling_off",
+            "blocked",
+            "cancelled"
+          ],
+          "title": "TransactionStatus",
+          "type": "string"
+        },
+        "TransferMetrics": {
+          "properties": {
+            "as_of": {
+              "format": "date-time",
+              "title": "As Of",
+              "type": "string"
+            },
+            "buckets": {
+              "items": {
+                "$ref": "#/components/schemas/MinuteBucket"
+              },
+              "title": "Buckets",
+              "type": "array"
+            },
+            "p95_overflow": {
+              "title": "P95 Overflow",
+              "type": "boolean"
+            },
+            "p95_upper_ms": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "P95 Upper Ms"
+            },
+            "rate_limited": {
+              "title": "Rate Limited",
+              "type": "integer"
+            },
+            "requests": {
+              "title": "Requests",
+              "type": "integer"
+            },
+            "scope": {
+              "const": "wallet_transfer_api",
+              "default": "wallet_transfer_api",
+              "title": "Scope",
+              "type": "string"
+            },
+            "server_errors": {
+              "title": "Server Errors",
+              "type": "integer"
+            },
+            "window_minutes": {
+              "default": 15,
+              "title": "Window Minutes",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "as_of",
+            "buckets",
+            "requests",
+            "rate_limited",
+            "server_errors",
+            "p95_upper_ms",
+            "p95_overflow"
+          ],
+          "title": "TransferMetrics",
+          "type": "object"
+        },
+        "ValidationError": {
+          "properties": {
+            "ctx": {
+              "title": "Context",
+              "type": "object"
+            },
+            "input": {
+              "title": "Input"
+            },
+            "loc": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              },
+              "title": "Location",
+              "type": "array"
+            },
+            "msg": {
+              "title": "Message",
+              "type": "string"
+            },
+            "type": {
+              "title": "Error Type",
+              "type": "string"
+            }
+          },
+          "required": [
+            "loc",
+            "msg",
+            "type"
+          ],
+          "title": "ValidationError",
+          "type": "object"
+        }
+      }
+    },
+    "paths": {
+      "/mobile/v1/account": {
+        "get": {
+          "operationId": "account_mobile_v1_account_get",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/AccountView"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Account"
+        }
+      },
+      "/mobile/v1/admin/metrics": {
+        "get": {
+          "operationId": "metrics_mobile_v1_admin_metrics_get",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/TransferMetrics"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Metrics"
+        }
+      },
+      "/mobile/v1/admin/staff": {
+        "get": {
+          "operationId": "overview_mobile_v1_admin_staff_get",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/StaffOverview"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Overview"
+        }
+      },
+      "/mobile/v1/auth/login": {
+        "post": {
+          "operationId": "password_login_mobile_v1_auth_login_post",
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordLogin"
+                }
+              }
+            },
+            "required": true
+          },
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "additionalProperties": true,
+                    "title": "Response Password Login Mobile V1 Auth Login Post",
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "summary": "Password Login"
+        }
+      },
+      "/mobile/v1/compatibility": {
+        "get": {
+          "operationId": "compatibility_mobile_v1_compatibility_get",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/MobileCompatibility"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            }
+          },
+          "summary": "Compatibility"
+        }
+      },
+      "/mobile/v1/requests": {
+        "post": {
+          "description": "Register ownership before the phone attempts a mutation with an uncertain outcome.",
+          "operationId": "reserve_request_mobile_v1_requests_post",
+          "responses": {
+            "201": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "title": "Response Reserve Request Mobile V1 Requests Post",
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Reserve Request"
+        }
+      },
+      "/mobile/v1/session": {
+        "delete": {
+          "operationId": "logout_mobile_v1_session_delete",
+          "responses": {
+            "204": {
+              "description": "Successful Response"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Logout"
+        },
+        "get": {
+          "operationId": "current_mobile_v1_session_get",
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    },
+                    "title": "Response Current Mobile V1 Session Get",
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Current"
+        }
+      },
+      "/mobile/v1/wallet/cases": {
+        "get": {
+          "operationId": "cases_mobile_v1_wallet_cases_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "state",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "NEW",
+                      "IN_REVIEW",
+                      "NEEDS_INFORMATION",
+                      "ESCALATED",
+                      "RESOLVED",
+                      "CLOSED"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "State"
+              }
+            },
+            {
+              "in": "query",
+              "name": "report_id",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Report Id"
+              }
+            },
+            {
+              "in": "query",
+              "name": "offset",
+              "required": false,
+              "schema": {
+                "default": 0,
+                "maximum": 10000,
+                "minimum": 0,
+                "title": "Offset",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "awaiting_first_action",
+              "required": false,
+              "schema": {
+                "default": false,
+                "title": "Awaiting First Action",
+                "type": "boolean"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "additionalProperties": true,
+                    "title": "Response Cases Mobile V1 Wallet Cases Get",
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Cases"
+        }
+      },
+      "/mobile/v1/wallet/operations": {
+        "get": {
+          "operationId": "operations_mobile_v1_wallet_operations_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "days",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Days"
+              }
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/TransactionStatus"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Status"
+              }
+            },
+            {
+              "in": "query",
+              "name": "direction",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "incoming",
+                      "outgoing"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Direction"
+              }
+            },
+            {
+              "in": "query",
+              "name": "day",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Day"
+              }
+            },
+            {
+              "in": "query",
+              "name": "through",
+              "required": false,
+              "schema": {
+                "anyOf": [
+                  {
+                    "format": "date",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Through"
+              }
+            },
+            {
+              "in": "query",
+              "name": "q",
+              "required": false,
+              "schema": {
+                "default": "",
+                "maxLength": 128,
+                "title": "Q",
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "default": 20,
+                "maximum": 50,
+                "minimum": 1,
+                "title": "Limit",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "offset",
+              "required": false,
+              "schema": {
+                "default": 0,
+                "maximum": 10000,
+                "minimum": 0,
+                "title": "Offset",
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "additionalProperties": true,
+                    "title": "Response Operations Mobile V1 Wallet Operations Get",
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Operations"
+        }
+      },
+      "/mobile/v1/wallet/soc": {
+        "get": {
+          "operationId": "soc_mobile_v1_wallet_soc_get",
+          "parameters": [
+            {
+              "in": "query",
+              "name": "days",
+              "required": false,
+              "schema": {
+                "default": 7,
+                "title": "Days",
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "include_policy",
+              "required": false,
+              "schema": {
+                "default": false,
+                "title": "Include Policy",
+                "type": "boolean"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "additionalProperties": true,
+                    "title": "Response Soc Mobile V1 Wallet Soc Get",
+                    "type": "object"
+                  }
+                }
+              },
+              "description": "Successful Response"
+            },
+            "422": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              },
+              "description": "Validation Error"
+            }
+          },
+          "security": [
+            {
+              "HTTPBearer": []
+            }
+          ],
+          "summary": "Soc"
+        }
+      }
+    }
+  }
+}

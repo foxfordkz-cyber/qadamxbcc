@@ -12,7 +12,7 @@ for (const file of await readdir(source, { withFileTypes: true })) {
   if (file.isFile() && /\.(mjs|css|svg|html)$/.test(file.name)) {
     // Keep the served text identical to the Linux APK build on Windows checkouts.
     await writeFile(to, (await readFile(from, "utf8")).replace(/\r\n/g, "\n"));
-  } else if (file.isDirectory() && ["vendor", "media", "img3d"].includes(file.name)) {
+  } else if (file.isDirectory() && ["vendor", "media", "img3d", "soc"].includes(file.name)) {
     await cp(from, to, {recursive: true});
   }
 }

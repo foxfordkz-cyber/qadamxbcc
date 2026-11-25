@@ -1,5 +1,7 @@
 import { Capacitor, registerPlugin } from "./vendor/capacitor.js";
 import { Gateway, GatewayError, isWalletRole } from "./gateway.mjs";
+import { checkProtocol } from "./compatibility.mjs";
+import { installedBuild } from "./native.mjs";
 const vault = registerPlugin("DeviceVault");
 const native = Capacitor.isNativePlatform();
 export const hasNativeDialer = native;
@@ -44,12 +46,24 @@ async function getGateway() {
   if (!origin) throw new GatewayError(503);
   const gateway=new Gateway(origin, undefined, origin);
   gateway.webSession=web;
+  const info = await installedBuild();
+  const support = await checkProtocol(gateway, info ? Number(info.build) : null);
+  if (support === "update_required") throw new GatewayError(426);
+  if (support === "invalid") throw new GatewayError(502);
   return gateway;
 }
 export async function signIn(login, password, remember = true) {
   const gateway = await getGateway();
   gateway.remember = remember;
-  const result = await gateway.request("/auth/login","POST",{login,password});
+  // One retry for an explicit gateway failure; an unanswered login already waits up to two minutes.
+  let result;
+  for (let attempt = 0; ; attempt++) {
+    try { result = await gateway.request("/auth/login","POST",{login,password}); break; }
+    catch (e) {
+      if (attempt >= 1 || !(e instanceof GatewayError) || ![502, 503, 504].includes(e.status)) throw e;
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
   if (!isWalletRole(result.role) || (!web && typeof result.token !== "string") ||
       typeof result.subject !== "string") throw new GatewayError(502);
   gateway.role = result.role; gateway.token = web ? "cookie" : result.token; gateway.subject=result.subject;

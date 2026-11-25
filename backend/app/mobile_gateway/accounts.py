@@ -17,6 +17,7 @@ from app.api.v1.payee_check import (
 )
 from app.integrations.telegram.service import CONTACT_LIMIT
 from app.mobile_gateway.app import IdentityDep
+from app.mobile_gateway.contracts import AccountView
 from app.mobile_gateway.demo_catalog import SAVED_TRANSFERS, saved_recipients, wallet_recipients
 from app.mobile_gateway.protection_models import PostCall, TransferKey
 from app.mobile_gateway.security_inbox import owner_inbox
@@ -91,7 +92,7 @@ def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
             )
         return result
 
-    @app.get("/mobile/v1/account")
+    @app.get("/mobile/v1/account", response_model=AccountView)
     async def account(
         request: Request, principal: IdentityDep, session: SessionDep
     ) -> dict[str, Any]:

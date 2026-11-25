@@ -74,7 +74,7 @@ export class Gateway {
   async send(path, method, body, idempotencyKey) {
     const inboxPath = path === "/inbox" || path === "/inbox?view=actions";
     if (
-      (!inboxPath && !/^\/(?:sessions?$|auth\/login$|account$|requests$|wallet\/|protection\/|transfers(?:\?|$)|api\/|admin\/(?:metrics|staff(?:\/[\da-f-]{36})?)$|callbacks(?:\/[\da-f-]{36}\/answer)?$|(?:cases|reports)\/[\da-f-]{36}\/callback$)/i.test(path)) ||
+      (!inboxPath && !/^\/(?:compatibility$|sessions?$|auth\/login$|account$|requests$|wallet\/|protection\/|transfers(?:\?|$)|api\/|admin\/(?:metrics|staff(?:\/[\da-f-]{36})?)$|callbacks(?:\/[\da-f-]{36}\/answer)?$|(?:cases|reports)\/[\da-f-]{36}\/callback$)/i.test(path)) ||
       path.includes("..")
     )
       throw new Error("invalid_path");

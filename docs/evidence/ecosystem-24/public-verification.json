@@ -1,0 +1,13 @@
+{
+  "build": 24,
+  "sha256": "119355ceea55b6087c357006ae14b2f272a72de00538521948d68362ecdfebf1",
+  "api_origin": "https://saq-bol-mobile.onrender.com",
+  "three_logins": true,
+  "role_boundaries": true,
+  "same_ledger_soc_redirect": true,
+  "transaction_id": "28e43557-b7b6-4584-8397-e3e8104f9944",
+  "status": "cooling_off",
+  "balance": "4785900.00",
+  "telegram": "fake_enabled",
+  "compatibility_http": 404
+}
