@@ -14,6 +14,8 @@ const policyComparisonSchema = z.object({
   policies: z.array(z.object({
     threshold: count.max(100).nullable(), extra_holds: count, missed_fraud: count.nullable(),
     false_interventions: count.nullable(), false_per_1000_legitimate: z.number().min(0).max(1000).nullable(),
+      missed_fraud_kzt: z.string().regex(/^\d+(?:\.\d{1,2})?$/).nullish(),
+      legitimate_held_kzt: z.string().regex(/^\d+(?:\.\d{1,2})?$/).nullish(),
   })).max(101).optional(),
 });
 export const caseStates = ["NEW", "IN_REVIEW", "NEEDS_INFORMATION", "ESCALATED", "RESOLVED", "CLOSED"] as const;

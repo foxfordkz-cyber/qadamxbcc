@@ -9,6 +9,7 @@ import { FxCard } from "./fx-card";
 import { BrandMark } from "./brand-mark";
 import { LanguageSwitch } from "./language-switch";
 import { MobileQr } from "./mobile-qr";
+import { ScenarioPolicy } from "./scenario-policy";
 import wallets from "@/lib/connected-wallet.json";
 import "./landing.css";
 
@@ -108,6 +109,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
           <p className="proof-remainder">{L(rest).replace("{n}", String(sampleSize - count))}</p>
         </article>
       )}</div>
+      <ScenarioPolicy />
     </section>
 
     <section id="story" className="land-story" aria-labelledby="story-title">

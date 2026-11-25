@@ -136,8 +136,8 @@ _PUBLIC_LOGINS = (
     + "</summary><dl>"
     + "".join(
         f'<div data-jury-account="{login}"><dt>{bilingual(kk, ru)}</dt>'
-        f'<dd><small>Логин</small><code>{login}</code></dd>'
-        f'<dd><small>{bilingual("Құпиясөз", "Пароль")}</small><code>{password}</code></dd></div>'
+        f"<dd><small>Логин</small><code>{login}</code></dd>"
+        f"<dd><small>{bilingual('Құпиясөз', 'Пароль')}</small><code>{password}</code></dd></div>"
         for kk, ru, login, password in _PUBLIC_ROLES
     )
     + "</dl></details>"
@@ -162,7 +162,6 @@ _HEAD = """<!doctype html><html lang="kk"><head><meta charset="utf-8">
 <section class="room-content">"""
 
 
-
 def landing(
     *,
     key: str | None = None,
@@ -173,50 +172,69 @@ def landing(
 ) -> HTMLResponse:
     # All markup consists of fixed bilingual copy and a server-generated URL-safe key.
     title = "<h1>" + bilingual("Қазылар әмияны", "Кошелёк жюри") + "</h1>"
-    intro = "<p>" + bilingual(
-        "Жеке оқу бөлмесін ашыңыз. Оған өз логиніңізбен кіре аласыз.",
-        "Откройте свою учебную комнату и войдите со своим логином.",
-    ) + "</p>"
+    intro = (
+        "<p>"
+        + bilingual(
+            "Жеке оқу бөлмесін ашыңыз. Оған өз логиніңізбен кіре аласыз.",
+            "Откройте свою учебную комнату и войдите со своим логином.",
+        )
+        + "</p>"
+    )
     submit = (
         bilingual("Әмиянға оралу", "Вернуться в кошелёк")
-        if key else bilingual("Бос бөлме ашу", "Открыть пустую комнату")
+        if key
+        else bilingual("Бос бөлме ашу", "Открыть пустую комнату")
     )
     history = ""
     if history_available and not key:
         history = (
             '<form method="post" action="/jury/start/history">'
             '<button class="with-history" type="submit">'
-            + bilingual("Тарихымен ашу", "Открыть с историей") + "</button></form>"
+            + bilingual("Тарихымен ашу", "Открыть с историей")
+            + "</button></form>"
         )
-        intro += '<p class="room-sample">' + bilingual(
-            "40 оқу аударымы · 10 іс", "40 учебных переводов · 10 дел SOC"
-        ) + "</p>"
+        intro += (
+            '<p class="room-sample">'
+            + bilingual("40 оқу аударымы · 10 іс", "40 учебных переводов · 10 дел SOC")
+            + "</p>"
+        )
     shared = ""
     if key:
         shared = (
-            "<p>" + bilingual(
+            "<p>"
+            + bilingual(
                 "Басқа рөлмен кіру үшін бөлменің сілтемесін бөлек браузер профилінде ашыңыз.",
                 "Для другой роли откройте ссылку своей комнаты в отдельном профиле браузера.",
-            ) + f'</p><a href="/jury/join/{key}">'
-            + bilingual("Бөлме сілтемесі", "Ссылка на вашу комнату") + "</a>"
+            )
+            + f'</p><a href="/jury/join/{key}">'
+            + bilingual("Бөлме сілтемесі", "Ссылка на вашу комнату")
+            + "</a>"
         )
     if contact_invite:
         shared += (
             f'<p><a href="/jury/invite-contact/{contact_invite}">'
-            + bilingual("Сенімді адамға шақыру", "Приглашение доверенному лицу") + "</a></p>"
+            + bilingual("Сенімді адамға шақыру", "Приглашение доверенному лицу")
+            + "</a></p>"
         )
     return HTMLResponse(
-        _HEAD + title + message + intro + '<div class="room-actions">' + history
+        _HEAD
+        + title
+        + message
+        + intro
+        + '<div class="room-actions">'
+        + history
         + '<form method="post" action="/jury/start">'
         f'<button type="submit">{submit}</button></form>'
         + "</div>"
         + '<p><a href="/jury/results">Неге тоқтады? · Почему остановлен перевод?</a></p>'
         + _PUBLIC_LOGINS
         + shared
-        + '<p class="room-expiry">' + bilingual(
+        + '<p class="room-expiry">'
+        + bilingual(
             "Бөлмеге 30 минут бойы ешкім кірмесе, деректері өшіріледі.",
             "После 30 минут бездействия данные комнаты удаляются.",
-        ) + '</p><a href="https://saq-bol-mobile.onrender.com/wallet/">'
+        )
+        + '</p><a href="https://saq-bol-mobile.onrender.com/wallet/">'
         + bilingual("Команда әмиянына кіру", "Вход в кошелёк команды")
         + "</a></section></main></body></html>",
         status_code=status,

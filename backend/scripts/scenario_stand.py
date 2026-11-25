@@ -68,6 +68,7 @@ class Result:
     fraud: bool
     decision: str
     score: int
+    amount_tiyn: int
     signals: list[str]
 
 
@@ -139,6 +140,7 @@ async def evaluate_case(engine: AntifraudEngine, story: Story, tx: TransferConte
         story.fraud,
         evaluation.decision.value,
         evaluation.score,
+        round(tx.amount * 100),
         [r.code for r in evaluation.reasons],
     )
 

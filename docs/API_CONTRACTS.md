@@ -182,6 +182,7 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 
 | Метод | Путь | Доступ | Тело | Ответ | Коды в схеме |
 |---|---|---|---|---|---|
+| `GET` | `/api/v1/soc/transfers/{transaction_id}/edge-receipts` | `X-BCC-SOC-Key` | — | `EdgeReceipts` | 200, 422 |
 | `GET` | `/api/v1/soc/accounts/{account_id}/trace-anchors` | `X-BCC-SOC-Key` | — | `TraceAnchors` | 200, 422 |
 | `GET` | `/api/v1/soc/transfers/{transaction_id}/funds-trace` | `X-BCC-SOC-Key` | — | `FundsTrace` | 200, 422 |
 | `GET` | `/api/v1/soc/feed` | `X-BCC-SOC-Key` | — | `FeedResponse` | 200, 422 |

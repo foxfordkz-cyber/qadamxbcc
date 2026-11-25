@@ -1,6 +1,6 @@
 "use client";
 import type { CaseAnalytics } from "@/lib/soc-integrations";
-import { useLocale } from "@/lib/i18n";
+import { money, useLocale } from "@/lib/i18n";
 
 export function PolicyComparison({ data }: { data: NonNullable<CaseAnalytics["policy_comparison"]> }) {
   const kk = useLocale().lang === "kk";
@@ -11,6 +11,7 @@ export function PolicyComparison({ data }: { data: NonNullable<CaseAnalytics["po
   const coverage = data.evaluated ? number.format(100 * known / data.evaluated) + "%" : "—";
   const legacyRow = (threshold: number | null, extra: number, detected: number, falseHolds: number) => ({
     threshold, extra_holds: extra,
+    missed_fraud_kzt: null, legitimate_held_kzt: null,
     missed_fraud: data.fraud_labelled ? data.fraud_labelled - detected : null,
     false_interventions: data.legitimate_labelled ? falseHolds : null,
     false_per_1000_legitimate: data.legitimate_labelled ? 1000 * falseHolds / data.legitimate_labelled : null,
@@ -37,9 +38,13 @@ export function PolicyComparison({ data }: { data: NonNullable<CaseAnalytics["po
       <div className="policy-scroll"><table><thead><tr>{columns.map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
         <tbody>{policies.map(row => <tr key={row.threshold ?? "current"}>
           <th scope="row">{row.threshold === null ? (kk ? "Қазіргі саясат" : "Текущая политика") : `≥ ${row.threshold}`}</th>
-          <td>{data.evaluated ? row.extra_holds : "—"}</td><td>{display(row.missed_fraud)}</td>
-          <td>{display(row.false_per_1000_legitimate)}{row.false_interventions !== null && <> ({row.false_interventions}/{data.legitimate_labelled})</>}</td>
+          <td>{data.evaluated ? row.extra_holds : "—"}</td><td>{display(row.missed_fraud)}
+            {row.missed_fraud_kzt != null && <small>{money(row.missed_fraud_kzt, kk ? "kk" : "ru")}</small>}</td>
+          <td>{display(row.false_per_1000_legitimate)}{row.false_interventions !== null && <> ({row.false_interventions}/{data.legitimate_labelled})</>}
+            {row.legitimate_held_kzt != null && <small>{money(row.legitimate_held_kzt, kk ? "kk" : "ru")}</small>}</td>
         </tr>)}</tbody></table></div>
+    <p>{kk ? "Теңгемен берілген сомалар әр саясат өткізіп жіберетін алаяқтық аударымдар мен кідіртетін заңды төлемдердің көлемін көрсетеді."
+      : "Суммы в тенге показывают объём мошеннических переводов, которые пропустила бы политика, и объём честных платежей, которые она задержала бы."}</p>
     <p>{kk ? "«—» тиісті дерек жоқ екенін білдіреді. Белгілер жабылған істерден алынады. Даулы немесе белгісіз нәтижелер сапа есебіне кірмейді. Осы аударымдар үшін толық HTTP сұрауының p95 уақыты қолжетімсіз."
       : "«—» означает, что для метрики нет данных. Исходы взяты из закрытых дел. Спорные и неизвестные исходы исключены из оценки качества. Для этих переводов p95 полного HTTP-запроса недоступен."}</p>
   </details>;

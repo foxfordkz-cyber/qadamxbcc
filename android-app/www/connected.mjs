@@ -3,6 +3,7 @@ import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
+import { canUseTransferKey, verifyWithDevice } from "./transfer-key.mjs";
 import { walletUI, icon, cardThumbnail, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
 import { familyView, checkView, packetContent, secondConfirmationView, secondSettingsView } from "./guardian.mjs";
@@ -15,6 +16,9 @@ const product = document.documentElement.hasAttribute("data-product");
 let initializingAccount = product;
 let rememberLogin = true, restoreFailed = false;
 let receiptPacket = null;
+let deviceReceipt = null;
+let partnerSignal = null;
+let graphAnchor = null;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
 const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""});
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
@@ -105,6 +109,7 @@ function clearVisible() {
   if(webWallet)history.replaceState({wallet:true},"",location.pathname);
   scanText=""; reportChoice=false; drafts=readDrafts(null);
   workspaceRead=null; lastRead=null;
+  deviceReceipt = partnerSignal = graphAnchor = null;
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
   callbackView=queueSnapshot=callbackAttempt=null;
@@ -205,6 +210,10 @@ const errText = (code) =>
     422: T(
       "Проверь поля. Не вводи настоящие банковские данные или секреты.",
       "Өрістерді тексер. Нақты банк деректері мен құпияларды енгізбе.",
+    ),
+    428: T(
+      "Ключ не подтвердил перевод. Проверьте сумму и получателя и повторите в браузере, где подключили ключ.",
+      "Кілт аударымды растамады. Сома мен алушыны тексеріп, кілт қосылған браузерде қайталаңыз.",
     ),
     429: T(
       "Достигнут лимит запросов. Попробуйте позже.",
@@ -394,6 +403,11 @@ async function open(next, id, remember=true) {
       const detail = await g.api("transfers/"+id);
       if (!current()) return;
       accept(detail);
+      if (juryWallet && (g.role === "admin" || account?.transfer_key_enrolled)) {
+        void g.request("/protection/transfer-key/receipts/"+id).then(proof => {
+          if (current()) { deviceReceipt = {id, ...proof}; render(); }
+        }).catch(() => {});
+      }
       if (product && g.role === "client") {
         void g.request("/protection/"+id+"/packet").then(packet => {
           if (current() && packet.transaction_id === id) { receiptPacket=packet; render(); }
@@ -948,9 +962,17 @@ function safetyView() {
       ["reports", "clock", T("Мои обращения","Менің өтініштерім"), T("История и отметка оператора","Тарих пен оператор белгісі")],
       ["call-transfer", "transfer", T("Перевод во время звонка","Қоңырау кезіндегі аударым"), T("Перевод с отметкой о звонке","Қоңырау белгісі бар аударым")],
     ];
+    const keyCard = !account?.supports_transfer_key ? "" :
+      '<section class="paper"><h2>' + T("Ключ устройства", "Құрылғы кілті") + '</h2><p>' +
+      (account.transfer_key_enrolled
+        ? T("Подключён. Каждый перевод в этой комнате требует подтверждения суммы и получателя ключом.", "Қосылды. Осы бөлмедегі әр аударымның сомасы мен алушысын кілтпен растау қажет.")
+        : T("Подключите ключ для своей учебной комнаты. Перед отправкой перевода браузер запросит PIN или биометрию устройства.", "Оқу бөлмеңізге кілтті қосыңыз. Аударымды жіберерде браузер құрылғының PIN кодын немесе биометриясын сұрайды.")) + '</p>' +
+      (account.transfer_key_enrolled ? "" : canUseTransferKey()
+        ? button("enroll-transfer-key", T("Подключить ключ", "Кілтті қосу"), "secondary")
+        : '<small>' + T("Откройте комнату в браузере с поддержкой ключей доступа.", "Бөлмені кіру кілттерін қолдайтын браузерде ашыңыз.") + '</small>') + '</section>';
     return `<section class="safety-hero"><h1 tabindex="-1">${T("Защита","Қорғаныс")}</h1><p>${T("Спокойствие — под контролем","Тыныштық — бақылауда")}</p>` +
       `<strong>${E(p.title)}</strong>${p.checks ? `<span>${E(p.checks)}</span>` : ""}<i class="art art-shield" aria-hidden="true"></i></section>` +
-      live + `<h2 class="section-title">${T("Инструменты защиты","Қорғаныс құралдары")}</h2><div class="tool-grid">` +
+      live + keyCard + `<h2 class="section-title">${T("Инструменты защиты","Қорғаныс құралдары")}</h2><div class="tool-grid">` +
       tools.map(([act, art, name, sub], i) => `<button class="tool t${i}" data-action="${act}"><i class="art art-${art}" aria-hidden="true"></i><b>${name}</b><small>${E(sub)}</small></button>`).join("") +
       `</div><section class="safety-list"><h2>${T("Связь с отделом безопасности","Қауіпсіздік бөлімімен байланыс")}</h2>` +
       service.map(([act, art, name, sub]) => `<button data-action="${act}"><i class="art art-${art}" aria-hidden="true"></i><span><strong>${name}</strong><small>${sub}</small></span>${icon("arrow")}</button>`).join("") +
@@ -1088,6 +1110,22 @@ function caseView() {
     ? `${title(T("Работа с делом", "Іспен жұмыс"))}<section class="paper case-summary"><small>SOC · ${when(data.created_at)}</small><h2>${E(label(data.category))}</h2><p>${caseState(data.state)} · v${Number(data.version)}</p><p class="fine">${E(data.assignee ?? T("Не назначено", "Тағайындалмаған"))}</p><p class="break-id">${E(data.id)}</p></section>${data.state === "NEW" ? button("case-review", T("Взять в рассмотрение", "Қарауға алу")) : ""}${desk.closeCase(data)}<p class="fine">${T("Действия фиксируются в журнале. Это не решение банка.", "Әрекеттер журналда сақталады. Бұл банк шешімі емес.")}</p>`
     : "";
 }
+function partnerSignalView() {
+  const result = partnerSignal?.id === data.id && partnerSignal.caseVersion === data.version ? partnerSignal : null;
+  const states = {
+    review: T("Партнёру предложена ручная проверка", "Серіктеске қолмен тексеру ұсынылды"),
+    withdrawn: T("Предыдущее предупреждение отозвано", "Алдыңғы ескерту қайтарылды"),
+    expired: T("Срок предупреждения истёк", "Ескертудің мерзімі аяқталды"),
+    no_signal: T("По этому делу нет подтверждённого сигнала", "Осы іс бойынша расталған белгі жоқ"),
+    unlinked: T("Для сверки нужно дело, связанное с переводом", "Салыстыру үшін аударымға байланысты іс қажет"),
+  };
+  const expired = result?.expires_at && Date.parse(result.expires_at) <= Date.now();
+  return '<section class="paper"><h2>'+T("Проверка в банке-партнёре", "Серіктес банкте тексеру")+'</h2><p>'+
+    T("Два учебных банка сверяют статус этого дела. Банк Б проверяет подпись ответа и срок его действия.", "Екі оқу банкі осы істің күйін салыстырады. Б банкі жауаптың қолтаңбасы мен жарамдылық мерзімін тексереді.")+'</p>'+
+    (result ? '<p role="status"><strong>'+E(expired ? T("Обновите ответ", "Жауапты жаңартыңыз") : states[result.state])+'</strong>'+
+      (result.reference ? '<br><small>Ed25519 · '+E(result.reference)+' · '+T("действует до ", "жарамды уақыты ")+E(when(result.expires_at))+'</small>' : "")+'</p>' : "")+
+    button("query-partner-signal", T("Проверить статус", "Күйін тексеру"), "secondary")+'</section>';
+}
 function enrichmentView() {
   return `${title(T("Доказательства интеграций", "Интеграция деректері"))}<section class="paper"><h2>${T("Учебный реестр получателей","Алушылардың оқу тізілімі")}</h2>${(data?.external_checks ?? []).map((c) => `<p>${E(c[lang === "ru" ? "description_ru" : "description_kk"] ?? label(c.result?.status))}</p>`).join("") || `<p>${T("Проверок нет", "Тексерулер жоқ")}</p>`}<h2>${T("Уведомления", "Хабарламалар")}</h2>${(data?.notifications ?? []).map((n) => `<p>${E(label(n.state))}</p>`).join("") || `<p>${T("Отправок нет", "Жіберілімдер жоқ")}</p>`}</section>`;
 }
@@ -1193,7 +1231,10 @@ const screens = {
   history: historyView,
   transfer: transferView,
   review: reviewView,
-  detail: () => detailView() + (evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation) : ""),
+  detail: () => detailView() + (deviceReceipt?.id === selectedId && deviceReceipt?.verified
+    ? '<section class="paper"><strong>' + T("Клиент подтвердил перевод ключом устройства", "Клиент аударымды құрылғы кілтімен растады") + '</strong><p>' +
+      E(ledgerTime(deviceReceipt.verified_at)) + " · " + amount(deviceReceipt.amount) + '</p></section>' : "") +
+    (evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation) : ""),
   questionnaire: questionnaireView,
   safety: safetyView,
   scan: scanView,
@@ -1204,7 +1245,7 @@ const screens = {
   timeline: timelineView,
   system: systemView,
   cases: casesView,
-  case: caseView,
+  case: () => caseView() + (juryWallet && data?.id ? partnerSignalView() : ""),
   enrichment: enrichmentView,
   gateway: gatewayView,
   settings: settingsView,
@@ -1353,6 +1394,16 @@ function render() {
         target.replaceChildren();if(!node)return;
         target.textContent=T("Загружаем операции…","Операциялар жүктелуде…");
         try{
+          if (graphAnchor && recipient && [node,recipient].includes(data.center)) {
+            const q = new URLSearchParams({source:node, target:recipient});
+            const evidence = await api("soc/transfers/"+graphAnchor+"/edge-receipts?"+q);
+            if(ticket!==selection || !target.isConnected) return;
+            target.innerHTML = '<h3>'+T("Зачисления за 24 часа до решения", "Шешімге дейінгі 24 сағатта түскен аударымдар")+'</h3>'+
+              (evidence.items.map(tx=>'<button class="graph-record" data-detail="'+E(tx.transaction_id)+'"><strong>'+amount(tx.amount)+'</strong><span>'+E(when(tx.settled_at))+'</span></button>').join("") ||
+              '<p>'+T("Зачислений в этом направлении нет.", "Осы бағытта түскен аударым жоқ.")+'</p>')+
+              (evidence.has_more ? '<small>'+T("Показаны последние 12 операций.", "Соңғы 12 операция көрсетілді.")+'</small>' : "");
+            return;
+          }
           const q=new URLSearchParams({node,offset:String(position)});
           if(recipient)q.set("recipient",recipient);
           const batch=await gateway.request("/wallet/graph-operations?"+q);
@@ -1491,6 +1542,8 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (b.dataset.graph) {
+    const anchor = page === "detail" ? evaluation : page === "case" ? caseTransaction : null;
+    graphAnchor = anchor?.recipient?.id === b.dataset.graph ? anchor.transaction_id : null;
     await open("graph", b.dataset.graph);
     return;
   }
@@ -1767,20 +1820,53 @@ root.addEventListener("click", async (event) => {
     });
     return;
   }
+  if (act === "query-partner-signal" && page === "case" && gateway?.role === "admin") {
+    const id = data.id;
+    await perform(async () => {
+      try {
+        partnerSignal = {id, caseVersion:data.version, ...await gateway.request("/wallet/cases/"+id+"/partner-signal")};
+      } catch (failure) {
+        if (failure.status !== 404) throw failure;
+        partnerSignal = {id, caseVersion:data.version, state:"unlinked"};
+      }
+    });
+    return;
+  }
+  if (act === "enroll-transfer-key" && page === "safety" && account?.supports_transfer_key && !account.transfer_key_enrolled) {
+    await perform(async () => {
+      await verifyWithDevice(gateway, null);
+      account = await gateway.request("/account");
+    });
+    return;
+  }
   if (act === "submit-transfer") {
     if (pending || !draft || (draft.payee && !canConfirmPayee(data))) return;
     if (needsCallAnswer(draft, data, account?.supports_call_question) && !draft.callAnswer) return;
     const context = submissionContext(draft, account?.supports_call_question);
+    const terms = {recipient_phone: draft.recipient_phone, amount: draft.amount, context, currency:"KZT"};
     await perform(async () => {
       const { request_id: id } = await gateway.request("/requests", "POST", {});
+      const payment = {...terms, request_id:id};
+      if (account?.transfer_key_enrolled) await verifyWithDevice(gateway, payment);
       await savePending(id);
       mutationOutcome = true;
-      const value = await api("transfers/evaluate", "POST", {
-        recipient_phone: draft.recipient_phone, amount: draft.amount, context,
-        request_id: id,
-        currency: "KZT",
-      });
+      let value;
+      try {
+        value = await api("transfers/evaluate", "POST", payment);
+      } catch (failure) {
+        if (failure.status === 428) {
+          mutationOutcome = false;
+          await savePending("");
+          account = await gateway.request("/account");
+        }
+        throw failure;
+      }
       accept(value);
+      if (account?.transfer_key_enrolled) {
+        deviceReceipt = null;
+        const proof = await gateway.request("/protection/transfer-key/receipts/"+value.transaction_id).catch(() => null);
+        if (proof) deviceReceipt = {id:value.transaction_id, ...proof};
+      }
       await savePending("");
       page = "detail"; backStack=[];
       const guarded=product && context.active_call && value.status==="cooling_off";

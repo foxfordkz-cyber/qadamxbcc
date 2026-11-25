@@ -28,6 +28,9 @@ test("anonymous hosted SOC reads synthetic feed and graph while private operatio
   });
   const flag = `soc/recipients/${account}/flag`;
   const history = ["soc", "recipients", account, "prior-receipts"];
+  const evidence = ["soc", "transfers", account, "edge-receipts"];
+  const q = "source="+account+"&target=00000000-0000-4000-8000-000000000002";
+  assert.equal((await GET(new NextRequest(`${origin}/api/v1/${evidence.join("/") }?${q}`), { params: Promise.resolve({path:evidence}) })).status, 403);
   assert.equal((await GET(new NextRequest(`${origin}/api/v1/${history.join("/")}?version=1`), { params: Promise.resolve({ path: history }) })).status, 403);
   assert.equal((await POST(post(flag), { params: Promise.resolve({ path: flag.split("/") }) })).status, 403);
   for (const route of ["guardian/soc/cases", `guardian/soc/cases/${account}/actions`]) {

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { payeeResult } from "./payee-check";
 import { incomingSchema, paymentSchema, returnRoute } from "./payment-returns";
 import { fundsTraceSchema, traceRoute } from "./funds-trace";
+import { edgeReceiptRoute, edgeReceiptSchema } from "./edge-receipts";
 import { anchorsRoute, traceAnchorsSchema } from "./trace-anchors";
 import { lookbackRoute, priorReceipts } from "./recipient-lookback";
 import { validateSocIntegrationResponse } from "./soc-integrations";
@@ -191,6 +192,14 @@ export function validateApiResponse(path: string, value: unknown, method = "GET"
     const parsed = paymentSchema.safeParse(value);
     if (!parsed.success || parsed.data.original_id.toLowerCase() !== linked.id.toLowerCase()) throw new ApiError("invalidResponse", 502);
     return parsed.data;
+  }
+  if (edgeReceiptRoute.test(route)) {
+    const response = edgeReceiptSchema.safeParse(value);
+    const pair = new URLSearchParams(path.split("?")[1]);
+    if (!response.success || response.data.transaction_id !== route.split("/")[2].toLowerCase()
+      || response.data.source !== pair.get("source")?.toLowerCase()
+      || response.data.target !== pair.get("target")?.toLowerCase()) throw new ApiError("invalidResponse", 502);
+    return response.data;
   }
   if (traceRoute.test(route)) {
     const trace = fundsTraceSchema.safeParse(value);

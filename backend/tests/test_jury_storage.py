@@ -21,6 +21,122 @@ from scripts.jury_wallet import JuryStorage, private_redis
 BASE = "/mobile/v1"
 
 
+async def test_room_key_and_signed_partner_advisory(
+    rooms: Path, connect: Callable[[int], Redis]
+) -> None:
+    from datetime import timedelta
+
+    from sqlalchemy import select
+
+    from app.db.base import utcnow
+    from app.integrations.cases.models import CaseEvent, FraudCase
+    from app.mobile_gateway.app import digest
+    from app.mobile_gateway.protection_models import SignedIntent, TransferKey
+    from app.mobile_gateway.transfer_keys import payment_terms
+
+    storage = jury_storage(rooms, connect)
+    origin = "http://localhost:18003"
+    async with (
+        storage.history_room(1) as room,
+        AsyncClient(transport=ASGITransport(app=room), base_url=origin) as http,
+    ):
+        owner = await sign_in(http, "client_demo", "customer fixture")
+        officer = await sign_in(http, "admin_demo", "officer fixture")
+        web = {**owner, "Origin": origin, "X-Qadam-Web": "1"}
+        key = BASE + "/protection/transfer-key/"
+        assert (await http.get(BASE + "/account", headers=owner)).json()["supports_transfer_key"]
+        assert (await http.post(key + "register/options", headers=officer)).status_code == 403
+        assert (await http.post(key + "register/options", headers=owner)).status_code == 403
+        opts = (await http.post(key + "register/options", headers=web)).json()
+        assert opts["publicKey"]["authenticatorSelection"]["userVerification"] == "required"
+        bad = {"ceremony": opts["ceremony"], "credential": {}}
+        assert (await http.post(key + "register/finish", json=bad, headers=web)).status_code == 422
+        assert (await http.post(key + "register/finish", json=bad, headers=web)).status_code == 409
+        async with room.state.resources.session_factory() as db:
+            db.add(
+                TransferKey(
+                    owner_id=storage.mobile.customer_id,
+                    credential_id=b"test-id",
+                    public_key=b"public-fixture",
+                    sign_count=0,
+                )
+            )
+            case_id = await db.scalar(
+                select(CaseEvent.case_id).where(
+                    CaseEvent.result["reason"].as_string() == "confirmed_fraud"
+                )
+            )
+            assert case_id
+            await db.commit()
+        request_id = (await http.post(BASE + "/requests", headers=owner)).json()["request_id"]
+        body = {"recipient_phone": "+77010000002", "request_id": request_id, "amount": "1250.25"}
+        assert (
+            await http.post(BASE + "/api/transfers/evaluate", json=body, headers=owner)
+        ).status_code == 428
+        options = (await http.post(key + "payment/options", json=body, headers=web)).json()
+        assert options["publicKey"]["userVerification"] == "required"
+        async with room.state.resources.session_factory() as db:
+            approved, _ = await payment_terms(db, storage.mobile.customer_id, body)
+            grant = SignedIntent(
+                **approved.model_dump(),
+                owner_id=storage.mobile.customer_id,
+                session_hash=digest(owner["Authorization"].removeprefix("Bearer ")),
+                verified_at=utcnow(),
+            )
+            db.add(grant)
+            await db.commit()
+        evaluate = BASE + "/api/transfers/evaluate"
+        for changed in (
+            {"amount": "1250.26"},
+            {"recipient_phone": "+77010000003"},
+            {"context": {"active_call": True}},
+        ):
+            assert (
+                await http.post(evaluate, json=body | changed, headers=owner)
+            ).status_code == 428
+        another_session = await sign_in(http, "client_demo", "customer fixture")
+        assert (await http.post(evaluate, json=body, headers=another_session)).status_code == 428
+        async with room.state.resources.session_factory() as db:
+            intent = await db.get(SignedIntent, uuid.UUID(request_id))
+            assert intent
+            intent.verified_at = utcnow() - timedelta(minutes=3)
+            await db.commit()
+        assert (await http.post(evaluate, json=body, headers=owner)).status_code == 428
+        route = BASE + f"/wallet/cases/{case_id}/partner-signal"
+        assert (await http.get(route, headers=owner)).status_code == 403
+        # Bring this old synthetic history finding inside the advisory's 24-hour window.
+        async with room.state.resources.session_factory() as db:
+            case = await db.get(FraudCase, case_id)
+            assert case
+            event = await db.scalar(
+                select(CaseEvent).where(
+                    CaseEvent.case_id == case.id, CaseEvent.version == case.version
+                )
+            )
+            assert event
+            event.created_at = utcnow() - timedelta(minutes=3)
+            await db.commit()
+        report = (await http.get(route, headers=officer)).json()
+        assert report["state"] == "review"
+        assert str(case_id) not in str(report)
+        action = BASE + f"/api/integrations/guardian/soc/cases/{case_id}/actions"
+        reopened = await http.post(
+            action,
+            headers={**officer, "Idempotency-Key": str(uuid.uuid4())},
+            json={
+                "action": "transition",
+                "state": "IN_REVIEW",
+                "reason": "reopened",
+                "expected_version": report["version"],
+            },
+        )
+        assert reopened.status_code == 200
+        next_report = (await http.get(route, headers=officer)).json()
+        assert next_report["state"] == "withdrawn"
+        assert next_report["reference"] == report["reference"]
+        assert next_report["challenge"] != report["challenge"]
+
+
 async def sign_in(http: AsyncClient, login: str, password: str) -> dict[str, str]:
     reply = await http.post(BASE + "/auth/login", json={"login": login, "password": password})
     assert reply.status_code == 200

@@ -169,7 +169,8 @@ export function SocDashboard({ tourEnabled, liveLedger, initialSelection, revisi
             setSelection(id);
             setTraceFocus(previous => ({ id, revision: (previous?.revision ?? 0) + 1 }));
           }} />}
-        {graph.data ? <NetworkGraph graph={graph.data} streaming={streaming} /> : <p className="empty">{t(selected ? "refreshing" : "select")}</p>}</section>
+        {graph.data ? <NetworkGraph graph={graph.data} streaming={streaming} evidence={liveLedger && !readOnly && selected && selected.transaction_id === inspectedId && selected.recipient.id === graph.data.center
+          ? { anchor: selected.transaction_id, onReceipt: id => { setSelection(id); setMode("transfers"); } } : undefined} /> : <p className="empty">{t(selected ? "refreshing" : "select")}</p>}</section>
       <section className="panel analysis-panel" aria-labelledby="analysis-title"><div className="panel-heading"><div><h2 id="analysis-title"><BrainCircuit size={18} />{t("analysisPanel")}</h2><p className="panel-subtitle">{t("caseSnapshotHint")}</p></div></div>
         <div className="analysis-body">{selected && selected.transaction_id === inspectedId ? <><div className="analysis-score"><Gauge score={selected.risk_score} /><div><Badge status={selected.status} /><p className="result-headline">{lang === "kk" ? selected.headline_kk : selected.headline_ru}</p></div></div><MLInspector details={selected} reasons={selected.reasons} /><Explain kk={selected.reasons_kk} ru={selected.reasons_ru} /></> : <p className="empty">{t("analysisEmpty")}</p>}</div></section>
       <CaseInspector traceRevision={traceFocus && traceFocus.id === inspectedId ? traceFocus.revision : 0} detail={selected} loading={detail.loading} error={detail.error} receivedAt={detail.receivedAt} selectedId={inspectedId} onReview={onReview} onSelectReceipt={id => { setSelection(id); setMode("transfers"); }} readOnly={readOnly} busy={busy} onRetry={() => setRefresh(value => value + 1)} />

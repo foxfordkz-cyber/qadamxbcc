@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import Field
 from sqlalchemy import func, select
 
@@ -18,7 +18,7 @@ from app.api.v1.payee_check import (
 from app.integrations.telegram.service import CONTACT_LIMIT
 from app.mobile_gateway.app import IdentityDep
 from app.mobile_gateway.demo_catalog import SAVED_TRANSFERS, saved_recipients, wallet_recipients
-from app.mobile_gateway.protection_models import PostCall
+from app.mobile_gateway.protection_models import PostCall, TransferKey
 from app.mobile_gateway.security_inbox import owner_inbox
 from app.mobile_gateway.wallet import balance
 from app.models import Account, RiskEvent, Transaction, TransactionStatus
@@ -91,7 +91,9 @@ def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
         return result
 
     @app.get("/mobile/v1/account")
-    async def account(principal: IdentityDep, session: SessionDep) -> dict[str, Any]:
+    async def account(
+        request: Request, principal: IdentityDep, session: SessionDep
+    ) -> dict[str, Any]:
         if principal.role != "client":
             raise HTTPException(403, "client_required")
         held = await session.scalar(
@@ -134,6 +136,14 @@ def install_accounts(app: FastAPI, *, integrations_enabled: bool) -> None:
         return {
             "display_name": customer.full_name,
             "supports_call_question": True,
+            "supports_transfer_key": app.state.transfer_key_origin
+            in (
+                f"https://{request.url.netloc}",
+                f"http://{request.url.netloc}",
+            ),
+            "transfer_key_enrolled": bool(
+                app.state.transfer_key_origin and await session.get(TransferKey, principal.subject)
+            ),
             "card_last4": customer.iban[-4:],
             "balance": await balance(session, principal.subject),
             "guardian_username": app.state.guardian_username or None,

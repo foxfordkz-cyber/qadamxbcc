@@ -255,6 +255,7 @@ async def test_shadow_review_uses_initial_decision_and_retracts_reopened_label(
             "status": "approved",
             "risk_score": 37,
         }
+        txn.amount = Decimal("12345.67")
         await session.commit()
     invalid = await iw.client.post(
         f"{CASES}/{case['id']}/actions",
@@ -283,6 +284,8 @@ async def test_shadow_review_uses_initial_decision_and_retracts_reopened_label(
     for threshold, row in policies.items():
         assert row["missed_fraud"] == int(threshold is None or threshold > 37)
         assert row["false_per_1000_legitimate"] is None
+        assert row["missed_fraud_kzt"] == ("12345.67" if row["missed_fraud"] else "0.00")
+        assert row["legitimate_held_kzt"] is None
     case = await act(iw, case, action="transition", state="IN_REVIEW", reason="reopened")
     comparison = (await iw.client.get(url, headers=iw.auth("soc"))).json()["policy_comparison"]
     assert comparison["fraud_labelled"] == 0
@@ -295,6 +298,9 @@ async def test_shadow_review_uses_initial_decision_and_retracts_reopened_label(
     policies = {r["threshold"]: r for r in comparison["policies"]}
     assert policies[35]["false_per_1000_legitimate"] == 1000
     assert policies[40]["false_per_1000_legitimate"] == 0
+    assert policies[35]["legitimate_held_kzt"] == "12345.67"
+    assert policies[40]["legitimate_held_kzt"] == "0.00"
+    assert policies[35]["missed_fraud_kzt"] is None
     async with iw.factory() as session:
         txn = await session.get(Transaction, tx_id)
         assert txn is not None

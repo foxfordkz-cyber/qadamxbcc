@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.kz import make_kz_iban
 from app.models import Account, Transaction, TransactionStatus
+from app.services.edge_receipts import edge_receipts
 from app.services.funds_trace import MAX_CANDIDATES, funds_trace
 from app.services.trace_anchors import recent_anchors
 from tests.test_service_boundaries import SOC_KEY, TRANSFER_KEY
@@ -84,6 +85,33 @@ async def test_partial_splits_merge_without_multiplying_the_anchor(ledger: Async
         (e.id, Decimal("100.55"), 3),
     ]
     assert result.links[-1].transaction_amount == 130
+
+
+async def test_edge_receipts_only_show_prior_settlements_in_the_selected_direction(
+    ledger: AsyncSession,
+) -> None:
+    anchor = payment(ledger, 1, 2, "80", 0, status=TransactionStatus.COOLING_OFF)
+    oldest = payment(ledger, 3, 2, "12.35", -1440)
+    payment(ledger, 3, 2, "13", -1441)
+    payment(ledger, 2, 3, "14", -4)
+    payment(ledger, 3, 2, "15", -3, resolved_minute=0)
+    payment(ledger, 3, 2, "16", -2, status=TransactionStatus.COOLING_OFF)
+    payment(ledger, 3, 2, "17", -1, currency="USD")
+    await ledger.flush()
+    result = await edge_receipts(ledger, anchor.id, UUID(int=3), UUID(int=2))
+    assert result
+    assert not result.has_more
+    assert [(r.transaction_id, r.amount) for r in result.items] == [(oldest.id, Decimal("12.35"))]
+    assert result.items[0].settled_at == result.from_time
+    assert await edge_receipts(ledger, anchor.id, UUID(int=3), UUID(int=4)) is None
+    for minute in range(-20, -8):
+        payment(ledger, 3, 2, "11", minute)
+    await ledger.flush()
+    bounded = await edge_receipts(ledger, anchor.id, UUID(int=3), UUID(int=2))
+    assert bounded
+    assert bounded.has_more
+    assert len(bounded.items) == 12
+    assert oldest.id not in {r.transaction_id for r in bounded.items}
 
 
 async def test_only_strictly_later_settlements_within_cutoff(ledger: AsyncSession) -> None:
