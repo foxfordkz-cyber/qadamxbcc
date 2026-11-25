@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any, Final
+from typing import Any, Final, Protocol
 
 import joblib
 import numpy as np
@@ -21,7 +21,7 @@ import sklearn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-from app.ml.features import FEATURE_LABELS, FEATURE_NAMES, Features
+from app.ml.features import FEATURE_LABELS, FEATURE_NAMES, ExplanationMethod, Features
 
 MODEL_VERSION: Final = "bcc-synthetic-rf-v3"
 GENERATOR_VERSION: Final = "v3-assisted-transfers"
@@ -45,6 +45,13 @@ class Prediction:
     score: float  # probability * 100, not a calibrated real-world fraud rate
     base_score: float
     contributors: tuple[Contributor, ...]
+    model_version: str = MODEL_VERSION
+    explanation_method: ExplanationMethod = "tree_path_probability"
+    review_threshold: float | None = None
+
+
+class RiskScorer(Protocol):
+    def score(self, features: Features) -> Prediction: ...
 
 
 @dataclass(frozen=True, slots=True)

@@ -59,6 +59,16 @@ test("a juror can select a saved recipient and an officer can inspect the same p
     const linked = cases.find(item => item.report_id === reports[0].id);
     expect(linked).toBeDefined();
     await officerPage.locator('[data-nav="cases"]').click();
+    const waiting = (await request(officer, "/wallet/cases?awaiting_first_action=true")).items;
+    const queueFilter = officerPage.locator('[data-action="first-action-filter"]');
+    await queueFilter.click();
+    await expect(queueFilter).toHaveAttribute("aria-pressed", "true");
+    await expect(officerPage.locator("button[data-case]")).toHaveCount(waiting.length);
+    expect(await officerPage.locator("button[data-case]").evaluateAll(rows =>
+      rows.map(row => row.dataset.case),
+    )).toEqual(waiting.map(row => row.id));
+    await queueFilter.click();
+    await expect(queueFilter).toHaveAttribute("aria-pressed", "false");
     await officerPage.locator(`[data-case="${linked.id}"]`).click();
     const source = officerPage.locator(".reason-groups").locator(
       `[data-detail="${reports[0].transaction_id}"]`,
@@ -84,6 +94,48 @@ test("a juror can select a saved recipient and an officer can inspect the same p
     expect(new URL(officerPage.url()).searchParams.get("operation")).toBe(first.transaction_id);
   } finally {
     await Promise.all([customerContext.close(), officerContext.close()]);
+  }
+});
+
+test("a disputed incoming payment reserves its amount and its saved statement follows the officer's decision", async ({ browser }, testInfo) => {
+  test.skip(process.env.QADAM_JURY_E2E !== "1", "Requires an isolated jury-room gateway");
+  test.setTimeout(90_000);
+  const origin = loopback();
+  const readme = await readFile(new URL("../../../README.md", import.meta.url), "utf8");
+  const customer = await browser.newContext({serviceWorkers: "block"});
+  const officer = await browser.newContext({serviceWorkers: "block"});
+  try {
+    const page = await customer.newPage();
+    const invite = await startRoom(page, origin, "/jury/start/history");
+    await enter(page, "client_demo", "client", readme);
+    await page.locator('[data-nav="history"]').click();
+    const incoming = page.locator("[data-incoming]").first();
+    await expect(incoming).toBeVisible();
+    const id = await incoming.getAttribute("data-incoming");
+    await incoming.click();
+    await page.locator('[data-action="dispute-report"]').click();
+    const save = page.waitForEvent("download");
+    await page.locator('[data-action="dispute-certificate"]').click();
+    const download = await save;
+    const file = testInfo.outputPath("statement.json");
+    await download.saveAs(file);
+    const document = JSON.parse(await readFile(file, "utf8")).statement;
+    expect(document.original_id).toBe(id);
+    expect(document.restricted_amount).toBe(document.original_amount);
+    await page.locator('[data-action="dispute-verify"]').click();
+    await expect(page.getByText(/Подпись и статус подтверждены|Қолтаңба мен күй расталды/)).toBeVisible();
+
+    const staff = await officer.newPage();
+    await staff.goto(invite);
+    await enter(staff, "admin_demo", "admin", readme);
+    await staff.locator('[data-nav="cases"]').click();
+    await staff.locator('button.graph-record[data-detail="' + id + '"]').click();
+    await staff.locator('[data-action="dispute-clear"]').click();
+    await expect(staff.getByText(/Сотрудник снял ограничение|Қызметкер шектеуді алып тастады/)).toBeVisible();
+    await page.locator("[data-dispute-file]").setInputFiles(file);
+    await expect(page.getByText(/Статус с тех пор изменился|Содан бері күй өзгерді/)).toBeVisible();
+  } finally {
+    await Promise.all([customer.close(), officer.close()]);
   }
 });
 

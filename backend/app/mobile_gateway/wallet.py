@@ -12,16 +12,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import SessionDep
 from app.db.base import utcnow
-from app.integrations.cases.models import FraudCase
+from app.integrations.cases.models import CaseEvent, FraudCase
 from app.integrations.cases.policy_review import compare_policies
 from app.integrations.cases.schemas import CaseOut, State
+from app.integrations.models import GuardianReport
 from app.mobile_gateway.app import IdentityDep
 from app.mobile_gateway.protection import client
 from app.models import Account, Transaction, TransactionStatus
+from app.services.demo_funds import posted_balance
 from app.services.soc import LATENCY_SAMPLE_LIMIT
 
 KZ = timezone(timedelta(hours=5))
-OPENING = Decimal("5000000.00")
 T = Transaction
 Direction = Literal["incoming", "outgoing"]
 
@@ -59,15 +60,7 @@ def day_column(db: AsyncSession) -> Any:
 
 
 async def balance(db: AsyncSession, owner: UUID) -> str:
-    incoming, outgoing = (
-        await db.execute(
-            select(
-                total_amount(received(owner)),
-                total_amount(and_(sent(owner), T.status == TransactionStatus.APPROVED)),
-            ).where(or_(T.sender_id == owner, T.recipient_id == owner))
-        )
-    ).one()
-    return money(OPENING + Decimal(incoming) - Decimal(outgoing))
+    return money(await posted_balance(db, owner))
 
 
 def operation(tx: Transaction, name: str, owner: UUID) -> dict[str, Any]:
@@ -215,23 +208,50 @@ def install_wallet(app: FastAPI) -> None:
         state: State | None = None,
         report_id: UUID | None = None,
         offset: Annotated[int, Query(ge=0, le=10000)] = 0,
+        awaiting_first_action: bool = False,
     ) -> dict[str, Any]:
         if principal.role != "admin":
             raise HTTPException(403, "soc_required")
-        stmt = select(FraudCase).where(FraudCase.expires_at > utcnow())
+        sampled_at = utcnow()
+        reported = func.coalesce(GuardianReport.created_at, FraudCase.created_at)
+        # Owner reports, expiry, and Guardian escalations alone are not staff action.
+        first_action = (
+            select(func.min(CaseEvent.created_at))
+            .where(
+                CaseEvent.case_id == FraudCase.id,
+                CaseEvent.actor_role == "soc",
+                CaseEvent.created_at <= sampled_at,
+            )
+            .correlate(FraudCase)
+            .scalar_subquery()
+        )
+        stmt = (
+            select(FraudCase, reported, first_action)
+            .outerjoin(GuardianReport, GuardianReport.id == FraudCase.report_id)
+            .where(FraudCase.expires_at > sampled_at, reported <= sampled_at)
+        )
         if report_id is not None:
             stmt = stmt.where(FraudCase.report_id == report_id)
         if state:
             stmt = stmt.where(FraudCase.state == state)
-        rows = (
-            await session.scalars(
-                stmt.order_by(FraudCase.created_at.desc(), FraudCase.id.desc())
-                .offset(offset)
-                .limit(21)
-            )
-        ).all()
+        if awaiting_first_action:
+            stmt = stmt.where(
+                first_action.is_(None), FraudCase.state.not_in(("CLOSED", "RESOLVED"))
+            ).order_by(reported, FraudCase.id)
+        else:
+            stmt = stmt.order_by(FraudCase.created_at.desc(), FraudCase.id.desc())
+        rows = (await session.execute(stmt.offset(offset).limit(21))).all()
         return {
-            "items": [CaseOut.model_validate(r) for r in rows[:20]],
+            "items": [
+                CaseOut.model_validate(row).model_dump(mode="json")
+                | {
+                    "reported_at": start,
+                    "first_staff_action_at": first,
+                    "first_action_due_at": start + timedelta(hours=1),
+                }
+                for row, start, first in rows[:20]
+            ],
+            "sampled_at": sampled_at,
             "offset": offset,
             "has_more": len(rows) > 20,
         }

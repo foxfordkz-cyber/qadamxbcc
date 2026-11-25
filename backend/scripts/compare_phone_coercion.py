@@ -24,7 +24,9 @@ from scripts.evaluate_fraud_model import (
 )
 
 
-def assisted_cases(seed: int, per_group: int = 128) -> list[tuple[str, Scenario]]:
+def assisted_cases(
+    seed: int, per_group: int = 128, *, cumulative_pauses: bool = False
+) -> list[tuple[str, Scenario]]:
     """Fixed-purpose challenge, independent of the numpy training generator.
 
     Each observation is a known payee on the usual device during a call. There
@@ -50,7 +52,11 @@ def assisted_cases(seed: int, per_group: int = 128) -> list[tuple[str, Scenario]
                 ratio = rng.uniform(0.2, 3.8)
             longest = gap if pauses else 0
             duration = rng.randint(2000, 12500) + longest
-            duration += sum(rng.randint(0, gap) for _ in range(max(0, pauses - 1)))
+            extra_gaps = [rng.randint(0, gap) for _ in range(max(0, pauses - 1))]
+            duration += sum(extra_gaps)
+            measured = [ms for ms in (longest, *extra_gaps) if ms >= 1500]
+            sensed_count = len(measured) if cumulative_pauses else pauses
+            sensed_ms = sum(measured) if cumulative_pauses else longest
             missing = rng.random() < 0.20
             ctx = replace(
                 base.context,
@@ -58,8 +64,8 @@ def assisted_cases(seed: int, per_group: int = 128) -> list[tuple[str, Scenario]
                 active_call=True,
                 recipient_input_length=None if missing else 12,
                 typing_duration_ms=None if missing else duration,
-                hesitation_count=0 if missing else pauses,
-                hesitation_ms=None if missing else longest,
+                hesitation_count=0 if missing else sensed_count,
+                hesitation_ms=None if missing else sensed_ms,
             )
             labels = (True, False) if group == "ambiguous_pair" else (group == "dictated",)
             for label in labels:

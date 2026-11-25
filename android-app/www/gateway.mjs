@@ -107,6 +107,9 @@ export class Gateway {
         this.role = null;
         if (sentToken) this.onExpired?.();
       }
+      if (response.status === 409 && (await response.json().catch(() => null))?.detail === "disputed_amount_reserved") {
+        throw Object.assign(new GatewayError(409), {code:"disputed_amount_reserved"});
+      }
       throw new GatewayError(
         response.status,
         response.headers.get("Retry-After"),

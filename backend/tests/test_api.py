@@ -182,6 +182,38 @@ async def test_cancelled_and_blocked_instalments_are_excluded_from_pair_history(
     assert signal["evidence"]["settled_count"] == 2
 
 
+async def test_familiar_call_observation_only_in_soc_and_stable_on_retry(world: World) -> None:
+    request_id = str(uuid.uuid4())
+    args = {
+        "occurred_at": DAY.isoformat(),
+        "request_id": request_id,
+        "context": {
+            "active_call": True,
+            "typing_duration_ms": 48000,
+            "recipient_input_length": 12,
+            "hesitation_ms": 9500,
+            "hesitation_count": 4,
+        },
+    }
+    original = await world.evaluate("alice", "bob", 95000, **args)
+    tx_id = original["transaction_id"]
+    assert original["ml_model_version"] == "bcc-synthetic-rf-v3"
+    assert "shadow_call" not in original
+    assert "shadow_call" not in (await world.client.get(f"{API}/transfers/{tx_id}")).json()
+    feed = f"{API}/soc/feed?q={tx_id}"
+    item = (await world.client.get(feed)).json()["items"][0]
+    observed = item["shadow_call"]
+    assert item["ml_score"] == original["ml_score"]
+    assert observed["model_version"] == "bcc-familiar-call-lr-v2"
+    assert observed["review_suggested"] == (observed["score"] >= observed["review_threshold"])
+    assert len(observed["contributors"]) == 4
+    assert await world.evaluate("alice", "bob", 95000, **args) == original
+    assert (await world.client.get(feed)).json()["items"][0]["shadow_call"] == observed
+    ordinary = await world.evaluate("alice", "bob", 1000, occurred_at=DAY.isoformat())
+    row = (await world.client.get(f"{API}/soc/feed?q={ordinary['transaction_id']}")).json()
+    assert "shadow_call" not in row["items"][0]
+
+
 async def test_biometrics_and_ml_response(world: World) -> None:
     data = await world.evaluate(
         "victim",

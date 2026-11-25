@@ -23,6 +23,7 @@ from app.schemas.soc import (
     GraphResponse,
     NodeRole,
     Position,
+    ShadowCall,
 )
 from app.services.graph import GraphStore, NodeView
 from app.services.transfers import NotFoundError, register_account, transfer_detail
@@ -101,6 +102,7 @@ async def feed(
     items = []
     for tx in rows:
         detail = transfer_detail(tx, tx.recipient)
+        shadow = (tx.evaluation_snapshot or {}).get("shadow_call")
         items.append(
             FeedItem(
                 transaction_id=tx.id,
@@ -125,6 +127,7 @@ async def feed(
                 verification_answers=detail.verification_answers,
                 ml_score=detail.ml_score,
                 ml_base_score=detail.ml_base_score,
+                shadow_call=ShadowCall.model_validate(shadow) if shadow is not None else None,
                 ml_model_version=detail.ml_model_version,
                 ml_explanation_method=detail.ml_explanation_method,
                 ml_contributors=detail.ml_contributors,

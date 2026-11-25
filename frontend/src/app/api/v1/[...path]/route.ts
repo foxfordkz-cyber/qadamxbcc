@@ -3,6 +3,7 @@ import { returnActionInput, returnRoute, reviewInput } from "@/lib/payment-retur
 import { z } from "zod";
 import { demoPayee, payeeInput, payeeResult } from "@/lib/payee-check";
 import { traceRoute } from "@/lib/funds-trace";
+import { edgeQuery, edgeReceiptRoute } from "@/lib/edge-receipts";
 import { anchorsRoute } from "@/lib/trace-anchors";
 import { lookbackRoute, priorReceiptQuery } from "@/lib/recipient-lookback";
 import { priorReceiptsDemo } from "@/lib/demo";
@@ -35,8 +36,9 @@ async function handle(request: NextRequest, context: RouteContext) {
   const detail = request.method === "GET" && /^transfers\/[0-9a-f-]{36}$/i.test(route);
   const feed = request.method === "GET" && route === "soc/feed";
   const graph = request.method === "GET" && /^soc\/graph\/[0-9a-f-]{36}$/i.test(route);
-  const fundsTrace = request.method === "GET" && (traceRoute.test(route) || anchorsRoute.test(route));
-  if (fundsTrace && request.nextUrl.search) return json({ error: "invalid" }, 422);
+  const evidence = request.method === "GET" && edgeReceiptRoute.test(route);
+  const fundsTrace = request.method === "GET" && (traceRoute.test(route) || anchorsRoute.test(route) || evidence);
+  if (fundsTrace && !evidence && request.nextUrl.search) return json({ error: "invalid" }, 422);
   const recipientFlag = ["GET", "POST"].includes(request.method) && /^soc\/recipients\/[0-9a-f-]{36}\/flag$/i.test(route);
   const callCheck = request.method === "POST" && route === "call-check";
   const payee = request.method === "POST" && route === "payee-check" && !request.nextUrl.search;
@@ -53,6 +55,12 @@ async function handle(request: NextRequest, context: RouteContext) {
   }
   try {
     const config = appConfig();
+    if (evidence) {
+      if (config.publicSocReadOnly || process.env.BCC_DEMO_PUBLIC_ORIGIN) return json({ error: "integrationForbidden" }, 403);
+      const params = request.nextUrl.searchParams;
+      if (params.size !== 2) return json({ error: "invalid" }, 422);
+      edgeQuery.parse(Object.fromEntries(params));
+    }
     if (lookback) {
       if (config.publicSocReadOnly || process.env.BCC_DEMO_PUBLIC_ORIGIN) return json({ error: "integrationForbidden" }, 403);
       const params = request.nextUrl.searchParams;
@@ -136,6 +144,10 @@ async function handle(request: NextRequest, context: RouteContext) {
     });
     if (response.status >= 300 && response.status < 400) return json({ error: "apiError" }, 502);
     if (!response.ok) {
+      if ((evaluate || resolve || linked) && response.status === 409) {
+        const failure = await response.json().catch(() => null);
+        if (failure?.detail === "disputed_amount_reserved") return json({error:"disputedAmountReserved"},409);
+      }
       if (recipientFlag && [404, 409].includes(response.status)) {
         const value: unknown = await response.json().catch(() => null);
         const code = value && typeof value === "object" && "detail" in value ? value.detail : null;

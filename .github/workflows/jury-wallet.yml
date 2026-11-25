@@ -13,6 +13,16 @@ on:
       - "backend/scripts/jury_wallet.py"
       - "backend/app/mobile_gateway/jury_rooms.py"
       - "backend/app/mobile_gateway/jury_results.py"
+      - "backend/app/mobile_gateway/transfer_keys.py"
+      - "backend/app/mobile_gateway/partner_signal.py"
+      - "backend/app/mobile_gateway/dispute_receipts.py"
+      - "backend/app/mobile_gateway/wallet.py"
+      - "backend/app/services/demo_funds.py"
+      - "backend/app/services/payment_returns.py"
+      - "android-app/www/connected.mjs"
+      - "android-app/www/dispute.mjs"
+      - "android-app/www/transfer-key.mjs"
+      - "android-app/scripts/verify-jury-key.mjs"
       - "backend/scripts/payee_followup_replay.py"
       - "docs/evidence/scenario_stand.json"
       - "frontend/src/lib/scenario-signals.json"
@@ -106,6 +116,11 @@ jobs:
           QADAM_JURY_E2E: "1"
           QADAM_JURY_ORIGIN: http://127.0.0.1:18003
         run: npm run test:ui -- tests/browser/jury-rooms.spec.mjs
+      - name: Confirm a payment with a device key in an isolated jury room
+        working-directory: android-app
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
+        run: node scripts/verify-jury-key.mjs
       - name: Verify packaged jury evidence and paired evaluation
         run: |
           python3 - <<'PY'

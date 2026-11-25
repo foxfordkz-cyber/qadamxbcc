@@ -2,7 +2,9 @@
 
 import math
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, Literal
+
+ExplanationMethod = Literal["tree_path_probability", "linear_probability_contributions"]
 
 FEATURE_NAMES: Final = (
     "amount_ratio",
@@ -48,6 +50,8 @@ class Features:
     hesitation_ms: int = -1
     hesitation_count: int = 0
     new_device: bool = False
+    # Routing metadata from the engine, outside the frozen v3 feature vector.
+    independent_warning: bool = False
 
     def vector(self) -> tuple[float, ...]:
         numeric = (

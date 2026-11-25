@@ -5,6 +5,7 @@ import { Background, Handle, MarkerType, Panel, Position, ReactFlow, ReactFlowPr
 import { Maximize2, Minus, Plus, Smartphone, UserRound } from "lucide-react";
 import type { Graph, GraphData } from "@/lib/contracts";
 import { directGraphLayout } from "@/lib/graph-layout";
+import { EdgeReceiptPicker } from "./edge-receipts";
 import { useLocale } from "@/lib/i18n";
 
 type AccountNode = Node<GraphData & { tone: string; caption: string; isCenter: boolean }, "account">;
@@ -21,11 +22,13 @@ function Controls() {
   const flow = useReactFlow();
   return <Panel position="bottom-left"><div className="graph-controls"><button aria-label={t("zoomIn")} title={t("zoomIn")} onClick={() => void flow.zoomIn()}><Plus size={16} /></button><button aria-label={t("zoomOut")} title={t("zoomOut")} onClick={() => void flow.zoomOut()}><Minus size={16} /></button><button aria-label={t("fit")} title={t("fit")} onClick={() => void flow.fitView({ padding: 0.2, maxZoom: 1.1 })}><Maximize2 size={16} /></button></div></Panel>;
 }
-function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
+type Evidence = { anchor: string; onReceipt: (id: string) => void };
+function Canvas({ graph, streaming, evidence }: { graph: Graph; streaming: boolean; evidence?: Evidence }) {
   const { t, lang } = useLocale();
   const container = useRef<HTMLDivElement>(null);
   const { fitView } = useReactFlow<AccountNode>();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [edgeId, setEdgeId] = useState("");
   const selected = graph.nodes.find(node => node.id === selectedId)?.data;
   useEffect(() => {
     const element = container.current;
@@ -80,12 +83,15 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
     const risky = edge.data.highlight || prepared.some(n => n.id === edge.target && n.data.tone === "danger");
     const color = shared ? "#DC6803" : risky ? "#D92D20" : "#079455";
     return { ...edge, ariaLabel: shared ? t("shared") : t("transfer"), label: shared ? t("shared") : edge.label ?? undefined, animated: !shared && (risky || streaming),
-      style: { stroke: color, strokeWidth: 1.8, strokeDasharray: shared ? "6 5" : undefined },
+      style: { stroke: color, strokeWidth: evidence && edge.id === edgeId ? 3.5 : 1.8, strokeDasharray: shared ? "6 5" : undefined },
       markerEnd: shared ? undefined : { type: MarkerType.ArrowClosed, color },
       labelStyle: { fill: "var(--ink-2)", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }, labelBgStyle: { fill: "var(--surface)", fillOpacity: 0.96 },
     };
   });
   return <><div className="graph-canvas" data-depth={graph.depth} ref={container}><ReactFlow<AccountNode> nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange}
+    onEdgeClick={evidence ? (_, edge) => {
+      if (edge.source === graph.center || edge.target === graph.center) setEdgeId(edge.id);
+    } : undefined}
     onNodeClick={(_, node) => setSelectedId(node.id)} onSelectionChange={({ nodes: selectedNodes }) => setSelectedId(selectedNodes[0]?.id ?? null)} onPaneClick={() => setSelectedId(null)} fitView fitViewOptions={{ padding: 0.2, maxZoom: 1.1 }} minZoom={0.2} maxZoom={2} nodesConnectable={false} edgesFocusable={false} colorMode="light"
     ariaLabelConfig={{ "node.a11yDescription.default": t("graphKeyboard"), "node.a11yDescription.keyboardDisabled": t("graphKeyboard"), "node.a11yDescription.ariaLiveMessage": ({ x, y }) => `${t("account")}: ${x}, ${y}`, "edge.a11yDescription.default": t("graphKeyboard"), "handle.ariaLabel": t("account") }}>
     <Background color="var(--line-strong)" gap={22} size={1.2} /><Controls />
@@ -93,8 +99,9 @@ function Canvas({ graph, streaming }: { graph: Graph; streaming: boolean }) {
   </ReactFlow></div>
     <div className="graph-legend"><span><i className="legend-warning" />{t("legendIncoming")}</span><span><i className="legend-danger" />{t("legendHub")}</span><span><i className="legend-safe" />{t("legendOutgoing")}</span><span><i className="legend-shared" />{t("shared")}</span></div>
     {selected && <div className="node-detail"><strong>{selected.label}</strong><span>{t("incoming")}: <b className="tabular-nums">{selected.in_degree}</b></span><span>{t("outgoing")}: <b className="tabular-nums">{selected.out_degree}</b></span><span>{t("device")}: <code>{selected.device_id || "—"}</code></span></div>}
+    {evidence && <EdgeReceiptPicker graph={graph} anchor={evidence.anchor} edgeId={edgeId} onEdge={setEdgeId} onReceipt={evidence.onReceipt} />}
   </>;
 }
-export default function NetworkGraph({ graph, streaming = false }: { graph: Graph; streaming?: boolean }) {
-  return <ReactFlowProvider key={`${graph.center}:${graph.depth}`}><Canvas graph={graph} streaming={streaming} /></ReactFlowProvider>;
+export default function NetworkGraph({ graph, streaming = false, evidence }: { graph: Graph; streaming?: boolean; evidence?: Evidence }) {
+  return <ReactFlowProvider key={`${graph.center}:${graph.depth}:${evidence?.anchor ?? ""}`}><Canvas graph={graph} streaming={streaming} evidence={evidence} /></ReactFlowProvider>;
 }

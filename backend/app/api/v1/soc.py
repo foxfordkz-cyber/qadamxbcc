@@ -15,12 +15,28 @@ from app.schemas.soc import (
     RecipientFlagState,
 )
 from app.services import recipient_flags, soc, submission_limits
+from app.services.edge_receipts import EdgeReceipts, edge_receipts
 from app.services.funds_trace import funds_trace
 from app.services.recipient_lookback import PriorReceipts, prior_receipts
 from app.services.trace_anchors import TraceAnchors, recent_anchors
 from app.services.transfers import NotFoundError
 
 router = APIRouter(prefix="/soc", tags=["soc"])
+
+
+@router.get("/transfers/{transaction_id}/edge-receipts", response_model=EdgeReceipts)
+async def inspect_edge(
+    transaction_id: uuid.UUID,
+    source: uuid.UUID,
+    target: uuid.UUID,
+    session: SessionDep,
+    response: Response,
+) -> EdgeReceipts:
+    response.headers["Cache-Control"] = "no-store"
+    result = await edge_receipts(session, transaction_id, source, target)
+    if result is None:
+        raise HTTPException(404, "case_edge_not_found")
+    return result
 
 
 @router.get("/accounts/{account_id}/trace-anchors", response_model=TraceAnchors)

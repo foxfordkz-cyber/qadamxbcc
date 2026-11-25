@@ -5,6 +5,7 @@ from typing import Any, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
+from app.ml.features import ExplanationMethod
 from app.models import TransactionStatus
 
 
@@ -134,7 +135,7 @@ class TransferEvaluateResponse(BaseModel):
     ml_score: float | None = Field(None, ge=0, le=100)
     ml_base_score: float | None = Field(None, ge=0, le=100)
     ml_model_version: str | None = None
-    ml_explanation_method: Literal["tree_path_probability"] | None = "tree_path_probability"
+    ml_explanation_method: ExplanationMethod | None = "tree_path_probability"
     ml_contributors: list[MLContributorOut]
     headline_kk: str
     headline_ru: str

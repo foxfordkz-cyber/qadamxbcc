@@ -3,6 +3,7 @@
 import uuid
 from collections import defaultdict
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,8 @@ async def compare_policies(
     query = select(
         Transaction.id,
         Transaction.created_at,
+        Transaction.amount,
+        Transaction.currency,
         Transaction.evaluation_snapshot["status"].label("initial_status"),
         Transaction.evaluation_snapshot["risk_score"].label("initial_score"),
     ).where(Transaction.created_at <= now)
@@ -48,6 +51,7 @@ async def compare_policies(
             GuardianReport.expires_at > now,
             FraudCase.expires_at > now,
             FraudCase.state == "CLOSED",
+            CaseEvent.created_at <= now,
             CaseEvent.code == "TRANSITION",
             reason.in_(OUTCOME_REASONS),
         )
@@ -57,8 +61,8 @@ async def compare_policies(
         if tx_id is not None:
             labels[tx_id].add(outcome)
     # Each eligible transfer appears once, even when multiple cases refer to it.
-    observations: list[tuple[bool, int, str | None]] = []
-    for tx_id, _, decision, score in sample:
+    observations: list[tuple[bool, int, str | None, Decimal | None]] = []
+    for tx_id, _, amount, currency, decision, score in sample:
         if (
             decision not in {"approved", "cooling_off", "blocked"}
             or type(score) is not int
@@ -67,12 +71,14 @@ async def compare_policies(
             continue
         outcomes = labels[tx_id]
         label = next(iter(outcomes)) if len(outcomes) == 1 else None
-        observations.append((decision != "approved", score, label))
+        observations.append(
+            (decision != "approved", score, label, amount if currency == "KZT" else None)
+        )
 
     metrics.evaluated = len(observations)
-    metrics.fraud_labelled = sum(label == "confirmed_fraud" for _, _, label in observations)
+    metrics.fraud_labelled = sum(label == "confirmed_fraud" for _, _, label, _ in observations)
     metrics.legitimate_labelled = sum(
-        label == "legitimate_transfer" for _, _, label in observations
+        label == "legitimate_transfer" for _, _, label, _ in observations
     )
     if observations:
         metrics.label_coverage = (metrics.fraud_labelled + metrics.legitimate_labelled) / len(
@@ -81,16 +87,28 @@ async def compare_policies(
 
     for threshold in (None, 25, 30, metrics.candidate_threshold, 40):
         missed = false_holds = extra_holds = 0
-        for held, score, label in observations:
+        missed_kzt = false_hold_kzt = Decimal("0.00")
+        has_fraud_kzt = has_legitimate_kzt = False
+        for held, score, label, amount in observations:
             extra = not held and threshold is not None and score >= threshold
             extra_holds += int(extra)
             intervened = held or extra
             missed += int(label == "confirmed_fraud" and not intervened)
             false_holds += int(label == "legitimate_transfer" and intervened)
+            if amount is not None and label == "confirmed_fraud":
+                has_fraud_kzt = True
+                if not intervened:
+                    missed_kzt += amount
+            if amount is not None and label == "legitimate_transfer":
+                has_legitimate_kzt = True
+                if intervened:
+                    false_hold_kzt += amount
         metrics.policies.append(
             PolicyResult(
                 threshold=threshold,
                 extra_holds=extra_holds,
+                missed_fraud_kzt=missed_kzt if has_fraud_kzt else None,
+                legitimate_held_kzt=false_hold_kzt if has_legitimate_kzt else None,
                 missed_fraud=missed if metrics.fraud_labelled else None,
                 false_interventions=false_holds if metrics.legitimate_labelled else None,
                 false_per_1000_legitimate=(

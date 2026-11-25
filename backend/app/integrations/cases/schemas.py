@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -149,6 +150,8 @@ class PolicyResult(BaseModel):
     missed_fraud: int | None
     false_interventions: int | None
     false_per_1000_legitimate: float | None
+    missed_fraud_kzt: Decimal | None = None
+    legitimate_held_kzt: Decimal | None = None
 
 
 class PolicyComparison(BaseModel):

@@ -22,6 +22,7 @@ recipient-side mule evidence. Synthetic-model scores require real-data validatio
 before production use; they are not calibrated estimates of banking fraud rates.
 """
 
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
@@ -29,10 +30,12 @@ from datetime import UTC, datetime
 from typing import Any, Final
 from zoneinfo import ZoneInfo
 
+from pydantic import ValidationError
 from redis.asyncio import Redis
 
-from app.ml.features import Features
-from app.ml.model import Contributor, get_model
+from app.ml.familiar import FamiliarModel, eligible, load_expert
+from app.ml.features import ExplanationMethod, Features
+from app.ml.model import Contributor, Prediction, RiskScorer, get_model
 from app.models import TransactionStatus
 from app.services import explain
 from app.services.graph import (
@@ -194,6 +197,9 @@ class Evaluation:
     ml_score: float
     ml_base_score: float
     ml_contributors: tuple[Contributor, ...]
+    ml_model_version: str
+    ml_explanation_method: ExplanationMethod
+    shadow_prediction: Prediction | None = None
 
     @property
     def reasons_kk(self) -> list[str]:
@@ -245,6 +251,8 @@ class AntifraudEngine:
         cooling_off_minutes: int = 15,
         allow_demo_overrides: bool = True,
         allow_model_training: bool = True,
+        use_virtual_wallet: bool = True,
+        observe_familiar_calls: bool = False,
     ) -> None:
         self.graph = graph
         self.redis = redis
@@ -252,11 +260,20 @@ class AntifraudEngine:
         self._tz = ZoneInfo(timezone)
         self.cooling_off_minutes = cooling_off_minutes
         self.allow_demo_overrides = allow_demo_overrides
+        self.use_virtual_wallet = use_virtual_wallet
         self._pending_settlements: dict[str, TransferContext] = {}
         self.synchronizer: Callable[[], Awaitable[None]] | None = None
         # Pilot startup validates the prebuilt artifact; it never silently trains
         # a replacement model. Demo mode retains deterministic auto-training.
-        self.model = get_model() if allow_model_training else get_model(allow_training=False)
+        self.model: RiskScorer = (
+            get_model() if allow_model_training else get_model(allow_training=False)
+        )
+        self.call_observer: FamiliarModel | None = None
+        if observe_familiar_calls:
+            try:
+                self.call_observer = load_expert()
+            except (OSError, ValidationError):
+                logging.getLogger(__name__).warning("Familiar-call observation unavailable")
 
     # ------------------------------------------------------------------ public
     async def ensure_consistent(self) -> None:
@@ -370,8 +387,11 @@ class AntifraudEngine:
             hesitation_ms=ctx.hesitation_ms if ctx.hesitation_ms is not None else -1,
             hesitation_count=ctx.hesitation_count,
             new_device=ctx.is_new_device,
+            independent_warning=any(r.score_delta > 0 for r in network)
+            or any(r.code not in {"ACTIVE_CALL", "AMOUNT_SPIKE"} for r in behavioral),
         )
         prediction = self.model.score(features)
+        shadow = self._observe_call(features) if record_attempt else None
         t_ml = time.perf_counter()
         reasons = sorted([*behavioral, *network], key=lambda r: (-r.score_delta, r.code))
         raw = sum(r.score_delta for r in reasons)
@@ -380,6 +400,12 @@ class AntifraudEngine:
         ml_delta = round(0.25 * max(0.0, prediction.score - 40.0))
         block_evidence = ctx.duress or any(r.code in HARD_BLOCK_EVIDENCE for r in network)
         rule_score = max(0, min(100 if block_evidence else BEHAVIORAL_ONLY_CAP, raw))
+        if prediction.review_threshold is not None:
+            ml_delta = (
+                min(15, max(0, COOLING_OFF_THRESHOLD - rule_score))
+                if prediction.score >= prediction.review_threshold
+                else 0
+            )
         # Preserve all rule floors, but ML may cross into BLOCKED only with
         # corroborated recipient-side mule evidence. A sender pass-through signal
         # by itself still gets the existing questionnaire, not an ML-only block.
@@ -524,7 +550,21 @@ class AntifraudEngine:
             ml_score=round(prediction.score, 4),
             ml_base_score=round(prediction.base_score, 4),
             ml_contributors=prediction.contributors[:5],
+            ml_model_version=prediction.model_version,
+            ml_explanation_method=prediction.explanation_method,
+            shadow_prediction=shadow,
         )
+
+    def _observe_call(self, features: Features) -> Prediction | None:
+        if self.call_observer is None or not eligible(features):
+            return None
+        try:
+            return self.call_observer.score(features)
+        except (ArithmeticError, ValueError):
+            # An invalid optional artifact must not interrupt the payment path.
+            self.call_observer = None
+            logging.getLogger(__name__).warning("Disabled invalid familiar-call observer")
+            return None
 
     def apply_transfer(self, ctx: TransferContext) -> None:
         """Commit a released (approved) transfer into the money-flow graph."""

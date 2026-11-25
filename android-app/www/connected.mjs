@@ -3,6 +3,8 @@ import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
+import { canUseTransferKey, verifyWithDevice } from "./transfer-key.mjs";
+import { disputeView } from "./dispute.mjs";
 import { walletUI, icon, cardThumbnail, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
 import { familyView, checkView, packetContent, secondConfirmationView, secondSettingsView } from "./guardian.mjs";
@@ -15,6 +17,10 @@ const product = document.documentElement.hasAttribute("data-product");
 let initializingAccount = product;
 let rememberLogin = true, restoreFailed = false;
 let receiptPacket = null;
+let deviceReceipt = null;
+let partnerSignal = null;
+let graphAnchor = null;
+let dispute = null, certificate = null, certificateCheck = null, disputeQueue = null;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
 const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""});
 let ledgerFilter=defaultLedger(),summary=null,circle=null,reportHistory=[],requests=[],caseEvidence=null;
@@ -22,6 +28,14 @@ let callbackView=null, queueSnapshot=null, callbackAttempt=null;
 let awaitingReplyCount=0, nextCallbackCheck=0;
 let homeNotices=[], homeInboxUnavailable=false, nextHomeInboxRead=0;
 let walletDays=7,socDays=7,selectedDay=null,caseFilter="",caseOffset=0,backStack=[];
+let awaitingFirstAction = false;
+
+function caseListPath() {
+  const params = new URLSearchParams({offset: String(caseOffset)});
+  if (caseFilter) params.set("state", caseFilter);
+  if (awaitingFirstAction) params.set("awaiting_first_action", "true");
+  return "/wallet/cases?" + params;
+}
 let lastRead=null;
 let viewRevision=0, loginName="", projector=false;
 let polling=false, nextPoll=0;
@@ -105,8 +119,11 @@ function clearVisible() {
   if(webWallet)history.replaceState({wallet:true},"",location.pathname);
   scanText=""; reportChoice=false; drafts=readDrafts(null);
   workspaceRead=null; lastRead=null;
+  deviceReceipt = partnerSignal = graphAnchor = null;
+  dispute = certificate = certificateCheck = disputeQueue = null;
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
+  awaitingFirstAction = false;
   callbackView=queueSnapshot=callbackAttempt=null;
   awaitingReplyCount=nextCallbackCheck=0;
   homeNotices=[];homeInboxUnavailable=false;nextHomeInboxRead=0;
@@ -181,6 +198,23 @@ const title = (heading, intro = "") =>
 const input = (name, label, value = "", type = "text", extra = "") =>
   `<label>${E(label)}<input name="${name}" type="${type}" value="${E(value)}" ${extra}></label>`;
 const api = (...args) => gateway.api(...args);
+
+document.addEventListener("change", async event => {
+  const input = event.target;
+  if (!input.matches?.("[data-dispute-file]") || !dispute?.statement || !input.files?.[0]) return;
+  const file = input.files[0], id = dispute.statement.original_id;
+  await perform(async () => {
+    if (file.size > 8192) { certificateCheck = {authentic:false}; return; }
+    let parsed;
+    try { parsed = JSON.parse(await file.text()); }
+    catch { certificateCheck = {authentic:false}; return; }
+    try { certificateCheck=await gateway.request("/wallet/disputes/"+id+"/verify","POST",parsed); }
+    catch (err) {
+      if (err.status !== 422) throw err;
+      certificateCheck={authentic:false};
+    }
+  });
+});
 const errText = (code) =>
   ({
     0: T(
@@ -207,6 +241,10 @@ const errText = (code) =>
       "Проверь поля. Не вводи настоящие банковские данные или секреты.",
       "Өрістерді тексер. Нақты банк деректері мен құпияларды енгізбе.",
     ),
+    428: T(
+      "Ключ не подтвердил перевод. Проверьте сумму и получателя и повторите в браузере, где подключили ключ.",
+      "Кілт аударымды растамады. Сома мен алушыны тексеріп, кілт қосылған браузерде қайталаңыз.",
+    ),
     429: T(
       "Достигнут лимит запросов. Попробуйте позже.",
       "Сұрау шегіне жеттіңіз. Кейінірек қайталап көріңіз.",
@@ -217,7 +255,9 @@ const errText = (code) =>
     ),
   })[code] ?? T("Не удалось выполнить действие.", "Әрекет орындалмады.");
 let failureState = null;
-function failureText({status,login,offline,mutation,report}) {
+function failureText({status,login,offline,mutation,report,code}) {
+  if (code === "disputed_amount_reserved") return T("Эта сумма затрагивает спорное зачисление. Проверьте доступный остаток.",
+    "Бұл сома даулы түсімді қамтиды. Қолжетімді қалдықты тексеріңіз.");
   return offline ? T("Нет интернета. Подключись и попробуй снова.", "Интернет жоқ. Қосылып, қайта көр.")
       : login && status === 401 ? (juryWallet
         ? T("Неверный логин или пароль. Сверьте данные своей роли в комнате жюри.", "Логин немесе құпиясөз қате. Қазылар бөлмесінен өз рөліңіздің деректерін тексеріңіз.")
@@ -244,7 +284,7 @@ async function perform(task) {
         caseEvents = (await api("integrations/guardian/soc/cases/" + id + "/history")).items;
       } catch { data = null; }
     }
-    failureState = {status:failure.status,login:page==="login",report:page==="report",offline:!navigator.onLine,mutation:mutationOutcome};
+    failureState = {status:failure.status,code:failure.code,login:page==="login",report:page==="report",offline:!navigator.onLine,mutation:mutationOutcome};
     error = failureText(failureState);
     if (failure.status === 401 && page !== "login") {
       if (product) await identity.write("session", null);
@@ -295,7 +335,8 @@ async function readWorkspace(next) {
     if(query)params.set("q",query);
     panel("feed",()=>g.api("soc/feed?"+params),v=>{data=v});
   } else if(next==="cases") {
-    panel("cases",()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),v=>{data=v;socCasesAt=soc.time(Date.now(),false);});
+    if(juryWallet) panel("disputes",()=>g.request("/wallet/disputes"),v=>{disputeQueue=v;});
+    panel("cases",()=>g.request(caseListPath()),v=>{data=v;socCasesAt=soc.time(Date.now(),false);});
     panel("queue",()=>g.api("integrations/guardian/soc/cases/analytics"),v=>{queueSnapshot=v});
   } else {
     panel(next,()=>g.request(next==="staff"?"/admin/staff":"/admin/metrics"),v=>{data=v});
@@ -323,6 +364,7 @@ async function open(next, id, remember=true) {
   const samePage=page===next;
   workspaceRead=null;
   receiptPacket=null;
+  dispute = certificate = certificateCheck = null;
   lastRead={page:next,id};
   if (next==="confirmCancel") evaluation = null;
   page = next;
@@ -367,7 +409,12 @@ async function open(next, id, remember=true) {
       }
     } else if(next==="analytics") data=await gateway.request("/wallet/analytics?days="+walletDays);
     else if(next==="socAnalytics")data=await gateway.request("/wallet/soc?days="+socDays+"&include_policy=true");
-    else if(next==="incoming")data=await gateway.request("/wallet/incoming/"+id);
+    else if(next==="incoming"){
+      data=await gateway.request("/wallet/incoming/"+id);
+      if (juryWallet) dispute = await gateway.request("/wallet/disputes/"+id).catch(e => {
+        if (e.status === 404) return null; throw e;
+      });
+    }
     else if(product && next==="safety") [account,circle,summary]=await Promise.all([gateway.request("/account"),api("trusted-contacts"),
       summary ? Promise.resolve(summary) : gateway.request("/wallet/analytics?days=7").catch(e=>{if(e.status===401)throw e;return null;})]);
     else if (next === "family") {
@@ -395,6 +442,16 @@ async function open(next, id, remember=true) {
       const detail = await g.api("transfers/"+id);
       if (!current()) return;
       accept(detail);
+      if (juryWallet && g.role === "admin") {
+        void g.request("/wallet/disputes/"+id).then(value => {
+          if (current()) { dispute=value; render(); }
+        }).catch(() => {});
+      }
+      if (juryWallet && (g.role === "admin" || account?.transfer_key_enrolled)) {
+        void g.request("/protection/transfer-key/receipts/"+id).then(proof => {
+          if (current()) { deviceReceipt = {id, ...proof}; render(); }
+        }).catch(() => {});
+      }
       if (product && g.role === "client") {
         void g.request("/protection/"+id+"/packet").then(packet => {
           if (current() && packet.transaction_id === id) { receiptPacket=packet; render(); }
@@ -424,7 +481,7 @@ async function open(next, id, remember=true) {
     else if (next === "reports")
       data = await api("integrations/guardian/reports");
     else if(product && next==="cases") {
-      data=await gateway.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:""));
+      data=await gateway.request(caseListPath());
       queueSnapshot=await api("integrations/guardian/soc/cases/analytics");
     }
     else if (next === "cases")
@@ -949,9 +1006,17 @@ function safetyView() {
       ["reports", "clock", T("Мои обращения","Менің өтініштерім"), T("История и отметка оператора","Тарих пен оператор белгісі")],
       ["call-transfer", "transfer", T("Перевод во время звонка","Қоңырау кезіндегі аударым"), T("Перевод с отметкой о звонке","Қоңырау белгісі бар аударым")],
     ];
+    const keyCard = !account?.supports_transfer_key ? "" :
+      '<section class="paper"><h2>' + T("Ключ устройства", "Құрылғы кілті") + '</h2><p>' +
+      (account.transfer_key_enrolled
+        ? T("Подключён. Каждый перевод в этой комнате требует подтверждения суммы и получателя ключом.", "Қосылды. Осы бөлмедегі әр аударымның сомасы мен алушысын кілтпен растау қажет.")
+        : T("Подключите ключ для своей учебной комнаты. Перед отправкой перевода браузер запросит PIN или биометрию устройства.", "Оқу бөлмеңізге кілтті қосыңыз. Аударымды жіберерде браузер құрылғының PIN кодын немесе биометриясын сұрайды.")) + '</p>' +
+      (account.transfer_key_enrolled ? "" : canUseTransferKey()
+        ? button("enroll-transfer-key", T("Подключить ключ", "Кілтті қосу"), "secondary")
+        : '<small>' + T("Откройте комнату в браузере с поддержкой ключей доступа.", "Бөлмені кіру кілттерін қолдайтын браузерде ашыңыз.") + '</small>') + '</section>';
     return `<section class="safety-hero"><h1 tabindex="-1">${T("Защита","Қорғаныс")}</h1><p>${T("Спокойствие — под контролем","Тыныштық — бақылауда")}</p>` +
       `<strong>${E(p.title)}</strong>${p.checks ? `<span>${E(p.checks)}</span>` : ""}<i class="art art-shield" aria-hidden="true"></i></section>` +
-      live + `<h2 class="section-title">${T("Инструменты защиты","Қорғаныс құралдары")}</h2><div class="tool-grid">` +
+      live + keyCard + `<h2 class="section-title">${T("Инструменты защиты","Қорғаныс құралдары")}</h2><div class="tool-grid">` +
       tools.map(([act, art, name, sub], i) => `<button class="tool t${i}" data-action="${act}"><i class="art art-${art}" aria-hidden="true"></i><b>${name}</b><small>${E(sub)}</small></button>`).join("") +
       `</div><section class="safety-list"><h2>${T("Связь с отделом безопасности","Қауіпсіздік бөлімімен байланыс")}</h2>` +
       service.map(([act, art, name, sub]) => `<button data-action="${act}"><i class="art art-${art}" aria-hidden="true"></i><span><strong>${name}</strong><small>${sub}</small></span>${icon("arrow")}</button>`).join("") +
@@ -1077,10 +1142,29 @@ function systemView() {
 }
 const caseStates={NEW:["Новое","Жаңа"],IN_REVIEW:["В работе","Қарастырылуда"],NEEDS_INFORMATION:["Ждём уточнения","Жауап күтілуде"],ESCALATED:["Передано старшему","Аға маманға берілді"],RESOLVED:["Разбор завершён","Талдау аяқталды"],CLOSED:["Закрыто","Жабылды"]};
 const caseState=k=>caseStates[k]?T(...caseStates[k]):E(k);
+function firstActionLabel(record, sample) {
+  if (!record.reported_at || !sample) return "";
+  const start = Date.parse(record.reported_at);
+  const first = Date.parse(record.first_staff_action_at);
+  if (Number.isFinite(first)) {
+    const minutes = Math.max(0, Math.floor((first - start) / 60000));
+    return T("Первое действие через " + minutes + " мин", "Алғашқы әрекет " + minutes + " мин өткенде жасалды");
+  }
+  if (["CLOSED", "RESOLVED"].includes(record.state)) return T("Действие сотрудника в журнале отсутствует", "Журналда қызметкердің әрекеті жоқ");
+  const remaining = Date.parse(record.first_action_due_at) - Date.parse(sample);
+  if (remaining <= 0) return T("Первый час истёк · ждёт сотрудника", "Бір сағат өтті · қызметкердің әрекеті күтілуде");
+  const minutes = Math.ceil(remaining / 60000);
+  return T("До конца первого часа " + minutes + " мин", "Бірінші сағаттың аяқталуына " + minutes + " мин қалды");
+}
 function casesView() {
   if(product)return title(T("Дела SOC","SOC істері"))+desk.queue(queueSnapshot)+button("reports",T("Обращения клиентов","Клиент өтініштері"),"secondary")+
     '<form id="case-filter" class="ledger-filter"><label>'+T("Статус дела","Істің күйі")+'<select name="state"><option value="">'+T("Все дела","Барлық істер")+'</option>'+Object.keys(caseStates).map(k=>'<option value="'+k+'" '+(caseFilter===k?'selected':'')+'>'+caseState(k)+'</option>').join("")+'</select></label><button class="secondary">'+T("Применить","Қолдану")+'</button></form>'+
-    ((data?.items||[]).map(c=>'<button class="live-row" data-case="'+E(c.id)+'"><div><strong>'+E(label(c.category))+'</strong><span class="status-pill">'+caseState(c.state)+'</span></div><small>'+when(c.created_at)+'</small></button>').join("")||'<p class="empty">'+T("По этому фильтру дел нет.","Бұл сүзгі бойынша іс жоқ.")+'</p>')+
+    (data?.sampled_at ? '<section class="paper"><h2>'+T("Первый час после обращения","Өтініш түскеннен кейінгі алғашқы сағат")+'</h2><p>'+
+      T("Учебная цель — первое действие сотрудника в течение 60 минут с момента обращения.","Оқу мақсаты — өтініш түскеннен кейін 60 минут ішінде қызметкердің алғашқы әрекетін тіркеу.")+'</p>'+
+      '<button class="secondary" data-action="first-action-filter" aria-pressed="'+awaitingFirstAction+'">'+
+      (awaitingFirstAction ? T("Показать все дела","Барлық істі көрсету") : T("Ждут сотрудника · сначала давние","Қызметкерді күткендер · ерте түскені алдымен"))+'</button></section>' : "")+
+    ((data?.items||[]).map(c=>'<button class="live-row" data-case="'+E(c.id)+'"><div><strong>'+E(label(c.category))+'</strong><span class="status-pill">'+caseState(c.state)+'</span></div><small>'+when(c.reported_at ?? c.created_at)+'</small>'+
+      (data.sampled_at ? '<small>'+E(firstActionLabel(c,data.sampled_at))+'</small>' : "")+'</button>').join("")||'<p class="empty">'+T("По этому фильтру дел нет.","Бұл сүзгі бойынша іс жоқ.")+'</p>')+
     (caseOffset?button("case-prev",T("Назад","Артқа"),"secondary"):"")+(data?.has_more?button("case-next",T("Ещё","Тағы"),"secondary"):"");
   return `${title(T("Дела SOC", "SOC істері"))}<div class="inline-actions">${button("reports", T("Обращения", "Өтініштер"), "secondary")}</div>${(data?.items ?? []).map((c) => `<button class="live-row" data-case="${E(c.id)}"><div><strong>${E(label(c.category))}</strong><span class="status-pill">${E(caseState(c.state))}</span></div><small>${when(c.created_at)} · v${Number(c.version)}</small></button>`).join("") || `<p class="empty">${T("Дел пока нет", "Істер әзірге жоқ")}</p>`}${data?.next_cursor ? button("cases-more", T("Ещё", "Тағы"), "secondary") : ""}`;
 }
@@ -1088,6 +1172,22 @@ function caseView() {
   return data
     ? `${title(T("Работа с делом", "Іспен жұмыс"))}<section class="paper case-summary"><small>SOC · ${when(data.created_at)}</small><h2>${E(label(data.category))}</h2><p>${caseState(data.state)} · v${Number(data.version)}</p><p class="fine">${E(data.assignee ?? T("Не назначено", "Тағайындалмаған"))}</p><p class="break-id">${E(data.id)}</p></section>${data.state === "NEW" ? button("case-review", T("Взять в рассмотрение", "Қарауға алу")) : ""}${desk.closeCase(data)}<p class="fine">${T("Действия фиксируются в журнале. Это не решение банка.", "Әрекеттер журналда сақталады. Бұл банк шешімі емес.")}</p>`
     : "";
+}
+function partnerSignalView() {
+  const result = partnerSignal?.id === data.id && partnerSignal.caseVersion === data.version ? partnerSignal : null;
+  const states = {
+    review: T("Партнёру предложена ручная проверка", "Серіктеске қолмен тексеру ұсынылды"),
+    withdrawn: T("Предыдущее предупреждение отозвано", "Алдыңғы ескерту қайтарылды"),
+    expired: T("Срок предупреждения истёк", "Ескертудің мерзімі аяқталды"),
+    no_signal: T("По этому делу нет подтверждённого сигнала", "Осы іс бойынша расталған белгі жоқ"),
+    unlinked: T("Для сверки нужно дело, связанное с переводом", "Салыстыру үшін аударымға байланысты іс қажет"),
+  };
+  const expired = result?.expires_at && Date.parse(result.expires_at) <= Date.now();
+  return '<section class="paper"><h2>'+T("Проверка в банке-партнёре", "Серіктес банкте тексеру")+'</h2><p>'+
+    T("Два учебных банка сверяют статус этого дела. Банк Б проверяет подпись ответа и срок его действия.", "Екі оқу банкі осы істің күйін салыстырады. Б банкі жауаптың қолтаңбасы мен жарамдылық мерзімін тексереді.")+'</p>'+
+    (result ? '<p role="status"><strong>'+E(expired ? T("Обновите ответ", "Жауапты жаңартыңыз") : states[result.state])+'</strong>'+
+      (result.reference ? '<br><small>Ed25519 · '+E(result.reference)+' · '+T("действует до ", "жарамды уақыты ")+E(when(result.expires_at))+'</small>' : "")+'</p>' : "")+
+    button("query-partner-signal", T("Проверить статус", "Күйін тексеру"), "secondary")+'</section>';
 }
 function enrichmentView() {
   return `${title(T("Доказательства интеграций", "Интеграция деректері"))}<section class="paper"><h2>${T("Учебный реестр получателей","Алушылардың оқу тізілімі")}</h2>${(data?.external_checks ?? []).map((c) => `<p>${E(c[lang === "ru" ? "description_ru" : "description_kk"] ?? label(c.result?.status))}</p>`).join("") || `<p>${T("Проверок нет", "Тексерулер жоқ")}</p>`}<h2>${T("Уведомления", "Хабарламалар")}</h2>${(data?.notifications ?? []).map((n) => `<p>${E(label(n.state))}</p>`).join("") || `<p>${T("Отправок нет", "Жіберілімдер жоқ")}</p>`}</section>`;
@@ -1180,7 +1280,8 @@ const screens = {
   callbacks:()=>desk.callbacks(data),
   analytics:()=>wallet.analytics(data,selectedDay),
   socAnalytics:()=>wallet.soc(data,true),
-  incoming:()=>data?'<h1>'+T("Входящий перевод","Кіріс аударым")+'</h1><section class="paper"><h2>+'+amount(data.amount)+'</h2><p>'+E(data.counterparty)+'</p>'+wallet.badge(data.status)+'<p>'+when(data.created_at)+'</p><small>'+E(data.transaction_id)+'</small></section>':"",
+  incoming:()=>data?'<h1>'+T("Входящий перевод","Кіріс аударым")+'</h1><section class="paper"><h2>+'+amount(data.amount)+'</h2><p>'+E(data.counterparty)+'</p>'+wallet.badge(data.status)+'<p>'+when(data.created_at)+'</p><small>'+E(data.transaction_id)+'</small></section>'+
+    disputeView(dispute,"client",certificate,certificateCheck,T,E,amount,button):"",
   family: () => familyView(data,T,button,when) + secondSettingsView(data?.second,T,button,when,amount,E,webWallet),
   guard: () => checkView(data,T,button,when,label),
   packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Скачать пакет инцидента · PDF","Оқиға құжаттарын жүктеу · PDF")) : "",
@@ -1194,7 +1295,10 @@ const screens = {
   history: historyView,
   transfer: transferView,
   review: reviewView,
-  detail: () => detailView() + (evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation) : ""),
+  detail: () => detailView() + (deviceReceipt?.id === selectedId && deviceReceipt?.verified
+    ? '<section class="paper"><strong>' + T("Клиент подтвердил перевод ключом устройства", "Клиент аударымды құрылғы кілтімен растады") + '</strong><p>' +
+      E(ledgerTime(deviceReceipt.verified_at)) + " · " + amount(deviceReceipt.amount) + '</p></section>' : "") +
+    (evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation)+disputeView(dispute,"admin",certificate,certificateCheck,T,E,amount,button) : ""),
   questionnaire: questionnaireView,
   safety: safetyView,
   scan: scanView,
@@ -1204,8 +1308,11 @@ const screens = {
   graph: graphView,
   timeline: timelineView,
   system: systemView,
-  cases: casesView,
-  case: caseView,
+  cases: () => casesView() + (!juryWallet || !disputeQueue?.items?.length ? "" :
+    '<section class="paper"><h2>'+T("Спорные зачисления на проверке", "Тексеріліп жатқан даулы түсімдер")+'</h2>'+
+    disputeQueue.items.map(r=>'<button class="graph-record" data-detail="'+E(r.id)+'"><strong>'+amount(r.amount)+'</strong><small>'+E(when(r.at))+' · '+E(r.id.slice(-8))+'</small></button>').join("")+
+    (disputeQueue.has_more?'<small>'+T("Последние 25 обращений", "Соңғы 25 өтініш")+'</small>':"")+'</section>'),
+  case: () => caseView() + (juryWallet && data?.id ? partnerSignalView() : ""),
   enrichment: enrichmentView,
   gateway: gatewayView,
   settings: settingsView,
@@ -1444,6 +1551,16 @@ function render() {
         target.replaceChildren();if(!node)return;
         target.textContent=T("Загружаем операции…","Операциялар жүктелуде…");
         try{
+          if (graphAnchor && recipient && [node,recipient].includes(data.center)) {
+            const q = new URLSearchParams({source:node, target:recipient});
+            const evidence = await api("soc/transfers/"+graphAnchor+"/edge-receipts?"+q);
+            if(ticket!==selection || !target.isConnected) return;
+            target.innerHTML = '<h3>'+T("Зачисления за 24 часа до решения", "Шешімге дейінгі 24 сағатта түскен аударымдар")+'</h3>'+
+              (evidence.items.map(tx=>'<button class="graph-record" data-detail="'+E(tx.transaction_id)+'"><strong>'+amount(tx.amount)+'</strong><span>'+E(when(tx.settled_at))+'</span></button>').join("") ||
+              '<p>'+T("Зачислений в этом направлении нет.", "Осы бағытта түскен аударым жоқ.")+'</p>')+
+              (evidence.has_more ? '<small>'+T("Показаны последние 12 операций.", "Соңғы 12 операция көрсетілді.")+'</small>' : "");
+            return;
+          }
           const q=new URLSearchParams({node,offset:String(position)});
           if(recipient)q.set("recipient",recipient);
           const batch=await gateway.request("/wallet/graph-operations?"+q);
@@ -1586,6 +1703,8 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (b.dataset.graph) {
+    const anchor = page === "detail" ? evaluation : page === "case" ? caseTransaction : null;
+    graphAnchor = anchor?.recipient?.id === b.dataset.graph ? anchor.transaction_id : null;
     await open("graph", b.dataset.graph);
     return;
   }
@@ -1718,6 +1837,12 @@ root.addEventListener("click", async (event) => {
   if(act==="clear-period"){ledgerFilter=defaultLedger();offset=0;await open("history");return;}
   if(act==="analytics"||act==="history"||act==="socAnalytics"){offset=0;if(act==="history")ledgerFilter=defaultLedger();await open(act);return;}
   if(act==="case-prev"||act==="case-next"){caseOffset=Math.max(0,caseOffset+(act==="case-prev"?-20:20));await open("cases");return;}
+  if (act === "first-action-filter") {
+    awaitingFirstAction = !awaitingFirstAction;
+    caseOffset = 0;
+    await open("cases");
+    return;
+  }
   if (act === "show-password") {
     const field = root.querySelector('[name=password]');
     const reveal = field.type === "password";
@@ -1865,20 +1990,75 @@ root.addEventListener("click", async (event) => {
     });
     return;
   }
+  if (act?.startsWith("dispute-") && ["incoming","detail"].includes(page) && dispute?.statement) {
+    const id = dispute.statement.original_id, base = "/wallet/disputes/"+id;
+    await perform(async () => {
+      if (act === "dispute-certificate") {
+        certificate = await gateway.request(base+"/statement");
+        certificateCheck = null;
+        const href = URL.createObjectURL(new Blob([JSON.stringify(certificate,null,2)],{type:"application/json"}));
+        const link = document.createElement("a");
+        link.href=href; link.download="Saq-Bol-"+id+".json"; link.click();
+        setTimeout(()=>URL.revokeObjectURL(href),1000);
+      } else if (act === "dispute-verify" && certificate) {
+        certificateCheck = await gateway.request(base+"/verify","POST",certificate);
+      } else if (["dispute-clear","dispute-uphold"].includes(act) && gateway.role === "admin") {
+        dispute = await gateway.request(base+"/review","POST",{decision:act==="dispute-clear"?"clear":"uphold",stage:dispute.stage,confirmed:true});
+        certificateCheck = null;
+      } else if (["dispute-report","dispute-appeal"].includes(act) && gateway.role === "client") {
+        dispute=await gateway.request(base+"/report","POST",{action:act==="dispute-report"?"report_redirect":"appeal",confirmed:true});
+        account=await gateway.request("/account"); certificateCheck=null;
+      }
+    });
+    return;
+  }
+  if (act === "query-partner-signal" && page === "case" && gateway?.role === "admin") {
+    const id = data.id;
+    await perform(async () => {
+      try {
+        partnerSignal = {id, caseVersion:data.version, ...await gateway.request("/wallet/cases/"+id+"/partner-signal")};
+      } catch (failure) {
+        if (failure.status !== 404) throw failure;
+        partnerSignal = {id, caseVersion:data.version, state:"unlinked"};
+      }
+    });
+    return;
+  }
+  if (act === "enroll-transfer-key" && page === "safety" && account?.supports_transfer_key && !account.transfer_key_enrolled) {
+    await perform(async () => {
+      await verifyWithDevice(gateway, null);
+      account = await gateway.request("/account");
+    });
+    return;
+  }
   if (act === "submit-transfer") {
     if (pending || !draft || (draft.payee && !canConfirmPayee(data))) return;
     if (needsCallAnswer(draft, data, account?.supports_call_question) && !draft.callAnswer) return;
     const context = submissionContext(draft, account?.supports_call_question);
+    const terms = {recipient_phone: draft.recipient_phone, amount: draft.amount, context, currency:"KZT"};
     await perform(async () => {
       const { request_id: id } = await gateway.request("/requests", "POST", {});
+      const payment = {...terms, request_id:id};
+      if (account?.transfer_key_enrolled) await verifyWithDevice(gateway, payment);
       await savePending(id);
       mutationOutcome = true;
-      const value = await api("transfers/evaluate", "POST", {
-        recipient_phone: draft.recipient_phone, amount: draft.amount, context,
-        request_id: id,
-        currency: "KZT",
-      });
+      let value;
+      try {
+        value = await api("transfers/evaluate", "POST", payment);
+      } catch (failure) {
+        if (failure.status === 428 || failure.code === "disputed_amount_reserved") {
+          mutationOutcome = false;
+          await savePending("");
+          account = await gateway.request("/account");
+        }
+        throw failure;
+      }
       accept(value);
+      if (account?.transfer_key_enrolled) {
+        deviceReceipt = null;
+        const proof = await gateway.request("/protection/transfer-key/receipts/"+value.transaction_id).catch(() => null);
+        if (proof) deviceReceipt = {id:value.transaction_id, ...proof};
+      }
       await savePending("");
       page = "detail"; backStack=[];
       const guarded=product && context.active_call && value.status==="cooling_off";
@@ -2299,7 +2479,7 @@ async function refreshVisible() {
     staff:()=>g.request("/admin/staff"),
     inbox:()=>g.request("/inbox"),
     reports:()=>g.api("integrations/guardian/reports"),
-    cases:()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),
+    cases:()=>g.request(caseListPath()),
     notifications:()=>g.api("trusted-contacts/transactions/"+id+"/notifications"),
     timeline:()=>g.api("integrations/soc/transactions/"+id+"/timeline?limit=50"),
     analytics:()=>g.request("/wallet/analytics?days="+walletDays),

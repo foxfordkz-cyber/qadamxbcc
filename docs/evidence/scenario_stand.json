@@ -5,6 +5,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 60,
+    "amount_tiyn": 11880000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -19,6 +20,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 12952500,
     "signals": [
       "ACTIVE_CALL",
       "PASTED_DURING_CALL",
@@ -34,6 +36,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 14025000,
     "signals": [
       "ACTIVE_CALL",
       "PASTED_DURING_CALL",
@@ -49,6 +52,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 50,
+    "amount_tiyn": 15097500,
     "signals": [
       "ACTIVE_CALL",
       "NEW_RECIPIENT",
@@ -62,6 +66,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 16170000,
     "signals": [
       "ACTIVE_CALL",
       "PASTED_DURING_CALL",
@@ -78,6 +83,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 17242500,
     "signals": [
       "ACTIVE_CALL",
       "NEW_DEVICE",
@@ -93,6 +99,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 62,
+    "amount_tiyn": 18315000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -107,6 +114,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 19387500,
     "signals": [
       "ACTIVE_CALL",
       "PASTED_DURING_CALL",
@@ -122,6 +130,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 63,
+    "amount_tiyn": 15120000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -136,6 +145,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 61,
+    "amount_tiyn": 16485000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -150,6 +160,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 61,
+    "amount_tiyn": 17850000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -164,6 +175,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 62,
+    "amount_tiyn": 19215000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -178,6 +190,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 20580000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -194,6 +207,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 21945000,
     "signals": [
       "ACTIVE_CALL",
       "NEW_DEVICE",
@@ -209,6 +223,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 63,
+    "amount_tiyn": 23310000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -223,6 +238,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 64,
+    "amount_tiyn": 24675000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -237,6 +253,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 51840000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -251,6 +268,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 56520000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -265,6 +283,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 61200000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -279,6 +298,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 65880000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -293,6 +313,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 70560000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -309,6 +330,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 75240000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -324,6 +346,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 79920000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -338,6 +361,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 84600000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -352,6 +376,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 25920000,
     "signals": [
       "ACTIVE_CALL",
       "DEPOSIT_WITHDRAWAL",
@@ -367,6 +392,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 28260000,
     "signals": [
       "ACTIVE_CALL",
       "DEPOSIT_WITHDRAWAL",
@@ -382,6 +408,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 30600000,
     "signals": [
       "ACTIVE_CALL",
       "DEPOSIT_WITHDRAWAL",
@@ -397,6 +424,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 32940000,
     "signals": [
       "ACTIVE_CALL",
       "DEPOSIT_WITHDRAWAL",
@@ -412,6 +440,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 35280000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -428,6 +457,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 37620000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -443,6 +473,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 39960000,
     "signals": [
       "ACTIVE_CALL",
       "DEPOSIT_WITHDRAWAL",
@@ -458,6 +489,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 42300000,
     "signals": [
       "ACTIVE_CALL",
       "DEPOSIT_WITHDRAWAL",
@@ -473,6 +505,7 @@
     "fraud": true,
     "decision": "approved",
     "score": 20,
+    "amount_tiyn": 10080000,
     "signals": [
       "AMOUNT_SPIKE",
       "NEW_RECIPIENT"
@@ -484,6 +517,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 58,
+    "amount_tiyn": 10990000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -498,6 +532,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 45,
+    "amount_tiyn": 11900000,
     "signals": [
       "ACTIVE_CALL",
       "NEW_RECIPIENT",
@@ -510,6 +545,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 45,
+    "amount_tiyn": 12810000,
     "signals": [
       "ACTIVE_CALL",
       "NEW_RECIPIENT",
@@ -522,6 +558,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 40,
+    "amount_tiyn": 13720000,
     "signals": [
       "AMOUNT_SPIKE",
       "NEW_RECIPIENT",
@@ -536,6 +573,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 14630000,
     "signals": [
       "ACTIVE_CALL",
       "NEW_DEVICE",
@@ -551,6 +589,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 60,
+    "amount_tiyn": 15540000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -565,6 +604,7 @@
     "fraud": true,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 3240000,
     "signals": [
       "NEW_RECIPIENT"
     ]
@@ -575,6 +615,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 60,
+    "amount_tiyn": 3532500,
     "signals": [
       "ACTIVE_CALL",
       "PASTED_DURING_CALL",
@@ -588,6 +629,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 60,
+    "amount_tiyn": 3825000,
     "signals": [
       "ACTIVE_CALL",
       "PASTED_DURING_CALL",
@@ -601,6 +643,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 45,
+    "amount_tiyn": 4117500,
     "signals": [
       "ACTIVE_CALL",
       "NEW_RECIPIENT",
@@ -613,6 +656,7 @@
     "fraud": true,
     "decision": "approved",
     "score": 20,
+    "amount_tiyn": 4410000,
     "signals": [
       "NEW_RECIPIENT",
       "NIGHT_HOURS"
@@ -624,6 +668,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 4702500,
     "signals": [
       "ACTIVE_CALL",
       "NEW_DEVICE",
@@ -638,6 +683,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 45,
+    "amount_tiyn": 4995000,
     "signals": [
       "ACTIVE_CALL",
       "NEW_RECIPIENT",
@@ -650,6 +696,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 60480000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -664,6 +711,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 65940000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -678,6 +726,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 71400000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -692,6 +741,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 76860000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -706,6 +756,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 82320000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -722,6 +773,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 87780000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -737,6 +789,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 74,
+    "amount_tiyn": 93240000,
     "signals": [
       "ACTIVE_CALL",
       "AMOUNT_SPIKE",
@@ -751,6 +804,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 65,
+    "amount_tiyn": 8280000,
     "signals": [
       "RECIPIENT_INSTANT_CASHOUT",
       "RECIPIENT_MANY_SENDERS",
@@ -764,6 +818,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 65,
+    "amount_tiyn": 9027500,
     "signals": [
       "RECIPIENT_INSTANT_CASHOUT",
       "RECIPIENT_MANY_SENDERS",
@@ -777,6 +832,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 65,
+    "amount_tiyn": 9775000,
     "signals": [
       "RECIPIENT_INSTANT_CASHOUT",
       "RECIPIENT_MANY_SENDERS",
@@ -790,6 +846,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 65,
+    "amount_tiyn": 10522500,
     "signals": [
       "RECIPIENT_INSTANT_CASHOUT",
       "RECIPIENT_MANY_SENDERS",
@@ -803,6 +860,7 @@
     "fraud": true,
     "decision": "blocked",
     "score": 89,
+    "amount_tiyn": 11270000,
     "signals": [
       "RECIPIENT_INSTANT_CASHOUT",
       "RECIPIENT_MANY_SENDERS",
@@ -820,6 +878,7 @@
     "fraud": true,
     "decision": "blocked",
     "score": 100,
+    "amount_tiyn": 12017500,
     "signals": [
       "RECIPIENT_INSTANT_CASHOUT",
       "RECIPIENT_MANY_SENDERS",
@@ -836,6 +895,7 @@
     "fraud": true,
     "decision": "cooling_off",
     "score": 65,
+    "amount_tiyn": 12765000,
     "signals": [
       "RECIPIENT_INSTANT_CASHOUT",
       "RECIPIENT_MANY_SENDERS",
@@ -849,6 +909,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 0,
+    "amount_tiyn": 2304000,
     "signals": []
   },
   {
@@ -857,6 +918,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 0,
+    "amount_tiyn": 2512000,
     "signals": []
   },
   {
@@ -865,6 +927,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 0,
+    "amount_tiyn": 2720000,
     "signals": []
   },
   {
@@ -873,6 +936,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 0,
+    "amount_tiyn": 2928000,
     "signals": []
   },
   {
@@ -881,6 +945,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 3136000,
     "signals": [
       "NIGHT_HOURS"
     ]
@@ -891,6 +956,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 15,
+    "amount_tiyn": 3344000,
     "signals": [
       "NEW_DEVICE"
     ]
@@ -901,6 +967,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 0,
+    "amount_tiyn": 3552000,
     "signals": []
   },
   {
@@ -909,6 +976,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 0,
+    "amount_tiyn": 3760000,
     "signals": []
   },
   {
@@ -917,6 +985,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 0,
+    "amount_tiyn": 3968000,
     "signals": []
   },
   {
@@ -925,6 +994,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 4176000,
     "signals": [
       "NIGHT_HOURS"
     ]
@@ -935,6 +1005,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 1296000,
     "signals": [
       "ACTIVE_CALL"
     ]
@@ -945,6 +1016,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 1413000,
     "signals": [
       "ACTIVE_CALL"
     ]
@@ -955,6 +1027,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 1530000,
     "signals": [
       "ACTIVE_CALL"
     ]
@@ -965,6 +1038,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 1647000,
     "signals": [
       "ACTIVE_CALL"
     ]
@@ -975,6 +1049,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 35,
+    "amount_tiyn": 1764000,
     "signals": [
       "ACTIVE_CALL",
       "NIGHT_HOURS"
@@ -986,6 +1061,7 @@
     "fraud": false,
     "decision": "cooling_off",
     "score": 40,
+    "amount_tiyn": 1881000,
     "signals": [
       "ACTIVE_CALL",
       "NEW_DEVICE"
@@ -997,6 +1073,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 1998000,
     "signals": [
       "ACTIVE_CALL"
     ]
@@ -1007,6 +1084,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 2115000,
     "signals": [
       "ACTIVE_CALL"
     ]
@@ -1017,6 +1095,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 2232000,
     "signals": [
       "ACTIVE_CALL"
     ]
@@ -1027,6 +1106,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 35,
+    "amount_tiyn": 2349000,
     "signals": [
       "ACTIVE_CALL",
       "NIGHT_HOURS"
@@ -1038,6 +1118,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 20,
+    "amount_tiyn": 28080000,
     "signals": [
       "AMOUNT_SPIKE"
     ]
@@ -1048,6 +1129,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 30615000,
     "signals": [
       "AMOUNT_SPIKE"
     ]
@@ -1058,6 +1140,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 33150000,
     "signals": [
       "AMOUNT_SPIKE"
     ]
@@ -1068,6 +1151,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 35685000,
     "signals": [
       "AMOUNT_SPIKE"
     ]
@@ -1078,6 +1162,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 30,
+    "amount_tiyn": 38220000,
     "signals": [
       "AMOUNT_SPIKE",
       "NIGHT_HOURS"
@@ -1089,6 +1174,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 38,
+    "amount_tiyn": 40755000,
     "signals": [
       "AMOUNT_SPIKE",
       "NEW_DEVICE",
@@ -1101,6 +1187,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 43290000,
     "signals": [
       "AMOUNT_SPIKE"
     ]
@@ -1111,6 +1198,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 45825000,
     "signals": [
       "AMOUNT_SPIKE"
     ]
@@ -1121,6 +1209,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 20,
+    "amount_tiyn": 48360000,
     "signals": [
       "AMOUNT_SPIKE"
     ]
@@ -1131,6 +1220,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 30,
+    "amount_tiyn": 50895000,
     "signals": [
       "AMOUNT_SPIKE",
       "NIGHT_HOURS"
@@ -1142,6 +1232,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 12600000,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "AMOUNT_SPIKE"
@@ -1153,6 +1244,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 13737500,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "AMOUNT_SPIKE"
@@ -1164,6 +1256,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 14875000,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "AMOUNT_SPIKE"
@@ -1175,6 +1268,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 16012500,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "AMOUNT_SPIKE"
@@ -1186,6 +1280,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 36,
+    "amount_tiyn": 17150000,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "AMOUNT_SPIKE",
@@ -1199,6 +1294,7 @@
     "fraud": false,
     "decision": "cooling_off",
     "score": 42,
+    "amount_tiyn": 18287500,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "NEW_DEVICE",
@@ -1212,6 +1308,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 19425000,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "AMOUNT_SPIKE"
@@ -1223,6 +1320,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 20562500,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "AMOUNT_SPIKE"
@@ -1234,6 +1332,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 21700000,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "AMOUNT_SPIKE"
@@ -1245,6 +1344,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 37,
+    "amount_tiyn": 22837500,
     "signals": [
       "DEPOSIT_WITHDRAWAL",
       "AMOUNT_SPIKE",
@@ -1258,6 +1358,7 @@
     "fraud": false,
     "decision": "cooling_off",
     "score": 45,
+    "amount_tiyn": 1584000,
     "signals": [
       "ACTIVE_CALL",
       "NEW_RECIPIENT",
@@ -1270,6 +1371,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 1727000,
     "signals": [
       "NEW_RECIPIENT"
     ]
@@ -1280,6 +1382,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 1870000,
     "signals": [
       "NEW_RECIPIENT"
     ]
@@ -1290,6 +1393,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 2013000,
     "signals": [
       "NEW_RECIPIENT"
     ]
@@ -1300,6 +1404,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 20,
+    "amount_tiyn": 2156000,
     "signals": [
       "NEW_RECIPIENT",
       "NIGHT_HOURS"
@@ -1311,6 +1416,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 2299000,
     "signals": [
       "NEW_DEVICE",
       "NEW_RECIPIENT"
@@ -1322,6 +1428,7 @@
     "fraud": false,
     "decision": "cooling_off",
     "score": 45,
+    "amount_tiyn": 2442000,
     "signals": [
       "ACTIVE_CALL",
       "NEW_RECIPIENT",
@@ -1334,6 +1441,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 2585000,
     "signals": [
       "NEW_RECIPIENT"
     ]
@@ -1344,6 +1452,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 10,
+    "amount_tiyn": 2728000,
     "signals": [
       "NEW_RECIPIENT"
     ]
@@ -1354,6 +1463,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 20,
+    "amount_tiyn": 2871000,
     "signals": [
       "NEW_RECIPIENT",
       "NIGHT_HOURS"
@@ -1365,6 +1475,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 15,
+    "amount_tiyn": 1152000,
     "signals": [
       "NEW_RECIPIENT",
       "RECIPIENT_MANY_SENDERS",
@@ -1377,6 +1488,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 15,
+    "amount_tiyn": 1256000,
     "signals": [
       "NEW_RECIPIENT",
       "RECIPIENT_MANY_SENDERS",
@@ -1389,6 +1501,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 15,
+    "amount_tiyn": 1360000,
     "signals": [
       "NEW_RECIPIENT",
       "RECIPIENT_MANY_SENDERS",
@@ -1401,6 +1514,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 15,
+    "amount_tiyn": 1464000,
     "signals": [
       "NEW_RECIPIENT",
       "RECIPIENT_MANY_SENDERS",
@@ -1413,6 +1527,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 1568000,
     "signals": [
       "NEW_RECIPIENT",
       "NIGHT_HOURS",
@@ -1426,6 +1541,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 30,
+    "amount_tiyn": 1672000,
     "signals": [
       "NEW_DEVICE",
       "NEW_RECIPIENT",
@@ -1439,6 +1555,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 15,
+    "amount_tiyn": 1776000,
     "signals": [
       "NEW_RECIPIENT",
       "RECIPIENT_MANY_SENDERS",
@@ -1451,6 +1568,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 15,
+    "amount_tiyn": 1880000,
     "signals": [
       "NEW_RECIPIENT",
       "RECIPIENT_MANY_SENDERS",
@@ -1463,6 +1581,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 15,
+    "amount_tiyn": 1984000,
     "signals": [
       "NEW_RECIPIENT",
       "RECIPIENT_MANY_SENDERS",
@@ -1475,6 +1594,7 @@
     "fraud": false,
     "decision": "approved",
     "score": 25,
+    "amount_tiyn": 2088000,
     "signals": [
       "NEW_RECIPIENT",
       "NIGHT_HOURS",

@@ -20,7 +20,6 @@ from sqlalchemy.orm import selectinload
 from app.db.locks import serialize_sender, serialized_identity
 from app.integrations.models import ContactNotification
 from app.integrations.telegram.schemas import NotificationState
-from app.ml.model import MODEL_VERSION
 from app.models import (
     AbandonedRequest,
     Account,
@@ -45,7 +44,7 @@ from app.schemas.transfers import (
     TransferEvaluateRequest,
     TransferEvaluateResponse,
 )
-from app.services import explain, family_approval
+from app.services import demo_funds, explain, family_approval
 from app.services.antifraud import (
     ACTIVE_HOLD_RULE,
     AMOUNT_SPIKE_RATIO,
@@ -319,10 +318,23 @@ class TransferService:
         return transfer_detail(tx, tx.recipient, minutes=self.engine.cooling_off_minutes)
 
     async def _get_account(self, account_id: uuid.UUID) -> Account:
-        account = await self.session.get(Account, account_id)
+        account = await self.session.get(Account, account_id, populate_existing=True)
         if account is None:
             raise NotFoundError(f"account {account_id} not found")
         return account
+
+    async def _check_disputed_funds(self, sender: Account, debit: Decimal) -> None:
+        if not sender.has_dispute_history:
+            return
+        reserved = await demo_funds.disputed_total(self.session, sender.id)
+        if not reserved:
+            return
+        # A pilot with an imported dispute requires an authoritative bank balance.
+        if not self.engine.use_virtual_wallet:
+            raise ConflictError("disputed_amount_reserved")
+        available = await demo_funds.posted_balance(self.session, sender.id) - reserved
+        if debit > available:
+            raise ConflictError("disputed_amount_reserved")
 
     async def _resolve_recipient(
         self, req: TransferEvaluateRequest, sender: Account
@@ -633,6 +645,7 @@ class TransferService:
     ) -> TransferEvaluateResponse:
         sender = await self._get_account(req.sender_id)
         recipient, ctx, bank_check = await self._scoring_context(req, tx_id, sender)
+        await self._check_disputed_funds(sender, req.amount)
 
         evaluation = await self.engine.evaluate(ctx)
 
@@ -712,7 +725,19 @@ class TransferService:
                 outbound_call_listed=bank_check.verified,
                 checked_at=datetime.fromisoformat(bank_check.checked_at),
             )
-        tx.evaluation_snapshot = response.model_dump(mode="json")
+        decision_snapshot = response.model_dump(mode="json")
+        shadow = evaluation.shadow_prediction
+        if shadow is not None and shadow.review_threshold is not None:
+            # The officer feed reads this immutable observation. Customer response
+            # schemas also filter it out on retries and historical detail reads.
+            decision_snapshot["shadow_call"] = {
+                "model_version": shadow.model_version,
+                "score": round(shadow.score, 4),
+                "review_threshold": shadow.review_threshold,
+                "review_suggested": shadow.score >= shadow.review_threshold,
+                "contributors": [asdict(item) for item in shadow.contributors],
+            }
+        tx.evaluation_snapshot = decision_snapshot
         self.session.add(tx)
         if protected is not None:
             await self.session.flush()
@@ -749,7 +774,8 @@ class TransferService:
             risk_score=ev.score,
             ml_score=ev.ml_score,
             ml_base_score=ev.ml_base_score,
-            ml_model_version=MODEL_VERSION,
+            ml_model_version=ev.ml_model_version,
+            ml_explanation_method=ev.ml_explanation_method,
             ml_contributors=[
                 MLContributorOut(
                     feature=c.feature,
@@ -911,6 +937,9 @@ class TransferService:
                         raise ConflictError("family_approval_expired")
                     if approval not in {"none", "confirmed"}:
                         raise ConflictError("family_approval_required")
+                    await self._check_disputed_funds(
+                        await self._get_account(tx.sender_id), tx.amount
+                    )
                     # A completed hold and clean questionnaire may override behavioral
                     # friction, but never current hard-blocking network evidence.
                     kk, ru = explain.render("QUESTIONNAIRE_PASSED")
@@ -991,7 +1020,8 @@ class TransferService:
                     "status": evaluation.decision.value,
                     "ml_score": evaluation.ml_score,
                     "ml_base_score": evaluation.ml_base_score,
-                    "ml_model_version": MODEL_VERSION,
+                    "ml_model_version": evaluation.ml_model_version,
+                    "ml_explanation_method": evaluation.ml_explanation_method,
                     "ml_contributors": [asdict(c) for c in evaluation.ml_contributors],
                     "reasons": [asdict(r) for r in evaluation.reasons],
                     "velocity": evaluation.velocity.as_dict(),

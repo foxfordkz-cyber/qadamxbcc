@@ -5,6 +5,7 @@ import samples from "@/lib/scenario-details.json";
 import signalNames from "@/lib/scenario-signals.json";
 import results from "@/lib/scenario-summary.json";
 import postCallReplay from "@/lib/post-call-replay.json";
+import { ScenarioPolicy } from "./scenario-policy";
 
 const labels: Record<keyof typeof results, [string, string]> = {
   bank: ["Банктің қауіпсіздік қызметі", "Звонок от службы безопасности"],
@@ -49,6 +50,7 @@ export function ScenarioResults() {
     <p>{kk
       ? `Жүйе ${scams.heldOrBlocked} алаяқтық аударымды тоқтатты (барлығы ${scams.total}). ${honest.total} адал аударым бойынша ${honest.heldOrBlocked} жалған дабыл тіркелді.`
       : `Система остановила ${scams.heldOrBlocked} из ${scams.total} мошеннических переводов. Ложные тревоги возникли в ${honest.heldOrBlocked} случаях из ${honest.total} честных переводов.`}</p>
+    <ScenarioPolicy />
     {[
       {label: kk ? "Тоқтатылған алаяқтық" : "Мошеннические переводы на паузе или в блоке", items: samples.filter(r => r.fraud && r.decision !== "approved")},
       {label: kk ? "Өтіп кеткен алаяқтық" : "Пропущенное мошенничество", items: samples.filter(r => r.fraud && r.decision === "approved")},

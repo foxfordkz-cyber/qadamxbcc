@@ -40,6 +40,7 @@ class IncomingPayment(BaseModel):
     original_id: uuid.UUID
     received_at: datetime
     amount: Decimal
+    restricted_amount: Decimal = Decimal("0.00")
     currency: Literal["KZT"] = "KZT"
     payer: OriginalPayer
     review_state: ReviewState

@@ -2,11 +2,15 @@ import uuid
 from datetime import timedelta
 from decimal import Decimal
 from html import escape
+from typing import Any
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
+from pydantic import SecretStr
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.base import utcnow
 from app.integrations.cases.models import FraudCase
@@ -25,7 +29,7 @@ from tests.test_mobile_gateway import mobile_world as mobile_world
 from tests.test_second_confirmation import ANSWERS, API, SETTINGS, contact, evaluate
 
 
-def test_jury_evidence():
+def test_jury_evidence() -> None:
     app = FastAPI()
     app.include_router(router)
     with TestClient(app) as http:
@@ -41,7 +45,7 @@ def test_jury_evidence():
         assert "96 000" in pair.text
 
 
-async def test_each_jury_pair_is_selectable_and_shows_the_engine_evidence():
+async def test_each_jury_pair_is_selectable_and_shows_the_engine_evidence() -> None:
     app = FastAPI()
     app.include_router(router)
     with TestClient(app) as http:
@@ -68,11 +72,15 @@ async def test_each_jury_pair_is_selectable_and_shows_the_engine_evidence():
 
 
 @pytest.mark.parametrize("trigger", ["appeal", "deadline", "suspicion"])
-async def test_review_roundtrip(mobile_world, session_factory, trigger):
+async def test_review_roundtrip(
+    mobile_world: tuple[AsyncClient, Any],
+    session_factory: async_sessionmaker[AsyncSession],
+    trigger: str,
+) -> None:
     client, _ = mobile_world
     owner, staff = await login(client), await login(client, ADMIN_CODE)
 
-    async def balance():
+    async def balance() -> Decimal:
         return Decimal((await client.get("/mobile/v1/account", headers=owner)).json()["balance"])
 
     before = await balance()
@@ -108,7 +116,7 @@ async def test_review_roundtrip(mobile_world, session_factory, trigger):
     path = f"/mobile/v1/protection/{tid}/review"
     assert (await client.post(path, headers=staff)).status_code == 403
     if trigger != "appeal":
-        cfg = IntegrationSettings(enabled=True, signing_key="x" * 40)
+        cfg = IntegrationSettings(enabled=True, signing_key=SecretStr("x" * 40))
         adapter = FakeTelegramAdapter()
         assert await deliver_one(session_factory, adapter, cfg)
         await escalate_due(session_factory)
@@ -119,11 +127,15 @@ async def test_review_roundtrip(mobile_world, session_factory, trigger):
                 select(ContactNotification).where(ContactNotification.transaction_id == tid)
             )
             if trigger == "suspicion":
+                assert notice is not None
+                assert notice.message_id is not None
                 await TrustedContactService(db, cfg).callback(
                     notice.id, 510008, notice.message_id, "suspect"
                 )
             else:
-                (await db.get(FamilyApproval, tid)).expires_at = utcnow() - timedelta(seconds=1)
+                approval = await db.get(FamilyApproval, tid)
+                assert approval is not None
+                approval.expires_at = utcnow() - timedelta(seconds=1)
                 await db.commit()
         await escalate_due(session_factory)
         await escalate_due(session_factory)
@@ -148,14 +160,14 @@ async def test_review_roundtrip(mobile_world, session_factory, trigger):
         return
     if trigger == "appeal":
 
-        async def act(payload):
+        async def act(payload: dict[str, str]) -> dict[str, Any]:
             response = await client.post(
                 route + "/actions",
                 headers={**staff, "Idempotency-Key": str(uuid.uuid4())},
                 json={"expected_version": case["version"], **payload},
             )
             assert response.is_success, response.text
-            return response.json()
+            return dict(response.json())
 
         case = await act({"action": "transition", "state": "IN_REVIEW", "reason": "review_started"})
         case = await act({"action": "request_information", "question": "caller_request"})
@@ -188,7 +200,9 @@ async def test_review_roundtrip(mobile_world, session_factory, trigger):
     assert before == await balance()
     if trigger == "appeal":
         async with session_factory() as db:
-            (await db.get(Transaction, tid)).cooling_until = utcnow() - timedelta(seconds=2)
+            held = await db.get(Transaction, tid)
+            assert held is not None
+            held.cooling_until = utcnow() - timedelta(seconds=2)
             await db.commit()
         for attempt in range(2):
             result = await client.post(

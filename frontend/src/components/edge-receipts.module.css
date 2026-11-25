@@ -1,0 +1,7 @@
+.evidence { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.evidence label { display: grid; gap: .45rem; font-weight: 650; }
+.evidence select { max-width: 100%; width: 100%; padding: .65rem; border-radius: .65rem; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font: inherit; font-weight: 450; }
+.evidence p { font-size: .85rem; color: var(--ink-2); margin: .65rem 0; }
+.evidence button { display: flex; gap: .65rem; align-items: center; flex-wrap: wrap; width: 100%; text-align: start; padding: .65rem 0; border-block-end: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.evidence button strong { margin-inline-start: auto; }
+.evidence button span { color: var(--ink-2); font-size: .8rem; }

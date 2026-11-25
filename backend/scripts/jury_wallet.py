@@ -48,7 +48,9 @@ class JuryStorage:
     @asynccontextmanager
     async def room(self, slot: int, *, with_history: bool = False) -> AsyncIterator[FastAPI]:
         from app.mobile_gateway.app import create_mobile_app
+        from app.mobile_gateway.dispute_receipts import install_dispute_receipts
         from app.mobile_gateway.jury_contact import install_jury_contact
+        from app.mobile_gateway.partner_signal import install_partner_signal
 
         if not 1 <= slot <= 8 or slot in self.active:
             raise ValueError("Invalid or active jury slot")
@@ -90,10 +92,21 @@ class JuryStorage:
                         telegram_allowed_chat_ids=[],
                         circle_web_owners={},
                     )
+                    hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+                    origin = os.getenv("BCC_JURY_PUBLIC_ORIGIN") or (
+                        f"https://{hostname}" if hostname else "http://localhost:18003"
+                    )
                     app = create_mobile_app(
-                        self.mobile, settings, resources, integration, browser_only=True
+                        self.mobile,
+                        settings,
+                        resources,
+                        integration,
+                        browser_only=True,
+                        transfer_key_origin=origin,
                     )
                     await install_jury_contact(app, sessions, integration, self.mobile.customer_id)
+                    install_partner_signal(app)
+                    install_dispute_receipts(app, self.mobile.customer_id)
                     if with_history:
                         # Populate only this new private SQLite lease; the contact
                         # already occupies its slot and startup will replay the graph.

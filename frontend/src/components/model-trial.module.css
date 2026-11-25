@@ -1,0 +1,28 @@
+.panel { margin-block: 1.3rem; padding: clamp(1rem, 2.5vw, 1.75rem); border: 1px solid var(--line); border-radius: 22px; background: var(--surface); color: var(--ink); scroll-margin-top: 5rem; }
+.panel h3 { margin: 0; font-size: clamp(1.2rem, 2vw, 1.6rem); }
+.panel p { max-width: 78ch; margin-block: .6rem 1rem; line-height: 1.55; }
+.select { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem; font-weight: 600; }
+.select select { max-width: 100%; padding: .55rem .7rem; color: inherit; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px; font: inherit; }
+.result { margin-block: 1rem; }
+.result table { width: 100%; border-collapse: collapse; white-space: normal; font-variant-numeric: tabular-nums; }
+.result th { position: static; }
+.result caption { text-align: start; font-weight: 650; padding-bottom: .4rem; }
+.result th, .result td { padding: .55rem .35rem; border-bottom: 1px solid var(--line); text-align: end; }
+.result th:first-child { text-align: start; font-weight: 550; }
+.result thead th { color: var(--ink-2); font-size: .84rem; }
+.result tbody td { white-space: nowrap; }
+.result tbody td:last-child { font-weight: 750; }
+.note { font-size: .9rem; color: var(--ink-2); }
+.verdict { font-size: .9rem; }
+.example { margin-top: 1rem; }
+.example > summary { cursor: pointer; font-weight: 650; }
+.observer { margin-block: 1rem; padding: 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.observer h3, .observer p { margin-block: 0 .5rem; }
+.observer summary { cursor: pointer; font-weight: 600; }
+.observer ul { padding: 0; list-style: none; }
+.observer li { display: flex; justify-content: space-between; gap: .8rem; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) {
+  .result table { font-size: .84rem; table-layout: fixed; }
+  .result th:first-child { width: 48%; }
+  .result th, .result td { padding-inline: .2rem; }
+}

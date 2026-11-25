@@ -60,6 +60,7 @@ CLIENT_PATHS = [
     ("GET", rf"external-checks/{UUID_PATTERN}"),
 ]
 ADMIN_PATHS = [
+    ("GET", rf"soc/transfers/{UUID_PATTERN}/edge-receipts"),
     ("GET", r"soc/feed"),
     ("GET", rf"soc/graph/{UUID_PATTERN}"),
     ("GET", rf"transfers/{UUID_PATTERN}"),
@@ -171,6 +172,7 @@ def create_mobile_app(
     integrations: IntegrationSettings | None = None,
     *,
     browser_only: bool = False,
+    transfer_key_origin: str | None = None,
 ) -> FastAPI:
     cfg = mobile or MobileSettings()
     core_cfg = settings or Settings()
@@ -209,6 +211,7 @@ def create_mobile_app(
 
     app = FastAPI(title="Qadam Android synthetic gateway", lifespan=lifespan)
     app.state.mobile_settings = cfg
+    app.state.transfer_key_origin = transfer_key_origin
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cfg.cors_origins,
@@ -261,6 +264,10 @@ def create_mobile_app(
     install_staff(app, cfg)
     install_technical_metrics(app)
     install_accounts(app, integrations_enabled=core.state.integration_settings.enabled)
+    if transfer_key_origin:
+        from app.mobile_gateway.transfer_keys import install_transfer_keys
+
+        install_transfer_keys(app, transfer_key_origin)
     install_protection(app, core.state.integration_settings)
     install_callbacks(app, cfg, core.state.integration_settings.enabled)
 
@@ -422,6 +429,14 @@ def create_mobile_app(
         if result.status_code >= 400:
             # Core validation may echo arbitrary inputs; do not forward raw error bodies.
             data = json.dumps({"detail": f"mobile_core_{result.status_code}"}).encode()
+            if result.status_code == 409:
+                with suppress(ValueError):
+                    error = result.json()
+                    if (
+                        isinstance(error, dict)
+                        and error.get("detail") == "disputed_amount_reserved"
+                    ):
+                        data = b'{"detail":"disputed_amount_reserved"}'
         elif path == "integrations/guardian/scam-check":
             # Translate the detected codes once, without resubmitting the customer's text.
             review = ScamCheckResult.model_validate_json(data)
@@ -554,6 +569,10 @@ def create_mobile_app(
                     raise HTTPException(503, "mobile_unavailable") from exc
                 if owner not in (str(principal.subject), str(principal.subject).encode()):
                     raise HTTPException(404, "mobile_transaction_not_found")
+                if transfer_key_origin:
+                    from app.mobile_gateway.transfer_keys import authorize_payment
+
+                    body = await authorize_payment(request, session, principal, body, existing)
             elif path.startswith("transfers/requests/"):
                 request_id = uuid.UUID(path.split("/")[2])
                 res = request.app.state.resources

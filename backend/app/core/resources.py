@@ -41,6 +41,8 @@ class Resources:
             cooling_off_minutes=settings.cooling_off_minutes,
             allow_demo_overrides=settings.allow_demo_overrides,
             allow_model_training=settings.environment != "pilot",
+            use_virtual_wallet=settings.environment != "pilot",
+            observe_familiar_calls=settings.environment != "pilot",
         )
         return cls(session_factory, redis_client, engine, db_engine, owns)
 

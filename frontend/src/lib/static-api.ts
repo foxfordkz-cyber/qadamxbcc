@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { demoPayee, payeeInput } from "./payee-check";
 import { traceRoute } from "./funds-trace";
+import { edgeReceiptRoute } from "./edge-receipts";
 import { anchorsRoute } from "./trace-anchors";
 import { lookbackRoute, priorReceiptQuery } from "./recipient-lookback";
 import { priorReceiptsDemo } from "./demo";
@@ -54,7 +55,7 @@ function dispatch(method: string, route: string, search: URLSearchParams, body: 
   const path = route.split("/");
   if (method === "POST" && route === "payee-check" && !search.size) return demoPayee(payeeInput.parse(body));
   if (method === "GET" && lookbackRoute.test(route)) return priorReceiptsDemo(uuid(path[2]), priorReceiptQuery.parse(Object.fromEntries(search)));
-  if (method === "GET" && (traceRoute.test(route) || anchorsRoute.test(route))) throw new ApiError("traceBackendRequired", 501);
+  if (method === "GET" && (traceRoute.test(route) || anchorsRoute.test(route) || edgeReceiptRoute.test(route))) throw new ApiError("traceBackendRequired", 501);
   if (method === "POST" && route === "transfers/evaluate") {
     const { recipient_card, ...rest } = transferSchema.parse(body);
     if (recipient_card) {

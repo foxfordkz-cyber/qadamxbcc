@@ -120,7 +120,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
   }
   function card(a, hidden) {
     return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance">${icon("eye")}<span>${hidden ? T("Показать баланс", "Балансты көрсету") : T("Скрыть баланс", "Балансты жасыру")}</span></button></div>
-      <div class="q-balance"><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><small>${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</small></div><i class="art art-card" aria-hidden="true"></i></article>`;
+      <div class="q-balance"><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><small>${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</small>${!hidden && Number(a.disputed_kzt)>0 ? "<small>"+T("Доступно", "Қолжетімді")+" "+amount(a.available_kzt)+"</small>" : ""}</div><i class="art art-card" aria-hidden="true"></i></article>`;
   }
   // Anti-fraud tips; each opens an existing protection screen.
   function stories() {
@@ -285,6 +285,8 @@ export function walletUI({ T, E, amount, when, button, status }) {
     if (!review?.policies?.length) return "";
     const formatter = new Intl.NumberFormat(T("ru-KZ", "kk-KZ"), {maximumFractionDigits: 1});
     const value = n => Number.isFinite(n) ? formatter.format(n) : "—";
+    const rowAmount = raw => typeof raw === "string" && /^\d+(?:\.\d{1,2})?$/.test(raw)
+      ? "<small>" + amount(raw) + "</small>" : "";
     const label = T("Пороги риска", "Тәуекел шектері");
     const headings = [
       T("Порог", "Шек"), T("Доп. паузы", "Қосымша кідіріс"),
@@ -294,7 +296,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
     const rows = review.policies.map(row => {
       const name = row.threshold === null ? T("Текущая", "Қазіргі") : "≥ " + value(row.threshold);
       const support = Number.isFinite(row.false_interventions) ? " (" + value(row.false_interventions) + "/" + value(review.legitimate_labelled) + ")" : "";
-      return `<tr><th scope="row">${name}</th><td>${review.evaluated ? value(row.extra_holds) : "—"}</td><td>${value(row.missed_fraud)}</td><td>${value(row.false_per_1000_legitimate)}${support}</td></tr>`;
+      return `<tr><th scope="row">${name}</th><td>${review.evaluated ? value(row.extra_holds) : "—"}</td><td>${value(row.missed_fraud)}${rowAmount(row.missed_fraud_kzt)}</td><td>${value(row.false_per_1000_legitimate)}${support}${rowAmount(row.legitimate_held_kzt)}</td></tr>`;
     }).join("");
     const coverage = review.label_coverage == null ? "—" : value(review.label_coverage * 100) + "%";
     const dates = review.first_sample_at && review.last_sample_at ? E(when(review.first_sample_at)) + " – " + E(when(review.last_sample_at)) : "—";
@@ -305,6 +307,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
       ${review.fraud_labelled + review.legitimate_labelled === 0 ? "<p>" + T("Чтобы появилась разметка, укажите исход расследования при закрытии дела по оценённому переводу.", "Нәтижелерді көрсету үшін бағаланған аударымға қатысты істі жабу кезінде тергеу нәтижесін белгілеңіз.") + "</p>" : ""}
       <p class="fine">${T("Пороги моделируют дополнительные паузы поверх действующих мер.", "Шектер қолданыстағы шараларға қосымша кідірісті модельдейді.")}</p>
       <div class="plot-viewport"><table class="desk-table policy-table" aria-label="${label}"><thead><tr>${headings.map(h => '<th scope="col">' + h + "</th>").join("")}</tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="fine">${T("Суммы в тенге показывают объём пропущенных мошеннических и задержанных честных переводов при каждом пороге.", "Теңгемен берілген сомалар әр шек бойынша өткен алаяқтық және кідіртілген заңды аударымдардың көлемін көрсетеді.")}</p>
       <p class="fine">${T("«—» означает, что данных нет. Оценка качества учитывает подтверждённые исходы закрытых дел. Для этой выборки p95 полного HTTP-запроса недоступен.", "«—» дерек жоқ екенін білдіреді. Сапа бағасына жабылған істердің расталған нәтижелері кіреді. Осы іріктеме үшін толық HTTP сұрауының p95 уақыты қолжетімсіз.")}</p></section>`;
   }
   function soc(d, full = false) {

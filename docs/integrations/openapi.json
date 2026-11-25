@@ -953,6 +953,85 @@
         }
       }
     },
+    "/api/v1/soc/transfers/{transaction_id}/edge-receipts": {
+      "get": {
+        "tags": [
+          "soc"
+        ],
+        "summary": "Inspect Edge",
+        "operationId": "inspect_edge_api_v1_soc_transfers__transaction_id__edge_receipts_get",
+        "parameters": [
+          {
+            "name": "transaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Transaction Id"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Target"
+            }
+          },
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EdgeReceipts"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/soc/accounts/{account_id}/trace-anchors": {
       "get": {
         "tags": [
@@ -4745,6 +4824,83 @@
         ],
         "title": "DemoBankCallResponse"
       },
+      "EdgeReceipt": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount"
+          },
+          "settled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Settled At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "amount",
+          "settled_at"
+        ],
+        "title": "EdgeReceipt"
+      },
+      "EdgeReceipts": {
+        "properties": {
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "source": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Target"
+          },
+          "from_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "From Time"
+          },
+          "before_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Before Time"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EdgeReceipt"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "source",
+          "target",
+          "from_time",
+          "before_time",
+          "items",
+          "has_more"
+        ],
+        "title": "EdgeReceipts"
+      },
       "EnrichmentOut": {
         "properties": {
           "transaction_id": {
@@ -5255,6 +5411,16 @@
             ],
             "title": "Ml Base Score"
           },
+          "shadow_call": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShadowCall"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "ml_model_version": {
             "anyOf": [
               {
@@ -5270,7 +5436,10 @@
             "anyOf": [
               {
                 "type": "string",
-                "const": "tree_path_probability"
+                "enum": [
+                  "tree_path_probability",
+                  "linear_probability_contributions"
+                ]
               },
               {
                 "type": "null"
@@ -6231,6 +6400,12 @@
             "type": "string",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Amount"
+          },
+          "restricted_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Restricted Amount",
+            "default": "0.00"
           },
           "currency": {
             "type": "string",
@@ -7281,6 +7456,30 @@
               }
             ],
             "title": "False Per 1000 Legitimate"
+          },
+          "missed_fraud_kzt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missed Fraud Kzt"
+          },
+          "legitimate_held_kzt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legitimate Held Kzt"
           }
         },
         "type": "object",
@@ -8262,6 +8461,47 @@
         ],
         "title": "ScamSignal"
       },
+      "ShadowCall": {
+        "properties": {
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "score": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "review_threshold": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Review Threshold"
+          },
+          "review_suggested": {
+            "type": "boolean",
+            "title": "Review Suggested"
+          },
+          "contributors": {
+            "items": {
+              "$ref": "#/components/schemas/MLContributorOut"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Contributors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_version",
+          "score",
+          "review_threshold",
+          "review_suggested",
+          "contributors"
+        ],
+        "title": "ShadowCall"
+      },
       "SimulatedUpdate": {
         "properties": {
           "kind": {
@@ -8926,7 +9166,10 @@
             "anyOf": [
               {
                 "type": "string",
-                "const": "tree_path_probability"
+                "enum": [
+                  "tree_path_probability",
+                  "linear_probability_contributions"
+                ]
               },
               {
                 "type": "null"

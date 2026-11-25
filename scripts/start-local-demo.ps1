@@ -210,6 +210,9 @@ try {
     }
 
     Write-Host 'Starting the bilingual frontend...'
+    # This operator workspace is bound to loopback. The hosted demo profile
+    # redirects /soc to the shared jury wallet, which uses a separate ledger.
+    Set-ChildEnvironment 'BCC_ENVIRONMENT' 'local'
     $frontendProcess = Start-Process -FilePath $nodeCommand.Source -ArgumentList @(('"' + $nextPath + '"'), 'start', '--hostname', '127.0.0.1', '--port', "$FrontendPort") -WorkingDirectory $frontendPath -WindowStyle Hidden -RedirectStandardOutput $frontendOut -RedirectStandardError $frontendErr -PassThru
     $startedProcesses.Add($frontendProcess)
     $launchRecord.frontend = @{ pid = $frontendProcess.Id; url = "http://127.0.0.1:$FrontendPort"; stdout = $frontendOut; stderr = $frontendErr }
