@@ -5,14 +5,55 @@ from fastapi import APIRouter, Header, Query, Response
 from sqlalchemy import select
 
 from app.api.deps import SessionDep
+from app.api.v1.guardian_cases import SafeCaseRoute
+from app.db.base import utcnow
 from app.integrations.audit import record
 from app.integrations.errors import IntegrationError
 from app.integrations.guardian_reports import ReportOut, ReportRequest, create_report, report_output
+from app.integrations.message_signals import (
+    EVENTS,
+    ReportOption,
+    SignalInput,
+    SignalReceipt,
+    attach,
+    options,
+)
 from app.integrations.models import GuardianReport, IntegrationAudit
-from app.integrations.security import ConfigDep, PrincipalDep, require_role
+from app.integrations.security import CirclePrincipalDep, ConfigDep, PrincipalDep, require_role
 from app.integrations.telegram.schemas import AuditOut
 
 router = APIRouter(prefix="/guardian", tags=["Guardian demo reports"])
+
+
+async def selectable_reports(
+    session: SessionDep, principal: CirclePrincipalDep, response: Response
+) -> list[ReportOption]:
+    require_role(principal, "owner")
+    response.headers["Cache-Control"] = "no-store"
+    return await options(session, principal.subject)
+
+
+async def consent_signal(
+    report_id: uuid.UUID,
+    body: SignalInput,
+    session: SessionDep,
+    principal: CirclePrincipalDep,
+    response: Response,
+) -> SignalReceipt:
+    require_role(principal, "owner")
+    response.headers["Cache-Control"] = "no-store"
+    return await attach(session, principal.subject, report_id, body)
+
+
+router.add_api_route(
+    "/report-signals", selectable_reports, methods=["GET"], route_class_override=SafeCaseRoute
+)
+router.add_api_route(
+    "/reports/{report_id}/message-signal",
+    consent_signal,
+    methods=["POST"],
+    route_class_override=SafeCaseRoute,
+)
 
 
 @router.post("/reports", response_model=ReportOut, status_code=201)
@@ -37,8 +78,6 @@ async def list_reports(
     response: Response,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> list[ReportOut]:
-    from app.db.base import utcnow
-
     if principal.role != "soc":
         require_role(principal, "owner")
     query = select(GuardianReport).where(
@@ -112,11 +151,11 @@ async def report_history(
         and (row.owner_id != principal.subject or row.contact_id is not None)
     ):
         raise IntegrationError(404, "incident_not_found")
-    rows = await session.scalars(
-        select(IntegrationAudit)
-        .where(IntegrationAudit.resource_id == report_id, IntegrationAudit.owner_id == row.owner_id)
-        .order_by(IntegrationAudit.created_at)
-        .limit(20)
+    query = select(IntegrationAudit).where(
+        IntegrationAudit.resource_id == report_id, IntegrationAudit.owner_id == row.owner_id
     )
+    if row.expires_at <= utcnow() or row.description is None:
+        query = query.where(IntegrationAudit.event.not_in(EVENTS.values()))
+    rows = await session.scalars(query.order_by(IntegrationAudit.created_at).limit(20))
     response.headers["Cache-Control"] = "no-store"
     return [AuditOut.model_validate(a) for a in rows]

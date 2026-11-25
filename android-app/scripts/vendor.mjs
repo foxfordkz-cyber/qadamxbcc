@@ -16,6 +16,7 @@ for (const lang of ["kaz","rus"]) {
   await rm(ocr+"/"+file+".gz", {force:true});
 }
 await mkdir("www/vendor", { recursive: true });
+await copyFile("../frontend/src/lib/message-patterns.mjs", "www/vendor/message-patterns.mjs");
 await copyFile("node_modules/jsqr/dist/jsQR.js", "www/vendor/jsQR.js");
 await copyFile(
   "node_modules/@capacitor/core/dist/index.js",

@@ -25,7 +25,9 @@ async def test_jury_blind_csv_partial_rows_commitment_and_room_isolation() -> No
         AsyncClient(transport=transport, base_url=ORIGIN) as owner,
         AsyncClient(transport=transport, base_url=ORIGIN) as guest,
     ):
-        assert 'lang="kk"' in (await owner.get("/jury/trial")).text
+        trial_page = await owner.get("/jury/trial")
+        assert 'lang="kk"' in trial_page.text
+        assert trial_page.headers["Referrer-Policy"] == "same-origin"
         cases = (await owner.get("/jury/trial/example/cases")).content
         labels = (await owner.get("/jury/trial/example/labels")).content
         data = cases.rstrip() + b"\nbad,0,30000,5,100,0,0\n"

@@ -60,6 +60,7 @@ def install_trial(app: FastAPI, pool: RoomPool) -> None:
             media_type="text/html",
             headers={
                 **NO_STORE,
+                "Referrer-Policy": "same-origin",
                 "Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'; "
                 "object-src 'none'; base-uri 'none'; form-action 'self'",
             },

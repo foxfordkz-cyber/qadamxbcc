@@ -59,6 +59,7 @@ async function exercise(browser, origin, language) {
     await page.locator("textarea").fill(text);
     await page.locator("form").filter({ has: page.locator("#message-check-text") }).getByRole("button").click();
     await page.locator(".safety-result li").first().waitFor();
+    assert.equal(await page.locator(".safety-result mark").first().textContent(), language === "ru" ? "Назовите код" : text);
     assert.equal(await page.locator("textarea").inputValue(), "");
     assert.deepEqual(leaked, []);
     const linkCheck = page.locator(".bank-link-check");

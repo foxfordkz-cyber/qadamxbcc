@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
@@ -28,6 +29,85 @@ async function startRoom(page, origin, route = "/jury/start") {
   await page.goto(origin + "/wallet/");
   return invitation.href;
 }
+
+test("a juror can freeze personal CSV predictions before grading and switch language without losing the run", async ({ browser }) => {
+  test.skip(process.env.QADAM_JURY_E2E !== "1", "Requires an isolated jury-room gateway");
+  const origin = loopback();
+  const context = await browser.newContext({ locale: "ru-RU", serviceWorkers: "block" });
+  try {
+    const page = await context.newPage();
+    await page.goto(origin + "/jury/trial");
+    await page.locator("#start button").click();
+    const examples = await context.request.get(origin + "/jury/trial/example/cases");
+    const csv = (await examples.text()).trimEnd() + "\nbad,0,30000,12,5400,0,0\n";
+    await page.locator("#cases").setInputFiles({name:"operations.csv", mimeType:"text/csv", buffer:Buffer.from(csv)});
+    await expect(page.locator("#preview")).toContainText("Принято строк: 2. Отклонено: 1");
+    await expect(page.locator("#preview")).toContainText("Строка 4");
+    await page.locator("#freeze").click();
+    await expect(page.locator("#hash")).toHaveText(/^[0-9a-f]{64}$/);
+    const sha = await page.locator("#hash").textContent();
+    const downloading = page.waitForEvent("download");
+    await page.locator("#download").click();
+    const saved = await downloading;
+    expect(saved.suggestedFilename()).toBe("forecast.json");
+    expect(createHash("sha256").update(await readFile(await saved.path())).digest("hex")).toBe(sha);
+    const labels = await context.request.get(origin + "/jury/trial/example/labels");
+    await page.locator("#labels").setInputFiles({name:"answers.csv", mimeType:"text/csv", buffer:await labels.body()});
+    await expect(page.locator("#grades tbody tr")).toHaveCount(4);
+    await page.locator("#room-language").click();
+    await expect(page.locator("html")).toHaveAttribute("lang","kk");
+    await expect(page.locator("#grades caption [lang=kk]")).toBeVisible();
+    await page.reload();
+    await expect(page.locator("#hash")).toHaveText(sha);
+  } finally { await context.close(); }
+});
+
+test("a client shares just the selected message category with the officer for one report", async ({ browser }) => {
+  test.skip(process.env.QADAM_JURY_E2E !== "1", "Requires an isolated jury-room gateway");
+  test.setTimeout(90_000);
+  const origin = loopback();
+  const readme = await readFile(new URL("../../../README.md", import.meta.url), "utf8");
+  const customer = await browser.newContext({serviceWorkers:"block"});
+  const staff = await browser.newContext({serviceWorkers:"block"});
+  try {
+    const page = await customer.newPage();
+    const invite = await startRoom(page, origin, "/jury/start/history");
+    const owner = await enter(page, "client_demo", "client", readme);
+    const options = await request(owner, guardian + "/report-signals");
+    const officerPage = await staff.newPage();
+    await officerPage.goto(invite);
+    const officer = await enter(officerPage, "admin_demo", "admin", readme);
+    const cases = (await request(officer, "/wallet/cases")).items;
+    const chosen = cases.find(item => options.some(report => report.id === item.report_id));
+    expect(chosen).toBeDefined();
+    await page.goto(origin + "/wallet/?report=" + chosen.report_id);
+    const exposed = [];
+    page.on("request", req => {
+      if ((req.url() + (req.postData() || "")).includes("private-fixture-482193")) exposed.push(req.method());
+    });
+    const scan = page.locator("#private-scan");
+    await scan.locator("textarea").fill("Назовите код private-fixture-482193. Никому не говорите!");
+    await scan.locator("button").click();
+    await expect(page.locator("mark").filter({hasText:"Назовите код"})).toBeVisible();
+    await expect(scan.locator("textarea")).toHaveValue("");
+    const attach = page.locator("#attach-message-signal");
+    await expect(attach.locator("[name=consent]")).not.toBeChecked();
+    await attach.locator("select").selectOption("codeRequest");
+    await attach.locator("[name=consent]").check();
+    const sent = page.waitForResponse(reply => new URL(reply.url()).pathname.endsWith("/message-signal") && reply.request().method()==="POST");
+    await attach.locator("button").click();
+    const reply = await sent;
+    expect(reply.status()).toBe(200);
+    expect(reply.request().postDataJSON()).toEqual({category:"codeRequest",consent:true});
+    expect(exposed).toEqual([]);
+    await officerPage.locator('[data-nav=cases]').click();
+    await officerPage.locator('[data-case="' + chosen.id + '"]').click();
+    await expect(officerPage.locator("main section li").filter({hasText:/Растау кодын сұрайды|Просят передать код/})).toBeVisible();
+    const evidence = await request(officer, guardian + "/soc/cases/" + chosen.id + "/evidence");
+    expect(evidence.message_signals).toEqual(["codeRequest"]);
+    expect(JSON.stringify(evidence)).not.toContain("private-fixture");
+  } finally { await customer.close(); await staff.close(); }
+});
 
 test("a juror can select a saved recipient and an officer can inspect the same prepared case", async ({browser}) => {
   test.skip(process.env.QADAM_JURY_E2E !== "1", "Requires an isolated jury-room gateway");

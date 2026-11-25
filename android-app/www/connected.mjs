@@ -1,4 +1,5 @@
 import { caseEvidenceView, caseLedgerView } from "./case-evidence.mjs";
+import { messageMatches } from "./vendor/message-patterns.mjs";
 import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
@@ -43,6 +44,13 @@ const webWallet=document.documentElement.hasAttribute("data-web-wallet");
 const juryWallet=document.documentElement.hasAttribute("data-jury-wallet");
 let guardRefreshed = "", guardReceived = 0;
 let scanText = "", reportChoice = false;
+let privateMatches = null, signalChoices = [], attachedTo = null;
+const signalText = {
+  bankClaim:["Представляются банком или полицией","Банк немесе полиция атынан сөйлейді"],
+  safeAccount:["Просят перевод на безопасный счёт","Қауіпсіз шотқа ақша аударуды сұрайды"],
+  secrecy:["Просят хранить тайну или установить приложение","Құпия сақтауды немесе қолданба орнатуды сұрайды"],
+  codeRequest:["Просят передать код","Растау кодын сұрайды"],
+};
 let drafts = {byOperation:{}, last:null};
 const reportKey = id => id || "general";
 function readDrafts(value) {
@@ -117,7 +125,7 @@ async function loadOwner(g, subject) {
 function clearVisible() {
   viewRevision++;nextPoll=0;projector=false;loginName="";
   if(webWallet)history.replaceState({wallet:true},"",location.pathname);
-  scanText=""; reportChoice=false; drafts=readDrafts(null);
+  scanText=""; privateMatches=null; signalChoices=[]; attachedTo=null; reportChoice=false; drafts=readDrafts(null);
   workspaceRead=null; lastRead=null;
   deviceReceipt = partnerSignal = graphAnchor = null;
   dispute = certificate = certificateCheck = disputeQueue = null;
@@ -367,6 +375,8 @@ async function open(next, id, remember=true) {
   lastRead={page:next,id};
   if (next==="confirmCancel") evaluation = null;
   page = next;
+  privateMatches=null; attachedTo=null;
+  if (!["reports","reportDetail"].includes(next)) signalChoices=[];
   if(!samePage || !["home","cases","staff"].includes(next))data=null;
   if(next==="home" && !samePage)summary=null;
   callbackView=queueSnapshot=null;
@@ -1027,6 +1037,21 @@ function scanView() {
   const review = scanResult?.alternate?.language === lang ? scanResult.alternate : scanResult;
   return `${title(T("Проверка сообщения","Хабарламаны тексеру"), T("Вставьте учебное сообщение или выберите скриншот. Уберите коды и реквизиты.", "Оқу хабарламасын енгізіңіз немесе скриншотты таңдаңыз. Кодтар мен деректемелерді алып тастаңыз."))}<section class="paper"><form id="scan-form" class="form-stack"><label>${T("Текст сообщения", "Хабарлама мәтіні")}<textarea name="text" minlength="1" maxlength="2000" required autocomplete="off">${E(scanText)}</textarea></label><button class="primary" type="submit">${T("Проверить", "Тексеру")} →</button></form></section>${button("clear-scan",T("Очистить текст","Мәтінді тазарту"),"text-button")}${review ? `<section class="paper"><h2>${T("Результат", "Нәтиже")}</h2><p>${E(review.guidance)}</p>${(review.signals ?? []).map((s) => `<div class="reason"><p>${E(s.explanation)}</p></div>`).join("")}<p class="fine">${E(review.limitation)}</p></section>` : ""}`;
 }
+function privateFragments() {
+  if (privateMatches === null) return "";
+  if (!privateMatches.length) return "<p>"+T("Знакомые признаки не найдены.","Белгілі белгілер табылмады.")+"</p>";
+  return "<ul>"+privateMatches.map(({code,phrase})=>"<li><mark>"+E(phrase)+"</mark><br>"+E(T(...signalText[code]))+"</li>").join("")+"</ul>";
+}
+function reportSignalView(id) {
+  if (attachedTo===id) return "<p role='status'>"+T("Категория добавлена в это обращение.","Санат осы өтінішке қосылды.")+"</p>";
+  return '<section class="paper"><h2>'+T("Признак подозрительного сообщения","Күдікті хабарламаның белгісі")+'</h2>'+
+    '<form id="private-scan" class="form-stack"><label>'+T("Проверить текст на этом устройстве","Мәтінді осы құрылғыда тексеру")+
+    '<textarea name="text" required maxlength="2000" autocomplete="off"></textarea></label><button>'+T("Найти подозрительные фразы","Күдікті сөздерді табу")+
+    '</button></form>'+privateFragments()+(signalChoices.length?'<form id="attach-message-signal" class="form-stack"><label>'+T("Категория для сотрудника","Қызметкерге жіберілетін санат")+
+    '<select name="category">'+signalChoices.map(c=>'<option value="'+c+'">'+E(T(...signalText[c]))+'</option>').join("")+
+    '</select></label><label><input type="checkbox" name="consent" required>'+T("Согласен передать в это обращение только категорию. Текст останется на устройстве.","Осы өтінішке тек санатты жіберуге келісемін. Мәтін құрылғыда қалады.")+
+    '</label><button>'+T("Добавить в обращение","Өтінішке қосу")+'</button></form>':"")+'</section>';
+}
 function reportView() {
   if (reportChoice) return title(T("Выберите черновик","Нобайды таңдаңыз")) +
     '<section class="paper"><p>'+reportContext(drafts.byOperation[drafts.last]?.transaction_id)+'</p>'+
@@ -1038,6 +1063,10 @@ function reportsView() {
   return `${title(T("Обращения", "Өтініштер"))}${!data?.length ? `<p class="empty">${T("Обращений нет", "Өтініштер жоқ")}</p>` : data.map((r) => `<section class="paper"><span class="status-pill">${E(label(r.state))}</span><p>${E(r.description)}</p><p class="fine">${E(label(r.category))} · ${when(r.created_at)}</p><small>${E(r.id)}</small><button class="text-button" data-object="report" data-object-id="${E(r.id)}">${T("Открыть квитанцию","Түбіртекті ашу")}</button>${gateway.role === "admin" ? `<div class="inline-actions"><button data-ack="${E(r.id)}">${T("Отметить", "Белгілеу")}</button><button data-open-case="${E(r.id)}">${T("Открыть дело", "Іс ашу")}</button></div>` : ""}</section>`).join("")}${button("reports", T("Обновить", "Жаңарту"), "secondary")}`;
 }
 const labels = {
+  MESSAGE_SIGNAL_BANK_CLAIM: signalText.bankClaim,
+  MESSAGE_SIGNAL_SAFE_ACCOUNT: signalText.safeAccount,
+  MESSAGE_SIGNAL_SECRECY: signalText.secrecy,
+  MESSAGE_SIGNAL_CODE_REQUEST: signalText.codeRequest,
   CASE_INFORMATION_REQUIRED:["Сотрудник запросил сведения по обращению","Қызметкер өтініш бойынша қосымша мәлімет сұрады"],
   CASE_REVIEW_CLOSED:["Рассмотрение обращения завершено","Өтінішті қарау аяқталды"],
   CASE_REVIEW_REOPENED:["Рассмотрение обращения возобновлено","Өтініш қайта қаралуда"],
@@ -1399,6 +1428,10 @@ function render() {
 
     if (page === "scan") {
       const form=root.querySelector("#scan-form");
+      form.querySelector("button[type=submit]").textContent=T("Отправить учебный текст на сервер для расширенной проверки","Оқу мәтінін кеңейтілген тексеруге серверге жіберу");
+      form.querySelector("button[type=submit]").insertAdjacentHTML("beforebegin",button("private-check",T("Проверить фразы на устройстве","Сөздерді құрылғыда тексеру"),"secondary",'type="button"'));
+      if (privateMatches!==null) form.parentElement.insertAdjacentHTML("afterend",'<section class="paper">'+privateFragments()+
+        (signalChoices.length?button("reports",T("Выбрать моё обращение","Өтінішімді таңдау"),"secondary"):"")+'</section>');
       form.insertAdjacentHTML("afterbegin",'<label>'+T("Прочитать скриншот","Скриншотты оқу")+'<input class="ocr-input" type="file" accept="image/png,image/jpeg"></label><p class="hint" role="status" id="ocr-status">'+T("Изображение остаётся на телефоне. Перед проверкой можно исправить текст.","Сурет телефонда қалады. Тексерер алдында мәтінді түзете аласыз.")+'</p>');
       form.querySelector("input[type=file]").onchange = async e => {
         const file=e.target.files[0], message=form.querySelector("#ocr-status"), submit=form.querySelector("[type=submit]");
@@ -1431,6 +1464,7 @@ function render() {
       }
     }
     if(page==="reportDetail" && data) {
+      if (gateway.role==="client") root.querySelector("main").insertAdjacentHTML("beforeend",reportSignalView(data.id));
       if(data.transaction_id) root.querySelector("main").insertAdjacentHTML("beforeend",
         '<button class="linked-receipt" data-detail="'+E(data.transaction_id)+'"><span>'+T("Связанная квитанция","Байланысты түбіртек")+'</span><small>'+E(data.transaction_id)+'</small></button>');
       const log=reportHistory.map(e=>'<p>'+E(label(e.event))+' · '+when(e.created_at)+'</p>').join("");
@@ -1498,6 +1532,10 @@ function render() {
         for(const l of root.querySelectorAll(".graph line")) l.classList.toggle("selected-edge", l.dataset.edge===edge?.id);
         root.querySelector("#edge-detail").textContent = edge ? (edge.data.edge_type==="transfer" ? T("Переводы","Аударымдар") : T("Общее устройство","Ортақ құрылғы"))+" · "+edge.data.tx_count : "";
       };
+    }
+    if(page==="case" && gateway?.role==="admin" && caseEvidence?.message_signals?.length) {
+      root.querySelector("main").insertAdjacentHTML("beforeend",'<section class="paper"><h2>'+T("Категории от клиента","Клиент жіберген санаттар")+
+        '</h2><ul>'+caseEvidence.message_signals.filter(code=>Object.hasOwn(signalText,code)).map(code=>'<li>'+E(T(...signalText[code]))+'</li>').join("")+'</ul></section>');
     }
     if(page==="case" && gateway?.role==="admin" && data?.id && caseTransaction && caseTransaction.transaction_id===caseEvidence?.transaction_id){
       const panel=document.createElement("section");
@@ -1770,7 +1808,12 @@ root.addEventListener("click", async (event) => {
     selectReport(act === "report-previous" ? drafts.byOperation[drafts.last]?.transaction_id : reportTx);
     render(); return;
   }
-  if (act === "clear-scan") { scanText=""; scanResult=null; error=""; render(); return; }
+  if (act === "private-check") {
+    privateMatches=messageMatches(root.querySelector("#scan-form textarea").value);
+    signalChoices=privateMatches.map(item=>item.code);
+    scanText=""; scanResult=null; error=""; render(); return;
+  }
+  if (act === "clear-scan") { scanText=""; scanResult=null; privateMatches=null; signalChoices=[]; error=""; render(); return; }
   if (act === "edit-transfer") { await back(); return; }
   if (act === "presets") { presetMode = true; render(); return; }
   if (
@@ -2195,6 +2238,20 @@ root.addEventListener("submit", async (event) => {
     offset = 0;
     await open("home");
     return;
+  }
+  if (form.id === "private-scan" && page==="reportDetail") {
+    privateMatches=messageMatches(String(fields.get("text")));
+    signalChoices=privateMatches.map(item=>item.code); render(); return;
+  }
+  if (form.id==="attach-message-signal" && page==="reportDetail" && gateway?.role==="client") {
+    const id=data.id, code=String(fields.get("category")), g=gateway;
+    if(!fields.has("consent") || !signalChoices.includes(code))return;
+    await perform(async()=>{
+      const saved=await g.api("integrations/guardian/reports/"+id+"/message-signal","POST",{category:code,consent:true});
+      if(gateway===g && page==="reportDetail" && data?.id===id && saved.report_id===id && saved.category===code){
+        attachedTo=id; privateMatches=null; signalChoices=[];
+      }
+    }); return;
   }
   if (form.id === "scan-form") {
     const text = scanText = String(fields.get("text"));

@@ -18,6 +18,7 @@ const apiKey = randomBytes(32).toString("hex");
 const socKey = randomBytes(32).toString("hex");
 const paths = [];
 const circleToken = randomBytes(32).toString("base64url");
+const reportId = "00000000-0000-4000-8000-000000000010";
 let circleCode = "ABCDEF0123456789";
 let signedIn = false;
 const mf = new Miniflare(await convertV4MiniflareOptions({
@@ -30,6 +31,18 @@ const mf = new Miniflare(await convertV4MiniflareOptions({
     const url = new URL(request.url);
     assert.equal(url.origin, upstream);
     if (url.pathname === "/health") return Response.json({ status: "ok" });
+    if (url.pathname.startsWith("/api/v1/integrations/guardian/")) {
+      assert.ok(signedIn);
+      assert.equal(request.headers.get("X-BCC-Circle-Session"), circleToken);
+      assert.equal(request.headers.get("X-BCC-API-Key"), apiKey);
+      if (request.method === "GET" && url.pathname.endsWith("/report-signals")) {
+        return Response.json([{ id:reportId, created_at:"2026-11-25T09:00:00Z" }]);
+      }
+      assert.equal(url.pathname, "/api/v1/integrations/guardian/reports/" + reportId + "/message-signal");
+      assert.equal(request.method, "POST");
+      assert.deepEqual(await request.json(), {category:"codeRequest",consent:true});
+      return Response.json({report_id:reportId,category:"codeRequest"});
+    }
     if (url.pathname.startsWith("/api/v1/trusted-contacts")) {
       assert.equal(request.headers.get("Authorization"), null);
       assert.equal(request.headers.get("X-BCC-API-Key"), apiKey);
@@ -156,6 +169,14 @@ async function checkPrivateCircle() {
   const authenticated = { ...headers, cookie: cookie.split(";")[0] };
   assert.equal((await fetch(login, { method: "POST", headers, body })).status, 401);
   assert.deepEqual(await (await fetch(members, { headers: authenticated })).json(), { contacts: [], private_session: true });
+  const signals = "/api/v1/trusted-circle/report-signals";
+  assert.equal((await fetch(signals)).status, 401);
+  assert.deepEqual(await (await fetch(signals, {headers:authenticated})).json(), [{id:reportId,created_at:"2026-11-25T09:00:00Z"}]);
+  const selection = {report_id:reportId,category:"codeRequest",consent:true};
+  const share = data => fetch(signals, {method:"POST",headers:authenticated,body:JSON.stringify(data)});
+  assert.equal((await share({...selection,consent:false})).status, 422);
+  assert.equal((await share({...selection,text:"sample"})).status, 422);
+  assert.deepEqual(await (await share(selection)).json(), {report_id:reportId,category:"codeRequest"});
   assert.equal((await fetch(members)).status, 401);
   assert.equal((await fetch(login, { method: "DELETE", headers: authenticated })).status, 200);
   assert.equal((await fetch(members, { headers: authenticated })).status, 401);

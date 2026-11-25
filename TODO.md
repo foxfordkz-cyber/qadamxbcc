@@ -22,4 +22,5 @@
 - [x] **T17: Familiar-payee call model.** Trained an explainable specialist, validated paired decisions against v3, published trial errors in Kazakh and Russian, and shipped officer observations and a blinded evaluation runner. The incumbent remains the decision model.
 - [x] **T18: Browser blind trial.** Preview anonymous CSV cases, freeze both model predictions in a jury room and grade them against independently supplied labels.
 - [x] **T19: Verified collection payout replay.** Compare time-bound clearing evidence on matching postings, expired and revoked proofs, and an independent SOC flag.
+- [x] **T20: Consent-based message evidence.** Highlight the original matching words on the device in both languages and let the owner attach one signal category to one open report for SOC review.
 - [ ] **Bank acceptance gates (external dependencies).** Customer/account authorization, authoritative device/deposit feeds, payment outbox adapter, real-data ML validation, SSO/MFA, immutable audit, HA/load testing and policy approval. See `docs/PILOT.md`; these require bank systems and sign-off, not synthetic demo credentials.

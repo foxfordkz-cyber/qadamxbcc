@@ -4,6 +4,7 @@ WORKDIR /src/android-app
 COPY android-app/package*.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY android-app/www ./www
+COPY frontend/src/lib/message-patterns.mjs ../frontend/src/lib/message-patterns.mjs
 COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs android-app/scripts/stage-installer.mjs ./scripts/
 ARG APK_API_ORIGIN=https://saq-bol-mobile.onrender.com
 RUN --mount=type=bind,source=frontend/public/downloads,target=/releases \
