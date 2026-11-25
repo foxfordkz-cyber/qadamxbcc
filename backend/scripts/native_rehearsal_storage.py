@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import time
 from pathlib import Path
 from typing import BinaryIO
 
@@ -84,7 +85,18 @@ class NativeStorage:
             "--appendonly",
             "yes",
         )
-        self.redis_started = True
+        for _ in range(30):
+            try:
+                pid = self.call("cat", self.folder + "/redis.pid").decode().strip()
+                info = self.call("redis-cli", "-p", str(self.redisport), "INFO", "server").decode()
+                if f"process_id:{pid}" in info.splitlines():
+                    self.redis_started = True
+                    break
+            except RuntimeError:
+                pass
+            time.sleep(0.2)
+        if not self.redis_started:
+            raise RuntimeError("Private Redis did not become ready; existing services untouched")
 
     def pg(self, command: str, *args: str, stdin: BinaryIO | None = None) -> bytes:
         return self.call(

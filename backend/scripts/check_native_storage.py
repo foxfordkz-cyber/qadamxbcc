@@ -6,11 +6,11 @@ import subprocess
 import sys
 
 from scripts.native_rehearsal_storage import NativeStorage
-from scripts.rehearse_release_storage import port
+from scripts.rehearse_release_storage import ports
 
 
 def main() -> None:
-    pg, redis = port(), port()
+    pg, redis = ports(2)
     password = secrets.token_hex(20)
     storage = NativeStorage(pg, redis)
     try:

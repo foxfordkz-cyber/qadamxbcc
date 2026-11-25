@@ -10,6 +10,7 @@ import sys
 import time
 import uuid
 from collections.abc import Mapping
+from contextlib import ExitStack
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import BinaryIO
@@ -24,9 +25,17 @@ def run(*args: str, env: Mapping[str, str] | None = None, stdin: BinaryIO | None
 
 
 def port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
+    return ports(1)[0]
+
+
+def ports(count: int) -> list[int]:
+    # Hold all reservations until every port is selected; Windows may reuse a
+    # just-released ephemeral port for the next bind.
+    with ExitStack() as stack:
+        sockets = [stack.enter_context(socket.socket()) for _ in range(count)]
+        for sock in sockets:
+            sock.bind(("127.0.0.1", 0))
+        return [int(sock.getsockname()[1]) for sock in sockets]
 
 
 def main() -> None:
@@ -40,7 +49,7 @@ def main() -> None:
     suffix = secrets.token_hex(5)
     pg, kv = "qadam-pg-" + suffix, "qadam-kv-" + suffix
     password = secrets.token_hex(20)
-    pgport, kvport, http = port(), port(), port()
+    pgport, kvport, http = ports(3)
     api.ORIGIN = f"http://127.0.0.1:{http}"
     env = {
         **os.environ,
