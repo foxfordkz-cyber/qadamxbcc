@@ -18,8 +18,8 @@ test("an older WebView can open the same team account in a browser", async ({ pa
 });
 test("welcome exposes personal sign-in and explains unavailable deployment", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".topbar .wordmark")).toContainText("Saq Bol × BCC");
-  await expect(page.getByRole("heading", {level: 1})).toHaveText(/Кабинетке кіру|Вход в кабинет/);
+  await expect(page.locator(".sign-hero")).toContainText("Saq Bol × BCC");
+  await expect(page.locator(".sign-heading h1")).toHaveText(/Кабинетке кіру|Вход в кабинет/);
   await page.locator('[name="login"]').fill("client_demo");
   await page.locator('[name="password"]').fill("example");
   await page.locator('[data-action="show-password"]').click();

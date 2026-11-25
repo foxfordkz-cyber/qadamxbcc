@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 
 test("the team sign-in adapts its photo and links directly to jury rooms", async ({ page }) => {
+  await page.route("**/", async route => {
+    const response = await route.fetch();
+    const html = (await response.text()).replace("data-product>", "data-product data-web-wallet>");
+    await route.fulfill({response, body:html});
+  });
   for (const [width, height] of [[360, 780], [1920, 1080]]) {
     await page.setViewportSize({ width, height });
     await page.goto("/");
@@ -46,6 +51,7 @@ test("wallet card and chart remain usable at phone widths", async ({
         outgoing: i * 100,
         count: i,
       }));
+      Object.assign(document.querySelector("#app").dataset, {screen:"home", actor:"client"});
       document.querySelector("main").innerHTML =
         views.home(account, { items: [] }, null, false, "") +
         views.analytics(

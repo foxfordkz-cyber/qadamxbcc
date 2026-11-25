@@ -11,7 +11,7 @@ from release_tools import CHANNELS, DOWNLOADS, filename, get_tool, inspect_apk, 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("apk", type=Path)
-    parser.add_argument("--channel", choices=CHANNELS, default="team")
+    parser.add_argument("--channel", choices=["team"], default="team")
     parser.add_argument("--sdk-tools", type=Path, required=True)
     parser.add_argument("--source", required=True)
     parser.add_argument("--date", type=date.fromisoformat, required=True)
@@ -24,7 +24,9 @@ def main():
     path = DOWNLOADS / manifest
     prior = read_record(path) if path.exists() else read_record(historical)
     if prior["package"] != record["package"]:
-        prior = read_record(historical)
+        prior = read_record(DOWNLOADS / "team.json")
+        if prior["package"] != record["package"]:
+            parser.error("Incompatible team release baseline")
     if record["versionCode"] < prior["versionCode"] or (record["versionCode"] == prior["versionCode"]
                                                        and digest != prior["apk_sha256"]):
         parser.error("Increment the Android versionCode for a new build")
@@ -40,6 +42,10 @@ def main():
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(record, indent=2) + "\n", encoding="utf8")
     tmp.replace(path)
+    # Older tools still fetch this URL. Deploy both files in the same site revision.
+    alias = DOWNLOADS / "team.json"
+    copyfile(path, alias.with_suffix(".tmp"))
+    alias.with_suffix(".tmp").replace(alias)
     print(name, digest)
 
 

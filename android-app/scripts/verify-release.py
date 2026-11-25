@@ -31,5 +31,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apksigner", type=Path, help="Android SDK apksigner to validate the signature and manifest")
     args = parser.parse_args()
+    if read_record(DOWNLOADS / "team.json") != read_record(DOWNLOADS / "current.json"):
+        raise ValueError("Compatibility manifest differs from the canonical release")
     for channel in CHANNELS:
         verify(channel, args.apksigner)

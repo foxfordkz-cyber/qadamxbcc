@@ -17,7 +17,7 @@ async function enter(page,baseURL,fixture={}) {
       status = fixture.inboxStatus || 200;
       json = {items: actions ? fixture.actions || [] : fixture.messages || []};
     }
-    else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",supports_call_question:fixture.supportsCallQuestion,recipients:fixture.recipients || [{name:"Арман",phone:"+77010000002"}]};
+    else if(path==="account")json={display_name:"Алия",card_last4:"1001",balance:"50000",active_pause:fixture.activePause,supports_call_question:fixture.supportsCallQuestion,recipients:fixture.recipients || [{name:"Арман",phone:"+77010000002"}]};
     else if(path==="api/payee-check"){
       const body=route.request().postDataJSON();
       fixture.payee=body;
@@ -73,6 +73,27 @@ test("a held receipt opens its own conversation and reuses it on return",async({
   await page.getByRole("button",{name:"Открыть дело и переписку"}).click();
   await expect(page.locator("#app")).toHaveAttribute("data-screen","reportDetail");
   expect(fixture.reviewPosts).toBe(1);
+});
+
+test("light and dark wallet retain the same held transfer and review action",async({page,baseURL},info)=>{
+  const fixture={activePause:ids[0],operations:[{...items[0],status:"cooling_off",cooling_until:new Date(Date.now()+600000).toISOString()}]};
+  await enter(page,baseURL,fixture);
+  await expect(page.locator("html")).toHaveAttribute("data-theme","light");
+  await expect(page.locator(".q-card")).toBeVisible();
+  await expect(page.locator(".protection-index")).toContainText("Перевод на проверке");
+  await page.screenshot({path:info.outputPath("client-light.png"),animations:"disabled"});
+  await page.locator(".profile-entry").click();
+  const toggle=page.getByRole("switch",{name:/Тёмная тема/});
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked","true");
+  await page.locator("[data-nav=home]").click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
+  await expect(page.locator(".q-card")).toBeVisible();
+  await page.screenshot({path:info.outputPath("client-dark.png"),animations:"disabled"});
+  await page.locator(`[data-detail="${ids[0]}"]`).first().click();
+  await expect(page.getByRole("button",{name:/Это мой перевод/})).toBeVisible();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
 });
 
 test("dashboard hierarchy, hidden amounts and RU/KK fit phone and desktop at large text",async({page,baseURL},info)=>{

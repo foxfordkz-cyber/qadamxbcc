@@ -34,3 +34,9 @@ export async function installBackHandler(handler) {
       if (!handler()) await App.minimizeApp();
     });
 }
+
+export async function installedBuild() {
+  if (!Capacitor.isNativePlatform()) return null;
+  const {version, build} = await App.getInfo();
+  return {version, build};
+}
