@@ -59,6 +59,16 @@ test("a juror can select a saved recipient and an officer can inspect the same p
     const linked = cases.find(item => item.report_id === reports[0].id);
     expect(linked).toBeDefined();
     await officerPage.locator('[data-nav="cases"]').click();
+    const waiting = (await request(officer, "/wallet/cases?awaiting_first_action=true")).items;
+    const queueFilter = officerPage.locator('[data-action="first-action-filter"]');
+    await queueFilter.click();
+    await expect(queueFilter).toHaveAttribute("aria-pressed", "true");
+    await expect(officerPage.locator("button[data-case]")).toHaveCount(waiting.length);
+    expect(await officerPage.locator("button[data-case]").evaluateAll(rows =>
+      rows.map(row => row.dataset.case),
+    )).toEqual(waiting.map(row => row.id));
+    await queueFilter.click();
+    await expect(queueFilter).toHaveAttribute("aria-pressed", "false");
     await officerPage.locator(`[data-case="${linked.id}"]`).click();
     const source = officerPage.locator(".reason-groups").locator(
       `[data-detail="${reports[0].transaction_id}"]`,

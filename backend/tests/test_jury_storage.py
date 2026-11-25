@@ -182,6 +182,93 @@ async def test_original_credit_certificate_and_review(
         }
 
 
+async def test_first_hour_queue_follows_report_time_and_only_staff_actions(
+    rooms: Path, connect: Callable[[int], Redis]
+) -> None:
+    from datetime import datetime, timedelta
+
+    from app.db.base import utcnow
+    from app.integrations.cases.models import CaseEvent, FraudCase
+    from app.integrations.models import GuardianReport
+
+    storage = jury_storage(rooms, connect)
+    now = utcnow()
+    async with (
+        storage.room(1) as room,
+        AsyncClient(transport=ASGITransport(app=room), base_url="http://localhost") as http,
+    ):
+        owner = await sign_in(http, "client_demo", "customer fixture")
+        officer = await sign_in(http, "admin_demo", "officer fixture")
+        cases = []
+        async with room.state.resources.session_factory() as db:
+            for age, state in [(25, "NEW"), (75, "NEW"), (85, "CLOSED")]:
+                identity = uuid.uuid4()
+                report = GuardianReport(
+                    id=identity,
+                    owner_id=storage.mobile.customer_id,
+                    idempotency_key=uuid.uuid4(),
+                    content_hash=identity.hex,
+                    category="other",
+                    state="SUBMITTED",
+                    created_at=now - timedelta(minutes=age),
+                    expires_at=now + timedelta(days=1),
+                )
+                case = FraudCase(
+                    id=uuid.uuid4(),
+                    report_id=identity,
+                    source="guardian_timeout",
+                    category="other",
+                    state=state,
+                    created_at=now - timedelta(minutes=5),
+                    expires_at=report.expires_at,
+                )
+                db.add_all([report, case])
+                await db.flush()
+                db.add(
+                    CaseEvent(
+                        case_id=case.id,
+                        key=uuid.uuid4(),
+                        version=1,
+                        actor_id=identity,
+                        actor_role="system",
+                        code="OPENED",
+                        state=state,
+                        request_hash=identity.hex,
+                        result={},
+                        created_at=case.created_at,
+                    )
+                )
+                cases.append(str(case.id))
+            await db.commit()
+        queue = BASE + "/wallet/cases?awaiting_first_action=true"
+        assert (await http.get(queue, headers=owner)).status_code == 403
+        snapshot = (await http.get(queue, headers=officer)).json()
+        before = snapshot["items"]
+        assert [r["id"] for r in before] == [cases[1], cases[0]]
+        assert before[0]["first_staff_action_at"] is None
+        sampled = datetime.fromisoformat(snapshot["sampled_at"])
+        assert datetime.fromisoformat(before[0]["first_action_due_at"]) < sampled
+        assert datetime.fromisoformat(before[1]["first_action_due_at"]) > sampled
+        route = BASE + f"/api/integrations/guardian/soc/cases/{cases[1]}/actions"
+        changed = await http.post(
+            route,
+            headers={**officer, "Idempotency-Key": str(uuid.uuid4())},
+            json={
+                "action": "transition",
+                "state": "IN_REVIEW",
+                "reason": "review_started",
+                "expected_version": 1,
+            },
+        )
+        assert changed.is_success, changed.text
+        assert [r["id"] for r in (await http.get(queue, headers=officer)).json()["items"]] == [
+            cases[0]
+        ]
+        history = (await http.get(BASE + "/wallet/cases", headers=officer)).json()["items"]
+        handled = next(r for r in history if r["id"] == cases[1])
+        assert datetime.fromisoformat(handled["first_staff_action_at"]) >= now
+
+
 async def sign_in(http: AsyncClient, login: str, password: str) -> dict[str, str]:
     reply = await http.post(BASE + "/auth/login", json={"login": login, "password": password})
     assert reply.status_code == 200

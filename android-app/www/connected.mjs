@@ -28,6 +28,14 @@ let callbackView=null, queueSnapshot=null, callbackAttempt=null;
 let awaitingReplyCount=0, nextCallbackCheck=0;
 let homeNotices=[], homeInboxUnavailable=false, nextHomeInboxRead=0;
 let walletDays=7,socDays=7,selectedDay=null,caseFilter="",caseOffset=0,backStack=[];
+let awaitingFirstAction = false;
+
+function caseListPath() {
+  const params = new URLSearchParams({offset: String(caseOffset)});
+  if (caseFilter) params.set("state", caseFilter);
+  if (awaitingFirstAction) params.set("awaiting_first_action", "true");
+  return "/wallet/cases?" + params;
+}
 let lastRead=null;
 let viewRevision=0, loginName="", projector=false;
 let polling=false, nextPoll=0;
@@ -115,6 +123,7 @@ function clearVisible() {
   dispute = certificate = certificateCheck = disputeQueue = null;
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
+  awaitingFirstAction = false;
   callbackView=queueSnapshot=callbackAttempt=null;
   awaitingReplyCount=nextCallbackCheck=0;
   homeNotices=[];homeInboxUnavailable=false;nextHomeInboxRead=0;
@@ -326,7 +335,7 @@ async function readWorkspace(next) {
     panel("feed",()=>g.api("soc/feed?"+params),v=>{data=v});
   } else if(next==="cases") {
     if(juryWallet) panel("disputes",()=>g.request("/wallet/disputes"),v=>{disputeQueue=v;});
-    panel("cases",()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),v=>{data=v});
+    panel("cases",()=>g.request(caseListPath()),v=>{data=v});
     panel("queue",()=>g.api("integrations/guardian/soc/cases/analytics"),v=>{queueSnapshot=v});
   } else {
     panel(next,()=>g.request(next==="staff"?"/admin/staff":"/admin/metrics"),v=>{data=v});
@@ -471,7 +480,7 @@ async function open(next, id, remember=true) {
     else if (next === "reports")
       data = await api("integrations/guardian/reports");
     else if(product && next==="cases") {
-      data=await gateway.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:""));
+      data=await gateway.request(caseListPath());
       queueSnapshot=await api("integrations/guardian/soc/cases/analytics");
     }
     else if (next === "cases")
@@ -1132,10 +1141,29 @@ function systemView() {
 }
 const caseStates={NEW:["Новое","Жаңа"],IN_REVIEW:["В работе","Қарастырылуда"],NEEDS_INFORMATION:["Ждём уточнения","Жауап күтілуде"],ESCALATED:["Передано старшему","Аға маманға берілді"],RESOLVED:["Разбор завершён","Талдау аяқталды"],CLOSED:["Закрыто","Жабылды"]};
 const caseState=k=>caseStates[k]?T(...caseStates[k]):E(k);
+function firstActionLabel(record, sample) {
+  if (!record.reported_at || !sample) return "";
+  const start = Date.parse(record.reported_at);
+  const first = Date.parse(record.first_staff_action_at);
+  if (Number.isFinite(first)) {
+    const minutes = Math.max(0, Math.floor((first - start) / 60000));
+    return T("Первое действие через " + minutes + " мин", "Алғашқы әрекет " + minutes + " мин өткенде жасалды");
+  }
+  if (["CLOSED", "RESOLVED"].includes(record.state)) return T("Действие сотрудника в журнале отсутствует", "Журналда қызметкердің әрекеті жоқ");
+  const remaining = Date.parse(record.first_action_due_at) - Date.parse(sample);
+  if (remaining <= 0) return T("Первый час истёк · ждёт сотрудника", "Бір сағат өтті · қызметкердің әрекеті күтілуде");
+  const minutes = Math.ceil(remaining / 60000);
+  return T("До конца первого часа " + minutes + " мин", "Бірінші сағаттың аяқталуына " + minutes + " мин қалды");
+}
 function casesView() {
   if(product)return title(T("Дела SOC","SOC істері"))+desk.queue(queueSnapshot)+button("reports",T("Обращения клиентов","Клиент өтініштері"),"secondary")+
     '<form id="case-filter" class="ledger-filter"><label>'+T("Статус дела","Істің күйі")+'<select name="state"><option value="">'+T("Все дела","Барлық істер")+'</option>'+Object.keys(caseStates).map(k=>'<option value="'+k+'" '+(caseFilter===k?'selected':'')+'>'+caseState(k)+'</option>').join("")+'</select></label><button class="secondary">'+T("Применить","Қолдану")+'</button></form>'+
-    ((data?.items||[]).map(c=>'<button class="live-row" data-case="'+E(c.id)+'"><div><strong>'+E(label(c.category))+'</strong><span class="status-pill">'+caseState(c.state)+'</span></div><small>'+when(c.created_at)+'</small></button>').join("")||'<p class="empty">'+T("По этому фильтру дел нет.","Бұл сүзгі бойынша іс жоқ.")+'</p>')+
+    (data?.sampled_at ? '<section class="paper"><h2>'+T("Первый час после обращения","Өтініш түскеннен кейінгі алғашқы сағат")+'</h2><p>'+
+      T("Учебная цель — первое действие сотрудника в течение 60 минут с момента обращения.","Оқу мақсаты — өтініш түскеннен кейін 60 минут ішінде қызметкердің алғашқы әрекетін тіркеу.")+'</p>'+
+      '<button class="secondary" data-action="first-action-filter" aria-pressed="'+awaitingFirstAction+'">'+
+      (awaitingFirstAction ? T("Показать все дела","Барлық істі көрсету") : T("Ждут сотрудника · сначала давние","Қызметкерді күткендер · ерте түскені алдымен"))+'</button></section>' : "")+
+    ((data?.items||[]).map(c=>'<button class="live-row" data-case="'+E(c.id)+'"><div><strong>'+E(label(c.category))+'</strong><span class="status-pill">'+caseState(c.state)+'</span></div><small>'+when(c.reported_at ?? c.created_at)+'</small>'+
+      (data.sampled_at ? '<small>'+E(firstActionLabel(c,data.sampled_at))+'</small>' : "")+'</button>').join("")||'<p class="empty">'+T("По этому фильтру дел нет.","Бұл сүзгі бойынша іс жоқ.")+'</p>')+
     (caseOffset?button("case-prev",T("Назад","Артқа"),"secondary"):"")+(data?.has_more?button("case-next",T("Ещё","Тағы"),"secondary"):"");
   return `${title(T("Дела SOC", "SOC істері"))}<div class="inline-actions">${button("reports", T("Обращения", "Өтініштер"), "secondary")}</div>${(data?.items ?? []).map((c) => `<button class="live-row" data-case="${E(c.id)}"><div><strong>${E(label(c.category))}</strong><span class="status-pill">${E(caseState(c.state))}</span></div><small>${when(c.created_at)} · v${Number(c.version)}</small></button>`).join("") || `<p class="empty">${T("Дел пока нет", "Істер әзірге жоқ")}</p>`}${data?.next_cursor ? button("cases-more", T("Ещё", "Тағы"), "secondary") : ""}`;
 }
@@ -1712,6 +1740,12 @@ root.addEventListener("click", async (event) => {
   if(act==="clear-period"){ledgerFilter=defaultLedger();offset=0;await open("history");return;}
   if(act==="analytics"||act==="history"||act==="socAnalytics"){offset=0;if(act==="history")ledgerFilter=defaultLedger();await open(act);return;}
   if(act==="case-prev"||act==="case-next"){caseOffset=Math.max(0,caseOffset+(act==="case-prev"?-20:20));await open("cases");return;}
+  if (act === "first-action-filter") {
+    awaitingFirstAction = !awaitingFirstAction;
+    caseOffset = 0;
+    await open("cases");
+    return;
+  }
   if (act === "show-password") {
     const field = root.querySelector('[name=password]');
     const reveal = field.type === "password";
@@ -2347,7 +2381,7 @@ async function refreshVisible() {
     staff:()=>g.request("/admin/staff"),
     inbox:()=>g.request("/inbox"),
     reports:()=>g.api("integrations/guardian/reports"),
-    cases:()=>g.request("/wallet/cases?offset="+caseOffset+(caseFilter?"&state="+caseFilter:"")),
+    cases:()=>g.request(caseListPath()),
     notifications:()=>g.api("trusted-contacts/transactions/"+id+"/notifications"),
     timeline:()=>g.api("integrations/soc/transactions/"+id+"/timeline?limit=50"),
     analytics:()=>g.request("/wallet/analytics?days="+walletDays),
