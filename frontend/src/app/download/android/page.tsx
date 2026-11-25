@@ -6,6 +6,7 @@ import { LanguageSwitch } from "@/components/language-switch";
 import { LocaleProvider, useLocale } from "@/lib/i18n";
 import release from "../../../../public/downloads/current.json";
 import legacy from "../../../../public/downloads/legacy-website-2.9.json";
+import wallets from "@/lib/connected-wallet.json";
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -36,12 +37,12 @@ function Installer() {
     <section className="installer-help">
       <h2>{kk ? "Телефон және ноутбук — бір операция" : "Телефон и ноутбук — одна операция"}</h2>
       <p>{kk ? "Бұл APK мен төмендегі кабинет бір оқу серверіне қосылған. Телефонда client_demo, ноутбукта admin_demo арқылы кіріңіз. SOC тізімінен телефондағы түбіртектің операция нөмірін іздеңіз." : "Этот APK и кабинет ниже подключены к одному учебному серверу. На телефоне войдите как client_demo, на ноутбуке — admin_demo. Найдите в ленте SOC номер операции из квитанции телефона."}</p>
-      <a className="installer-browser" href="https://saq-bol-mobile.onrender.com/soc/">{kk ? "Осы APK-ның SOC кабинетін ашу" : "Открыть SOC для этого APK"}<ArrowUpRight aria-hidden size={17} /></a>
+      <a className="installer-browser" href={wallets.socUrl}>{kk ? "Осы APK-ның SOC кабинетін ашу" : "Открыть SOC для этого APK"}<ArrowUpRight aria-hidden size={17} /></a>
       <h2>{kk ? "Орнату" : "Установка"}</h2>
       <p>{kk ? "Телефоныңызда жүктелген APK файлын ашып, Android сұрауын растаңыз. Командалық нұсқа орнатылса, деректер сақталады." : "Откройте скачанный APK на телефоне и подтвердите установку в Android. Если установлен командный кошелёк, обновление сохранит его данные."}</p>
       <details><summary>{kk ? "Кіру экраны ашылмаса" : "Если не появился экран входа"}</summary>
         <p>{kk ? "Google Play арқылы Android System WebView мен Chrome қолданбаларын жаңартып, әмиянды қайта ашыңыз. Командалық тіркелгімен браузерден де кіруге болады." : "Обновите Android System WebView и Chrome через Google Play и снова откройте кошелёк. В командный аккаунт также можно войти из браузера."}</p>
-        <a href="https://saq-bol-mobile.onrender.com/wallet/">{kk ? "Командалық әмиянды ашу" : "Открыть командный кошелёк"}</a>
+        <a href={wallets.url}>{kk ? "Командалық әмиянды ашу" : "Открыть командный кошелёк"}</a>
       </details>
       <details><summary>{kk ? "APK файлын тексеру" : "Проверить файл APK"}</summary><p>SHA-256</p><code>{release.apk_sha256}</code></details>
       <details><summary>{kk ? "Сайттың бұрынғы нұсқасы орнатылған ба?" : "Уже установлен прежний кошелёк с сайта?"}</summary>

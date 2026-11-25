@@ -1,5 +1,7 @@
 import { Capacitor, registerPlugin } from "./vendor/capacitor.js";
 import { Gateway, GatewayError, isWalletRole } from "./gateway.mjs";
+import { checkProtocol } from "./compatibility.mjs";
+import { installedBuild } from "./native.mjs";
 const vault = registerPlugin("DeviceVault");
 const native = Capacitor.isNativePlatform();
 export const hasNativeDialer = native;
@@ -44,6 +46,10 @@ async function getGateway() {
   if (!origin) throw new GatewayError(503);
   const gateway=new Gateway(origin, undefined, origin);
   gateway.webSession=web;
+  const info = await installedBuild();
+  const support = await checkProtocol(gateway, info ? Number(info.build) : null);
+  if (support === "update_required") throw new GatewayError(426);
+  if (support === "invalid") throw new GatewayError(502);
   return gateway;
 }
 export async function signIn(login, password, remember = true) {

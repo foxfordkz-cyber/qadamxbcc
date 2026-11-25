@@ -38,7 +38,7 @@ function caseListPath() {
 }
 let lastRead=null;
 let viewRevision=0, loginName="", projector=false;
-let polling=false, nextPoll=0;
+let polling=false, pollBackoff=new PollBackoff(), pollFailure="";
 const webWallet=document.documentElement.hasAttribute("data-web-wallet");
 const juryWallet=document.documentElement.hasAttribute("data-jury-wallet");
 let guardRefreshed = "", guardReceived = 0;
@@ -115,7 +115,7 @@ async function loadOwner(g, subject) {
   if(target && g.role!=="platform_admin")await open(...target);
 }
 function clearVisible() {
-  viewRevision++;nextPoll=0;projector=false;loginName="";
+  viewRevision++;pollBackoff=new PollBackoff();pollFailure="";projector=false;loginName="";
   if(webWallet)history.replaceState({wallet:true},"",location.pathname);
   scanText=""; reportChoice=false; drafts=readDrafts(null);
   workspaceRead=null; lastRead=null;
@@ -135,6 +135,7 @@ import { Gateway, gatewayOrigin, remainingSeconds } from "./gateway.mjs";
 import { installBackHandler } from "./native.mjs";
 import { currentTheme, toggleTheme } from "./theme-mode.mjs";
 import { socUI } from "./soc-ui.mjs";
+import { PollBackoff, pollInterval } from "./poll-backoff.mjs";
 
 const root = document.querySelector("#app");
 const E = (value) =>
@@ -225,6 +226,7 @@ const errText = (code) =>
       "Сессия истекла. Войди снова.",
       "Сессия аяқталды. Қайта кір.",
     ),
+    426: T("Версия приложения несовместима с сервером. Скачайте обновление с сайта Saq Bol.","Қолданба нұсқасы сервермен үйлеспейді. Жаңартуды Saq Bol сайтынан жүктеңіз."),
     403: T(
       "У этой роли нет доступа к действию.",
       "Бұл рөлге әрекет қолжетімсіз.",
@@ -2422,7 +2424,7 @@ root.addEventListener("input", event => {
 });
 // Reconcile visible read models only. A form or an in-flight mutation always wins.
 async function refreshVisible() {
-  if (!product || !gateway?.token || loading || polling || document.hidden || Date.now()<nextPoll) return;
+  if (!product || !gateway?.token || loading || polling || document.hidden || !pollBackoff.ready(Date.now())) return;
   const editing=()=>{
     const search=root.querySelector("#search-form input");
     return document.activeElement?.matches("input,textarea,select") ||
@@ -2495,9 +2497,9 @@ async function refreshVisible() {
   };
   if(screen==="case" && g.role==="admin" && ["owner_demo","guardian_timeout","guardian_signal"].includes(data?.source))read=async()=>{
     const casePath="integrations/guardian/soc/cases/"+data.id;
-    const state=await readCallback(g,"/cases/"+data.id+"/callback");
-    if (!here() || same(callbackView,state)) return;
-    const [current,history]=await Promise.all([g.api(casePath),g.api(casePath+"/history")]);
+    const [state,current]=await Promise.all([readCallback(g,"/cases/"+data.id+"/callback"),g.api(casePath)]);
+    if (!here() || Number(current.version)<Number(data.version) || same(callbackView,state) && same(current,data)) return;
+    const history=await g.api(casePath+"/history");
     if(here()){data=current;caseEvents=history.items;callbackView=state;render();}
   };
   if(screen==="reportDetail" && data?.id)read=async()=>{
@@ -2508,14 +2510,17 @@ async function refreshVisible() {
   };
   if(!read)return;
   polling=true;
-  try{await read();}
+  try{await read();if(g===gateway){pollBackoff.success(Date.now(),pollInterval(screen));if(pollFailure && error===pollFailure){error="";pollFailure="";if(here())render();}}}
   catch(e){
     if(here() && e.status===401){clearVisible();await identity.write("session",null);error=errText(401);render();}
-    if(e.status===429)nextPoll=Date.now()+Math.max(1000,(Number(e.retryAfter)||60)*1000);
+    if(g===gateway){
+      pollBackoff.failure(Date.now(),e.status,e.retryAfter);
+      if(here() && e.status!==401){pollFailure=T("Не удалось обновить данные. Показан последний полученный статус. Повторим автоматически.","Деректер жаңартылмады. Соңғы алынған күй көрсетілген. Автоматты түрде қайталаймыз.");error=pollFailure;render();}
+    }
   }finally{polling=false;}
 }
 setInterval(refreshVisible,3000);
-window.addEventListener("online",refreshVisible);
+window.addEventListener("online",()=>{pollBackoff.reconnect();void refreshVisible();});
 document.addEventListener("visibilitychange", () => {
   if (product && !document.hidden && !loading && page==="guard")void open(page,selectedId,false);
   else void refreshVisible();

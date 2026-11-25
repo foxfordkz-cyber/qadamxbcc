@@ -7,6 +7,7 @@ async function login(page,baseURL,role,handle) {
     const url=new URL(route.request().url());
     if(!url.pathname.startsWith("/mobile/v1/")) return route.fulfill({response:await route.fetch({url:new URL(url.pathname,baseURL).href})});
     const path=url.pathname.slice("/mobile/v1".length);
+    if(path==="/compatibility")return route.fulfill({json:{api_major:1,minimum_android_build:0}});
     if(path==="/auth/login")return route.fulfill({json:{role,subject,token:"synthetic"}});
     const response=await handle(path,route.request());
     await route.fulfill(response);

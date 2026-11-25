@@ -210,6 +210,9 @@ def create_mobile_app(
                         await task
 
     app = FastAPI(title="Qadam Android synthetic gateway", lifespan=lifespan)
+    from app.mobile_gateway.compatibility import install_compatibility
+
+    install_compatibility(app, cfg)
     app.state.mobile_settings = cfg
     app.state.transfer_key_origin = transfer_key_origin
     app.add_middleware(

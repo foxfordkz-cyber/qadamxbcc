@@ -2,7 +2,8 @@ apply plugin: 'com.android.application'
 
 def usbRehearsal = System.getenv('QADAM_USB_REHEARSAL') == '1'
 def configuredOrigin = (System.getenv('QADAM_API_ORIGIN') ?: '').trim()
-def apiOrigin = configuredOrigin ?: 'https://saq-bol-mobile.onrender.com'
+def ecosystem = new groovy.json.JsonSlurper().parse(rootProject.file('../../frontend/src/lib/connected-wallet.json'))
+def apiOrigin = configuredOrigin ?: ecosystem.apiOrigin
 if (apiOrigin && !(apiOrigin ==~ /https:\/\/[a-zA-Z0-9.-]+/)) {
     throw new GradleException("Set a canonical HTTPS mobile API origin")
 }
@@ -14,7 +15,7 @@ android {
         applicationId "kz.qadamx.bccshield"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 23
+        versionCode 24
         versionName "2.9"
         manifestPlaceholders = [appLabel: "@string/app_name", activityLabel: "@string/title_activity_main"]
         resValue "string", "qadam_api_origin", apiOrigin
@@ -46,7 +47,7 @@ android {
             applicationIdSuffix ".website"
             debuggable false
             signingConfig signingConfigs.debug
-            resValue "string", "qadam_api_origin", "https://saq-bol-mobile.onrender.com"
+            resValue "string", "qadam_api_origin", ecosystem.apiOrigin
             resValue "string", "website_app_name", "Saq Bol × BCC · 2.9"
             manifestPlaceholders = [appLabel: "@string/website_app_name", activityLabel: "@string/website_app_name"]
         }

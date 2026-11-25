@@ -93,6 +93,7 @@ test("sign-in can recover from a service outage without granting a role early", 
       });
       return route.fulfill({ response: asset });
     }
+    if (path.endsWith("/compatibility")) return route.fulfill({json:{api_major:1,minimum_android_build:0}});
     if (path.endsWith("/auth/login")) {
       attempts += 1;
       return route.fulfill({

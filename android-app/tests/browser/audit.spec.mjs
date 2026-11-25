@@ -12,6 +12,7 @@ async function enter(page,baseURL,fixture={}) {
     if(!u.pathname.startsWith("/mobile/v1/")) return route.fulfill({response:await route.fetch({url:new URL(u.pathname,baseURL).href})});
     const path=u.pathname.slice(11);
     let status=200, json={};
+    if(path==="compatibility")return route.fulfill({json:{api_major:1,minimum_android_build:0}});
     if(path==="auth/login")json={role:"client",subject:"audit-fixture",token:"fixture-session"};
     else if(path==="inbox"){
       fixture.inboxReads=(fixture.inboxReads||0)+1;
@@ -368,7 +369,7 @@ test("home refreshes security updates without frequent inbox reads or stale tran
   await enter(page,baseURL,fixture);
   const home=page.locator(".home-security");
   await expect(home.locator("[data-inbox-state=FAMILY_APPROVAL_RECORDED]")).toBeVisible();
-  await page.clock.fastForward(12000);
+  await page.clock.runFor(12000);
   expect(fixture.inboxReads).toBe(1);
   fixture.messages = Array.from({length:30},()=>({
     kind:"transfer",state:"approved",object_id:ids[0],time:"2026-11-21T12:00:00Z",
@@ -376,7 +377,7 @@ test("home refreshes security updates without frequent inbox reads or stale tran
   fixture.actions = Array.from({length:4},(_,index)=>({
     kind:"report",state:"CASE_INFORMATION_REQUIRED",object_id:"cccccccc-cccc-4ccc-8ccc-ccccccccccc"+index,time:"2026-11-21T10:02:00Z",
   }));
-  await page.clock.fastForward(25000);
+  await page.clock.runFor(25000);
   await expect(home.locator("[data-inbox-state=CASE_INFORMATION_REQUIRED]:visible")).toHaveCount(3);
   await home.locator(".more-security summary").click();
   await expect(home.locator("[data-inbox-state=CASE_INFORMATION_REQUIRED]:visible")).toHaveCount(4);

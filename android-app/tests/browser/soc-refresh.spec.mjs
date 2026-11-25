@@ -15,6 +15,7 @@ for (const width of [393,1440]) test(`SOC ${width}: same receipt, graph evidence
     const u=new URL(route.request().url());
     if(!u.pathname.startsWith("/mobile/v1/"))return route.fulfill({response:await route.fetch({url:new URL(u.pathname,baseURL).href})});
     const path=u.pathname.slice(11);let json={},status=200;
+    if(path==="compatibility")return route.fulfill({json:{api_major:1,minimum_android_build:0}});
     if(path==="auth/login")json={role,subject:role,token:"fixture-session"};
     else if(path==="session"&&route.request().method()==="DELETE")return route.fulfill({status:204});
     else if(path==="inbox")json={items:[]};
