@@ -1,13 +1,13 @@
 {
   "package": "kz.qadamx.bccshield.demo",
-  "versionCode": 22,
+  "versionCode": 24,
   "version": "2.9",
   "minSdk": 24,
   "certificate_sha256": "0dd732df01a3c1d98ec7b2ebfbd448b7d783080bfc784845676df8eb10aad0ab",
   "api_origin": "https://saq-bol-mobile.onrender.com",
-  "apk_sha256": "83d2f7366a47a24b22904261602e729963a949697c17dca7fc050e5d3d7b48b5",
-  "bytes": 10605848,
-  "date": "2026-11-24",
-  "url": "/downloads/Saq-Bol-2.9-83d2f7366a47.apk",
-  "source_commit": "aba72791fbe8ec02b17ffefffd7fb49ff67153ac"
+  "apk_sha256": "119355ceea55b6087c357006ae14b2f272a72de00538521948d68362ecdfebf1",
+  "bytes": 10754120,
+  "date": "2026-11-25",
+  "url": "/downloads/Saq-Bol-2.9-119355ceea55.apk",
+  "source_commit": "24e51149210c8fd4bc96815b457d2b7d55d7e537"
 }
