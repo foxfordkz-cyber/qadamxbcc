@@ -1,0 +1,105 @@
+{
+  "as_of": "2026-11-25T09:15:00+00:00",
+  "issuer": "jury-clearing-register",
+  "examples": {
+    "valid": {
+      "proof": "valid",
+      "observed": {
+        "score": 97,
+        "decision": "blocked"
+      },
+      "contextual": {
+        "score": 15,
+        "decision": "approved"
+      },
+      "received_at": "2026-11-25T09:00:00+00:00",
+      "expires_at": "2026-11-25T10:15:00+00:00",
+      "revoked_at": null
+    },
+    "expired": {
+      "proof": "expired",
+      "observed": {
+        "score": 97,
+        "decision": "blocked"
+      },
+      "contextual": {
+        "score": 97,
+        "decision": "blocked"
+      },
+      "received_at": "2026-11-25T09:00:00+00:00",
+      "expires_at": "2026-11-25T09:14:59+00:00",
+      "revoked_at": null
+    },
+    "revoked": {
+      "proof": "revoked",
+      "observed": {
+        "score": 97,
+        "decision": "blocked"
+      },
+      "contextual": {
+        "score": 97,
+        "decision": "blocked"
+      },
+      "received_at": "2026-11-25T09:00:00+00:00",
+      "expires_at": "2026-11-25T10:15:00+00:00",
+      "revoked_at": "2026-11-25T09:14:59+00:00"
+    },
+    "future": {
+      "proof": "future",
+      "observed": {
+        "score": 97,
+        "decision": "blocked"
+      },
+      "contextual": {
+        "score": 97,
+        "decision": "blocked"
+      },
+      "received_at": "2026-11-25T09:16:00+00:00",
+      "expires_at": "2026-11-25T10:15:00+00:00",
+      "revoked_at": null
+    },
+    "mismatch": {
+      "proof": "mismatch",
+      "observed": {
+        "score": 97,
+        "decision": "blocked"
+      },
+      "contextual": {
+        "score": 97,
+        "decision": "blocked"
+      },
+      "received_at": "2026-11-25T09:00:00+00:00",
+      "expires_at": "2026-11-25T10:15:00+00:00",
+      "revoked_at": null
+    },
+    "flagged": {
+      "proof": "valid",
+      "observed": {
+        "score": 100,
+        "decision": "blocked"
+      },
+      "contextual": {
+        "score": 100,
+        "decision": "blocked"
+      },
+      "received_at": "2026-11-25T09:00:00+00:00",
+      "expires_at": "2026-11-25T10:15:00+00:00",
+      "revoked_at": null
+    }
+  },
+  "test_seed": 250126,
+  "cohort": {
+    "observed": {
+      "honest": 12,
+      "fraud": 12,
+      "false_pauses": 12,
+      "caught": 12
+    },
+    "contextual": {
+      "honest": 12,
+      "fraud": 12,
+      "false_pauses": 6,
+      "caught": 12
+    }
+  }
+}

@@ -11,6 +11,7 @@ import { LanguageSwitch } from "./language-switch";
 import { MobileQr } from "./mobile-qr";
 import { ScenarioPolicy } from "./scenario-policy";
 import { ModelTrial } from "./model-trial";
+import { SettlementTrial } from "./settlement-trial";
 import wallets from "@/lib/connected-wallet.json";
 import "./landing.css";
 
@@ -111,6 +112,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
         </article>
       )}</div>
       <ScenarioPolicy />
+      <SettlementTrial />
       <ModelTrial />
     </section>
 

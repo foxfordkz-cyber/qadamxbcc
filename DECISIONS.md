@@ -21,3 +21,7 @@ The first specialist missed three additional labelled scams in the sensor-loss c
 ### Jury CSV trial, 25 November 2026
 
 Run the existing blind-call scorer on accepted rows of anonymous UTF-8 CSVs, with at most 32 rows per jury run. Store only the latest frozen forecast in its private ephemeral room. Reject repeated identifiers on all affected rows. Bind the downloadable forecast and subsequent grade to the same SHA-256, and keep labels out of scoring. The room and its examples use synthetic transfers.
+
+### Clearing evidence in the collection exhibit
+
+Only the synthetic clearing register supplies settlement evidence. Match the posting reference, debtor, beneficiary, currency and integer amount, and require receipt before scoring, a current validity window and no effective revocation. Re-evaluate collection-only pressure with the matched payout attributed to clearing in an isolated projection. Preserve the observed ledger and all decisions with independent warnings. The paired trial is read-only and never changes a customer payment decision.
