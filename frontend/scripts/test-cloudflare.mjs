@@ -77,7 +77,8 @@ try {
       const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
       checkInitialLanguageSwitch(header);
       assert.match(header, /<img\b[^>]*src="\/saq-bol-mark\.svg"/, pathname);
-      assert.ok(header.includes('href="https://saq-bol-jury.onrender.com/"'), pathname);
+      const entry = pathname === "/" ? "https://saq-bol-mobile.onrender.com/wallet/" : "https://saq-bol-jury.onrender.com/";
+      assert.ok(header.includes(`href="${entry}"`), pathname);
       assert.ok(html.includes('href="https://saq-bol-mobile.onrender.com/wallet/"'), pathname);
     }
     if (pathname === "/") {
@@ -90,7 +91,7 @@ try {
   for (const path of ["/soc", "/soc?workspace=full"]) {
     const response = await fetch(path, { redirect: "manual" });
     assert.ok([303, 307, 308].includes(response.status), "Hosted SOC requires wallet sign-in");
-    assert.equal(response.headers.get("location"), "https://saq-bol-jury.onrender.com/");
+    assert.equal(response.headers.get("location"), "https://saq-bol-mobile.onrender.com/soc/");
   }
   assert.equal((await (await fetch("/health")).json()).status, "ok");
   assert.deepEqual(await (await fetch("/health?tour=1")).json(), { source: "api" });
