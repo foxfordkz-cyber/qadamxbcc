@@ -14,6 +14,14 @@ async function enter(page,baseURL,fixture={}) {
     let status=200, json={};
     if(path==="compatibility")return route.fulfill({json:{api_major:1,minimum_android_build:0}});
     if(path==="auth/login")json={role:"client",subject:"audit-fixture",token:"fixture-session"};
+    else if(path==="wallet/cash" && route.request().method()==="GET")json=fixture.cash || null;
+    else if(path==="wallet/cash"){
+      const body=route.request().postDataJSON();
+      fixture.cash={...body,state:body.caller_requested_cash?"cooling_off":"ready",until:"2026-11-26T10:15:00Z"};
+      json=fixture.cash;
+    }else if(path.endsWith("/cancel") && path.startsWith("wallet/cash/")){
+      fixture.cash={...fixture.cash,state:"cancelled"};json=fixture.cash;
+    }
     else if(path==="inbox"){
       fixture.inboxReads=(fixture.inboxReads||0)+1;
       if (fixture.inboxGate) await fixture.inboxGate;
@@ -383,4 +391,17 @@ test("home refreshes security updates without frequent inbox reads or stale tran
   await expect(home.locator("[data-inbox-state=CASE_INFORMATION_REQUIRED]:visible")).toHaveCount(4);
   await expect(home.locator("[data-inbox-state=FAMILY_APPROVAL_RECORDED]")).toHaveCount(0);
   expect(fixture.inboxReads).toBe(2);
+});
+
+test("client reports a cash request during a call and cancels the held instruction",async({page,baseURL})=>{
+  const fixture={};
+  await enter(page,baseURL,fixture);
+  await page.locator('[data-action="cash-open"]').click();
+  const form=page.locator("#cash-window-form");
+  await form.locator("select").selectOption("yes");
+  await form.locator("button").click();
+  await expect(page.locator('[data-action="cash-cancel"]')).toBeVisible();
+  expect(fixture.cash.caller_requested_cash).toBe(true);
+  await page.locator('[data-action="cash-cancel"]').click();
+  await expect(page.getByRole("status")).toContainText("Снятие отменено");
 });
