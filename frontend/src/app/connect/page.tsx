@@ -23,7 +23,7 @@ function WalletEntry() {
     }
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
-    const timeout = setTimeout(() => { controller.abort(); setExpired(true); }, 60_000);
+    const timeout = setTimeout(() => { controller.abort(); setExpired(true); }, 90_000);
     async function check() {
       try {
         const response = await fetch("/api/wallet-readiness?stand=" + encodeURIComponent(stand), {
@@ -43,11 +43,14 @@ function WalletEntry() {
   return <main className="shell"><LanguageSwitch /><section aria-live="polite">
     <h1>{!destination ? (kk ? "Стенд табылмады" : "Стенд не найден") : expired ?
       (kk ? "Стенд әзірге жауап бермеді" : "Стенд пока не ответил") :
-      (kk ? "Сервер іске қосылуда" : "Сервер просыпается")}</h1>
-    {destination && !expired && <p>{kk ? "Әдетте 20–40 секунд қажет. Әмиян дайын болғанда өзі ашылады." :
-      "Обычно это занимает 20–40 секунд. Кошелёк откроется, когда сервер будет готов."}</p>}
+      (kk ? "Стендке қосылып жатырмыз" : "Подключаемся к стенду")}</h1>
+    {destination && !expired && <p>{kk ? "Алғашқы қосылу шамамен бір минут алуы мүмкін. Стенд дайын болғанда автоматты түрде ашылады." :
+      "Первый запуск может занять около минуты. Когда стенд будет готов, он откроется автоматически."}</p>}
     {destination && expired && <button type="button" onClick={() => { setExpired(false); setAttempt(n => n + 1); }}>
       {kk ? "Қайта тексеру" : "Проверить ещё раз"}</button>}
+    {destination && <p><a href={destination}>{stand === "wallet"
+      ? (kk ? "Әмиянды тікелей ашу" : "Открыть кошелёк напрямую")
+      : (kk ? "Стендті тікелей ашу" : "Открыть стенд напрямую")}</a></p>}
     <p><Link href="/mobile">{kk ? "Аударым симуляторын ашу" : "Открыть симулятор перевода"}</Link></p>
   </section></main>;
 }

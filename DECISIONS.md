@@ -86,6 +86,10 @@ The adapter contract is a proposed bank interface. Decision state is distinct fr
 
 Older clients asked for bigger type. Rather than a second set of font sizes, the "Aa" switch on the site and Profile → Large text in Android scale the whole document (`zoom`), so layouts keep their proportions. The choice is a per-device preference in localStorage.
 
+## Public wallet readiness (26 Nov 2026)
+
+The Cloudflare Worker probes each configured Render health endpoint with manual redirect handling. A redirect or a response without the expected JSON leaves the stand pending. In workerd, passing `redirect: "error"` throws before the network request. The compiled Worker test exercises the real fetch path for both origins. Visitors can open the same configured stand directly during the bounded 90-second wait.
+
 ## Pitch as a slide deck (26 Nov 2026, later)
 
 A scrolling page read as a website, not a pitch. `/pitch` is now a 1920×1080 deck scaled to the screen: 14 slides, 300 seconds, one idea per slide and one moving explanation each (the scam call, the antifraud blind spot, a 3D stack of the four layers, the live phone, the freezing card, the Telegram link, the 3D drop network, the tilted SOC screen, the decision gauge). Animations replay on every entry; heavy 3D mounts only for the current and adjacent slides. Controls hide while the mouse rests. The scrolling page moved to `/pitch/web`. PDFs in `docs/pitch/` are full-HD screenshots of each slide with the 3D rendered, because a print of the page would lose the WebGL scenes.

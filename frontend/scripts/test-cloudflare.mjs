@@ -21,6 +21,11 @@ const circleToken = randomBytes(32).toString("base64url");
 const reportId = "00000000-0000-4000-8000-000000000010";
 let circleCode = "ABCDEF0123456789";
 let signedIn = false;
+const walletConfig = JSON.parse(await readFile("src/lib/connected-wallet.json", "utf8"));
+const teamProbe = new URL(walletConfig.readiness.team.url, walletConfig.url).href;
+const juryProbe = new URL(walletConfig.readiness.jury.url, walletConfig.juryUrl).href;
+const walletRequests = [];
+let walletResponds = false;
 const mf = new Miniflare(await convertV4MiniflareOptions({
   name: config.name, modules, modulesRoot: directory,
   compatibilityDate: config.compatibility_date, compatibilityFlags: config.compatibility_flags,
@@ -29,6 +34,14 @@ const mf = new Miniflare(await convertV4MiniflareOptions({
     BCC_DEMO_UPSTREAM_API_KEY: apiKey, BCC_DEMO_UPSTREAM_SOC_KEY: socKey },
   outboundService: async request => {
     const url = new URL(request.url);
+    if (url.href === teamProbe || url.href === juryProbe) {
+      walletRequests.push(url.href);
+      assert.equal(request.method, "GET");
+      assert.equal(request.headers.get("cookie"), null);
+      assert.equal(request.headers.get("authorization"), null);
+      if (!walletResponds) return Response.redirect("https://warming.example/");
+      return Response.json(url.href === teamProbe ? { status: "ready" } : { status: "ok", mode: "synthetic-jury" });
+    }
     assert.equal(url.origin, upstream);
     if (url.pathname === "/health") return Response.json({ status: "ok" });
     if (url.pathname.startsWith("/api/v1/integrations/guardian/")) {
@@ -83,6 +96,22 @@ try {
   await checkPrivateCircle();
   const connect = await fetch("/connect?stand=wallet");
   assert.equal(connect.status, 200, "/connect warm-up page");
+  const readiness = stand => fetch("/api/wallet-readiness?stand=" + stand, {
+    headers: { cookie: "test-session=private", authorization: "Bearer fixture" },
+  });
+  const cold = await readiness("wallet");
+  assert.equal(cold.status, 503);
+  assert.equal(cold.headers.get("retry-after"), "4");
+  assert.deepEqual(await cold.json(), { ready: false });
+  walletResponds = true;
+  for (const stand of ["wallet", "soc", "jury", "trial"]) {
+    const ready = await readiness(stand);
+    assert.equal(ready.status, 200, stand);
+    assert.equal(ready.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await ready.json(), { ready: true });
+  }
+  assert.equal((await readiness("unknown")).status, 400);
+  assert.deepEqual(walletRequests, [teamProbe, teamProbe, teamProbe, juryProbe, juryProbe]);
   for (const pathname of ["/", "/mobile", "/pitch", "/pitch/console", "/pitch/web"]) {
     const response = await fetch(pathname);
     assert.equal(response.status, 200, pathname);
