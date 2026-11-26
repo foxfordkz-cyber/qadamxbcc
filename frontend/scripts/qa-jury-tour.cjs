@@ -6,6 +6,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright-core')
 require('tsx/cjs');
 const { feedDemo, graphDemo } = require('../src/lib/demo.ts');
 const { ids } = require('../src/lib/demo-ids.ts');
+const wallets = require('../src/lib/connected-wallet.json');
 
 const origin = process.argv[2];
 assert.ok(origin && ['localhost', '127.0.0.1'].includes(new URL(origin).hostname), 'Pass a localhost preview URL');
@@ -54,14 +55,14 @@ async function walk(browser, viewport, lang, cold) {
     }
   }
   const next = () => page.locator('.tour-next').click();
+  const enterTour = navigate => Promise.all([page.waitForRequest('**/health?tour=1'), navigate()]);
   try {
-    const probe = page.waitForRequest('**/health?tour=1');
     if (cold) {
-      await page.goto(tourUrl);
+      await enterTour(() => page.goto(tourUrl));
     } else {
       await page.goto(origin);
       assert.equal(await page.locator('#tab-soc, .demo-bar, #personal-login').count(), 0);
-      assert.equal(await page.locator('.public-signin').getAttribute('href'), 'https://saq-bol-jury.onrender.com/');
+      assert.equal(await page.locator('.public-signin').getAttribute('href'), wallets.url);
       if (viewport.width === 360) {
         const menu = page.locator('.public-menu-toggle');
         await menu.click();
@@ -69,7 +70,7 @@ async function walk(browser, viewport, lang, cold) {
         await menu.click();
         assert.equal(await menu.getAttribute('aria-expanded'), 'false');
       }
-      const entry = page.locator('.land-hero').getByRole('link', { name: lang === 'ru' ? 'Демо для жюри' : 'Қазыларға арналған көрсетілім' });
+      const entry = page.locator('.land-hero').getByRole('link', { name: lang === 'ru' ? 'Смотреть демо' : 'Демоны көру' });
       await entry.waitFor();
       await page.evaluate(() => document.fonts.ready);
       const box = await entry.boundingBox();
@@ -80,9 +81,8 @@ async function walk(browser, viewport, lang, cold) {
         assert.equal(await card.locator('.proof-marks .counted').count(), stopped);
         assert.equal((await card.locator('.proof-result strong').innerText()).trim(), stopped + ' / 60');
       }
-      await entry.click();
+      await enterTour(() => entry.click());
     }
-    await probe;
     if (cold) {
       await page.getByText(lang === 'ru' ? 'Подготавливаем стенд…' : 'Стендті дайындап жатырмыз…').waitFor();
       await page.clock.fastForward(60_001);
@@ -144,6 +144,7 @@ async function walk(browser, viewport, lang, cold) {
     await next(); await page.locator('.tour-guide .tour-skip').click();
     await page.waitForURL(url => url.pathname === '/mobile' && !url.search);
     await page.locator('.wallet-home-account').waitFor();
+    assert.equal(await page.locator('.jury-entry').getAttribute('href'), wallets.juryUrl);
     assert.equal(await page.evaluate(() => sessionStorage.getItem('saqbol.jury-tour.v1')), null);
     assert.deepEqual(errors, []);
     console.log(`${viewport.width}×${viewport.height} ${lang.toUpperCase()}: six stops, ${cold ? '60 s fallback' : 'warm API'}, isolation, replay and skip passed; zero console errors or horizontal overflow`);

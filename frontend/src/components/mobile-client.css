@@ -325,10 +325,10 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .home-tools .wallet-home-account h3 { font-family: var(--font-display); font-weight: 560; font-size: 15px; color: var(--muted); letter-spacing: 0; }
 
 /* Risk fills the screen, not a box. */
-.phone-stage[data-risk=cooling_off] .phone-frame { background: linear-gradient(180deg, #E3EDF3 0%, #F1F5F7 34%, var(--bg) 78%); }
+.phone-stage[data-risk=cooling_off] .phone-frame { background: linear-gradient(180deg, #FFF3DC 0%, #FFF9EE 34%, var(--bg) 78%); }
 .phone-stage[data-risk=blocked] .phone-frame { background: linear-gradient(180deg, #F3E1E2 0%, #F7F1F1 34%, var(--bg) 78%); }
-.phone-stage[data-risk=approved] .phone-frame { background: linear-gradient(180deg, #E4EFE9 0%, #F2F6F3 34%, var(--bg) 78%); }
-:root:has(.mobile-shell .phone-stage[data-risk=cooling_off]) body { background: linear-gradient(180deg, #E3EDF3, var(--bg) 60vh) no-repeat; }
+.phone-stage[data-risk=approved] .phone-frame { background: linear-gradient(180deg, #E6F6EF 0%, #F2FAF6 34%, var(--bg) 78%); }
+:root:has(.mobile-shell .phone-stage[data-risk=cooling_off]) body { background: linear-gradient(180deg, #FFF3DC, var(--bg) 60vh) no-repeat; }
 :root:has(.mobile-shell .phone-stage[data-risk=blocked]) body { background: linear-gradient(180deg, #F3E1E2, var(--bg) 60vh) no-repeat; }
 .phone-stage[data-risk] .phone-receipt { background: rgba(255, 255, 255, .7); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .receipt-card { width: 100%; margin: -6px 0 2px; }
@@ -357,3 +357,15 @@ button.appbar-back:hover:not(:disabled) { background: var(--surface-3); }
 .wallet-home-services .secondary svg:first-child { background: var(--surface-3); color: var(--ink); border-radius: 50%; }
 .wallet-home-services, .home-tools h3 { font-family: var(--font-display); }
 .wallet-home-services { border-radius: 26px; box-shadow: none; border: 1px solid var(--line); }
+
+/* ---- bcc.kz layer for the standalone client (/mobile), 26 November 2026 ---- */
+.mobile-topbar { background: transparent; border-bottom: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.mobile-topbar .topbar-inner { max-width: 560px; margin-top: 8px; border-radius: var(--r-lg); background: var(--surface); }
+.mobile-shell { position: relative; isolation: isolate; }
+.home-tools .wallet-home-account, .wallet-home-services { padding: 18px; border: 0; border-radius: var(--r-card); background: var(--surface); box-shadow: none; }
+.home-tools .wallet-home-account h3 { color: var(--ink-3); font-weight: 700; }
+.wallet-balance b { font-weight: 700; letter-spacing: -.03em; }
+.wallet-home-services .secondary { border: 0; border-radius: var(--r-md); background: var(--surface-2); }
+.wallet-home-services .secondary:hover:not(:disabled) { background: var(--emerald-soft); }
+.wallet-home-services .secondary svg:first-child { background: var(--emerald-soft); color: var(--emerald-dark); }
+.wallet-links a { border-radius: var(--r-md); }

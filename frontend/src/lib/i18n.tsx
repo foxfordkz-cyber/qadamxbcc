@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Lang } from "./contracts";
 
 const messages = {
-  tourEntry: ["Қазыларға арналған көрсетілім", "Демо для жюри"],
+  tourEntry: ["Демоны көру", "Смотреть демо"],
   tourName: ["Қауіпсіз аударым", "Защита перевода"],
   tourPrepare: ["Стендті дайындап жатырмыз…", "Подготавливаем стенд…"],
   tourWait: ["Банк сервисінің жауабын күтеміз. Ең көбі бір минут.", "Ждём ответа сервиса банка. Это займёт до минуты."],

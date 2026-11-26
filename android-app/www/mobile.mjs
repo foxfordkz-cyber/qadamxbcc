@@ -1,6 +1,6 @@
 import {revealChartSelection,stepChart} from "./spending-chart.mjs";
 import {walletUI,icon as walletIcon,formatTenge as money} from "./wallet.mjs";
-import {offlineWallet} from "./offline-wallet.mjs";
+import {offlineWallet,SAMPLE_OPERATIONS,sampleInstant} from "./offline-wallet.mjs";
 import {ledgerTime,ledgerInstant} from "./wallet-date.mjs";
 import { COPY } from "./copy.mjs";
 import {
@@ -143,8 +143,17 @@ function transfer() {
 function review() {
   return `${heading(t("review"))}<div class="paper"><span class="eyebrow">${t(preset)}</span><div class="amount">${money(PRESETS[preset].amount)}</div><dl><dt>${t("recipient")}</dt><dd>${PRESETS[preset].recipient}</dd></dl></div><p class="callout">${icon("shield")}<span>${t("reviewNote")}</span></p>${action("confirm", t("confirm"))}`;
 }
+function sampleReceipt(sample) {
+  const held = sample.heldDuringCall === true;
+  const steps = held
+    ? [[t("sampleCreated"), sample.counterparty], [t("sampleHeld"), t("sampleHeldNote")], [t("sampleCancelled"), t("sampleKept")]]
+    : [[t("sampleCreated"), sample.counterparty], [t("sampleSent"), t("sampleNoSignals")]];
+  return `<div class="receipt"><span class="result-icon ${sample.status}">${icon(held ? "close" : "check")}</span>${heading(t(held ? "sampleHeldTitle" : "sampleSentTitle"), t(held ? "sampleHeldText" : "sampleSentText"))}<div class="amount">${money(sample.amount)}</div><p>${esc(sample.counterparty)} · ${date(Date.parse(sampleInstant(sample)))}</p></div><section class="paper"><h2>${t("timeline")}</h2><ol class="timeline">${steps.map(([step, note]) => `<li><strong>${esc(step)}</strong><small>${esc(note)}</small></li>`).join("")}</ol><p class="fine">${t("sampleNote")}</p></section>${action("home", t("done"))}`;
+}
 function receipt() {
   const tx = state.transfers.find((item) => item.id === currentId);
+  const sample = SAMPLE_OPERATIONS.find((item) => item.id === currentId);
+  if (!tx && sample) return sampleReceipt(sample);
   if (!tx) return heading(t("empty"));
   const statusIcon =
     tx.status === "approved"
@@ -187,7 +196,7 @@ function render() {
     history:practiceHistory,
   };
   app.dataset.screen=route;app.dataset.actor="client";
-  app.innerHTML=`<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${t("back")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>saq bol</span></div><button class="text-button" data-action="language">${T("ҚАЗ","РУС")}</button></header><main><div class="offline-source">${T("Офлайн · учебные данные телефона","Офлайн · телефондағы оқу деректері")}<button data-action="connect">${T("Войти","Кіру")}</button></div>${storageFailed?'<p class="network-note">'+t("storageError")+'</p>':""}${(screens[route]??home)()}</main><nav class="bottom-nav connected-nav">${mainRoutes.map(key=>`<button data-route="${key}" aria-current="${selected===key?"page":"false"}"><b>${walletIcon(key)}</b><span>${key==="analytics"?T("Аналитика","Талдау"):t(key)}</span></button>`).join("")}</nav></div>`;
+  app.innerHTML=`<div class="shell"><header class="topbar"><button class="back" data-action="back" aria-label="${t("back")}">←</button><div class="wordmark"><img src="mark.svg" alt=""><span>saq bol</span></div><button class="text-button" data-action="language">${T("ҚАЗ","РУС")}</button></header><main><div class="offline-source"><span>${T("Офлайн-режим","Офлайн режим")}</span><button data-action="connect">${T("Войти","Кіру")}</button></div>${storageFailed?'<p class="network-note">'+t("storageError")+'</p>':""}${(screens[route]??home)()}</main><nav class="bottom-nav connected-nav">${mainRoutes.map(key=>`<button data-route="${key}" aria-current="${selected===key?"page":"false"}"><b>${walletIcon(key)}</b><span>${key==="analytics"?T("Аналитика","Талдау"):t(key)}</span></button>`).join("")}</nav></div>`;
   if(route==="analytics")revealChartSelection(app);
 
 }
@@ -232,6 +241,13 @@ app.addEventListener("click", async (event) => {
   if(["settings","history","safety","analytics"].includes(button.dataset.action)){navigate(button.dataset.action);return;}
   if (button.dataset.route) {
     navigate(button.dataset.route);
+    return;
+  }
+  // Saved recipients and "+" open the practice transfer; the offline ledger has no free-form payee.
+  if (button.dataset.payee || button.dataset.action === "new-recipient") {
+    preset = "everyday";
+    draftId = null;
+    navigate("transfer");
     return;
   }
   if (button.dataset.preset && Object.hasOwn(PRESETS, button.dataset.preset)) {

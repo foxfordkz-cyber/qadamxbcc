@@ -3,58 +3,59 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   Saq Bol design system — 2026 refresh (see docs/DESIGN_SYSTEM.md)
-   One quiet premium system: warm silver page, graphite ink, a deep emerald
-   brand and colour that appears only when money is at risk (amber = held,
-   red = blocked). Onest for text, Geologica for display numerals and titles;
-   both carry every Kazakh letter and the tenge sign (checked in tests).
+   Saq Bol design system — bcc.kz alignment, 26 November 2026
+   (see docs/DESIGN_SYSTEM.md). Palette, heading face and shapes measured on
+   bcc.kz: canvas #F5F5FA, ink #1D1D1E, green #00AB75, Roboto Flex headings,
+   12 px buttons, 16–24 px cards. Green text and buttons use #00875C/#007A53,
+   the same hue at 4.5:1 with white. Amber = held (as in the Android wallet),
+   red = blocked. Onest for text; Roboto Flex for titles and amounts. Both carry
+   every Kazakh letter and the tenge sign (checked in tests).
    ========================================================================== */
 :root {
   color-scheme: light;
   /* Surfaces */
-  --bg: #F2F3F0;
+  --bg: #F5F5FA;
   --surface: #FFFFFF;
-  --surface-2: #F8F9F6;
-  --surface-3: #ECEEEA;
-  --surface-glass: rgba(255, 255, 255, .72);
+  --surface-2: #F9F9FB;
+  --surface-3: #EFEFF4;
+  --surface-glass: rgba(255, 255, 255, .78);
   /* Text */
-  --ink: #0E1311;
-  --ink-2: #252D29;
-  --ink-3: #3B4540;
-  --muted: #5B6661;
-  --subtle: #87918C;
+  --ink: #1D1D1E;
+  --ink-2: #3A3A3B;
+  --ink-3: #565658;
+  --muted: #6E6F75;
+  --subtle: #9C9DA3;
   /* Lines */
-  --line: rgba(14, 19, 17, .08);
-  --line-strong: rgba(14, 19, 17, .15);
-  /* Brand: deep emerald with a bright signal tone for glow and dark surfaces */
-  --emerald: #0B7A56;
-  --emerald-dark: #086446;
-  --emerald-ink: #064C35;
-  --emerald-soft: #E5F1EA;
-  --emerald-line: #C6E0D2;
-  --signal: #2FD39A;
-  /* Status */
-  /* "Held" is ice, not amber: cool like the silver and emerald, and it is the freeze metaphor. */
-  --amber: #5E8BA8;
-  --amber-ink: #2C5670;
-  --amber-deep: #1F3F53;
-  --amber-soft: #EAF2F7;
-  --amber-line: #CFE0EA;
+  --line: #E7E7EB;
+  --line-strong: #D8D8DD;
+  /* Brand: the bcc.kz green; --signal is the bright tone for fills and dark surfaces */
+  --emerald: #00875C;
+  --emerald-dark: #007A53;
+  --emerald-ink: #00613F;
+  --emerald-soft: #E6F6EF;
+  --emerald-line: #B9E6D4;
+  --signal: #00AB75;
+  /* Status: held is amber, as in the wallet; blocked is red */
+  --amber: #E39B1B;
+  --amber-ink: #9A5B00;
+  --amber-deep: #6E4100;
+  --amber-soft: #FFF6E5;
+  --amber-line: #F6DDB0;
   --red: #D92D3A;
   --red-ink: #A3141F;
-  --red-soft: #FDEDEC;
+  --red-soft: #FCEBEC;
   --red-line: #F4CACD;
   /* Metal */
-  --silver: linear-gradient(135deg, #FBFCFA 0%, #DCE0DC 38%, #F4F5F2 55%, #C3C9C5 100%);
+  --silver: linear-gradient(135deg, #FBFBFD 0%, #DEDEE4 38%, #F5F5FA 55%, #C6C7CE 100%);
   /* Shape */
-  --r-card: 28px;
-  --r-lg: 18px;
-  --r-md: 14px;
-  --r-sm: 10px;
-  --shadow-sm: 0 1px 2px rgba(14, 19, 17, .05);
-  --shadow: 0 1px 2px rgba(14, 19, 17, .04), 0 18px 40px -26px rgba(14, 19, 17, .22);
-  --shadow-lg: 0 40px 90px -40px rgba(14, 19, 17, .45);
-  --focus: 0 0 0 3px rgba(11, 122, 86, .3);
+  --r-card: 24px;
+  --r-lg: 16px;
+  --r-md: 12px;
+  --r-sm: 8px;
+  --shadow-sm: 0 1px 2px rgba(29, 29, 30, .04);
+  --shadow: 0 1px 2px rgba(29, 29, 30, .03), 0 14px 32px -24px rgba(29, 29, 30, .18);
+  --shadow-lg: 0 40px 80px -40px rgba(29, 29, 30, .4);
+  --focus: 0 0 0 3px rgba(0, 135, 92, .3);
   --on-ink: #FFFFFF;
   /* Motion */
   --ease-out: cubic-bezier(.22, 1, .36, 1);
@@ -65,7 +66,7 @@
   /* Legacy aliases kept for components that still reference them */
   --canvas: var(--bg); --green: var(--emerald); --green-dark: var(--emerald-dark); --green-soft: var(--emerald-soft); --danger: var(--red);
   --font: "Onest Variable", "Onest", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Geologica Variable", "Geologica", "Onest Variable", "Segoe UI", Arial, sans-serif;
+  --font-display: "Roboto Flex Variable", "Roboto Flex", "Onest Variable", "Segoe UI", Arial, sans-serif;
 }
 
 /* ---------- Base ---------- */
@@ -83,8 +84,8 @@ input:not([type=radio]):user-invalid { border-color: var(--red); }
 input::placeholder { color: var(--subtle); }
 input[type=radio] { accent-color: var(--emerald-dark); width: 18px; height: 18px; }
 h1, h2, h3, p { margin: 0; }
-h1 { font-family: var(--font-display); font-size: clamp(28px, 2.6vw, 38px); font-weight: 600; letter-spacing: -.035em; line-height: 1.08; }
-h2 { font-family: var(--font-display); font-size: 18px; font-weight: 560; letter-spacing: -.02em; line-height: 1.25; }
+h1 { font-family: var(--font-display); font-size: clamp(28px, 2.6vw, 38px); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+h2 { font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; }
 h3 { font-size: 14px; font-weight: 650; line-height: 1.4; }
 code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
 .muted { color: var(--muted); line-height: 1.6; }
@@ -92,11 +93,11 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .tabular-nums, td, .gauge, .mini-gauge, .amount-input, .stat strong { font-variant-numeric: tabular-nums; }
 
 /* ---------- Buttons ---------- */
-.primary, .secondary, .danger-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 13px 22px; border-radius: 999px; font-size: 15px; font-weight: 600; letter-spacing: -.005em; line-height: 1.2; text-align: center; }
-.primary { position: relative; overflow: hidden; background: linear-gradient(180deg, #1D2622, var(--ink)); color: #FFFFFF; border: 1px solid #000; box-shadow: 0 1px 0 rgba(255, 255, 255, .14) inset, 0 10px 24px -12px rgba(14, 19, 17, .65); }
+.primary, .secondary, .danger-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 13px 22px; border-radius: var(--r-md); font-size: 15px; font-weight: 600; letter-spacing: -.005em; line-height: 1.2; text-align: center; }
+.primary { position: relative; overflow: hidden; background: var(--emerald); color: #FFFFFF; border: 0; box-shadow: none; transition: background-color var(--t-fast), transform var(--t-fast); }
 .primary::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .16) 50%, transparent 70%); transform: translateX(-120%); transition: transform .9s var(--ease-out); pointer-events: none; }
 .primary:hover:not(:disabled)::after { transform: translateX(120%); }
-.primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255, 255, 255, .14) inset, 0 16px 30px -14px rgba(14, 19, 17, .7); }
+.primary:hover:not(:disabled) { transform: translateY(-1px); background: var(--emerald-dark); }
 .primary:active:not(:disabled) { transform: scale(.98); }
 .secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); }
 .secondary:hover:not(:disabled) { background: var(--surface-2); border-color: var(--ink-3); transform: translateY(-1px); }
@@ -143,8 +144,8 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 .brand strong span { font-weight: 400; color: var(--ink-3); }
 .brand small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
 .header-right { display: flex; align-items: center; gap: 16px; }
-.jury-entry { margin-inline-start: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 18px; background: var(--ink); color: white; border-radius: 999px; font-size: 14px; font-weight: 600; transition: transform var(--t-med) var(--ease-spring), background-color var(--t-fast); }
-.jury-entry:hover { background: #26302B; transform: translateY(-1px); }
+.jury-entry { margin-inline-start: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 18px; background: var(--emerald); color: white; border-radius: var(--r-md); font-size: 14px; font-weight: 600; transition: transform var(--t-med) var(--ease-spring), background-color var(--t-fast); }
+.jury-entry:hover { background: var(--emerald-dark); transform: translateY(-1px); }
 .mode { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 999px; background: var(--surface-3); color: var(--ink-3); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .mode .live-dot { width: 6px; height: 6px; }
 .shell { max-width: 1880px; margin: 0 auto; padding: 24px 32px 0; }
@@ -652,28 +653,5 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
   .scenario-results th, .scenario-results td { padding: .4rem .18rem; }
 }
 
-.installer { width: min(100%, 760px); margin: 0 auto; padding: clamp(16px, 4vw, 40px); color: #101828; }
-.installer-nav, .installer-back, .installer-action, .installer-browser { display: flex; align-items: center; gap: 8px; }
-.installer-nav { justify-content: space-between; margin-bottom: 24px; }
-.installer-back, .installer-browser, .installer-help a { font-weight: 650; color: #006943; }
-.installer-back, .installer-browser { min-height: 44px; }
-.installer-card, .installer-help { background: #fff; border: 1px solid #dfe7e3; border-radius: 24px; padding: clamp(20px, 4vw, 36px); }
-.installer-card { display: flex; align-items: center; gap: 28px; justify-content: space-between; box-shadow: 0 10px 36px #143c300a; }
-.installer-main { max-width: 390px; }
-.installer-main h1 { margin: 18px 0 8px; font-size: clamp(32px, 5vw, 44px); line-height: 1.05; letter-spacing: -.04em; font-weight: 760; }
-.installer p, .installer figcaption, .installer small { color: #475467; line-height: 1.5; }
-.installer-action { justify-content: center; width: fit-content; min-height: 48px; border-radius: 14px; margin: 22px 0 8px; padding: 10px 21px; color: white; background: #007a49; font-weight: 700; }
-.installer-action:hover { background: #00683d; }
-.installer-qr { margin: 0; flex: 0 0 160px; text-align: center; font-size: .875rem; }
-.installer-qr img { margin: 0 auto 8px; }
-.installer-help { margin-top: 16px; }
-.installer-help h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
-.installer-help details { margin-top: 12px; border-top: 1px solid #e4e9e7; padding-top: 8px; overflow-wrap: anywhere; }
-.installer-help summary { cursor: pointer; padding: 10px 0; font-weight: 650; }
-.installer-help code { font-size: .85rem; }
-.installer-browser { margin-top: 12px; }
-@media (max-width: 600px) {
-  .installer-qr { display: none; }
-  .installer-action { width: 100%; }
-}
+/* Android download page: app/download/android/installer.css */
 

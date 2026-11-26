@@ -2,6 +2,7 @@
 
 import { ArrowRight, BrainCircuit, Check, CircleDashed, Clock3, ExternalLink, Fingerprint, Gauge, MessageSquareWarning, Network, PhoneCall, ShieldCheck, ShieldX, Smartphone, UserRound, Wallet, X } from "lucide-react";
 import type { Lang } from "@/lib/contracts";
+import { BrandMark } from "./brand-mark";
 import { compare, compareNote, compareSources, competitors, decisions, layers, metrics, phases, problem, screens, slides, steps, team, type L, type Slide } from "@/content/pitch-deck";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -18,7 +19,7 @@ export function DeckSlide({ slide, index, total, lang }: { slide: Slide; index: 
   const tr = (value: L) => value[lang];
   const pick = (pair: readonly [string, string]) => pair[lang === "kk" ? 0 : 1];
   return <article className={`deck-slide deck-k-${slide.kind}`} aria-label={`${index + 1} / ${total}`}>
-    <div className="deck-mark"><span className="deck-logo"><ShieldCheck size={16} /></span><span>SAQ BOL</span><span className="deck-eyebrow">{tr(slide.eyebrow)}</span><span className="deck-count">{String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}</span></div>
+    <div className="deck-mark"><BrandMark className="deck-logo" size={28} /><span>Saq Bol</span><span className="deck-eyebrow">{tr(slide.eyebrow)}</span><span className="deck-count">{String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}</span></div>
 
     {slide.kind === "cover" && <div className="deck-cover">
       <div className="deck-cover-text"><h1>{tr(slide.title)}</h1>{slide.lead && <p className="deck-lead">{tr(slide.lead)}</p>}</div>

@@ -1,0 +1,63 @@
+/* Android download page in the bcc.kz system: banner with the wallet's 3D phone, QR card and three steps. */
+.installer { width: min(100%, 1120px); margin: 0 auto; padding: 12px clamp(12px, 2.4vw, 32px) 40px; color: var(--ink); }
+.installer-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding: 8px 12px 8px 14px; border-radius: var(--r-lg); background: var(--surface); }
+.installer-back { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--ink); }
+.installer-back svg { color: var(--muted); transition: transform var(--t-fast); }
+.installer-back:hover svg { transform: translateX(-3px); }
+.installer-back strong { font: 700 20px/1 var(--font-display); letter-spacing: -.02em; }
+.installer-back strong span { color: var(--muted); font-weight: 500; }
+.installer-card { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; gap: 24px; padding: clamp(28px, 4.4vw, 64px); border-radius: 32px; background: var(--emerald-soft); }
+.installer-eyebrow { display: inline-flex; padding: 6px 12px; border-radius: 999px; background: var(--surface); color: var(--emerald-dark); font-size: 14px; font-weight: 600; }
+.installer-main h1 { margin: 16px 0 0; font: 700 clamp(36px, 4.6vw, 60px)/1.04 var(--font-display); letter-spacing: -.025em; }
+.installer-main h1 span { display: block; color: #00996A; }
+.installer-main > p:not(.installer-eyebrow) { max-width: 40ch; margin-top: 18px; color: var(--ink-2); font-size: 18px; line-height: 1.5; }
+.installer-action { display: inline-flex; align-items: center; gap: 10px; min-height: 56px; margin: 28px 0 10px; padding: 14px 26px; border-radius: var(--r-md); background: var(--emerald); color: #fff; font-size: 17px; font-weight: 600; transition: background-color var(--t-fast), transform var(--t-fast); }
+.installer-action:hover { background: var(--emerald-dark); transform: translateY(-1px); }
+.installer-main small { display: block; color: var(--ink-3); font-size: 14px; }
+.installer-visual { position: relative; min-height: 420px; border-radius: 24px; background: var(--bg); }
+.installer-device { position: absolute; left: 24px; top: 50%; width: 250px; height: 500px; margin-top: -250px; box-sizing: border-box; padding: 9px; border-radius: 42px; background: #1D1D1E; box-shadow: inset 0 0 0 1.5px #4A4A4D, 0 40px 60px -40px rgb(29 29 30 / 50%); }
+.installer-screen { position: relative; height: 100%; display: flex; flex-direction: column; gap: 10px; overflow: hidden; padding: 40px 12px 12px; box-sizing: border-box; border-radius: 34px; background: var(--bg); font-size: 11px; }
+.installer-screen::before { content: ""; position: absolute; left: 50%; top: 10px; width: 70px; height: 20px; margin-left: -35px; border-radius: 20px; background: #1D1D1E; }
+.installer-hello { display: flex; align-items: center; gap: 8px; }
+.installer-hello span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--emerald-soft); color: var(--emerald-dark); font-weight: 700; }
+.installer-account { display: grid; gap: 8px; padding: 11px; border-radius: 18px; background: var(--surface); }
+.installer-account small { color: var(--ink-3); font-weight: 600; }
+.installer-account > b { font: 700 24px/1 var(--font-display); }
+.installer-card { position: relative; aspect-ratio: 1.586; border-radius: 11px; overflow: hidden; color: #fff; background: linear-gradient(160deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0) 40%), linear-gradient(135deg, #0E5C44 0%, #0A4736 55%, #073426 100%); }
+.installer-card span { position: absolute; left: 8%; top: 10%; font: 700 11px var(--font-display); }
+.installer-card i { position: absolute; left: 8%; top: 40%; width: 13%; aspect-ratio: 1.25; border-radius: 4px; background: linear-gradient(135deg, #F3DE9C, #C79F4B); }
+.installer-card em { position: absolute; left: 8%; bottom: 12%; font-style: normal; letter-spacing: .12em; }
+.installer-actions { display: grid; grid-template-columns: repeat(4, 1fr); justify-items: center; }
+.installer-actions i { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); }
+.installer-actions i.on { background: var(--emerald); }
+.installer-ops { display: grid; gap: 7px; padding: 10px 12px; border-radius: 14px; background: var(--surface); }
+.installer-ops > span { display: flex; justify-content: space-between; }
+.installer-ops > span + span { padding-top: 7px; border-top: 1px solid var(--line); }
+.installer-ops b.in { color: var(--emerald-dark); }
+.installer-qr { position: absolute; right: 0; top: 50%; translate: 0 -50%; z-index: 1; display: grid; justify-items: center; gap: 8px; margin: 0; padding: 18px; border-radius: var(--r-card); background: var(--surface); text-align: center; font-size: 14px; color: var(--ink-3); box-shadow: 0 24px 48px -32px rgb(29 29 30 / 35%); }
+.installer-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 16px 0 0; padding: 0; list-style: none; }
+.installer-steps li { position: relative; display: grid; align-content: start; gap: 10px; padding: 24px; border-radius: var(--r-card); background: var(--surface); }
+.installer-step-n { position: static; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--emerald-soft); color: var(--emerald-dark); font-weight: 700; }
+.installer-steps h2 { margin: 0; font-size: 20px; line-height: 1.2; }
+.installer-steps p { margin: 0; color: var(--ink-3); font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.installer-browser { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--emerald-dark); font-weight: 600; }
+.installer-help { margin-top: 16px; padding: 8px 24px 16px; border-radius: var(--r-card); background: var(--surface); }
+.installer-help details { padding: 6px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.installer-help summary { cursor: pointer; padding: 12px 0; font-weight: 650; }
+.installer-help details p { margin: 0 0 8px; color: var(--ink-3); }
+.installer-help details a { color: var(--emerald-dark); font-weight: 600; }
+.installer-help code { font-size: .85rem; }
+.installer-help > .installer-browser { margin-top: 10px; }
+@media (max-width: 900px) {
+  .installer-card { grid-template-columns: minmax(0, 1fr); }
+  .installer-visual { min-height: 540px; }
+  .installer-steps { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .installer { padding-inline: 10px; }
+  .installer-card { padding: 24px 18px; border-radius: 24px; }
+  .installer-qr { display: none; }
+  .installer-device { left: 50%; margin-left: -125px; }
+  .installer-action { width: 100%; justify-content: center; }
+  .installer-help { padding-inline: 18px; }
+}

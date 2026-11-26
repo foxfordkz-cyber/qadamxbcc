@@ -34,14 +34,14 @@ export function policeReportHtml(detail: Evaluation, lang: Lang, t: T, now = new
   const timeline = caseTimeline(detail).map(event => `<li class="${event.tone}"><time>${escape(when(event.time))}</time><span>${escape(t(event.key))}${event.signals ? `: ${escape(event.signals.map(key => t(signalLabels[key])).join(", "))}` : ""}${event.score !== undefined ? ` · ${escape(pick(lang, "тәуекел", "риск"))} ${event.score}/100` : ""}</span></li>`).join("");
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(t("policeReport"))} · ${escape(detail.transaction_id.slice(-8))}</title>
 <style>
-body{font:14px/1.5 Onest,"Segoe UI",Arial,sans-serif;color:#0E1311;background:#fff;margin:0;padding:32px;max-width:820px}
-h1,h2{font-family:Geologica,Onest,"Segoe UI",sans-serif}h1{font-size:22px;margin:0 0 4px}h2{font-size:15px;margin:24px 0 8px;border-bottom:1px solid #d7dcd6;padding-bottom:4px}
-.lead{color:#3B4540;margin:0 0 16px}.note{font-size:12px;color:#3B4540;background:#F2F3F0;border-radius:8px;padding:8px 12px}a{color:#086446}
-table{border-collapse:collapse;width:100%}th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid #ECEEEA}th{width:38%;font-weight:600;color:#3B4540}
+body{font:14px/1.5 Onest,"Segoe UI",Arial,sans-serif;color:#1D1D1E;background:#fff;margin:0;padding:32px;max-width:820px}
+h1,h2{font-family:"Roboto Flex",Onest,"Segoe UI",sans-serif}h1{font-size:22px;margin:0 0 4px}h2{font-size:15px;margin:24px 0 8px;border-bottom:1px solid #E7E7EB;padding-bottom:4px}
+.lead{color:#565658;margin:0 0 16px}.note{font-size:12px;color:#565658;background:#F5F5FA;border-radius:8px;padding:8px 12px}a{color:#007A53}
+table{border-collapse:collapse;width:100%}th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid #ECEEEA}th{width:38%;font-weight:600;color:#565658}
 ol{margin:0;padding-left:20px}li{margin:4px 0}ol.tl{list-style:none;padding:0}ol.tl li{display:grid;grid-template-columns:170px 1fr;gap:12px;padding-left:14px;position:relative}
-ol.tl li:before{content:"";position:absolute;left:0;top:8px;width:7px;height:7px;border-radius:50%;background:#0B7A56}ol.tl li.risk:before{background:#D92D3A}ol.tl li.planned:before{background:#5E8BA8}
-time{color:#3B4540;font-variant-numeric:tabular-nums}.sign{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:40px}.sign div{border-top:1px solid #0E1311;padding-top:4px;font-size:12px;color:#3B4540}
-.print{position:fixed;top:16px;right:16px;min-height:44px;padding:8px 18px;border-radius:99px;border:0;background:#0E1311;color:#fff;font-weight:600;cursor:pointer}@media print{.print{display:none}body{padding:0}}
+ol.tl li:before{content:"";position:absolute;left:0;top:8px;width:7px;height:7px;border-radius:50%;background:#00875C}ol.tl li.risk:before{background:#D92D3A}ol.tl li.planned:before{background:#E39B1B}
+time{color:#565658;font-variant-numeric:tabular-nums}.sign{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:40px}.sign div{border-top:1px solid #1D1D1E;padding-top:4px;font-size:12px;color:#565658}
+.print{position:fixed;top:16px;right:16px;min-height:44px;padding:8px 18px;border-radius:99px;border:0;background:#1D1D1E;color:#fff;font-weight:600;cursor:pointer}@media print{.print{display:none}body{padding:0}}
 @media(max-width:540px){body{padding:14px;overflow-wrap:anywhere}ol.tl li{grid-template-columns:1fr;gap:1px}.print{position:static;float:none;min-height:44px;margin-bottom:10px}th,td{padding:5px}}
 </style></head><body>
 <button class="print" onclick="window.print()">${escape(pick(lang, "Басып шығару / PDF", "Печать / PDF"))}</button>

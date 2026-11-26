@@ -21,6 +21,8 @@ import { TransferAmount, TransferConfirmButton } from "./transfer-phone";
 import { SuspicionReply } from "./trusted-circle";
 import "./jury-tour.css";
 
+
+
 const titles = {
   transfer: "tourTransfer", caller: "tourPause", payee: "tourPause", call: "sigBankLog", verdict: "tourNoCall",
   telegram: "tourTelegram", blocked: "tourBlocked", feed: "tourFeed", graph: "tourGraph", model: "tourModel",
@@ -41,7 +43,8 @@ function Warmup({ onSkip }: { onSkip: () => void }) {
     return () => clearInterval(timer);
   }, []);
   return <section className="tour-warmup">
-    <BrandMark size={52} /><h1 role="status">{t("tourPrepare")}</h1><p>{t("tourWait")}</p>
+    <BrandMark size={56} />
+    <h1 role="status">{t("tourPrepare")}</h1><p>{t("tourWait")}</p>
     <progress value={elapsed} max={warmupLimit} aria-label={t("tourPrepare")} />
     <button type="button" className="tour-skip" onClick={onSkip}>{t("tourSkip")}</button>
   </section>;
@@ -111,7 +114,7 @@ function TourScreen({ state, graph, advance }: { state: TourSession; graph: Grap
     case "document": return <iframe className="tour-document tour-focus" title={t("policeReport")}
       sandbox="allow-scripts allow-modals allow-popups allow-popups-to-escape-sandbox"
       srcDoc={policeReportHtml(detail, lang, t, new Date(state.blocked ?? state.started), state.answers)} />;
-    case "saved": return <div className="tour-saved"><ShieldCheck size={54} /><h2>{t("tourSaved").replace("{amount}", amount)}</h2>
+    case "saved": return <div className="tour-saved"><span className="tour-saved-icon"><ShieldCheck size={44} /></span><h2>{t("tourSaved").replace("{amount}", amount)}</h2>
       <p>{t("tourContactReason")}</p></div>;
   }
 }
@@ -144,7 +147,7 @@ export default function JuryTour() {
   const step = state ? tourStep(state.view) : 1;
   const tone = state?.view === "blocked" ? "blocked" : step === 2 || step === 3 ? "held" : undefined;
   return <main className="jury-tour" data-state={tone}>
-    <header className="tour-brand"><div><BrandMark size={32} /><strong>Saq Bol <span>× BCC</span></strong></div><LanguageSwitch /></header>
+    <header className="tour-brand"><div><BrandMark size={32} /><strong>Saq Bol</strong></div><LanguageSwitch /></header>
     {!state || !stand ? <Warmup onSkip={skip} /> : <div className="tour-layout" data-tour-view={state.view} data-source={stand.source}>
       <section className="tour-phone" aria-labelledby="tour-view-title" data-case-id={state.id}>
         <header><small>{step === 1 || step === 2 || step === 3 ? <UserRound size={15} /> : step === 4 && state.view === "telegram" ? <Send size={15} /> : <ShieldCheck size={15} />}
@@ -157,6 +160,9 @@ export default function JuryTour() {
           {state.view !== "saved" && <button type="button" className="tour-skip" onClick={skip}>{t("tourSkip")}</button>}
         </div>
         <div className="tour-progress" aria-hidden="true">{tourSteps.map((_, i) => <i key={i} className={i < step ? "active" : ""} />)}</div>
+        <ol className="tour-steps" aria-hidden="true">{tourSteps.map((views, i) => <li key={views[0]} className={i + 1 < step || state.view === "saved" ? "done" : i + 1 === step ? "current" : undefined}>
+          <i>{i + 1 < step || state.view === "saved" ? <Check size={14} /> : i + 1}</i><span>{t(titles[views[0]])}</span>
+        </li>)}</ol>
         {state.view === "saved" ? <button type="button" className="primary" onClick={() => { setStand(null); setRun(n => n + 1); }}>
           <RotateCcw size={18} />{t("tourRestart")}</button> : <>
           <p className="tour-hint" aria-live="polite">{t(hints[state.view])}</p>

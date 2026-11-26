@@ -358,7 +358,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   );
   if (layout === "officer") return <div className="officer-root">
     <header className="topbar"><div className="topbar-inner"><div className="brand">
-      <BrandMark /><div><strong>Saq Bol<span> × BCC</span></strong><small>{t("officerWorkspace")}</small></div>
+      <BrandMark /><div><strong>Saq Bol</strong><small>{t("officerWorkspace")}</small></div>
     </div>{juryEntry}{languageSwitch}</div></header>
     <main className="shell">
       {showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("staffWalletLogin")}<ArrowRight size={15} aria-hidden="true" /></a>}
@@ -371,7 +371,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   // /mobile: the same client logic on a real smartphone — no bezel, decision panel or SOC tab.
   if (layout === "phone") return <>
     <header className="topbar mobile-topbar"><div className="topbar-inner">
-      <div className="brand"><BrandMark /><div><strong>Saq Bol<span> × BCC</span></strong></div></div>
+      <div className="brand"><BrandMark /><div><strong>Saq Bol</strong></div></div>
       {juryEntry}{languageSwitch}
     </div></header>
     <main className="mobile-shell">
@@ -384,7 +384,7 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   </>;
   return <>
     <header className="topbar"><div className="topbar-inner">
-      <div className="brand"><BrandMark /><div><strong>Saq Bol<span> × BCC</span></strong><small>{t("prototypeIdentity")}</small></div></div>
+      <div className="brand"><BrandMark /><div><strong>Saq Bol</strong><small>{t("prototypeIdentity")}</small></div></div>
       {juryEntry}<div className="header-right"><span className="mode" title={t(config.mode)}><span className="live-dot" /><span className="mode-text">{config.mode === "demo" ? t("demoMarker") : t("live")}</span></span>{languageSwitch}</div>
     </div></header>
     <main className="shell" id="live">

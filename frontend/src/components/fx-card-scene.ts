@@ -1,5 +1,5 @@
 /**
- * Real-time card scene: a brushed-metal Saq Bol card behind a thick glass
+ * Real-time card scene: a deep-green Saq Bol card behind a thick glass
  * shield, lit like a product shot (studio softboxes reflected in metal and
  * glass). When a transfer is held the glass turns frosted and the card behind
  * it blurs; a blocked transfer tints the glass red. On the landing page the
@@ -71,30 +71,27 @@ function cardFace(last4: string) {
   const metal = document.createElement("canvas"); metal.width = w; metal.height = h;
   const c = color.getContext("2d")!; const m = metal.getContext("2d")!;
   const g = c.createLinearGradient(0, 0, w, h);
-  g.addColorStop(0, "#E9ECE9"); g.addColorStop(.5, "#D2D7D4"); g.addColorStop(1, "#C3C9C5");
+  // Deep-green monochrome plastic, the same card as the wallet's home screen.
+  g.addColorStop(0, "#0E5C44"); g.addColorStop(.55, "#0A4736"); g.addColorStop(1, "#073426");
   c.fillStyle = g; c.fillRect(0, 0, w, h);
-  for (let i = 0; i < 3200; i++) {
-    const y = Math.random() * h; const a = Math.random() * .06;
-    c.fillStyle = Math.random() > .5 ? `rgba(255,255,255,${a})` : `rgba(30,40,35,${a * .7})`;
-    c.fillRect(0, y, w, Math.random() * 1.4 + .3);
-  }
+  for (let x = -h; x < w; x += 9) { c.strokeStyle = "rgba(255,255,255,.035)"; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, h); c.lineTo(x + h * .47, 0); c.stroke(); }
   m.fillStyle = "#ffffff"; m.fillRect(0, 0, w, h);
   // The mark and type are enamel (non-metal), so they read as printed on metal.
   const drawMark = (ctx: CanvasRenderingContext2D, top: string, bottom: string) => {
     ctx.save(); ctx.translate(w * .07, h * .1); ctx.scale(h * .0042, h * .0042);
     ctx.fillStyle = top; ctx.fill(new Path2D(MARK_TOP)); ctx.fillStyle = bottom; ctx.fill(new Path2D(MARK_BOTTOM)); ctx.restore();
   };
-  drawMark(c, "#0B5C42", "#1B8F68"); drawMark(m, "#000", "#000");
+  drawMark(c, "#FFFFFF", "rgba(255,255,255,.72)"); drawMark(m, "#000", "#000");
   const type = (ctx: CanvasRenderingContext2D, fill: string) => {
     ctx.fillStyle = fill;
-    ctx.font = `600 ${h * .08}px "Geologica Variable", "Onest Variable", sans-serif`; ctx.textBaseline = "alphabetic";
+    ctx.font = `600 ${h * .08}px "Roboto Flex Variable", "Onest Variable", sans-serif`; ctx.textBaseline = "alphabetic";
     ctx.fillText("Saq Bol", w * .07, h * .86);
     ctx.font = `500 ${h * .058}px "Onest Variable", sans-serif`; ctx.textAlign = "right";
     ctx.fillText(`•••• ${last4}`, w * .93, h * .86); ctx.textAlign = "left";
   };
-  type(c, "#1A221E"); type(m, "#222");
+  type(c, "#FFFFFF"); type(m, "#222");
   c.save(); c.translate(w * .07, h * .42);
-  const chip = c.createLinearGradient(0, 0, w * .105, h * .14); chip.addColorStop(0, "#DCDFD8"); chip.addColorStop(1, "#A3AAA4");
+  const chip = c.createLinearGradient(0, 0, w * .105, h * .14); chip.addColorStop(0, "#F3DE9C"); chip.addColorStop(1, "#C79F4B");
   c.fillStyle = chip; c.beginPath(); c.roundRect(0, 0, w * .105, h * .14, h * .02); c.fill();
   c.strokeStyle = "rgba(40,50,44,.32)"; c.lineWidth = 3;
   for (const fx of [.33, .66]) { c.beginPath(); c.moveTo(w * .105 * fx, 0); c.lineTo(w * .105 * fx, h * .14); c.stroke(); }
@@ -158,10 +155,10 @@ export function mountCardScene({ canvas, last4, fit, watchFrames, onSlow, onRead
   body.translate(0, 0, -D / 2);
   const face = cardFace(last4);
   const faceMaterial = new MeshPhysicalMaterial({
-    map: face.map, metalnessMap: face.metalness, metalness: .88, roughness: .26, anisotropy: .6,
-    clearcoat: .5, clearcoatRoughness: .2, envMapIntensity: 1,
+    map: face.map, metalnessMap: face.metalness, metalness: .18, roughness: .38,
+    clearcoat: 1, clearcoatRoughness: .12, envMapIntensity: .9,
   });
-  const edgeMaterial = new MeshPhysicalMaterial({ color: "#C4CAC6", metalness: 1, roughness: .18, envMapIntensity: 1.1 });
+  const edgeMaterial = new MeshPhysicalMaterial({ color: "#0A4736", metalness: .2, roughness: .3, clearcoat: 1, envMapIntensity: .9 });
   const card = new Mesh(body, [faceMaterial, edgeMaterial]);
 
   // Glass shield
