@@ -54,7 +54,8 @@ test("a scene that keeps missing the frame budget asks to drop to lite", () => {
 
 test("the display and text fonts carry every Kazakh letter and the tenge sign", () => {
   // Unicode ranges are declared per subset; the woff2 glyph check lives in the font choice notes.
-  for (const pkg of ["onest", "geologica"]) {
+  // roboto-flex is the bcc.kz heading face used on the public homepage.
+  for (const pkg of ["onest", "geologica", "roboto-flex"]) {
     const css = readFileSync(new URL(`../node_modules/@fontsource-variable/${pkg}/index.css`, import.meta.url), "utf8");
     assert.match(css, /cyrillic-ext/, pkg);
     const ranges = [...css.matchAll(/unicode-range:\s*([^;]+);/g)].flatMap(m => m[1].split(",").map(r => r.trim().replace("U+", "")));
