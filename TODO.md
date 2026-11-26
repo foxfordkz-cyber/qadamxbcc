@@ -1,5 +1,7 @@
 # TODO — BCC Shield Core
 
+- [x] **Research handoff, 26 November.** Publish the sourced project and bank registry, previous studies and interactive views on the research branch.
+
 - [x] **T01: Scaffold & Oracle.** Set up `docker-compose.yml` (Postgres 16, Redis 7, Backend, Frontend), `backend/app` structure, Pydantic settings, and executable `./verify.sh` (`ruff`, `mypy --strict`, `pytest`, frontend `tsc`/build).
 - [x] **T02: DB Schema & Migrations.** Implement SQLAlchemy async models & Alembic migration: `Account` (KZ IIN, IBAN, device_id, avg_tx_amount), `Transaction` (`approved | cooling_off | blocked`, latency_ms), `RiskEvent` (rule_code, score_delta, reason_kk, reason_ru), `GraphEdge` (source_id, target_id, edge_type, weight).
 - [x] **T03: KZ Synthetic Seed (`scripts/seed_bcc.py`).** Generate 300 realistic KZ accounts and 3,000 transactions embedding 4 demo scenarios: (1) normal P2P transfer, (2) social engineering victim (active call + deposit withdrawal + new recipient), (3) drop-network hub (12 incoming transfers in 30m + instant cashout), (4) new device + night transfer.

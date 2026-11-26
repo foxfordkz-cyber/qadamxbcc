@@ -1,0 +1,255 @@
+<section id="bcc-finalist-profiles" data-viz-composition>
+  <div data-viz-container></div>
+  <script type="application/json" data-viz-chart>
+{
+  "id": "bcc-top-ten-dimensions",
+  "title": "Чем сильны десять антифрод-проектов",
+  "description": "Код, тесты и материалы демо на 20 ноября 2026 года. Экспертная шкала 0–3 по каждому критерию. Нулём отмечена функция, для которой не найдено подтверждения.",
+  "height": 460,
+  "columns": [
+    "project",
+    "criterion",
+    "score"
+  ],
+  "rows": [
+    [
+      "Saq Bol × BCC",
+      "Клиент",
+      3
+    ],
+    [
+      "Saq Bol × BCC",
+      "Детекция",
+      3
+    ],
+    [
+      "Saq Bol × BCC",
+      "Работа SOC",
+      3
+    ],
+    [
+      "Saq Bol × BCC",
+      "Проверяемость",
+      3
+    ],
+    [
+      "QORNET",
+      "Клиент",
+      2
+    ],
+    [
+      "QORNET",
+      "Детекция",
+      3
+    ],
+    [
+      "QORNET",
+      "Работа SOC",
+      3
+    ],
+    [
+      "QORNET",
+      "Проверяемость",
+      3
+    ],
+    [
+      "Тихий код",
+      "Клиент",
+      3
+    ],
+    [
+      "Тихий код",
+      "Детекция",
+      2
+    ],
+    [
+      "Тихий код",
+      "Работа SOC",
+      3
+    ],
+    [
+      "Тихий код",
+      "Проверяемость",
+      3
+    ],
+    [
+      "Чистый счёт",
+      "Клиент",
+      3
+    ],
+    [
+      "Чистый счёт",
+      "Детекция",
+      2
+    ],
+    [
+      "Чистый счёт",
+      "Работа SOC",
+      3
+    ],
+    [
+      "Чистый счёт",
+      "Проверяемость",
+      3
+    ],
+    [
+      "Qorgan Antifraud",
+      "Клиент",
+      2
+    ],
+    [
+      "Qorgan Antifraud",
+      "Детекция",
+      3
+    ],
+    [
+      "Qorgan Antifraud",
+      "Работа SOC",
+      2
+    ],
+    [
+      "Qorgan Antifraud",
+      "Проверяемость",
+      3
+    ],
+    [
+      "Qorgau AI",
+      "Клиент",
+      2
+    ],
+    [
+      "Qorgau AI",
+      "Детекция",
+      3
+    ],
+    [
+      "Qorgau AI",
+      "Работа SOC",
+      2
+    ],
+    [
+      "Qorgau AI",
+      "Проверяемость",
+      3
+    ],
+    [
+      "BCCShield",
+      "Клиент",
+      3
+    ],
+    [
+      "BCCShield",
+      "Детекция",
+      2
+    ],
+    [
+      "BCCShield",
+      "Работа SOC",
+      2
+    ],
+    [
+      "BCCShield",
+      "Проверяемость",
+      3
+    ],
+    [
+      "Qorgan · Ibrakazah",
+      "Клиент",
+      3
+    ],
+    [
+      "Qorgan · Ibrakazah",
+      "Детекция",
+      2
+    ],
+    [
+      "Qorgan · Ibrakazah",
+      "Работа SOC",
+      2
+    ],
+    [
+      "Qorgan · Ibrakazah",
+      "Проверяемость",
+      3
+    ],
+    [
+      "NEXORA AI",
+      "Клиент",
+      0
+    ],
+    [
+      "NEXORA AI",
+      "Детекция",
+      3
+    ],
+    [
+      "NEXORA AI",
+      "Работа SOC",
+      3
+    ],
+    [
+      "NEXORA AI",
+      "Проверяемость",
+      3
+    ],
+    [
+      "Qaqpan",
+      "Клиент",
+      3
+    ],
+    [
+      "Qaqpan",
+      "Детекция",
+      2
+    ],
+    [
+      "Qaqpan",
+      "Работа SOC",
+      1
+    ],
+    [
+      "Qaqpan",
+      "Проверяемость",
+      3
+    ]
+  ],
+  "spec": {
+    "type": "heatmap",
+    "x": "criterion",
+    "y": "project",
+    "value": "score",
+    "xOrder": [
+      "Клиент",
+      "Детекция",
+      "Работа SOC",
+      "Проверяемость"
+    ],
+    "yOrder": [
+      "Saq Bol × BCC",
+      "QORNET",
+      "Тихий код",
+      "Чистый счёт",
+      "Qorgan Antifraud",
+      "Qorgau AI",
+      "BCCShield",
+      "Qorgan · Ibrakazah",
+      "NEXORA AI",
+      "Qaqpan"
+    ],
+    "colorDomain": [
+      0,
+      3
+    ],
+    "showValues": true,
+    "xLabel": "Критерий оценки",
+    "yLabel": "Проект"
+  }
+}
+  </script>
+</section>
+<script type="module">
+  import { mountChart } from "https://persistent.oaistatic.com/plugins/visualize/charts/1.8.1/element.js";
+  const root = document.getElementById("bcc-finalist-profiles");
+  const config = JSON.parse(root.querySelector("[data-viz-chart]").textContent);
+  mountChart(root.querySelector("[data-viz-container]"), config);
+</script>

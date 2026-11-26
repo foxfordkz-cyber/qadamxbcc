@@ -1,0 +1,505 @@
+<div id="saq-competitors">
+  <style>
+    #saq-competitors { display: grid; gap: calc(var(--font-size-base) * 1); }
+    #saq-competitors .comparison-heading { padding-inline-end: 90px; }
+    #saq-competitors .comparison-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr)); gap: calc(var(--font-size-base) * .5); }
+    #saq-competitors .comparison-grid span { overflow-wrap: anywhere; }
+    #saq-competitors .comparison-detail { display: grid; gap: calc(var(--font-size-base) * .5); }
+    #saq-competitors .comparison-detail dl { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 3fr); gap: calc(var(--font-size-base) * .5) calc(var(--font-size-base) * 1); margin: 0; }
+    #saq-competitors .comparison-detail dd { margin: 0; overflow-wrap: anywhere; }
+    #saq-competitors .comparison-detail dt { color: var(--muted-foreground); }
+    #saq-competitors .comparison-sources { display: flex; gap: calc(var(--font-size-base) * 1); flex-wrap: wrap; }
+    @media (max-width: 480px) { #saq-competitors .comparison-detail dl { grid-template-columns: 1fr; } }
+  </style>
+  <div class="comparison-heading"><h2>Конкуренты и Saq Bol × BCC</h2><div class="text-small text-muted">29 публичных репозиториев · срез 20 ноября 2026 · исходники не равны проверке работающего сервиса</div></div>
+  <div class="comparison-detail" aria-live="polite">
+    <div class="viz-row"><h3 id="comparison-project"></h3><span class="viz-badge" id="comparison-category"></span></div>
+    <dl>
+      <dt>Доказательства</dt><dd id="comparison-evidence"></dd>
+      <dt>Сильная сторона</dt><dd id="comparison-strength"></dd>
+      <dt>Сравнение с нами</dt><dd id="comparison-difference"></dd>
+      <dt>Что улучшать</dt><dd id="comparison-action"></dd>
+    </dl>
+    <div class="comparison-sources text-small" id="comparison-sources"></div>
+  </div>
+  <hr>
+  <div class="comparison-grid" role="group" aria-label="Выбрать репозиторий для сравнения"></div>
+  <div class="text-small text-muted">Источники: публичные GitHub-срезы по ссылкам в карточке. Одинаковые названия и другие кейсы отмечены отдельно; единого теста точности всех моделей не проводилось.</div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('saq-competitors');
+  const projects = [
+  {
+    "repo": "narutouciha431-sketch/tihiy-kod",
+    "title": "Тихий код",
+    "category": "bcc_antifraud",
+    "sha": "82b9cbfa4ddae759d72981942beab11c865b42cd",
+    "evidence": "Исходники, тестовый стенд и авторский отчёт прочитаны; live/CI не проверены",
+    "strength": "Серверный контекст удержания между несколькими попытками",
+    "comparison": "Saq Bol сохраняет остаток паузы при повторе тому же или незнакомому получателю. Другой знакомый получатель получает независимую оценку.",
+    "next_step": "На пилоте измерить долю законных повторов, затронутых этим правилом.",
+    "sources": [
+      "https://github.com/narutouciha431-sketch/tihiy-kod/blob/82b9cbfa4ddae759d72981942beab11c865b42cd/server/risk.py",
+      "https://github.com/narutouciha431-sketch/tihiy-kod/blob/82b9cbfa4ddae759d72981942beab11c865b42cd/server/db.py",
+      "https://github.com/narutouciha431-sketch/tihiy-kod/blob/82b9cbfa4ddae759d72981942beab11c865b42cd/docs/test-stand-results.md"
+    ]
+  },
+  {
+    "repo": "adiletpn/Qaqpan",
+    "title": "Qaqpan",
+    "category": "bcc_antifraud",
+    "sha": "5fa87067bf89eed5bcff770b3587370af506d57c",
+    "evidence": "Исходники и ограничения eval прочитаны; demo не пройден",
+    "strength": "Понятная история для клиента, родственника и аналитика",
+    "comparison": "Наш Guardian advisory и серверный lifecycle; банковский ownership сигнала своего счёта не подключён",
+    "next_step": "Единая короткая история оснований для всех ролей",
+    "sources": [
+      "https://github.com/adiletpn/Qaqpan/blob/5fa87067bf89eed5bcff770b3587370af506d57c/api/risk.py",
+      "https://github.com/adiletpn/Qaqpan/blob/5fa87067bf89eed5bcff770b3587370af506d57c/api/family.py",
+      "https://github.com/adiletpn/Qaqpan/blob/5fa87067bf89eed5bcff770b3587370af506d57c/docs/METRICS.md"
+    ]
+  },
+  {
+    "repo": "your-golden-hour/transferguard-itu",
+    "title": "TransferGuard",
+    "category": "bcc_antifraud",
+    "sha": "c8da1f67eafc9de0cf8067a08139bd5b72c98092",
+    "evidence": "Risk/API/UI и тестовые файлы прочитаны; тесты не запускались",
+    "strength": "ASK_CONTEXT отличает недостаток данных от высокого риска",
+    "comparison": "У Saq Bol шире lifecycle/SOC; неизвестный результат нельзя показывать как score 0",
+    "next_step": "Сделать видимой недостаточность данных без изменения вердикта API",
+    "sources": [
+      "https://github.com/your-golden-hour/transferguard-itu/blob/c8da1f67eafc9de0cf8067a08139bd5b72c98092/lib/risk.ts",
+      "https://github.com/your-golden-hour/transferguard-itu/blob/c8da1f67eafc9de0cf8067a08139bd5b72c98092/app/api/risk/evaluate/route.ts"
+    ]
+  },
+  {
+    "repo": "aikenmurat1-design/dropradar",
+    "title": "DropRadar",
+    "category": "bcc_antifraud",
+    "sha": "1bc435ad050d7f7d05ce3e49f1bba8b7e2230fb6",
+    "evidence": "Прочитан один HTML с сериализованными деревьями; train/eval scripts не найдены",
+    "strength": "Реальный browser inference и управляемая песочница атаки",
+    "comparison": "У нас trainer/evaluation и durable API; scenario replay конкурента частично использует сохранённые scores",
+    "next_step": "Парный adversarial и честный контроль через настоящий API",
+    "sources": [
+      "https://github.com/aikenmurat1-design/dropradar/blob/1bc435ad050d7f7d05ce3e49f1bba8b7e2230fb6/index.html."
+    ]
+  },
+  {
+    "repo": "aikenmurat1-design/bcc-aman",
+    "title": "BCC Аман",
+    "category": "bcc_antifraud",
+    "sha": "ed4ca472e8efc5c57af06d3f906f5dcfafa83537",
+    "evidence": "Прочитан HTML/README; финансовый state и face check демонстрационные",
+    "strength": "Наглядная семейная история в трёх ролях",
+    "comparison": "Наши действия подтверждаются сервером; у BCC Аман JS ledger и анимация проверки лица",
+    "next_step": "Показать последствия одного реального события для клиента и SOC",
+    "sources": [
+      "https://github.com/aikenmurat1-design/bcc-aman/blob/ed4ca472e8efc5c57af06d3f906f5dcfafa83537/index.html",
+      "https://github.com/aikenmurat1-design/bcc-aman/blob/ed4ca472e8efc5c57af06d3f906f5dcfafa83537/README.md"
+    ]
+  },
+  {
+    "repo": "aikenmurat1-design/Qorgan",
+    "title": "Qorgan — сценарий",
+    "category": "bcc_antifraud",
+    "sha": "77a8c0847e3b80aafdb82bda40970ecebd9bd71f",
+    "evidence": "Автор прямо указывает кейс Банк ЦентрКредит на ITU HACKATHON-2026. В дереве закреплённого коммита один файл index.html и 74 строки Markdown со сценарием. Проверены архив и метаданные GitHub.",
+    "strength": "Описан сценарий защиты при смене карты",
+    "comparison": "В этой версии Qorgan смена реквизитов описана сценарием. У Saq Bol сохранение исходной паузы проверено через API и PostgreSQL.",
+    "next_step": "Проверять сценарий обхода тестом, не переносить неподтверждённые AI-claims",
+    "sources": [
+      "https://github.com/aikenmurat1-design/Qorgan/blob/77a8c0847e3b80aafdb82bda40970ecebd9bd71f/index.html"
+    ]
+  },
+  {
+    "repo": "Ibrakazah/qorgan",
+    "title": "Qorgan",
+    "category": "bcc_antifraud",
+    "sha": "25a6ea63d4940bb3f45cba5b750bf221d34e0fc7",
+    "evidence": "Прочитаны policy/risk/service/UI/tests; live не проверен",
+    "strength": "AI не может снять удержание при давлении и дроп-сигналах",
+    "comparison": "Наши hard-block/release инварианты также важнее ML-процента",
+    "next_step": "Явно показывать приоритет серверных оснований над ML",
+    "sources": [
+      "https://github.com/Ibrakazah/qorgan/blob/25a6ea63d4940bb3f45cba5b750bf221d34e0fc7/app/qorgan/policy.py",
+      "https://github.com/Ibrakazah/qorgan/blob/25a6ea63d4940bb3f45cba5b750bf221d34e0fc7/app/qorgan/risk.py",
+      "https://github.com/Ibrakazah/qorgan/blob/25a6ea63d4940bb3f45cba5b750bf221d34e0fc7/tests/test_qorgan.py"
+    ]
+  },
+  {
+    "repo": "alinaraevali18/qorgan-antifraud",
+    "title": "Qorgan Antifraud",
+    "category": "bcc_antifraud",
+    "sha": "019c7a2d4736c97b6b0fff42394815e5773522fe",
+    "evidence": "Прочитаны модель, граф, policy и тесты; latency не воспроизводилась",
+    "strength": "HistGradientBoosting и собственное приближение Шепли",
+    "comparison": "Наше быстрое feature importance не следует называть точным SHAP; методы и стоимость различаются",
+    "next_step": "Раскрыть метод объяснения и проверять latency полного пути",
+    "sources": [
+      "https://github.com/alinaraevali18/qorgan-antifraud/blob/019c7a2d4736c97b6b0fff42394815e5773522fe/qorgan/model.py",
+      "https://github.com/alinaraevali18/qorgan-antifraud/blob/019c7a2d4736c97b6b0fff42394815e5773522fe/qorgan/graph.py",
+      "https://github.com/alinaraevali18/qorgan-antifraud/blob/019c7a2d4736c97b6b0fff42394815e5773522fe/tests/test_pipeline.py"
+    ]
+  },
+  {
+    "repo": "MaratelloMaJo/bcc-shield-360",
+    "title": "BCC Shield 360",
+    "category": "bcc_antifraud",
+    "sha": "46588a22d767086c57631d71b864e5d31c8bd8d1",
+    "evidence": "Исходники React и text-analysis API прочитаны; runtime не проверен",
+    "strength": "Широкая клиентская история и маскирование текста перед внешним AI",
+    "comparison": "Наш transfer pipeline серверный; HMAC демо и localStorage не равны банковской подписи/ledger",
+    "next_step": "Сообщения анализировать отдельно от горячего пути переводов",
+    "sources": [
+      "https://github.com/MaratelloMaJo/bcc-shield-360/blob/46588a22d767086c57631d71b864e5d31c8bd8d1/app/page.tsx",
+      "https://github.com/MaratelloMaJo/bcc-shield-360/blob/46588a22d767086c57631d71b864e5d31c8bd8d1/lib/scam-engine.ts",
+      "https://github.com/MaratelloMaJo/bcc-shield-360/blob/46588a22d767086c57631d71b864e5d31c8bd8d1/app/api/scam-analyze/route.ts"
+    ]
+  },
+  {
+    "repo": "wiwiq009/bcc-qorgau",
+    "title": "BCC Qorgau",
+    "category": "different_case",
+    "sha": "a371dcb5fc5aa7f2181f5e0ff72c75dbf2ffec28",
+    "evidence": "Прочитаны Flask regex engine и UI; test/demo не проверены",
+    "strength": "Простой RU/KK-анализ сообщения и конкретный совет",
+    "comparison": "Смежный text scanner; transfer lifecycle и граф не подтверждены",
+    "next_step": "Связывать клиентское предупреждение с конкретным найденным признаком",
+    "sources": [
+      "https://github.com/wiwiq009/bcc-qorgau/blob/a371dcb5fc5aa7f2181f5e0ff72c75dbf2ffec28/app.py",
+      "https://github.com/wiwiq009/bcc-qorgau/blob/a371dcb5fc5aa7f2181f5e0ff72c75dbf2ffec28/templates/index.html"
+    ]
+  },
+  {
+    "repo": "mzhks01/BCC-SAFE-GUARD",
+    "title": "BCC Safe Guard",
+    "category": "unconfirmed",
+    "sha": "069eb7cddaf8c513915d460f686476fbd7cf0d5b",
+    "evidence": "HTML и README прочитаны; участие в конкретном BCC/ITU кейсе не установлено",
+    "strength": "Учебный сценарий проверки звонка, текста и перевода",
+    "comparison": "Наш сервер сохраняет lifecycle; здесь журнал localStorage и эвристики",
+    "next_step": "Чётко подписывать симуляцию и официальную независимость",
+    "sources": [
+      "https://github.com/mzhks01/BCC-SAFE-GUARD/blob/069eb7cddaf8c513915d460f686476fbd7cf0d5b/index.html",
+      "https://github.com/mzhks01/BCC-SAFE-GUARD/blob/069eb7cddaf8c513915d460f686476fbd7cf0d5b/README.txt"
+    ]
+  },
+  {
+    "repo": "ramazanabdimalik/ITU-HACKATHON",
+    "title": "ITU-HACKATHON — банковский UI",
+    "category": "bcc_antifraud",
+    "sha": "b83455e56fc340cc5288719b20c62b53bf3a429c",
+    "evidence": "Прочитаны TS engine/tests/store/UI; demo не пройден",
+    "strength": "Чистые правила, RU/KK и интерфейс клиент/аналитик",
+    "comparison": "У нас БД и конкурентные действия; у конкурента localStorage объединяет демо-состояние",
+    "next_step": "Проверить ясные boundary states и сохранить нативный мобильный путь",
+    "sources": [
+      "https://github.com/ramazanabdimalik/ITU-HACKATHON/blob/b83455e56fc340cc5288719b20c62b53bf3a429c/web/lib/risk-engine.ts",
+      "https://github.com/ramazanabdimalik/ITU-HACKATHON/blob/b83455e56fc340cc5288719b20c62b53bf3a429c/web/lib/risk-engine.test.ts",
+      "https://github.com/ramazanabdimalik/ITU-HACKATHON/blob/b83455e56fc340cc5288719b20c62b53bf3a429c/web/lib/store.ts"
+    ]
+  },
+  {
+    "repo": "Mirafil/ScamGuard-KZ",
+    "title": "ScamGuard-KZ",
+    "category": "different_case",
+    "sha": "8da678bcb204cfbcc973efe9ba16888e8d6949ee",
+    "evidence": "Прочитаны API, UI, тесты и synthetic metrics; BCC-связь не установлена",
+    "strength": "Validation Lab раскрывает false positives",
+    "comparison": "Образовательный pre-transfer; общий банковский benchmark с нами отсутствует",
+    "next_step": "Показывать ошибочные паузы вместе с найденным риском",
+    "sources": [
+      "https://github.com/Mirafil/ScamGuard-KZ/blob/8da678bcb204cfbcc973efe9ba16888e8d6949ee/server.py",
+      "https://github.com/Mirafil/ScamGuard-KZ/blob/8da678bcb204cfbcc973efe9ba16888e8d6949ee/results/synthetic_metrics_threshold40.json",
+      "https://github.com/Mirafil/ScamGuard-KZ/blob/8da678bcb204cfbcc973efe9ba16888e8d6949ee/tests/test_validation.py"
+    ]
+  },
+  {
+    "repo": "meirz911/qorgau-ai",
+    "title": "Qorgau AI",
+    "category": "unconfirmed",
+    "sha": "65d1ffb6482901cf730717a10e5fa5a0d14a7443",
+    "evidence": "Прочитаны ML/rules/server; ITU FinTech заявлен, BCC явно не подтверждён",
+    "strength": "Несколько реальных скореров, SSE и обратная связь аналитика",
+    "comparison": "Наш audit/version/durable state сильнее доказаны; немедленный retrain по одному клику нежелателен",
+    "next_step": "Очередь подтверждённой разметки и отдельный цикл validation",
+    "sources": [
+      "https://github.com/meirz911/qorgau-ai/blob/65d1ffb6482901cf730717a10e5fa5a0d14a7443/engine/risk.js",
+      "https://github.com/meirz911/qorgau-ai/blob/65d1ffb6482901cf730717a10e5fa5a0d14a7443/engine/supervised.js",
+      "https://github.com/meirz911/qorgau-ai/blob/65d1ffb6482901cf730717a10e5fa5a0d14a7443/engine/isoforest.js",
+      "https://github.com/meirz911/qorgau-ai/blob/65d1ffb6482901cf730717a10e5fa5a0d14a7443/server.js"
+    ]
+  },
+  {
+    "repo": "h1keru2nem-sudo/MyProject",
+    "title": "Qalqan AI",
+    "category": "different_case",
+    "sha": "c77703c2f69df5e58d3c3e09e98ed57fa4f988a4",
+    "evidence": "Прочитаны README и bot.py; внешние сервисы не вызывались",
+    "strength": "RU/KZ Telegram-консультация с семейной БД и Groq",
+    "comparison": "Помощь до платежа, не банковский SOC gateway; анализ не полностью локален",
+    "next_step": "Указывать внешний источник анализа и правила хранения",
+    "sources": [
+      "https://github.com/h1keru2nem-sudo/MyProject/blob/c77703c2f69df5e58d3c3e09e98ed57fa4f988a4/README.md",
+      "https://github.com/h1keru2nem-sudo/MyProject/blob/c77703c2f69df5e58d3c3e09e98ed57fa4f988a4/bot.py"
+    ]
+  },
+  {
+    "repo": "sasiska666/AAM_guard",
+    "title": "AAM Guard",
+    "category": "different_case",
+    "sha": "a3d7ed72d4129649eec25fca3c03e47af2c304d0",
+    "evidence": "Прочитаны модель, OCR, анализатор и тесты. Запуски и метрики автора не воспроизводились.",
+    "strength": "Классификация вакансий по словам и символам с объяснением признаков. OCR извлекает текст из изображений.",
+    "comparison": "Другой этап цепочки — вербовка дропперов; у нас transaction scoring",
+    "next_step": "Добавить безопасный маршрут помощи после вовлечения, без выдуманного автоматического возврата",
+    "sources": [
+      "https://github.com/sasiska666/AAM_guard/blob/a3d7ed72d4129649eec25fca3c03e47af2c304d0/aam-guard/engine/ml.py",
+      "https://github.com/sasiska666/AAM_guard/blob/a3d7ed72d4129649eec25fca3c03e47af2c304d0/aam-guard/engine/ocr.py",
+      "https://github.com/sasiska666/AAM_guard/blob/a3d7ed72d4129649eec25fca3c03e47af2c304d0/aam-guard/tests/test_engine_bot.py",
+      "https://github.com/sasiska666/AAM_guard/blob/a3d7ed72d4129649eec25fca3c03e47af2c304d0/aam-guard/tools/evaluate.py"
+    ]
+  },
+  {
+    "repo": "oralkanbekzan/Qorgau-Ai",
+    "title": "Qorgau-Ai — browser scanner",
+    "category": "different_case",
+    "sha": "dc9f6529a053a596c56abdcc4b47b0f2dd530461",
+    "evidence": "Прочитаны ml.js и runtime; демо не проверено",
+    "strength": "OCR-коррекция и несколько browser ML алгоритмов",
+    "comparison": "Локальный PIN не серверная SOC-роль; наш BFF/service access другой уровень",
+    "next_step": "Давать исправить распознанный текст перед анализом",
+    "sources": [
+      "https://github.com/oralkanbekzan/Qorgau-Ai/blob/dc9f6529a053a596c56abdcc4b47b0f2dd530461/README.md",
+      "https://github.com/oralkanbekzan/Qorgau-Ai/blob/dc9f6529a053a596c56abdcc4b47b0f2dd530461/ml.js",
+      "https://github.com/oralkanbekzan/Qorgau-Ai/blob/dc9f6529a053a596c56abdcc4b47b0f2dd530461/static-runtime.js"
+    ]
+  },
+  {
+    "repo": "knrbvaademi/scam-radar-kz",
+    "title": "Scam Radar KZ",
+    "category": "different_case",
+    "sha": "deb437a42e935c939c94c2debb200a1564b325c2",
+    "evidence": "Прочитаны README и Flask; deployment не проверен",
+    "strength": "Telegram-раннее предупреждение и сводка сообщений",
+    "comparison": "Смежный молодежный scanner; пустая dashboard БД заполняет UI демо-примерами",
+    "next_step": "Явно маркировать synthetic feed и реальные поступившие сообщения",
+    "sources": [
+      "https://github.com/knrbvaademi/scam-radar-kz/blob/deb437a42e935c939c94c2debb200a1564b325c2/README.md",
+      "https://github.com/knrbvaademi/scam-radar-kz/blob/deb437a42e935c939c94c2debb200a1564b325c2/flask_app.py"
+    ]
+  },
+  {
+    "repo": "deKingsq/qornet",
+    "title": "QORNET",
+    "category": "bcc_antifraud",
+    "sha": "d2fecae88936c4dc592070a5bdccee785502f21c",
+    "evidence": "Исходники и тесты прочитаны; исполнение и актуальный CI не проверялись",
+    "strength": "Сильная сторона — доказательные связи сети, маршрут денег и отдельные сценарии банкомата/P2P.",
+    "comparison": "У Saq Bol другой центр продукта: серверное решение перевода, ML, биометрия и жизненный цикл cooling-off; широкий ATM/P2P-marketplace сценарий QORNET нельзя приписывать нашему прототипу.",
+    "next_step": "В инспекторе показывать конкретные транзакции, которыми подтверждается каждый графовый сигнал, и легитимный контрпример рядом с дроп-сетью.",
+    "sources": [
+      "https://github.com/deKingsq/qornet/blob/d2fecae88936c4dc592070a5bdccee785502f21c/README.md",
+      "https://github.com/deKingsq/qornet/blob/d2fecae88936c4dc592070a5bdccee785502f21c/tests/engine.test.ts",
+      "https://github.com/deKingsq/qornet/blob/d2fecae88936c4dc592070a5bdccee785502f21c/backend/transfer-risk.ts",
+      "https://github.com/deKingsq/qornet/blob/d2fecae88936c4dc592070a5bdccee785502f21c/frontend/browser-api.ts"
+    ]
+  },
+  {
+    "repo": "RootVandal/BCCShield",
+    "title": "BCC Shield / семейная защита",
+    "category": "bcc_antifraud",
+    "sha": "76480be74cd751e806f8e9f0293abc5aff867c08",
+    "evidence": "Исходники и тесты прочитаны; исполнение и актуальный CI не проверялись",
+    "strength": "Сильная сторона — связный сценарий клиента, родственника и аналитика, включая реакцию ещё во время звонка и decoy.",
+    "comparison": "У нас есть cooling-off, Guardian и операторская пометка получателя; автоматическую распознаваемость AnyDesk/сотовых звонков и полноценный семейный продукт из этого не следует считать реализованными.",
+    "next_step": "Сделать честную панель происхождения сигнала: браузерное наблюдение, ручной demo-toggle, серверные данные, mock-внешний источник; добавлять приманку только как явно изолированную демо-функцию.",
+    "sources": [
+      "https://github.com/RootVandal/BCCShield/blob/76480be74cd751e806f8e9f0293abc5aff867c08/README.md",
+      "https://github.com/RootVandal/BCCShield/blob/76480be74cd751e806f8e9f0293abc5aff867c08/app/call_guard/context.py",
+      "https://github.com/RootVandal/BCCShield/blob/76480be74cd751e806f8e9f0293abc5aff867c08/app/family/decoy.py",
+      "https://github.com/RootVandal/BCCShield/blob/76480be74cd751e806f8e9f0293abc5aff867c08/tests/test_decoy.py"
+    ]
+  },
+  {
+    "repo": "SaginbekDaniel/SYNAPTIC-LABS",
+    "title": "NEXORA AI",
+    "category": "bcc_antifraud",
+    "sha": "ea5ca9c120115e068ada90c508f2d078d6b512c3",
+    "evidence": "Исходники и тесты прочитаны; исполнение и актуальный CI не проверялись",
+    "strength": "Сильная сторона — причинная проверка денежной цепочки и явная недостаточность доказательств.",
+    "comparison": "Saq Bol уже считает fan-in/transit/shared-device сигналы; это не эквивалент capacity-constrained temporal max-flow с уровнями неоднозначности.",
+    "next_step": "Ввести в SOC короткую карточку «основания / ограничения данных», ссылку на исходные события и тест «исходящий раньше входящего не доказывает транзит».",
+    "sources": [
+      "https://github.com/SaginbekDaniel/SYNAPTIC-LABS/blob/ea5ca9c120115e068ada90c508f2d078d6b512c3/README.md",
+      "https://github.com/SaginbekDaniel/SYNAPTIC-LABS/blob/ea5ca9c120115e068ada90c508f2d078d6b512c3/src/nexora/analytics/temporal/flow.py",
+      "https://github.com/SaginbekDaniel/SYNAPTIC-LABS/blob/ea5ca9c120115e068ada90c508f2d078d6b512c3/tests/unit/test_temporal_flow.py",
+      "https://github.com/SaginbekDaniel/SYNAPTIC-LABS/blob/ea5ca9c120115e068ada90c508f2d078d6b512c3/src/nexora/analytics/risk.py",
+      "https://github.com/SaginbekDaniel/SYNAPTIC-LABS/blob/ea5ca9c120115e068ada90c508f2d078d6b512c3/src/nexora/analytics/evidence_validation.py"
+    ]
+  },
+  {
+    "repo": "ERA216/ITU-Hackathon",
+    "title": "Чистый счёт",
+    "category": "bcc_antifraud",
+    "sha": "bf52cd54a0ff931b533cd1b80031078d01294516",
+    "evidence": "Исходники и тесты прочитаны; исполнение и актуальный CI не проверялись",
+    "strength": "Сильная сторона — защита невольного участника схемы «ошибочный перевод → верните на другую карту», включая возврат и апелляцию.",
+    "comparison": "Наш SENDER_PASS_THROUGH может заметить общий транзит, но inspected TransferContext/scorer не содержит связи original_payment/refund; полное покрытие этой истории у Saq Bol не подтверждено.",
+    "next_step": "Сначала добавить проверяемый сценарий входящий→попытка пересылки→безопасная рекомендация обратиться в банк. Настоящий возврат строить только позже на авторитетной связи с исходным платежом и ledger, не подменять UI-плашкой.",
+    "sources": [
+      "https://github.com/ERA216/ITU-Hackathon/blob/bf52cd54a0ff931b533cd1b80031078d01294516/README.md",
+      "https://github.com/ERA216/ITU-Hackathon/blob/bf52cd54a0ff931b533cd1b80031078d01294516/app/engine.py",
+      "https://github.com/ERA216/ITU-Hackathon/blob/bf52cd54a0ff931b533cd1b80031078d01294516/tests/test_flow.py",
+      "https://github.com/ERA216/ITU-Hackathon/blob/bf52cd54a0ff931b533cd1b80031078d01294516/app/main.py"
+    ]
+  },
+  {
+    "repo": "ShadowNoYami/bcc-adapt-2026",
+    "title": "BCC Adapt — web-витрина",
+    "category": "different_case",
+    "sha": "f928c0edd9d6c21bd0106365a25af5c6df403cf0",
+    "evidence": "Исходники интерактивного макета прочитаны; функциональное live-демо не проверено",
+    "strength": "Сильная сторона — интерактивная демонстрация доступности интерфейса.",
+    "comparison": "Это смежный accessibility-кейс, а не полноценный конкурент транзакционному антифроду Saq Bol.",
+    "next_step": "Перенять ручные настройки размера/контраста и проверку суммы прописью; не выводить мошенничество из медленного ввода пожилого пользователя.",
+    "sources": [
+      "https://github.com/ShadowNoYami/bcc-adapt-2026/blob/f928c0edd9d6c21bd0106365a25af5c6df403cf0/README.md",
+      "https://github.com/ShadowNoYami/bcc-adapt-2026/blob/f928c0edd9d6c21bd0106365a25af5c6df403cf0/src/Accessibility.tsx",
+      "https://github.com/ShadowNoYami/bcc-adapt-2026/blob/f928c0edd9d6c21bd0106365a25af5c6df403cf0/src/Transfer.tsx"
+    ]
+  },
+  {
+    "repo": "ShadowNoYami/BCC-Adapt",
+    "title": "BCC Adapt — Flutter MVP",
+    "category": "different_case",
+    "sha": "a5028557f413536a54fa2459edd69f2c22d7fa0f",
+    "evidence": "Исходники и тесты прочитаны; исполнение и актуальный CI не проверялись",
+    "strength": "Сильная сторона — адаптация к системным accessibility-настройкам, тремору и голосовому вводу RU/KK.",
+    "comparison": "Это мобильный accessibility-MVP того же владельца; у Saq Bol фокус на защите и SOC, а полноценного adaptive native banking профиля нет.",
+    "next_step": "Добавить регрессии keyboard-only, screen-reader, крупного текста и исключить двойную озвучку; альтернативный ввод должен сохранять самостоятельное подтверждение суммы и получателя.",
+    "sources": [
+      "https://github.com/ShadowNoYami/BCC-Adapt/blob/a5028557f413536a54fa2459edd69f2c22d7fa0f/README.md",
+      "https://github.com/ShadowNoYami/BCC-Adapt/blob/a5028557f413536a54fa2459edd69f2c22d7fa0f/lib/core/accessibility/domain/accessibility_rules_engine.dart",
+      "https://github.com/ShadowNoYami/BCC-Adapt/blob/a5028557f413536a54fa2459edd69f2c22d7fa0f/test/core_engine_test.dart",
+      "https://github.com/ShadowNoYami/BCC-Adapt/blob/a5028557f413536a54fa2459edd69f2c22d7fa0f/lib/features/banking/presentation/transfer_screen.dart"
+    ]
+  },
+  {
+    "repo": "athiphat67/zero-scam-shield",
+    "title": "Zero Scam Shield / Trust Provenance",
+    "category": "different_case",
+    "sha": "e57e0a8a51fe1e378f408423980df1ae65989615",
+    "evidence": "Исходники и тесты прочитаны; исполнение и актуальный CI не проверялись",
+    "strength": "Сильная сторона — история выстраивания доверия до самого большого платежа и честный экспериментальный протокол.",
+    "comparison": "Это NITMX Fintech Bootcamp, не ITU/BCC; Saq Bol пока показывает текущий риск и общую velocity, а не отдельный эксперимент early-warning по эпизодам grooming.",
+    "next_step": "Добавить небольшой замороженный набор «маленькая выплата → возрастающие платежи» с честными семейными/торговыми аналогами и метрикой предупреждения до максимальной потери.",
+    "sources": [
+      "https://github.com/athiphat67/zero-scam-shield/blob/e57e0a8a51fe1e378f408423980df1ae65989615/README.md",
+      "https://github.com/athiphat67/zero-scam-shield/blob/e57e0a8a51fe1e378f408423980df1ae65989615/src/tp/features.py",
+      "https://github.com/athiphat67/zero-scam-shield/blob/e57e0a8a51fe1e378f408423980df1ae65989615/tests/test_features.py",
+      "https://github.com/athiphat67/zero-scam-shield/blob/e57e0a8a51fe1e378f408423980df1ae65989615/reports/G0_LAB_REPORT.md"
+    ]
+  },
+  {
+    "repo": "mohammadyaksafu/DIU_Hackathon_final",
+    "title": "Shurokkha",
+    "category": "different_case",
+    "sha": "cfd3703333f40b2899129cbb834aee80b1a1c7c3",
+    "evidence": "Исходники и тесты прочитаны; исполнение и актуальный CI не проверялись",
+    "strength": "Сильная сторона — управляемое внедрение модели: shadow/warn/enforce, policy и развёрнутый evidence pack.",
+    "comparison": "Это Bangladesh/upay, другой конкурс. Наш технический demo/pilot gate не равен реализованной продуктовой последовательности shadow→warn→enforce.",
+    "next_step": "Определить shadow policy как отдельный режим с сохранением исходного решения и наблюдаемого результата; добавить семейства unseen-fraud и сегментные false positives в offline evaluation.",
+    "sources": [
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final/blob/cfd3703333f40b2899129cbb834aee80b1a1c7c3/README.md",
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final/blob/cfd3703333f40b2899129cbb834aee80b1a1c7c3/backend/app/policy/engine.py",
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final/blob/cfd3703333f40b2899129cbb834aee80b1a1c7c3/backend/config/policy.yaml",
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final/blob/cfd3703333f40b2899129cbb834aee80b1a1c7c3/backend/tests/test_units.py",
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final/blob/cfd3703333f40b2899129cbb834aee80b1a1c7c3/backend/app/services/scoring.py",
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final/blob/cfd3703333f40b2899129cbb834aee80b1a1c7c3/DISCLOSURES.md",
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final/blob/cfd3703333f40b2899129cbb834aee80b1a1c7c3/docs/reports/evaluation.md"
+    ]
+  },
+  {
+    "repo": "Banu190/-ITU-hackathon",
+    "title": "Fraud Replay — каркас",
+    "category": "unconfirmed",
+    "sha": "5177f05401e9f0e8519c8aa76f4be9c0ea02d06b",
+    "evidence": "Каркас из 11 файлов; проверенные main.py и README пустые, tests/.gitkeep",
+    "strength": "В репозитории есть каркас, но доступных свидетельств работающего продукта пока нет.",
+    "comparison": "Не следует называть его буквально пустым либо полноценным конкурентом Saq Bol.",
+    "next_step": "Ничего не копировать по одному имени папки; пересматривать только при появлении реализации или демонстрации.",
+    "sources": [
+      "https://github.com/Banu190/-ITU-hackathon/blob/5177f05401e9f0e8519c8aa76f4be9c0ea02d06b/fraud-replay/README.md",
+      "https://github.com/Banu190/-ITU-hackathon/blob/5177f05401e9f0e8519c8aa76f4be9c0ea02d06b/fraud-replay/backend/main.py",
+      "https://github.com/Banu190/-ITU-hackathon/blob/5177f05401e9f0e8519c8aa76f4be9c0ea02d06b/fraud-replay/tests/.gitkeep"
+    ]
+  },
+  {
+    "repo": "InfectedDuck/SaqBol",
+    "title": "SaqBol — текстовый checker",
+    "category": "namesake",
+    "sha": "85796d387b521ad03f4c3debf4a2e437f92c35b4",
+    "evidence": "Исходники и тесты прочитаны; исполнение и актуальный CI не проверялись",
+    "strength": "Сильная сторона — объяснения точными фрагментами текста, приватность и честный ответ «не уверен».",
+    "comparison": "Это отдельный репозиторий другого владельца о text scam detection, не наш Saq Bol × BCC transaction/SOC prototype; принадлежность нашей команде ничем не подтверждена.",
+    "next_step": "Явно показывать полное имя команды/репозитория и независимый статус; при будущем анализе сообщений использовать цитируемые evidence spans и состояние недостаточной уверенности.",
+    "sources": [
+      "https://github.com/InfectedDuck/SaqBol/blob/85796d387b521ad03f4c3debf4a2e437f92c35b4/README.md",
+      "https://github.com/InfectedDuck/SaqBol/blob/85796d387b521ad03f4c3debf4a2e437f92c35b4/src/saqbol/core/fuse.py",
+      "https://github.com/InfectedDuck/SaqBol/blob/85796d387b521ad03f4c3debf4a2e437f92c35b4/tests/test_fuse.py",
+      "https://github.com/InfectedDuck/SaqBol/blob/85796d387b521ad03f4c3debf4a2e437f92c35b4/tests/test_privacy.py"
+    ]
+  },
+  {
+    "repo": "itsaibarr/saq-bol",
+    "title": "Сақ бол — tryHard",
+    "category": "namesake",
+    "sha": "e8b0237642afe3713bae715b4eea2976fcbc28bf",
+    "evidence": "Исходники, протокол и JSON результатов прочитаны; модель не запускалась",
+    "strength": "Сильная сторона — опубликованная оценка на реальных публичных текстах с RU/KK разбивкой и раскрытыми ограничениями.",
+    "comparison": "Это отдельный text/call-transcript классификатор команды tryHard; банковские транзакции, velocity и SOC-исполнение не являются его заявленным центром.",
+    "next_step": "Сформировать независимый holdout и языковые контрпримеры для наших клиентских предупреждений; не переносить показатели чужого text classifier на transaction antifraud.",
+    "sources": [
+      "https://github.com/itsaibarr/saq-bol/blob/e8b0237642afe3713bae715b4eea2976fcbc28bf/README.md",
+      "https://github.com/itsaibarr/saq-bol/blob/e8b0237642afe3713bae715b4eea2976fcbc28bf/runs/kg_e5L_v8b_s1/final_report_testC.json",
+      "https://github.com/itsaibarr/saq-bol/blob/e8b0237642afe3713bae715b4eea2976fcbc28bf/SPEC.md",
+      "https://github.com/itsaibarr/saq-bol/blob/e8b0237642afe3713bae715b4eea2976fcbc28bf/app.py"
+    ]
+  }
+]
+;
+  const categories = { bcc_antifraud: 'Кейс BCC · антифрод', different_case: 'Другой кейс', namesake: 'Другой Saq Bol', unconfirmed: 'Недостаточно данных' };
+  const grid = root.querySelector('.comparison-grid');
+  const controls = [];
+  function choose(project) {
+    root.querySelector('#comparison-project').textContent = project.title;
+    root.querySelector('#comparison-category').textContent = categories[project.category] || project.category;
+    root.querySelector('#comparison-evidence').textContent = project.evidence + (project.sha ? ' · ' + project.sha.slice(0, 8) : '');
+    root.querySelector('#comparison-strength').textContent = project.strength;
+    root.querySelector('#comparison-difference').textContent = project.comparison;
+    root.querySelector('#comparison-action').textContent = project.next_step;
+    const sources = root.querySelector('#comparison-sources');
+    sources.replaceChildren();
+    project.sources.forEach((url, index) => {
+      const link = document.createElement('a');
+      link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = index === 0 ? project.repo : 'Исходник ' + index;
+      sources.append(link);
+    });
+    controls.forEach(({button, repo}) => button.setAttribute('aria-pressed', String(repo === project.repo)));
+  }
+  projects.forEach(project => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'btn viz-tile';
+    const text = document.createElement('span'); text.textContent = project.repo;
+    button.append(text); button.setAttribute('aria-label', project.title + ': ' + project.repo);
+    button.setAttribute('aria-pressed', 'false'); button.addEventListener('click', () => choose(project));
+    controls.push({button, repo: project.repo}); grid.append(button);
+  });
+  choose(projects[0]);
+})();
+</script>

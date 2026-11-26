@@ -1,0 +1,98 @@
+<section id="saqbol-nov25-tests" lang="ru" aria-labelledby="saqbol-nov25-title">
+  <style>
+    #saqbol-nov25-tests {
+      display: grid;
+      gap: calc(var(--font-size-base) * 1);
+    }
+    #saqbol-nov25-tests .test-heading {
+      display: grid;
+      gap: calc(var(--font-size-base) * 0.25);
+    }
+    #saqbol-nov25-tests .test-sample {
+      margin-bottom: calc(var(--font-size-base) * 0.5);
+    }
+  </style>
+  <header class="test-heading">
+    <h2 id="saqbol-nov25-title">Решения Saq Bol на трёх выборках</h2>
+    <p class="text-small text-muted">Синтетические переводы · 25 ноября 2026 · <code>main d053847</code></p>
+  </header>
+  <div class="nav nav-pills" role="tablist" aria-label="Выборка переводов">
+    <button class="nav-link active" id="saqbol-nov25-base-tab" type="button" role="tab" aria-controls="saqbol-nov25-base" aria-selected="true">Основной</button>
+    <button class="nav-link" id="saqbol-nov25-pairs-tab" type="button" role="tab" aria-controls="saqbol-nov25-pairs" aria-selected="false">12 пар</button>
+    <button class="nav-link" id="saqbol-nov25-call-tab" type="button" role="tab" aria-controls="saqbol-nov25-call" aria-selected="false">Звонки</button>
+  </div>
+  <div id="saqbol-nov25-base" role="tabpanel" aria-labelledby="saqbol-nov25-base-tab" aria-live="polite">
+    <h3 class="test-sample">120 переводов в 14 типовых ситуациях</h3>
+    <div class="viz-grid">
+      <div class="card viz-stat">
+        <span>Пауза или блокировка при мошенничестве</span>
+        <span class="viz-stat-value tabular-nums">57 из 60</span>
+        <span class="text-small">95,0 % · 55 пауз и 2 блока</span>
+      </div>
+      <div class="card viz-stat">
+        <span>Приостановлено законных</span>
+        <span class="viz-stat-value tabular-nums">4 из 60</span>
+        <span class="text-small">6,7 %</span>
+      </div>
+    </div>
+  </div>
+  <div id="saqbol-nov25-pairs" role="tabpanel" aria-labelledby="saqbol-nov25-pairs-tab" aria-live="polite" hidden>
+    <h3 class="test-sample">24 перевода в 12 парах с одинаковой суммой</h3>
+    <div class="viz-grid">
+      <div class="card viz-stat">
+        <span>Пауза или блокировка при мошенничестве</span>
+        <span class="viz-stat-value tabular-nums">8 из 12</span>
+        <span class="text-small">66,7 % · все 8 на паузе</span>
+      </div>
+      <div class="card viz-stat">
+        <span>Приостановлено законных</span>
+        <span class="viz-stat-value tabular-nums">1 из 12</span>
+        <span class="text-small">8,3 %</span>
+      </div>
+    </div>
+  </div>
+  <div id="saqbol-nov25-call" role="tabpanel" aria-labelledby="saqbol-nov25-call-tab" aria-live="polite" hidden>
+    <h3 class="test-sample">640 переводов знакомому получателю во время звонка</h3>
+    <div class="viz-grid">
+      <div class="card viz-stat">
+        <span>Пауза или блокировка при мошенничестве</span>
+        <span class="viz-stat-value tabular-nums">168 из 256</span>
+        <span class="text-small">65,6 % · все 168 на паузе</span>
+      </div>
+      <div class="card viz-stat">
+        <span>Приостановлено законных</span>
+        <span class="viz-stat-value tabular-nums">123 из 384</span>
+        <span class="text-small">32,0 %</span>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+  (() => {
+    const root = document.getElementById("saqbol-nov25-tests");
+    const tabs = Array.from(root.querySelectorAll('[role="tab"]'));
+    function restore(state) {
+      const selected = tabs.find(tab => tab.id === state?.privateContent?.sampleTab);
+      if (!selected) return;
+      for (const tab of tabs) {
+        const active = tab === selected;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+        document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
+      }
+    }
+    restore(window.openai?.widgetState);
+    window.addEventListener("openai:set_globals", event => {
+      restore(event.detail?.globals?.widgetState);
+    });
+    root.addEventListener("click", event => {
+      const tab = event.target.closest('[role="tab"]');
+      if (tabs.includes(tab) && window.openai?.setWidgetState) {
+        window.openai.setWidgetState({
+          modelContent: { sample: tab.textContent.trim() },
+          privateContent: { sampleTab: tab.id }
+        }).catch(() => {});
+      }
+    });
+  })();
+</script>

@@ -1,0 +1,567 @@
+[
+  {
+    "name": "Тихий код",
+    "repos": [
+      "https://github.com/narutouciha431-sketch/tihiy-kod"
+    ],
+    "sites": [
+      {
+        "url": "https://narutouciha431-sketch.github.io/tihiy-kod/presentation/",
+        "label": "Презентация",
+        "status": "GET 200, презентация «Тихий код»"
+      },
+      {
+        "url": "https://narutouciha431-sketch.github.io/tihiy-kod/",
+        "label": "Описание проекта",
+        "status": "GET 200, страница README на GitHub Pages"
+      }
+    ],
+    "scope": "direct",
+    "feature": "После завершения подозрительного звонка клиент отвечает «Это вы?». Подозрительный получатель попадает на проверку аналитика. Есть хронология операции и справка для полиции. В отчёте команды задержано или передано доверенному лицу 39 из 45 мошеннических сценариев на стенде из 85 синтетических примеров.",
+    "evidence": "Кейс BCC указан в README. Опубликованы движок, сценарный стенд и результаты авторов.",
+    "sources": [
+      "https://github.com/narutouciha431-sketch/tihiy-kod/blob/82b9cbfa4ddae759d72981942beab11c865b42cd/README.md",
+      "https://github.com/narutouciha431-sketch/tihiy-kod/blob/82b9cbfa4ddae759d72981942beab11c865b42cd/docs/test-stand-results.md",
+      "https://github.com/narutouciha431-sketch/tihiy-kod/blob/82b9cbfa4ddae759d72981942beab11c865b42cd/scripts/test_stand.py"
+    ]
+  },
+  {
+    "name": "Qaqpan",
+    "repos": [
+      "https://github.com/adiletpn/Qaqpan"
+    ],
+    "sites": [
+      {
+        "url": "https://qaqpan-production.up.railway.app/try",
+        "label": "Открыть демо Qaqpan",
+        "status": "GET 200, открылась страница проекта"
+      },
+      {
+        "url": "https://qaqpan-production.up.railway.app/",
+        "label": "Главная",
+        "status": "GET 200, открылась страница проекта"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Объединяет подозрительное сообщение, звонок и действия в течение 30 минут после него. До перевода показывает результат проверки получателя и учитывает суммарные отправки новым получателям за сутки. Доверенный человек может участвовать в решении.",
+    "evidence": "Кейс BCC указан командой. Доступны серверный расчёт, тесты правил и публичная демостраница.",
+    "sources": [
+      "https://github.com/adiletpn/Qaqpan/blob/96e64ef188ff9800f54b3b204b9a3d0d2e997b2f/README.md",
+      "https://github.com/adiletpn/Qaqpan/blob/96e64ef188ff9800f54b3b204b9a3d0d2e997b2f/api/risk.py",
+      "https://github.com/adiletpn/Qaqpan/blob/96e64ef188ff9800f54b3b204b9a3d0d2e997b2f/tests/test_risk.py"
+    ]
+  },
+  {
+    "name": "TransferGuard",
+    "repos": [
+      "https://github.com/your-golden-hour/transferguard-itu"
+    ],
+    "sites": [
+      {
+        "url": "https://transferguard-itu.vercel.app/",
+        "label": "Симулятор перевода",
+        "status": "GET 200, открылась страница проекта"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Клиент видит причины до подтверждения перевода. Ответы на вопросы меняют рекомендацию. Наглядно показывает, в какой момент нужна дополнительная проверка.",
+    "evidence": "Команда указывает банковский кейс ITU 2026. Доступны расчёт, тесты и публичный симулятор.",
+    "sources": [
+      "https://github.com/your-golden-hour/transferguard-itu/blob/c8da1f67eafc9de0cf8067a08139bd5b72c98092/README.md",
+      "https://github.com/your-golden-hour/transferguard-itu/blob/c8da1f67eafc9de0cf8067a08139bd5b72c98092/lib/risk.ts",
+      "https://github.com/your-golden-hour/transferguard-itu/blob/c8da1f67eafc9de0cf8067a08139bd5b72c98092/tests/risk.test.ts"
+    ]
+  },
+  {
+    "name": "DropRadar",
+    "repos": [
+      "https://github.com/aikenmurat1-design/dropradar"
+    ],
+    "sites": [
+      {
+        "url": "https://aikenmurat1-design.github.io/dropradar/index.html.",
+        "label": "Рабочий симулятор",
+        "status": "GET 200, открывается DropRadar. Точка после html входит в адрес"
+      },
+      {
+        "url": "https://aikenmurat1-design.github.io/dropradar/",
+        "label": "Корневой адрес Pages",
+        "status": "GET 404. Для просмотра подходит прямая ссылка на файл"
+      }
+    ],
+    "scope": "direct",
+    "feature": "В браузере выполняется расчёт двух ансамблей деревьев. Пользователь меняет параметры учебной сети и видит, когда её заметит радар. История обучения и отдельный набор для восстановления заявленных метрик не опубликованы в закреплённой версии.",
+    "evidence": "Кейс BCC указан в описании GitHub. В HTML есть деревья, расчёт и игровая симуляция.",
+    "sources": [
+      "https://github.com/aikenmurat1-design/dropradar/blob/1bc435ad050d7f7d05ce3e49f1bba8b7e2230fb6/index.html."
+    ]
+  },
+  {
+    "name": "BCC Аман",
+    "repos": [
+      "https://github.com/aikenmurat1-design/bcc-aman"
+    ],
+    "sites": [
+      {
+        "url": "https://aikenmurat1-design.github.io/bcc-aman/",
+        "label": "Семейный симулятор",
+        "status": "GET 200, открылась страница проекта"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Семейная защита пожилого клиента. Получатель уведомления видит объяснение, может позвонить и разрешить или остановить платёж. Суммарный счётчик за сутки учитывает дробление платежей. Три роли собраны в одном браузерном прототипе.",
+    "evidence": "Кейс BCC указан в README. Опубликован интерактивный HTML.",
+    "sources": [
+      "https://github.com/aikenmurat1-design/bcc-aman/blob/ed4ca472e8efc5c57af06d3f906f5dcfafa83537/README.md",
+      "https://github.com/aikenmurat1-design/bcc-aman/blob/ed4ca472e8efc5c57af06d3f906f5dcfafa83537/index.html"
+    ]
+  },
+  {
+    "name": "Qorgan · aikenmurat1-design",
+    "repos": [
+      "https://github.com/aikenmurat1-design/Qorgan"
+    ],
+    "sites": [
+      {
+        "url": "https://aikenmurat1-design.github.io/Qorgan/",
+        "label": "Текст сценария",
+        "status": "GET 200, доступен текст описания"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Сценарий учитывает длительность неизвестного звонка, диктовку реквизитов, свежий кредит и связи получателя. В опубликованном index.html размещены 1682 символа текста Markdown с описаниями переключателей и диалога. Исполняемые элементы интерфейса в нём отсутствуют.",
+    "evidence": "Кейс BCC назван в единственном файле. Доказан сценарий, работоспособность модели этим исходником не подтверждается.",
+    "sources": [
+      "https://github.com/aikenmurat1-design/Qorgan/blob/77a8c0847e3b80aafdb82bda40970ecebd9bd71f/index.html"
+    ]
+  },
+  {
+    "name": "Qorgan · Ibrakazah",
+    "repos": [
+      "https://github.com/Ibrakazah/qorgan"
+    ],
+    "sites": [],
+    "scope": "direct",
+    "feature": "Риск перевода под диктовку, вопрос о цели платежа, распознавание легенды мошенника, задержка и передача доверенному лицу и аналитику. Есть офлайн-режим и опция языковой модели.",
+    "evidence": "Кейс BCC указан в README. Опубликованы серверные правила, политика решений и изучаемые локально сценарии.",
+    "sources": [
+      "https://github.com/Ibrakazah/qorgan/blob/25a6ea63d4940bb3f45cba5b750bf221d34e0fc7/README.md",
+      "https://github.com/Ibrakazah/qorgan/blob/25a6ea63d4940bb3f45cba5b750bf221d34e0fc7/app/qorgan/risk.py",
+      "https://github.com/Ibrakazah/qorgan/blob/25a6ea63d4940bb3f45cba5b750bf221d34e0fc7/app/qorgan/policy.py"
+    ]
+  },
+  {
+    "name": "Qorgan Antifraud · ZhanLI",
+    "repos": [
+      "https://github.com/alinaraevali18/qorgan-antifraud"
+    ],
+    "sites": [
+      {
+        "url": "https://qorgan-antifraud-knnai7fwmhudrcnfhmamal.streamlit.app/",
+        "label": "Демо Streamlit",
+        "status": "После перенаправлений GET 200, отдана JavaScript-оболочка Streamlit. Расчёт в приложении этим запросом не подтверждён"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Сигналы сессии включают звонок, демонстрацию экрана, вставку реквизитов и свежий кредит. Средний риск ведёт к трём вопросам и десятиминутной паузе. Граф отмечает получателей и дальнейших сборщиков. Метрики в README рассчитаны командой на синтетике.",
+    "evidence": "Кейс BCC указан в README. Опубликованы код выбора решения, признаки и адрес Streamlit.",
+    "sources": [
+      "https://github.com/alinaraevali18/qorgan-antifraud/blob/019c7a2d4736c97b6b0fff42394815e5773522fe/README.md",
+      "https://github.com/alinaraevali18/qorgan-antifraud/blob/019c7a2d4736c97b6b0fff42394815e5773522fe/qorgan/features.py",
+      "https://github.com/alinaraevali18/qorgan-antifraud/blob/019c7a2d4736c97b6b0fff42394815e5773522fe/qorgan/policy.py"
+    ]
+  },
+  {
+    "name": "BCC Shield 360",
+    "repos": [
+      "https://github.com/MaratelloMaJo/bcc-shield-360"
+    ],
+    "sites": [],
+    "scope": "direct",
+    "feature": "Мобильный экран и пульт жюри позволяют переключать контекст звонка, разбирать вклад сигналов, подтверждать семейный платёж и проверять подпись квитанции. Диалог звонка воспроизводится как симуляция.",
+    "evidence": "Кейс BCC указан в README. Доступны Next.js-приложение, модуль анализа и описание TrustLens.",
+    "sources": [
+      "https://github.com/MaratelloMaJo/bcc-shield-360/blob/46588a22d767086c57631d71b864e5d31c8bd8d1/README.md",
+      "https://github.com/MaratelloMaJo/bcc-shield-360/blob/46588a22d767086c57631d71b864e5d31c8bd8d1/app/page.tsx",
+      "https://github.com/MaratelloMaJo/bcc-shield-360/blob/46588a22d767086c57631d71b864e5d31c8bd8d1/lib/scam-engine.ts"
+    ]
+  },
+  {
+    "name": "BCC Qorgau · wiwiq009",
+    "repos": [
+      "https://github.com/wiwiq009/bcc-qorgau"
+    ],
+    "sites": [],
+    "scope": "candidate",
+    "feature": "Flask ищет признаки давления, запроса секретных данных и подозрительных ссылок в тексте на русском и казахском. Результат показывает причины риска. Основной пользовательский сценарий — проверка сообщения.",
+    "evidence": "Изучены обработчик и шаблон. В README упомянут Казахстан, принадлежность к кейсу ITU × BCC не установлена.",
+    "sources": [
+      "https://github.com/wiwiq009/bcc-qorgau/blob/a371dcb5fc5aa7f2181f5e0ff72c75dbf2ffec28/README.md",
+      "https://github.com/wiwiq009/bcc-qorgau/blob/a371dcb5fc5aa7f2181f5e0ff72c75dbf2ffec28/app.py",
+      "https://github.com/wiwiq009/bcc-qorgau/blob/a371dcb5fc5aa7f2181f5e0ff72c75dbf2ffec28/templates/index.html"
+    ]
+  },
+  {
+    "name": "BCC Safe Guard",
+    "repos": [
+      "https://github.com/mzhks01/BCC-SAFE-GUARD"
+    ],
+    "sites": [],
+    "scope": "candidate",
+    "feature": "Статическое приложение принимает описание звонка или SMS, проверяет тестовый перевод по эвристикам и ведёт локальный журнал. Пользователь вводит сведения вручную.",
+    "evidence": "В README проект назван независимым учебным прототипом BCC. Подтверждения участия в ITU в просмотренном источнике нет.",
+    "sources": [
+      "https://github.com/mzhks01/BCC-SAFE-GUARD/blob/069eb7cddaf8c513915d460f686476fbd7cf0d5b/README.txt",
+      "https://github.com/mzhks01/BCC-SAFE-GUARD/blob/069eb7cddaf8c513915d460f686476fbd7cf0d5b/index.html"
+    ]
+  },
+  {
+    "name": "SafeTransfer",
+    "repos": [
+      "https://github.com/ramazanabdimalik/ITU-HACKATHON"
+    ],
+    "sites": [
+      {
+        "url": "https://itu-hackathon.vercel.app/",
+        "label": "SafeTransfer",
+        "status": "GET 200, заголовок «Главная · SafeTransfer»"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Форма перевода, лента для сотрудника и детерминированные баллы. Причины рассчитываются с учётом суммы, времени, частоты операций и устройства, объясняются на русском и казахском.",
+    "evidence": "Кейс BCC указан в README. Доступны серверный маршрут оценки, описание граничных тестов и Vercel-стенд.",
+    "sources": [
+      "https://github.com/ramazanabdimalik/ITU-HACKATHON/blob/b83455e56fc340cc5288719b20c62b53bf3a429c/README.md",
+      "https://github.com/ramazanabdimalik/ITU-HACKATHON/blob/b83455e56fc340cc5288719b20c62b53bf3a429c/web/app/api/score/route.ts"
+    ]
+  },
+  {
+    "name": "ScamGuard KZ",
+    "repos": [
+      "https://github.com/Mirafil/ScamGuard-KZ"
+    ],
+    "sites": [],
+    "scope": "adjacent",
+    "feature": "Университетский прототип оценки до списания. Правила выбирают ALLOW, VERIFY или HOLD. Опубликованы синтетические примеры и результаты, а также автономная страница и локальный API.",
+    "evidence": "README описывает учебный MVP. Участие в данном кейсе BCC не подтверждено.",
+    "sources": [
+      "https://github.com/Mirafil/ScamGuard-KZ/blob/8da678bcb204cfbcc973efe9ba16888e8d6949ee/README.md",
+      "https://github.com/Mirafil/ScamGuard-KZ/blob/8da678bcb204cfbcc973efe9ba16888e8d6949ee/server.py",
+      "https://github.com/Mirafil/ScamGuard-KZ/blob/8da678bcb204cfbcc973efe9ba16888e8d6949ee/data/synthetic_validation_600.csv"
+    ]
+  },
+  {
+    "name": "Qorgau AI · meirz911",
+    "repos": [
+      "https://github.com/meirz911/qorgau-ai"
+    ],
+    "sites": [],
+    "scope": "unknown",
+    "feature": "В предыдущем сохранённом разборе проекта были правила, Isolation Forest, логистическая модель и обратная связь аналитика. На 26 ноября текущий репозиторий, прежний коммит и raw README возвращают 404. Причина смены доступности неизвестна.",
+    "evidence": "Текущая доступность проверена. Функции относятся к прежнему публичному снимку 65d1ffb6 от 18 ноября.",
+    "sources": [
+      "https://github.com/meirz911/qorgau-ai/commit/65d1ffb6482901cf730717a10e5fa5a0d14a7443",
+      "https://github.com/meirz911/qorgau-ai"
+    ]
+  },
+  {
+    "name": "QORNET",
+    "repos": [
+      "https://github.com/deKingsq/qornet",
+      "https://github.com/deKingsq/qornet-presentation"
+    ],
+    "sites": [
+      {
+        "url": "https://dekingsq.github.io/qornet/",
+        "label": "Главная",
+        "status": "GET 200, открылась страница проекта"
+      },
+      {
+        "url": "https://dekingsq.github.io/qornet/demo/",
+        "label": "Интерактивное демо",
+        "status": "GET 200, открылась страница проекта"
+      },
+      {
+        "url": "https://dekingsq.github.io/qornet/presentation.html",
+        "label": "Презентация",
+        "status": "GET 200, открылась страница проекта"
+      },
+      {
+        "url": "https://dekingsq.github.io/qornet-presentation/",
+        "label": "Презентация из второго репозитория",
+        "status": "GET 200, открылась страница проекта"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Распутывает цепочку переводов во времени и показывает операции, подтверждающие связь. Общий IP сам по себе даёт ноль баллов. Есть сценарий P2P-треугольника и сравнение двух политик на одних и тех же 48 синтетических заявках.",
+    "evidence": "README называет ITU. Код скоринга, веб-демо и отдельная одноимённая презентация опубликованы одним владельцем.",
+    "sources": [
+      "https://github.com/deKingsq/qornet/blob/d2fecae88936c4dc592070a5bdccee785502f21c/README.md",
+      "https://github.com/deKingsq/qornet/blob/d2fecae88936c4dc592070a5bdccee785502f21c/backend/transfer-risk.ts",
+      "https://github.com/deKingsq/qornet-presentation/blob/2c09e3e3a44213e6664088bf4171b2c6ed18723c/README.md"
+    ]
+  },
+  {
+    "name": "BCC Shield · RootVandal",
+    "repos": [
+      "https://github.com/RootVandal/BCCShield"
+    ],
+    "sites": [
+      {
+        "url": "https://bcc-shield.onrender.com/",
+        "label": "Демо",
+        "status": "GET 200 при повторной проверке, первый запрос превысил 20 секунд"
+      },
+      {
+        "url": "https://bcc-shield.onrender.com/pitch",
+        "label": "Презентация",
+        "status": "GET 200 после перенаправления на презентацию"
+      },
+      {
+        "url": "https://bcc-shield.onrender.com/video",
+        "label": "Страница видео",
+        "status": "GET 200, открылась страница проекта"
+      },
+      {
+        "url": "https://t.me/BCCshieldbot",
+        "label": "Telegram команды",
+        "status": "GET 200, публичная карточка бота. Сообщения не отправлялись"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Доверенный родственник получает предупреждение о подозрительном звонке ещё до перевода. В учебном сценарии семья решает судьбу операции, аналитик видит граф. Опубликованы симулятор, презентация и страница видео.",
+    "evidence": "Кейс BCC указан в README. Есть серверные модули звонка, семейной связи и графа. Публичный Render ответил при повторном запросе.",
+    "sources": [
+      "https://github.com/RootVandal/BCCShield/blob/76480be74cd751e806f8e9f0293abc5aff867c08/README.md",
+      "https://github.com/RootVandal/BCCShield/blob/76480be74cd751e806f8e9f0293abc5aff867c08/app/call_guard/analyzer.py",
+      "https://github.com/RootVandal/BCCShield/blob/76480be74cd751e806f8e9f0293abc5aff867c08/app/graph/scoring.py"
+    ]
+  },
+  {
+    "name": "NEXORA AI · SYNAPTIC LABS",
+    "repos": [
+      "https://github.com/SaginbekDaniel/SYNAPTIC-LABS"
+    ],
+    "sites": [
+      {
+        "url": "https://web-production-4593b103.up.railway.app/login",
+        "label": "Вход NEXORA",
+        "status": "GET 200, заголовок «NEXORA AI — расследование сетей». Без авторизации"
+      },
+      {
+        "url": "https://web-production-4593b103.up.railway.app/",
+        "label": "Главная NEXORA",
+        "status": "GET 200, тот же заголовок приложения"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Для аналитика восстанавливает направление и последовательность денег, проверяет, мог ли объём пройти по указанной цепочке, и различает подтверждённый, неоднозначный и противоречивый путь. Есть исходные операции и воспроизводимый синтетический benchmark.",
+    "evidence": "Кейс BCC и точный адрес Railway прямо указаны в README. Доступны движок и JSON с результатами.",
+    "sources": [
+      "https://github.com/SaginbekDaniel/SYNAPTIC-LABS/blob/ea5ca9c120115e068ada90c508f2d078d6b512c3/README.md",
+      "https://github.com/SaginbekDaniel/SYNAPTIC-LABS/blob/ea5ca9c120115e068ada90c508f2d078d6b512c3/src/nexora/analytics/risk.py",
+      "https://github.com/SaginbekDaniel/SYNAPTIC-LABS/blob/ea5ca9c120115e068ada90c508f2d078d6b512c3/benchmarks/results/bench-v1.json"
+    ]
+  },
+  {
+    "name": "Clean Break / «Чистый счёт»",
+    "repos": [
+      "https://github.com/ERA216/ITU-Hackathon",
+      "https://github.com/ERA216/ITU"
+    ],
+    "sites": [
+      {
+        "url": "https://itu-hackathon.onrender.com/",
+        "label": "Главная Clean Break",
+        "status": "GET 200, открылась страница проекта"
+      },
+      {
+        "url": "https://itu-hackathon.onrender.com/client",
+        "label": "Клиент",
+        "status": "GET 200, открылась страница проекта"
+      },
+      {
+        "url": "https://itu-hackathon.onrender.com/analyst",
+        "label": "Аналитик",
+        "status": "GET 200, открылась страница проекта"
+      }
+    ],
+    "scope": "direct",
+    "feature": "Защита клиента, которому пришли чужие деньги. Возврат исходному отправителю, удержание спорной суммы и разбор у сотрудника. Ранняя версия называется «Чистый счёт». У двух репозиториев общие автор, сценарий и 289 совпадающих строк старого движка из 293.",
+    "evidence": "Оба README называют кейс BCC. Сверены версии app/engine.py и публичные страницы клиента и аналитика.",
+    "sources": [
+      "https://github.com/ERA216/ITU-Hackathon/blob/8a3ec6a4f860e7ed054beb83a7aa066b5380b877/README.md",
+      "https://github.com/ERA216/ITU-Hackathon/blob/8a3ec6a4f860e7ed054beb83a7aa066b5380b877/app/engine.py",
+      "https://github.com/ERA216/ITU/blob/a77ea7a495d9a7e16565efa9690c277ade85e962/README.md",
+      "https://github.com/ERA216/ITU/blob/a77ea7a495d9a7e16565efa9690c277ade85e962/app/engine.py"
+    ]
+  },
+  {
+    "name": "Fraud Replay",
+    "repos": [
+      "https://github.com/Banu190/-ITU-hackathon"
+    ],
+    "sites": [],
+    "scope": "candidate",
+    "feature": "Исследует операции из CSV, строит граф и временную шкалу, даёт проверить альтернативное решение и выгрузить PDF. В backend опубликованы PostgreSQL, правила и опционный Isolation Forest. В рабочей ветке Front1 есть собственный локальный вариант React/FastAPI/SQLite.",
+    "evidence": "Ветка master содержит заготовку. Сверены ветки backend, Front1 и feature/fraud-engine. Название связывает репозиторий с ITU, официальный список заявок BCC не установлен.",
+    "sources": [
+      "https://github.com/Banu190/-ITU-hackathon/blob/b901bf458e/fraud-replay/backend/README.md",
+      "https://github.com/Banu190/-ITU-hackathon/blob/36e34e0f81/fraud-replay/README.md",
+      "https://github.com/Banu190/-ITU-hackathon/tree/a15d13d071/fraud-replay/backend/fraud_engine",
+      "https://github.com/Banu190/-ITU-hackathon"
+    ]
+  },
+  {
+    "name": "BCC Adapt",
+    "repos": [
+      "https://github.com/ShadowNoYami/bcc-adapt-2026",
+      "https://github.com/ShadowNoYami/BCC-Adapt"
+    ],
+    "sites": [
+      {
+        "url": "https://shadownoyami.github.io/bcc-adapt-2026/",
+        "label": "Интерактивная презентация и симулятор",
+        "status": "GET 200, открылась страница проекта"
+      }
+    ],
+    "scope": "adjacent",
+    "feature": "Доступный банкинг для клиентов с нарушениями зрения или моторики. Flutter-приложение адаптирует интерфейс, а публичный веб-симулятор показывает настройку контраста и размера, короткую паузу и подтверждение удержанием.",
+    "evidence": "Автор обоих репозиториев публикует презентацию и приложение BCC Adapt для ITU. Специализация — доступность.",
+    "sources": [
+      "https://github.com/ShadowNoYami/bcc-adapt-2026/blob/f928c0edd9d6c21bd0106365a25af5c6df403cf0/README.md",
+      "https://github.com/ShadowNoYami/BCC-Adapt/blob/f4ac702204f18140e725a2f192d6ab0baf994fda/README.md"
+    ]
+  },
+  {
+    "name": "SaqBol · InfectedDuck",
+    "repos": [
+      "https://github.com/InfectedDuck/SaqBol"
+    ],
+    "sites": [],
+    "scope": "adjacent",
+    "feature": "Проверка мошеннических текстов с выделением конкретных фраз, объяснением схемы и советами на четырёх языках. В репозитории есть web, API и Telegram. Автор прямо указывает, что публичный запуск ещё не состоялся.",
+    "evidence": "Одноимённый независимый проект. Опубликованы статус разработки и код анализа ссылок.",
+    "sources": [
+      "https://github.com/InfectedDuck/SaqBol/blob/85796d387b521ad03f4c3debf4a2e437f92c35b4/README.md",
+      "https://github.com/InfectedDuck/SaqBol/blob/85796d387b521ad03f4c3debf4a2e437f92c35b4/src/saqbol/core/url_analyzer.py"
+    ]
+  },
+  {
+    "name": "Сақ бол · tryHard",
+    "repos": [
+      "https://github.com/itsaibarr/saq-bol"
+    ],
+    "sites": [],
+    "scope": "adjacent",
+    "feature": "Классифицирует мошеннические сообщения на казахском, русском и их смеси. Опубликованы код оценки и сравнение с базовыми подходами на отложенном наборе из 151 мошеннического текста. Показатели относятся к сообщениям.",
+    "evidence": "Команда обозначает финансовый трек. Связь с кейсом BCC не установлена. Отдельный проект с похожим названием.",
+    "sources": [
+      "https://github.com/itsaibarr/saq-bol/blob/e8b0237642afe3713bae715b4eea2976fcbc28bf/README.md",
+      "https://github.com/itsaibarr/saq-bol/blob/e8b0237642afe3713bae715b4eea2976fcbc28bf/RUNS.md",
+      "https://github.com/itsaibarr/saq-bol/blob/e8b0237642afe3713bae715b4eea2976fcbc28bf/pipeline/src/score_model.py"
+    ]
+  },
+  {
+    "name": "Zero Scam Shield",
+    "repos": [
+      "https://github.com/athiphat67/zero-scam-shield"
+    ],
+    "sites": [],
+    "scope": "other",
+    "feature": "Изучает, как подозрительные небольшие «выплаты» формируют доверие до крупного перевода. Использует LightGBM и собственный симулятор, проверяет утечку информации из будущего.",
+    "evidence": "По README это финалист NITMX Fintech Bootcamp 2026 в Таиланде. Испытания проводились на синтетике.",
+    "sources": [
+      "https://github.com/athiphat67/zero-scam-shield/blob/e57e0a8a51fe1e378f408423980df1ae65989615/README.md",
+      "https://github.com/athiphat67/zero-scam-shield/blob/e57e0a8a51fe1e378f408423980df1ae65989615/DECISIONS.md"
+    ]
+  },
+  {
+    "name": "Shurokkha · TwinLogic",
+    "repos": [
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final"
+    ],
+    "sites": [
+      {
+        "url": "https://165-99-219-251.sslip.io/",
+        "label": "Заявленный стенд Shurokkha",
+        "status": "TLS-соединение не установлено при проверке. Доступность приложения не подтверждена"
+      }
+    ],
+    "scope": "other",
+    "feature": "Политика ALLOW/WARN/HOLD, объяснения на бенгальском, граф сетей и рабочее место аналитика. Проект публикует метрики и описание нагрузочных проверок.",
+    "evidence": "Проект DIU CPC и upay в Бангладеш. Адрес в README и GitHub About совпадает.",
+    "sources": [
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final/blob/cfd3703333f40b2899129cbb834aee80b1a1c7c3/README.md",
+      "https://github.com/mohammadyaksafu/DIU_Hackathon_final/blob/cfd3703333f40b2899129cbb834aee80b1a1c7c3/DISCLOSURES.md"
+    ]
+  },
+  {
+    "name": "Qalqan AI",
+    "repos": [
+      "https://github.com/h1keru2nem-sudo/MyProject"
+    ],
+    "sites": [],
+    "scope": "adjacent",
+    "feature": "Telegram-помощник для семьи: принимает текст, голос или изображение, проверяет поддельные квитанции и может предупредить близкого. Поддерживает русский и казахский.",
+    "evidence": "Опубликованы README и бот. Принадлежность к ITU × BCC в них не установлена.",
+    "sources": [
+      "https://github.com/h1keru2nem-sudo/MyProject/blob/c77703c2f69df5e58d3c3e09e98ed57fa4f988a4/README.md",
+      "https://github.com/h1keru2nem-sudo/MyProject/blob/c77703c2f69df5e58d3c3e09e98ed57fa4f988a4/bot.py"
+    ]
+  },
+  {
+    "name": "AAM Guard",
+    "repos": [
+      "https://github.com/sasiska666/AAM_guard"
+    ],
+    "sites": [
+      {
+        "url": "https://t.me/AAMGuardKZbot",
+        "label": "Telegram AAM Guard",
+        "status": "GET 200, публичная карточка бота. Ответы не проверялись"
+      }
+    ],
+    "scope": "adjacent",
+    "feature": "Проверяет вакансии и скриншоты на вербовку в дропы. Бот и Streamlit-приложение используют OCR и локальный классификатор.",
+    "evidence": "Проверен вложенный README, указан публичный Telegram. Связь с кейсом BCC не установлена.",
+    "sources": [
+      "https://github.com/sasiska666/AAM_guard/blob/a3d7ed72d4129649eec25fca3c03e47af2c304d0/aam-guard/README.md",
+      "https://github.com/sasiska666/AAM_guard/blob/a3d7ed72d4129649eec25fca3c03e47af2c304d0/aam-guard/streamlit_app.py"
+    ]
+  },
+  {
+    "name": "QORGAU AI · oralkanbekzan",
+    "repos": [
+      "https://github.com/oralkanbekzan/Qorgau-Ai"
+    ],
+    "sites": [
+      {
+        "url": "https://oralkanbekzan.github.io/Qorgau-Ai/",
+        "label": "Проверка ссылок и сообщений",
+        "status": "GET 200, открылась страница проекта"
+      }
+    ],
+    "scope": "adjacent",
+    "feature": "Проверяет ссылки, номера и переписку, распознаёт текст на скриншоте. Браузерная версия использует локальные правила и модели. В README автор отдельно отмечает отключённую проверку через Claude.",
+    "evidence": "Опубликованы исходный код и GitHub Pages. Участие именно в BCC-кейсе не подтверждено.",
+    "sources": [
+      "https://github.com/oralkanbekzan/Qorgau-Ai/blob/dc9f6529a053a596c56abdcc4b47b0f2dd530461/README.md",
+      "https://github.com/oralkanbekzan/Qorgau-Ai/blob/dc9f6529a053a596c56abdcc4b47b0f2dd530461/index.html"
+    ]
+  },
+  {
+    "name": "Scam Radar KZ",
+    "repos": [
+      "https://github.com/knrbvaademi/scam-radar-kz"
+    ],
+    "sites": [],
+    "scope": "adjacent",
+    "feature": "Сбор жалоб и мониторинг мошенничества, ориентированный на молодёжь Казахстана. Доступен Flask-файл. Telegram упоминается в описании, отдельное публичное демо не найдено.",
+    "evidence": "Проверены README и flask_app.py. Связь с кейсом BCC не установлена.",
+    "sources": [
+      "https://github.com/knrbvaademi/scam-radar-kz/blob/deb437a42e935c939c94c2debb200a1564b325c2/README.md",
+      "https://github.com/knrbvaademi/scam-radar-kz/blob/deb437a42e935c939c94c2debb200a1564b325c2/flask_app.py"
+    ]
+  }
+]

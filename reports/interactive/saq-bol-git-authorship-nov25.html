@@ -1,0 +1,32 @@
+<style>
+  #saq-authorship-25 { display: grid; gap: calc(var(--font-size-base) * .75); }
+  #saq-authorship-25 section h3 { margin-bottom: calc(var(--font-size-base) * .5); }
+</style>
+<div id="saq-authorship-25" lang="ru">
+  <h2>Авторские коммиты Saq Bol без слияний</h2>
+  <div class="nav nav-pills" role="tablist" aria-label="Какую историю Git сравнить">
+    <button type="button" id="saq-main-tab" class="nav-link active" role="tab" aria-selected="true" aria-controls="saq-main-count">Опубликованный main</button>
+    <button type="button" id="saq-refs-tab" class="nav-link" role="tab" aria-selected="false" aria-controls="saq-refs-count">Все 48 веток</button>
+  </div>
+  <section id="saq-main-count" role="tabpanel" aria-labelledby="saq-main-tab">
+    <h3>Дамир впереди на 20 коммитов</h3>
+    <table class="table table-sm" aria-label="Два ведущих автора среди 198 коммитов без слияний в main">
+      <thead><tr><th scope="col">Автор</th><th class="text-end" scope="col">Коммиты</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Дамир</th><td class="text-end tabular-nums">101</td></tr>
+        <tr><th scope="row">Бекзат</th><td class="text-end tabular-nums">81</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section id="saq-refs-count" role="tabpanel" aria-labelledby="saq-refs-tab" hidden>
+    <h3>Бекзат впереди на 36 коммитов</h3>
+    <table class="table table-sm" aria-label="Два ведущих автора среди 334 уникальных коммитов без слияний во всех 48 удалённых ветках">
+      <thead><tr><th scope="col">Автор</th><th class="text-end" scope="col">Коммиты</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Бекзат</th><td class="text-end tabular-nums">160</td></tr>
+        <tr><th scope="row">Дамир</th><td class="text-end tabular-nums">124</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <p class="text-small text-muted">25 ноября 2026 · GitHub, <a href="https://github.com/foxfordkz-cyber/qadamxbcc/commits/ff399275b0bcd2944bcb78f4807fcc8f5b3b07cb/">история релиза</a> и <a href="https://github.com/foxfordkz-cyber/qadamxbcc/branches/all">удалённые ветки</a>. Каждый SHA учтён один раз.</p>
+</div>

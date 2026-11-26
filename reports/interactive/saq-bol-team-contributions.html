@@ -1,0 +1,60 @@
+<section id="saq-team-rank" lang="ru" aria-labelledby="saq-team-title">
+  <h2 id="saq-team-title">Вклад в Saq Bol × BCC</h2>
+  <div class="viz-controls">
+    <label class="form-label">Порядок
+      <select class="form-select" id="saq-team-order">
+        <option value="impact">Вклад в выпущенный продукт</option>
+        <option value="patches">Уникальные изменения во всех ветках</option>
+        <option value="main">Авторские коммиты в main</option>
+      </select>
+    </label>
+  </div>
+  <ol id="saq-team-list" aria-live="polite">
+    <li data-impact="1" data-patches="62" data-main="57">
+      <strong>Дамир</strong><p>Антифрод-ядро, ML, сборка продукта и выпуск.</p>
+      <small>62 уникальных изменения · 57 коммитов в main</small>
+    </li>
+    <li data-impact="2" data-patches="65" data-main="40">
+      <strong>Бекзат</strong><p>Telegram, стенд НБК, расследования, Android-кошелёк и проверка на Honor.</p>
+      <small>65 уникальных изменений · 40 коммитов в main</small>
+    </li>
+    <li data-impact="3" data-patches="7" data-main="7">
+      <strong>Айдана</strong><p>Мобильный интерфейс, доверенный круг, Android/QR и казахская версия.</p>
+      <small>7 уникальных изменений · 7 коммитов в main</small>
+    </li>
+    <li data-impact="4" data-patches="6" data-main="6">
+      <strong>Танирберді</strong><p>Восстановление сессии и незавершённого перевода, устойчивое отображение графа SOC.</p>
+      <small>6 уникальных изменений · 6 коммитов в main</small>
+    </li>
+  </ol>
+  <p class="text-small text-muted">Git и GitHub, 20 ноября 2026 · 35 веток и 25 PR до релиза № 26. Одинаковые изменения внутри веток одного автора учтены один раз. Коммиты слияния исключены.</p>
+</section>
+<style>
+  #saq-team-rank {display:grid;gap:var(--font-size-base)}
+  #saq-team-rank ol {margin:0;padding-inline-start:2em;display:grid;gap:var(--font-size-base)}
+  #saq-team-rank small {color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+</style>
+<script>
+(() => {
+  const root = document.getElementById("saq-team-rank");
+  const order = root.querySelector("select");
+  const list = root.querySelector("ol");
+  const rows = Array.from(list.children);
+  function apply(value) {
+    const field = ["impact", "patches", "main"].includes(value) ? value : "impact";
+    order.value = field;
+    const direction = field === "impact" ? 1 : -1;
+    const sorted = [...rows].sort((a, b) => direction * (Number(a.dataset[field]) - Number(b.dataset[field])));
+    list.replaceChildren(...sorted);
+  }
+  apply(window.openai?.widgetState?.privateContent?.order);
+  order.addEventListener("change", () => {
+    apply(order.value);
+    window.openai?.setWidgetState?.({privateContent:{order:order.value}})?.catch(() => {});
+  });
+  window.addEventListener("openai:set_globals", event => {
+    const saved = event.detail?.globals?.widgetState;
+    if (saved) apply(saved.privateContent?.order);
+  });
+})();
+</script>
