@@ -1,3 +1,4 @@
+import { last as lastItem } from "./compat.mjs";
 import { ledgerInstant, shortDate } from "./wallet-date.mjs";
 import { cashPlot } from "./spending-chart.mjs";
 
@@ -90,8 +91,8 @@ export function walletUI({ T, E, amount, when, button, status }) {
     const days = [];
     for (const r of items) {
       const day = ledgerInstant(r.created_at)?.day || "";
-      if (!days.length || days.at(-1).day !== day) days.push({ day, items: [] });
-      days.at(-1).items.push(r);
+      if (!days.length || lastItem(days).day !== day) days.push({ day, items: [] });
+      lastItem(days).items.push(r);
     }
     return '<div class="ledger">' + days.map(({ day, items: list }) => {
       const done = list.filter((r) => r.status === "approved");
@@ -233,7 +234,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
     return `<svg class="donut" viewBox="0 0 42 42" aria-hidden="true"><circle class="track" cx="21" cy="21" r="15.915"/>${seg("out", outPct, 0)}${seg("in", inPct, outPct)}</svg>`;
   }
   function periodLabel(d) {
-    const first = d.series?.[0]?.day, last = d.series?.at(-1)?.day;
+    const first = d.series?.[0]?.day, last = lastItem(d.series ?? [])?.day;
     if (!first || !last) return "";
     const [fy, fm, fd] = first.split("-").map(Number), [ly, lm, ld] = last.split("-").map(Number);
     const month = (m) => T(RU_MONTHS[m - 1] || "", KK_MONTHS[m - 1] || "");
@@ -271,7 +272,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
     for(let i=0;i<d.series.length;i+=width){
       const rows=d.series.slice(i,i+width);
       const total=rows.reduce((sum,r)=>sum+Object.values(r.states).reduce((a,b)=>a+b,0),0);
-      groups.push({from:shortDate(rows[0].day),to:shortDate(rows.at(-1).day),total});
+      groups.push({from:shortDate(rows[0].day),to:shortDate(lastItem(rows).day),total});
     }
     const max=Math.max(...groups.map(g=>g.total),1);
     return '<section class="paper"><h2>'+T("Динамика операций","Операциялар динамикасы")+'</h2><p class="fine">'+

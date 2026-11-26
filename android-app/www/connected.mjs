@@ -1,3 +1,4 @@
+import { copyDraftData, hasOwn, requestId as newRequestId } from "./compat.mjs";
 import { caseEvidenceView, caseLedgerView } from "./case-evidence.mjs";
 import { messageMatches } from "./vendor/message-patterns.mjs";
 import {revealChartSelection,stepChart} from "./spending-chart.mjs";
@@ -61,7 +62,7 @@ function readDrafts(value) {
 }
 function persistDrafts() {
   const slot = "report." + ownerScope;
-  const snapshot = structuredClone(drafts);
+  const snapshot = copyDraftData(drafts);
   const write = savingDraft.catch(() => {}).then(() => identity.write(slot, snapshot));
   savingDraft = write;
   return write;
@@ -542,7 +543,7 @@ async function readCallback(session,path) {
 }
 async function submitCallback(path, body) {
   const operation=JSON.stringify([path,body]);
-  if (callbackAttempt?.operation!==operation) callbackAttempt={operation,key:crypto.randomUUID()};
+  if (callbackAttempt?.operation!==operation) callbackAttempt={operation,key:newRequestId()};
   const result=await gateway.request(path,"POST",body,callbackAttempt.key);
   callbackAttempt=null;
   return result;
@@ -889,7 +890,7 @@ function moneyOutcome(state) {
 }
 function officerCallEvidence(tx) {
   const answer = tx.context?.call_pressure_answer;
-  const statement = Object.hasOwn(callAnswers, answer) ? T(...callAnswers[answer]) + " · " + when(tx.created_at)
+  const statement = hasOwn(callAnswers, answer) ? T(...callAnswers[answer]) + " · " + when(tx.created_at)
     : T("Ответ на вопрос не зарегистрирован", "Сұраққа жауап тіркелмеген");
   const log = tx.bank_call_evidence;
   return `<section class="paper"><h2>${T("Ответ клиента об этом переводе","Аударым туралы клиенттің жауабы")}</h2>
@@ -1101,8 +1102,8 @@ const inboxActions = {
   FAMILY_APPROVAL_RECORDED: ["transfer", "Проверить статус перевода", "Аударым күйін тексеру"],
 };
 function inboxRow(event) {
-  const action=Object.hasOwn(inboxActions,event.state) ? inboxActions[event.state] : null;
-  const text=Object.hasOwn(statuses,event.state) ? status(event.state) : label(event.state);
+  const action=hasOwn(inboxActions,event.state) ? inboxActions[event.state] : null;
+  const text=hasOwn(statuses,event.state) ? status(event.state) : label(event.state);
   const cta=action?.[0]===event.kind ? '<span class="notice-action">'+T(action[1],action[2])+'</span>' : "";
   const reference=cta ? T(event.kind==="report" ? "Обращение" : "Перевод", event.kind==="report" ? "Өтініш" : "Аударым")+
     " · "+String(event.object_id).slice(-8)+" · " : "";
@@ -1628,7 +1629,7 @@ function render() {
     }
     if(page==="case" && gateway?.role==="admin" && caseEvidence?.message_signals?.length) {
       root.querySelector("main").insertAdjacentHTML("beforeend",'<section class="paper"><h2>'+T("Категории от клиента","Клиент жіберген санаттар")+
-        '</h2><ul>'+caseEvidence.message_signals.filter(code=>Object.hasOwn(signalText,code)).map(code=>'<li>'+E(T(...signalText[code]))+'</li>').join("")+'</ul></section>');
+        '</h2><ul>'+caseEvidence.message_signals.filter(code=>hasOwn(signalText,code)).map(code=>'<li>'+E(T(...signalText[code]))+'</li>').join("")+'</ul></section>');
     }
   if(page==="case" && gateway?.role==="admin" && !socMode() && data?.id && caseTransaction && caseTransaction.transaction_id===caseEvidence?.transaction_id){
       const panel=document.createElement("section");
@@ -1707,7 +1708,7 @@ root.addEventListener("click", async (event) => {
   }
   if(b.dataset.pref){
     const c=data?.contacts?.find(v=>v.id===b.dataset.pref);
-    if(c){await perform(()=>api("trusted-contacts/"+c.id+"/preferences","PATCH",{alias:c.alias,language:c.language,notifications_enabled:!c.notifications_enabled},crypto.randomUUID()));if(!error)await open("contacts");}
+    if(c){await perform(()=>api("trusted-contacts/"+c.id+"/preferences","PATCH",{alias:c.alias,language:c.language,notifications_enabled:!c.notifications_enabled},newRequestId()));if(!error)await open("contacts");}
     return;
   }
   if (b.dataset.share) {
@@ -1761,7 +1762,7 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (b.dataset.preset) {
-    draft = structuredClone(presetValues[b.dataset.preset]);
+    draft = copyDraftData(presetValues[b.dataset.preset]);
     render();
     return;
   }
@@ -1796,7 +1797,7 @@ root.addEventListener("click", async (event) => {
       if(product)target=await lookup();
       if(target)return;
       try {
-        target=await api("integrations/guardian/soc/cases","POST",{report_id:reportId},crypto.randomUUID());
+        target=await api("integrations/guardian/soc/cases","POST",{report_id:reportId},newRequestId());
       } catch(failure) {
         if(!product || failure.status!==409)throw failure;
         target=await lookup();
@@ -2012,7 +2013,7 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "transfer" || act === "new-recipient") {
-    presetMode = false; draft = product ? null : structuredClone(presetValues.normal);
+    presetMode = false; draft = product ? null : copyDraftData(presetValues.normal);
     await open("transfer");
     return;
   }
@@ -2250,7 +2251,7 @@ root.addEventListener("click", async (event) => {
           reason: "review_started"}),
           expected_version: current.version,
         },
-        crypto.randomUUID(),
+        newRequestId(),
       );
     });
     if(!error)await open("case",current.id,false);
@@ -2279,7 +2280,7 @@ root.addEventListener("submit", async (event) => {
   }
   if(form.id==="ledger-filter"){ledgerFilter={...ledgerFilter,q:String(fields.get("q")||"").trim(),status:String(fields.get("status")||""),direction:String(fields.get("direction")||"")};offset=0;await open("history");return;}
   if(form.id==="case-filter"){caseFilter=String(fields.get("state")||"");caseOffset=0;await open("cases");return;}
-  if(form.id==="request-answer"){const id=data.id;await perform(()=>api("integrations/guardian/reports/"+id+"/information-requests/"+form.dataset.id,"POST",{body:String(fields.get("body")),confirmed_demo_submission:true},crypto.randomUUID()));if(!error)await open("reportDetail",id);return;}
+  if(form.id==="request-answer"){const id=data.id;await perform(()=>api("integrations/guardian/reports/"+id+"/information-requests/"+form.dataset.id,"POST",{body:String(fields.get("body")),confirmed_demo_submission:true},newRequestId()));if(!error)await open("reportDetail",id);return;}
   if (form.id === "login-form") {
     const origin = gatewayOrigin(String(fields.get("origin") ?? ""));
     if (!origin) {
@@ -2319,7 +2320,7 @@ root.addEventListener("submit", async (event) => {
   }
   if (form.id === "case-note") {
     const id = data.id;
-    await perform(() => api("integrations/guardian/soc/cases/"+id+"/actions","POST",{action:"note",body:fields.get("note"),expected_version:data.version},crypto.randomUUID()));
+    await perform(() => api("integrations/guardian/soc/cases/"+id+"/actions","POST",{action:"note",body:fields.get("note"),expected_version:data.version},newRequestId()));
     if (!error) await open("case",id);
     return;
   }
@@ -2329,7 +2330,7 @@ root.addEventListener("submit", async (event) => {
     if (!desk.outcomeLabel(reason)) return;
     await perform(() => api("integrations/guardian/soc/cases/"+current.id+"/actions","POST",{
       action:"transition", state:"CLOSED", reason, expected_version:current.version,
-    },crypto.randomUUID()));
+    },newRequestId()));
     if (!error) await open("case",current.id,false);
     return;
   }
@@ -2371,7 +2372,7 @@ root.addEventListener("submit", async (event) => {
       description: String(fields.get("description")),
       confirmed_demo_submission: true,
     };
-    const key = reportDraft?.key || crypto.randomUUID();
+    const key = reportDraft?.key || newRequestId();
     reportDraft = {...body, consent: fields.has("consent"), key};
     await perform(async () => {
       if (product) { drafts.byOperation[reportKey(reportTx)]=reportDraft; drafts.last=reportKey(reportTx); await persistDrafts(); }
@@ -2388,7 +2389,7 @@ root.addEventListener("submit", async (event) => {
         "external-checks",
         "POST",
         { identifier: String(fields.get("identifier")) },
-        crypto.randomUUID(),
+        newRequestId(),
       );
     });
     return;
@@ -2459,7 +2460,7 @@ root.addEventListener("change", event => {
     else delete draft.context.payment_requested_after_call;
   }
   if (page === "review" && draft && event.target.name === "call_pressure_answer" &&
-      Object.hasOwn(callAnswers, event.target.value) && needsCallAnswer(draft, data, account?.supports_call_question)) {
+      hasOwn(callAnswers, event.target.value) && needsCallAnswer(draft, data, account?.supports_call_question)) {
     draft.callAnswer = event.target.value;
     render();
     root.querySelector('[name="call_pressure_answer"]:checked')?.focus();
@@ -2472,7 +2473,7 @@ root.addEventListener("input", event => {
   if (!form || !product || !ownerScope) return;
   const fields = new FormData(form);
   const draft = {category: fields.get("category"), description: fields.get("description"),
-    consent: fields.has("consent"), transaction_id: reportTx, key:reportDraft?.key || crypto.randomUUID()};
+    consent: fields.has("consent"), transaction_id: reportTx, key:reportDraft?.key || newRequestId()};
   reportDraft = draft;
   drafts.byOperation[reportKey(reportTx)] = draft; drafts.last=reportKey(reportTx);
   persistDrafts().catch(() => {
@@ -2544,7 +2545,7 @@ async function refreshVisible() {
     analytics:()=>g.request("/wallet/analytics?days="+walletDays),
     socAnalytics:()=>g.request("/wallet/soc?days="+socDays+"&include_policy=true")
   };
-  if(Object.hasOwn(reads,screen))read=async()=>{
+  if(hasOwn(reads,screen))read=async()=>{
     const rows=await reads[screen]();
     if(here() && !same(data,rows)){data=rows;render();}
   };
@@ -2585,6 +2586,6 @@ document.addEventListener("visibilitychange", () => {
 if(webWallet)window.addEventListener("popstate",event=>{
   if(loading || !gateway?.token)return;
   const state=event.state;
-  const route=state?.scope===ownerScope && Object.hasOwn(screens,state.page) ? state.page : "home";
+  const route=state?.scope===ownerScope && hasOwn(screens,state.page) ? state.page : "home";
   void open(route==="review" && !draft ? "transfer" : route,state?.id,false);
 });
