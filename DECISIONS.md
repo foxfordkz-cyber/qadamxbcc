@@ -73,3 +73,7 @@ Only authenticated officers add observations from received reports. The applicat
 ## Statements are separate from the score
 
 Only the authenticated sender or recipient can submit their own categorical account for a reported payment. An immutable private audit record per party supports retries. The officer sees both versions. In isolated jury rooms only, the officer can issue a ten-minute link for the other synthetic participant, restricted to one dispute, with its source marked. The link has no wallet or payment rights. The entry is excluded from shared receipts and scoring explanations.
+
+## Ledger and privacy handoff
+
+The adapter contract is a proposed bank interface. Decision state is distinct from a ledger receipt. Bank identity, lawful basis, residency and retention require agreement before receiving identifiable client records.
