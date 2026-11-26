@@ -20,7 +20,7 @@ import { TraceAnchorPicker } from "./trace-anchor-picker";
 import { TransferStory } from "./transfer-story";
 import { MobileQr } from "./mobile-qr";
 import { SocCasesWorkspace } from "./soc-cases-workspace";
-import { SocIntegrationInsights } from "./soc-integration-insights";
+import { HoldOutcomesPanel, SocIntegrationInsights } from "./soc-integration-insights";
 import { integrationText } from "@/lib/soc-integration-copy";
 import { readSocDashboardSession, writeSocDashboardSession, SOC_SESSION_KEY } from "@/lib/soc-dashboard-session";
 
@@ -133,7 +133,7 @@ export function SocDashboard({ tourEnabled, liveLedger, initialSelection, revisi
       {mode === "transfers" && <button className="secondary icon-button" onClick={() => setRefresh(n => n + 1)} disabled={feed.loading} aria-label={t("refresh")} title={t("refresh")}><RefreshCw size={16} className={feed.loading ? "animate-spin" : ""} /></button>}
     </div></div>
     {!readOnly && <nav className="soc-investigation-nav" aria-label={t("socTitle")}>{(["transfers", "cases"] as const).map(value => <button type="button" data-testid={`soc-mode-${value}`} key={value} aria-pressed={mode === value} onClick={() => { setMode(value); if (value === "cases" && streaming) stream.toggle(); }}>{integrationText(lang, value)}</button>)}</nav>}
-    {!readOnly && restored && mode === "cases" && <><SocCasesWorkspace revision={revision} onSelectTransaction={setCaseTransactionId} /><SocIntegrationInsights key={caseTransactionId ?? "unlinked"} transactionId={caseTransactionId} revision={revision} /></>}
+    {!readOnly && restored && mode === "cases" && <><HoldOutcomesPanel revision={revision} /><SocCasesWorkspace revision={revision} onSelectTransaction={setCaseTransactionId} /><SocIntegrationInsights key={caseTransactionId ?? "unlinked"} transactionId={caseTransactionId} revision={revision} /></>}
     {mode === "transfers" && <>
     <div className="traffic-strip"><span className={`live-dot ${streaming ? "" : "offline"}`} /><p>{t(stream.inFlight && !streaming ? "trafficDraining" : canStream ? "trafficHint" : "trafficMissing")}</p><span className="tabular-nums">{t("trafficSession")}: {Object.keys(traffic).length}</span></div>
     {stream.error && <p className="error" role="alert">{t(stream.error)}</p>}

@@ -584,3 +584,50 @@ async def test_case_concurrent_optimistic_updates_have_one_winner(iw: Integratio
         return response.status_code
 
     assert sorted(await asyncio.gather(update(), update())) == [200, 409]
+
+
+async def test_officer_hold_outcomes_follow_original_cohort_and_current_labels(
+    iw: IntegrationWorld,
+) -> None:
+    path = CASES + "/outcomes"
+    assert (await iw.client.get(path, headers=iw.auth("owner"))).status_code == 403
+    assert (await iw.client.get(path + "?days=2", headers=iw.auth("soc"))).status_code == 422
+    empty = (await iw.client.get(path, headers=iw.auth("soc"))).json()
+    assert empty["held"] == 0
+    assert empty["confirmed_share"] is None
+    assert empty["p90_seconds"] is None
+    payment = await iw.transfer()
+    txid = uuid.UUID(str(payment["transaction_id"]))
+    row = await opened(iw, transaction_id=txid)
+    row = await act(iw, row, action="transition", state="IN_REVIEW", reason="review_started")
+    row = await act(iw, row, action="transition", state="CLOSED", reason="legitimate_transfer")
+    async with iw.factory() as session:
+        tx = await session.get(Transaction, txid)
+        assert tx is not None
+        tx.active_call = True
+        tx.is_new_recipient = True
+        tx.amount = Decimal("100000")
+        tx.status = TransactionStatus.CANCELLED
+        tx.resolution_action = "cancel"
+        await session.commit()
+    data = (await iw.client.get(path + "?days=30", headers=iw.auth("soc"))).json()
+    assert (data["held"], data["cancelled"], data["released"], data["referred"]) == (1, 1, 0, 1)
+    assert data["confirmed_share"] == 0
+    assert data["labelled"] == 1
+    assert data["false_holds"] == {
+        "new_recipient": 1,
+        "active_call": 1,
+        "kzt_below_100k": 0,
+        "kzt_100k_to_500k": 1,
+        "kzt_500k_plus": 0,
+    }
+    assert data["responses"] == 1
+    assert data["median_seconds"] == data["p90_seconds"]
+    assert data["rules"]
+    assert all(n == 1 for n in data["rules"].values())
+    assert "confirmed_pct" in data["csv"]
+    assert str(txid) not in data["csv"]
+    await act(iw, row, action="transition", state="IN_REVIEW", reason="reopened")
+    reopened = (await iw.client.get(path + "?days=90", headers=iw.auth("soc"))).json()
+    assert reopened["labelled"] == 0
+    assert not any(reopened["false_holds"].values())
