@@ -14,6 +14,12 @@ async function enter(page,baseURL,fixture={}) {
     let status=200, json={};
     if(path==="compatibility")return route.fulfill({json:{api_major:1,minimum_android_build:0}});
     if(path==="auth/login")json={role:"client",subject:"audit-fixture",token:"fixture-session"};
+    else if(path.startsWith("wallet/participant-statements/")){
+      if(fixture.statementRole){
+        if(route.request().method()==="POST")fixture.statementAnswer=route.request().postDataJSON().answer;
+        json={audience:fixture.statementRole,...(fixture.statementAnswer?{[fixture.statementRole]:{answer:fixture.statementAnswer}}:{})};
+      }else{status=404;json={};}
+    }
     else if(path==="inbox"){
       fixture.inboxReads=(fixture.inboxReads||0)+1;
       if (fixture.inboxGate) await fixture.inboxGate;
@@ -383,4 +389,31 @@ test("home refreshes security updates without frequent inbox reads or stale tran
   await expect(home.locator("[data-inbox-state=CASE_INFORMATION_REQUIRED]:visible")).toHaveCount(4);
   await expect(home.locator("[data-inbox-state=FAMILY_APPROVAL_RECORDED]")).toHaveCount(0);
   expect(fixture.inboxReads).toBe(2);
+});
+
+test("the payer can submit only their own structured statement from the transfer",async({page,baseURL})=>{
+  const fixture={statementRole:"sender"};
+  await enter(page,baseURL,fixture);
+  await page.locator('[data-detail="'+ids[0]+'"]').first().click();
+  await page.locator('[data-action="statement-agreed"]').click();
+  await expect(page.locator("#app")).toContainText("Стороны согласовали платёж");
+  expect(fixture.statementAnswer).toBe("agreed");
+  await expect(page.locator("#app")).not.toContainText("Объяснения участников");
+});
+
+test("a jury invitation submits one attributed reply without opening a wallet",async({page})=>{
+  const code="A".repeat(43);
+  let payload;
+  await page.route("**/mobile/v1/wallet/jury-interview",async route=>{
+    payload=route.request().postDataJSON();await route.fulfill({json:{audience:"recipient"}});
+  });
+  await page.goto("/counterparty.html#"+ids[0]+"."+code);
+  await expect(page.locator("#title")).toContainText("Екінші қатысушы");
+  expect(new URL(page.url()).hash).toBe("");
+  await page.locator("#language").click();
+  await page.locator('[value="unexpected"]').check();
+  await page.locator("#submit").click();
+  await expect(page.getByRole("status")).toContainText("Ответ добавлен");
+  expect(payload).toEqual({transfer:ids[0],code,answer:"unexpected"});
+  await expect(page.locator("#personal-login")).toHaveCount(0);
 });

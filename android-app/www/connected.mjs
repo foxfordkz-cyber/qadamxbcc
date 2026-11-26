@@ -5,6 +5,7 @@ import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
 import { canUseTransferKey, verifyWithDevice } from "./transfer-key.mjs";
+import { participantStatements } from "./participant-statements.mjs";
 import { disputeView } from "./dispute.mjs";
 import { walletUI, icon, cardThumbnail, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
@@ -21,6 +22,7 @@ let receiptPacket = null;
 let deviceReceipt = null;
 let partnerSignal = null;
 let graphAnchor = null;
+let participantView = null, interviewHref = "";
 let dispute = null, certificate = null, certificateCheck = null, disputeQueue = null;
 let ownerScope = "", account = null, reportDraft = null, invitation = null, caseEvents = [];
 const defaultLedger=()=>({q:"",status:"",direction:"",day:"",through:"",days:""});
@@ -128,6 +130,7 @@ function clearVisible() {
   scanText=""; privateMatches=null; signalChoices=[]; attachedTo=null; reportChoice=false; drafts=readDrafts(null);
   workspaceRead=null; lastRead=null;
   deviceReceipt = partnerSignal = graphAnchor = null;
+  participantView = null; interviewHref = "";
   dispute = certificate = certificateCheck = disputeQueue = null;
   account = reportDraft = invitation = evaluation = data = draft = selectedId = scanResult = null;
   summary=circle=caseEvidence=null;ledgerFilter=defaultLedger();reportHistory=[];requests=[];walletDays=socDays=7;caseFilter="";caseOffset=0;selectedDay=null;backStack=[];
@@ -374,6 +377,7 @@ async function open(next, id, remember=true) {
   const samePage=page===next;
   workspaceRead=null;
   receiptPacket=null;
+  participantView = null; interviewHref = "";
   dispute = certificate = certificateCheck = null;
   lastRead={page:next,id};
   if (next==="confirmCancel") evaluation = null;
@@ -423,6 +427,7 @@ async function open(next, id, remember=true) {
     else if(next==="socAnalytics")data=await gateway.request("/wallet/soc?days="+socDays+"&include_policy=true");
     else if(next==="incoming"){
       data=await gateway.request("/wallet/incoming/"+id);
+      participantView=await gateway.request("/wallet/participant-statements/"+id).catch(e=>{if(e.status!==404)throw e;return null;});
       if (juryWallet) dispute = await gateway.request("/wallet/disputes/"+id).catch(e => {
         if (e.status === 404) return null; throw e;
       });
@@ -454,6 +459,9 @@ async function open(next, id, remember=true) {
       const detail = await g.api("transfers/"+id);
       if (!current()) return;
       accept(detail);
+      void g.request("/wallet/participant-statements/"+id).then(value=>{
+        if(current()){participantView=value;render();}
+      }).catch(e=>{if(current() && e.status!==404){error=errText(e.status);render();}});
       if (juryWallet && g.role === "admin") {
         void g.request("/wallet/disputes/"+id).then(value => {
           if (current()) { dispute=value; render(); }
@@ -522,6 +530,9 @@ async function open(next, id, remember=true) {
             const tx=await g.api("transfers/"+evidence.transaction_id);
             if(!current() || tx.transaction_id!==evidence.transaction_id)return;
             caseTransaction=tx;
+            const statements=await g.request("/wallet/participant-statements/"+tx.transaction_id).catch(e=>{if(e.status!==404)throw e;return null;});
+            if(!current())return;
+            participantView=statements;
             const graph=await g.api("soc/graph/"+tx.recipient.id+"?depth=1");
             if(current())caseNetwork=graph;
           }catch(e){if(e.status===401)throw e;}
@@ -1312,7 +1323,7 @@ const screens = {
   analytics:()=>wallet.analytics(data,selectedDay),
   socAnalytics:()=>wallet.soc(data,true),
   incoming:()=>data?'<h1>'+T("Входящий перевод","Кіріс аударым")+'</h1><section class="paper"><h2>+'+amount(data.amount)+'</h2><p>'+E(data.counterparty)+'</p>'+wallet.badge(data.status)+'<p>'+when(data.created_at)+'</p><small>'+E(data.transaction_id)+'</small></section>'+
-    disputeView(dispute,"client",certificate,certificateCheck,T,E,amount,button):"",
+    disputeView(dispute,"client",certificate,certificateCheck,T,E,amount,button)+participantStatements(participantView,T,E,button,juryWallet,interviewHref):"",
   family: () => familyView(data,T,button,when) + secondSettingsView(data?.second,T,button,when,amount,E,webWallet),
   guard: () => checkView(data,T,button,when,label),
   packet: () => data ? packetView(packetContent(data,T,when,status),E)+button("print-packet",T("Скачать пакет инцидента · PDF","Оқиға құжаттарын жүктеу · PDF")) : "",
@@ -1329,7 +1340,7 @@ const screens = {
   detail: () => detailView() + (deviceReceipt?.id === selectedId && deviceReceipt?.verified
     ? '<section class="paper"><strong>' + T("Клиент подтвердил перевод ключом устройства", "Клиент аударымды құрылғы кілтімен растады") + '</strong><p>' +
       E(ledgerTime(deviceReceipt.verified_at)) + " · " + amount(deviceReceipt.amount) + '</p></section>' : "") +
-    (evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation)+disputeView(dispute,"admin",certificate,certificateCheck,T,E,amount,button) : ""),
+    participantStatements(participantView,T,E,button,juryWallet,interviewHref)+(evaluation && gateway?.role === "admin" ? officerCallEvidence(evaluation)+disputeView(dispute,"admin",certificate,certificateCheck,T,E,amount,button) : ""),
   questionnaire: questionnaireView,
   safety: safetyView,
   scan: scanView,
@@ -1419,7 +1430,7 @@ let socCasesAt="";
   const legacy={...screens};
   const own={
     home:()=>soc.home({summary,feed:data,filter,query,offset,projector}),
-    detail:()=>evaluation?soc.detail(evaluation,{timer:timerText(),callEvidence:officerCallEvidence(evaluation)}):"",
+    detail:()=>evaluation?soc.detail(evaluation,{timer:timerText(),callEvidence:officerCallEvidence(evaluation)})+participantStatements(participantView,T,E,button,juryWallet,interviewHref):"",
     cases:()=>soc.cases({data,queue:queueSnapshot,filter:caseFilter,offset:caseOffset,caseState,states:caseStates,updated:socCasesAt}),
     graph:()=>data?soc.graph(data):"",
     socAnalytics:()=>soc.analytics(data),
@@ -1435,7 +1446,7 @@ let socCasesAt="";
       const linked=caseTransaction && caseTransaction.transaction_id===caseEvidence?.transaction_id;
       return soc.caseView({data,events:caseEvents.map(e=>({...e,outcome:desk.outcomeLabel(e.reason)})),
         tx:linked?caseTransaction:null,evidence:linked?caseEvidence:null,network:linked?caseNetwork:null,
-        actions,closeForm:desk.closeCase(data),callback:desk.officerCallback(data,callbackView)});
+        actions,closeForm:desk.closeCase(data),callback:desk.officerCallback(data,callbackView)})+participantStatements(participantView,T,E,button,juryWallet,interviewHref);
     },
   };
   for(const key of Object.keys(screens)){
@@ -1812,6 +1823,19 @@ root.addEventListener("click", async (event) => {
     return;
   }
   const act = b.dataset.action;
+  if (act === "jury-interview" && juryWallet && gateway.role==="admin") {
+    const transfer=page==="case"?caseTransaction?.transaction_id:evaluation?.transaction_id;
+    if (!transfer) return;
+    await perform(async()=>{
+      const issue=await gateway.request("/wallet/participant-statements/"+transfer+"/jury-invite","POST",{});
+      const url=new URL("/wallet/counterparty.html",location.origin);
+      url.hash=issue.fragment;interviewHref=url.href;
+    });return;
+  }
+  if (act?.startsWith("statement-") && participantView && gateway.role === "client") {
+    const answer=act.slice("statement-".length);
+    await perform(async()=>{participantView=await gateway.request("/wallet/participant-statements/"+lastRead.id,"POST",{answer});}); return;
+  }
   if (act==="callbacks" && gateway?.role==="client") { await open("callbacks"); return; }
   if (b.dataset.staff && page==="staff" && gateway?.role==="platform_admin") {
     const staff=data?.items?.find(s=>s.subject===b.dataset.staff);
@@ -2052,6 +2076,7 @@ root.addEventListener("click", async (event) => {
         certificateCheck = null;
       } else if (["dispute-report","dispute-appeal"].includes(act) && gateway.role === "client") {
         dispute=await gateway.request(base+"/report","POST",{action:act==="dispute-report"?"report_redirect":"appeal",confirmed:true});
+        participantView=await gateway.request("/wallet/participant-statements/"+id);
         account=await gateway.request("/account"); certificateCheck=null;
       }
     });
