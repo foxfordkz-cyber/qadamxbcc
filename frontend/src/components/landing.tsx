@@ -125,7 +125,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
       <div className="feat-grid">
         <article className="feat-card">
           <div className="feat-mini mini-call"><span className="mini-icon mini-red"><PhoneOff size={18} /></span><span><b>{L("demoNotBank")}</b><small>{L("heroToastCallSub")}</small></span></div>
-          <h3>{L("fCallTitle")}</h3><p>{L("fCallText")}</p>
+          <h3>{L("fCallTitle")}</h3><p>{L("fCallText")}</p><a href="/connect?stand=wallet">{lang === "kk" ? "Оқу әмияны · қоңыраудан кейін банкоматта 15 минут кідіру" : "Учебный кошелёк · пауза 15 минут при снятии по просьбе звонящего"}</a>
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-chat"><span className="mini-bubble">{L("demoBotText")}</span><span className="mini-choices"><i className="mini-scam">{L("demoScam")}</i><i>{L("demoFine")}</i></span></div>

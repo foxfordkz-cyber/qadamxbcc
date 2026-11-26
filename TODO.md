@@ -7,6 +7,7 @@
 - [x] **T04: Real-Time Antifraud & Graph Engine (`backend/app/services/antifraud.py`).** Evaluate transfers in <50ms using Redis velocity counters (10m/1h windows), recipient graph metrics (in-degree, fan-in/fan-out ratio, shared device_id), and behavioral signals. Return bilingual explainable reasons (`reasons_kk`, `reasons_ru`) and action (`approved` <40, `cooling_off` 40–74, `blocked` >=75).
 - [x] **Android 11 WebView compatibility.** Both wallet entry points open with older browser APIs, secure request IDs and bounded request cancellation.
 - [x] **T05: REST API Endpoints.** Build `POST /api/v1/transfers/evaluate`, `POST /api/v1/transfers/{id}/resolve-cooling` (verify anti-scam questionnaire), `GET /api/v1/soc/feed` (live transaction stream), and `GET /api/v1/soc/graph/{account_id}` (subgraph nodes & edges for React Flow).
+- [x] Synthetic wallet ATM holds cash requests after a reported caller instruction for 15 minutes.
 - [x] **T06: Tests & Latency Benchmark.** Write pytest suites covering all 4 fraud scenarios, false-positive guard on legitimate transfers, cooling-off resolution, and p95 latency <50ms assertion.
 - [x] **Measured public claims.** Attribute kernel latency, HTTP latency, model false positives and honest scenario holds to their own experiments.
 - [x] **T07: Bilingual Frontend (`kk` / `ru`).** Build Next.js UI in `frontend/` with a global `ҚАЗ / РУС` switcher:
