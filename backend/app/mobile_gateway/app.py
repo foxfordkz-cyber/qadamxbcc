@@ -273,7 +273,10 @@ def create_mobile_app(
     from app.mobile_gateway.wallet import install_wallet
 
     install_readiness(app)
+    from app.mobile_gateway.cash_window import install_cash_window
+
     install_wallet(app)
+    install_cash_window(app)
     install_staff(app, cfg)
     install_technical_metrics(app)
     install_accounts(app, integrations_enabled=core.state.integration_settings.enabled)

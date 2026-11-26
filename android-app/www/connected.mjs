@@ -1,3 +1,4 @@
+import { cashWindow, uuidForCash } from "./cash-window.mjs";
 import { caseEvidenceView, caseLedgerView } from "./case-evidence.mjs";
 import { messageMatches } from "./vendor/message-patterns.mjs";
 import {revealChartSelection,stepChart} from "./spending-chart.mjs";
@@ -402,7 +403,8 @@ async function open(next, id, remember=true) {
     return;
   }
   await perform(async () => {
-    if (next==="home" && gateway.role==="platform_admin") data=await gateway.request("/admin/metrics");
+    if (next==="cash") data=await gateway.request("/wallet/cash");
+    else if (next==="home" && gateway.role==="platform_admin") data=await gateway.request("/admin/metrics");
     else if (next==="staff") data=await gateway.request("/admin/staff");
     else if (next==="callbacks") data=await gateway.request("/callbacks");
     else if (next === "home" || next === "history") {
@@ -619,7 +621,7 @@ function balanceHidden() {
   return getLocal("qadam.mask."+ownerScope,"0")==="1";
 }
 function historyView() {
-  if(product && gateway.role==="client")return page==="history"?wallet.history(data,ledgerFilter):wallet.home(account,data,summary,balanceHidden(),pending);
+  if(product && gateway.role==="client")return page==="history"?wallet.history(data,ledgerFilter):wallet.home(account,data,summary,balanceHidden(),pending)+button("cash-open",T("Учебный банкомат","Оқу банкоматы"),"secondary");
   if(product && gateway.role==="admin")return wallet.soc(summary)+feedParticipants(data?.items)+title(T("Лента операций","Операциялар тізімі"))+
     '<div class="filter-row">'+["","approved","cooling_off","blocked","cancelled"].map(k=>'<button data-filter="'+k+'" aria-pressed="'+(k===filter)+'">'+(k?E(status(k)):T("Все","Барлығы"))+'</button>').join("")+'</div><form id="search-form"><input name="q" maxlength="128" value="'+E(query)+'" aria-label="'+T("Имя или ID","Аты немесе ID")+'" placeholder="'+T("Имя или ID","Аты немесе ID")+'"></form>'+transactionRows(data?.items,true)+(offset?button("prev",T("Назад","Артқа"),"secondary"):"")+(data?.pagination?.has_more?button("next",T("Ещё","Тағы"),"secondary"):"");
   const admin = gateway.role === "admin",
@@ -1307,6 +1309,7 @@ function callLogView() {
 }
 
 const screens = {
+  cash:()=>cashWindow(data,{T,E,amount,when,button}),
   staff:()=>desk.staff(data),
   callbacks:()=>desk.callbacks(data),
   analytics:()=>wallet.analytics(data,selectedDay),
@@ -1812,6 +1815,12 @@ root.addEventListener("click", async (event) => {
     return;
   }
   const act = b.dataset.action;
+  if (act === "cash-open") { await open("cash"); return; }
+  if (page === "cash" && ["cash-confirm","cash-cancel"].includes(act) && data?.id) {
+    const action = act === "cash-confirm" ? "confirm" : "cancel";
+    await perform(async () => { data = await gateway.request("/wallet/cash/"+data.id+"/"+action, "POST"); });
+    return;
+  }
   if (act==="callbacks" && gateway?.role==="client") { await open("callbacks"); return; }
   if (b.dataset.staff && page==="staff" && gateway?.role==="platform_admin") {
     const staff=data?.items?.find(s=>s.subject===b.dataset.staff);
@@ -2309,6 +2318,12 @@ root.addEventListener("submit", async (event) => {
     });
     if (gateway?.token) await open("home");
     return;
+  }
+  if (form.id === "cash-window-form" && page === "cash") {
+    const id = form.dataset.operation || (form.dataset.operation = uuidForCash());
+    await perform(async () => {
+      data = await gateway.request("/wallet/cash","POST",{id,amount_kzt:Number(fields.get("cashAmount")),caller_requested_cash:fields.get("cashCall")==="yes"});
+    }); return;
   }
   if (form.id === "transfer-form") {
     draft = readTransferDraft(fields);
