@@ -1,0 +1,1392 @@
+{
+  "checked_at": "2026-11-26T15:21:18.207290+00:00",
+  "source_head": "cee12aba7615ec1f09230b7586c464ad20249818",
+  "fresh_unique_passed": 339,
+  "skipped": 1,
+  "groups": [
+    {
+      "name": "Backend affected integration/security suites",
+      "timestamp": "2026-11-26T20:14:25.383424+05:00",
+      "passed": 78,
+      "skipped": 1,
+      "tests": [
+        {
+          "id": "tests.test_mobile_gateway::test_role_chosen_by_secret_not_request",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_payee_check_uses_scoped_directory_and_minimal_response",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_call_question_previews_without_submitting_and_persists_customer_answer",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[soc/feed]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[soc/graph/00000000-0000-4000-8000-000000000001]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[integrations/health/details]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[integrations/guardian/soc/cases]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[../soc/feed]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[trusted-contacts/simulator/update]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_admin_cannot_transfer_or_change_cooling",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_real_core_evaluation_ownership_and_admin_feed",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_server_cooling_stays_held_after_clean_answers",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_expiration_logout_and_login_quota",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_inputs_do_not_leak_and_bodies_bounded",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_private_scam_check_and_contact_read",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_gateway_disabled_by_default",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_other_customer_transaction_is_not_readable_or_cancellable",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_abandon_is_owned_and_prevents_late_execution",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_session_expiry_fails_closed",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_no_credentials_means_no_mobile_data",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_mobile_health_does_not_expose_secrets",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_two_password_accounts_restore_and_revoke",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_post_call_quiet_period_and_packet",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_incident_packet_is_private_and_masks_recipient",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_pressure_can_cancel_immediately_and_soc_sees_payment_decision",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_switch_delay_independent_of_contact",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_shutdown_can_be_cancelled_and_rescheduled_for_a_full_day",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_protection_requires_owner",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_one_recipient_actual_callback",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states0-1-SUSPICION_REPORTED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states1-None-CONTACT_ACKNOWLEDGED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states2-None-NOTIFICATION_QUEUED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states3-None-NOTIFICATION_SENT]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states4-2-NOTIFICATION_QUEUED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_wallet_amounts_history_and_role_boundaries",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_case_lookup_is_role_scoped_and_respects_retention",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_staff::test_access_changes_revoke_legacy_and_current_sessions",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_staff::test_platform_requires_a_separate_configured_password[None-401]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_staff::test_platform_requires_a_separate_configured_password[operator-401]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_staff::test_platform_requires_a_separate_configured_password[platform-200]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_account_provisioning::test_repeated_provision_preserves_all_existing_credentials",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_account_provisioning::test_provision_does_not_replace_incomplete_existing_handoff[partial-file]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_account_provisioning::test_provision_does_not_replace_incomplete_existing_handoff[{\"login\":\"client_demo\"}]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_account_provisioning::test_gateway_restart_retains_role_credentials",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_account_provisioning::test_gateway_rejects_damaged_handoff_without_reset[partial-file]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_account_provisioning::test_gateway_rejects_damaged_handoff_without_reset[{\"client\":\"old-password\"}]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_backup::test_wal_snapshot_restores_all_rows_before_and_after_reopen",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_guardian_live_transition::test_live_advisory_skips_old_fake_contact_and_deduplicates[True]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_guardian_live_transition::test_live_advisory_skips_old_fake_contact_and_deduplicates[False]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_local_refusal_is_terminal_without_provider_request[False]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_local_refusal_is_terminal_without_provider_request[True]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_rejected_send_retries_once_without_duplicate[1-NOTIFICATION_SENT]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_rejected_send_retries_once_without_duplicate[3-DELIVERY_FAILED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_ambiguous_send_is_never_retried[failure0]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_ambiguous_send_is_never_retried[failure1]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_long_retry_after_does_not_wait_or_resend",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_polling_boundary_does_not_leak_or_crash[invalid_input]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_polling_boundary_does_not_leak_or_crash[redis_unavailable]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_lifecycle_history_export_analytics",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_role_boundary_and_safe_validation",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_ledger_uses_settlement_before_original_transfer",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_shadow_review_uses_initial_decision_and_retracts_reopened_label",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_idempotency_version_and_actor_scope",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_open_replay_and_nonexistent_source",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_state_matrix[NEW]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_state_matrix[IN_REVIEW]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_state_matrix[NEEDS_INFORMATION]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_state_matrix[ESCALATED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_state_matrix[RESOLVED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_state_matrix[CLOSED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_allowed_information_channel_and_owner_isolation",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_contact_information_does_not_reach_bank_owner",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_outstanding_information_survives_active_review_but_not_case_closure[IN_REVIEW]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_outstanding_information_survives_active_review_but_not_case_closure[ESCALATED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_outstanding_information_survives_active_review_but_not_case_closure[RESOLVED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_outstanding_information_survives_active_review_but_not_case_closure[CLOSED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_cursor_authentication_and_stable_pagination",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_retention_hides_content_then_purges_audit",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_guardian_cases::test_case_concurrent_optimistic_updates_have_one_winner",
+          "result": "SKIP"
+        }
+      ]
+    },
+    {
+      "name": "Android JS",
+      "passed": 50,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "android::a legacy server receives compatible call flags and no new fields",
+          "result": "PASS"
+        },
+        {
+          "id": "android::the current server decides when to ask and manual testimony stays distinct from presets",
+          "result": "PASS"
+        },
+        {
+          "id": "android::a missing answer and a neutral rule cannot become exculpatory evidence",
+          "result": "PASS"
+        },
+        {
+          "id": "android::case ledger links actual receipts and distinguishes missing and empty history in both languages",
+          "result": "PASS"
+        },
+        {
+          "id": "android::later evidence displays its own recorded time",
+          "result": "PASS"
+        },
+        {
+          "id": "android::corrupt and unknown storage starts safely",
+          "result": "PASS"
+        },
+        {
+          "id": "android::restoring storage whitelists fields and rejects invented decisions",
+          "result": "PASS"
+        },
+        {
+          "id": "android::three distinct fixtures, duplicate IDs and bounded history",
+          "result": "PASS"
+        },
+        {
+          "id": "android::only cooling can cancel; cancellation never approves",
+          "result": "PASS"
+        },
+        {
+          "id": "android::education needs all answers, and no-signal result never means safe",
+          "result": "PASS"
+        },
+        {
+          "id": "android::Russian and Kazakh cover identical interface keys",
+          "result": "PASS"
+        },
+        {
+          "id": "android::protocol discovery accepts additive fields but rejects a newer major or unsupported build",
+          "result": "PASS"
+        },
+        {
+          "id": "android::only a missing legacy discovery route is optional; network and auth errors survive",
+          "result": "PASS"
+        },
+        {
+          "id": "android::read reconnect uses bounded backoff and never overrides Retry-After",
+          "result": "PASS"
+        },
+        {
+          "id": "android::published client, SOC and platform use the Android ledger; jury is explicitly isolated",
+          "result": "PASS"
+        },
+        {
+          "id": "android::family opt-in selects a verified contact and distinguishes the jury channel from Telegram",
+          "result": "PASS"
+        },
+        {
+          "id": "android::scheduled deactivation retains the current contact and an explicit option to keep protection",
+          "result": "PASS"
+        },
+        {
+          "id": "android::receipt explains exact guardian outcome in both languages",
+          "result": "PASS"
+        },
+        {
+          "id": "android::gateway cannot take tokens to public, credentialed or path-bearing hosts",
+          "result": "PASS"
+        },
+        {
+          "id": "android::external pages are limited and do not use the native WebView",
+          "result": "PASS"
+        },
+        {
+          "id": "android::login role comes from server and token is memory-only",
+          "result": "PASS"
+        },
+        {
+          "id": "android::unknown delivery is surfaced once without automatic retry",
+          "result": "PASS"
+        },
+        {
+          "id": "android::the wallet accepts the inbox and its actions view on web and native sessions",
+          "result": "PASS"
+        },
+        {
+          "id": "android::cold starts extend only the sign-in request deadline",
+          "result": "PASS"
+        },
+        {
+          "id": "android::expired session is cleared and 429 retains Retry-After",
+          "result": "PASS"
+        },
+        {
+          "id": "android::timer uses server deadline and is display-only",
+          "result": "PASS"
+        },
+        {
+          "id": "android::QR from the SOC header and typed addresses become the /mobile URL",
+          "result": "PASS"
+        },
+        {
+          "id": "android::only the laptop on the local network is opened inside the app",
+          "result": "PASS"
+        },
+        {
+          "id": "android::recent servers are unique, newest first and bounded",
+          "result": "PASS"
+        },
+        {
+          "id": "android::5 network nodes fit with room for diameter and border",
+          "result": "PASS"
+        },
+        {
+          "id": "android::15 network nodes fit with room for diameter and border",
+          "result": "PASS"
+        },
+        {
+          "id": "android::30 network nodes fit with room for diameter and border",
+          "result": "PASS"
+        },
+        {
+          "id": "android::identical reads share a request only within one active session",
+          "result": "PASS"
+        },
+        {
+          "id": "android::case results distinguish the analyst's finding, live ledger state and next action",
+          "result": "PASS"
+        },
+        {
+          "id": "android::only an assigned officer can offer contact, a terminal answer requires a new customer request",
+          "result": "PASS"
+        },
+        {
+          "id": "android::case owner can renew declined or expired contact only when the case remains active",
+          "result": "PASS"
+        },
+        {
+          "id": "android::no offered phone links before agreement, the accepted card ignores any number sent by the server",
+          "result": "PASS"
+        },
+        {
+          "id": "android::monitor presents the real p95 bound, overflow, and empty-data state separately",
+          "result": "PASS"
+        },
+        {
+          "id": "android::stages only the selected legacy APK and its verified sidecar",
+          "result": "PASS"
+        },
+        {
+          "id": "android::stages a manifest-backed release and preserves its metadata",
+          "result": "PASS"
+        },
+        {
+          "id": "android::uses the same active manifest as the site and rejects the legacy website identity",
+          "result": "PASS"
+        },
+        {
+          "id": "android::rejects missing artifacts and mismatches in either release record",
+          "result": "PASS"
+        },
+        {
+          "id": "android::cancelling the device prompt sends no authorization",
+          "result": "PASS"
+        },
+        {
+          "id": "android::KZT amounts use the same thousands and tiyn separators on both wallet locales",
+          "result": "PASS"
+        },
+        {
+          "id": "android::privacy mask hides balance and account suffix and opening Guardian preserves consent",
+          "result": "PASS"
+        },
+        {
+          "id": "android::a selected chart day drills into the same day of the ledger",
+          "result": "PASS"
+        },
+        {
+          "id": "android::the chart distinguishes an empty ledger from zero settled money",
+          "result": "PASS"
+        },
+        {
+          "id": "android::period bins preserve chronological ranges and exact posted amounts",
+          "result": "PASS"
+        },
+        {
+          "id": "android::ledger dates agree across the Kazakhstan midnight boundary",
+          "result": "PASS"
+        },
+        {
+          "id": "android::officer analytics distinguishes an unlabelled cohort from zero false holds",
+          "result": "PASS"
+        }
+      ]
+    },
+    {
+      "name": "Frontend",
+      "passed": 211,
+      "skipped": 0,
+      "tests": [
+        {
+          "id": "frontend::hosted synthetic demo sends distinct service keys only with a complete HTTPS upstream configuration",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::pilot fails closed for missing configuration and demands credentials",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::pilot rejects CSRF even with valid Basic credentials",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::demo blocks cross-origin mutations and keeps backend role keys server-side",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::local requests use their actual loopback Host despite Next URL normalization",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::unknown or missing environment cannot make a credentialed proxy anonymous",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::credential-free local demos remain usable in production Next builds",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::LAN demo trusts only its own private Wi-Fi Host, and only when enabled",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::hosted demo trusts only its configured public HTTPS origin behind the proxy",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::fresh request with cleared browser flags cannot bypass the same recipient's pause",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::changing to an unfamiliar recipient is held despite caller-supplied known-recipient override",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::another previously known recipient and another sender remain independently evaluated",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a pause for the known recipient itself still applies to fresh retries",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::cancelled or expired roots no longer apply, and guarded descendants never restart the window",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::original deadline is inclusive and clean answers cannot release a guarded retry early",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::independent pressure retains a full new pause and hard network evidence retains its block",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::amount is grouped like a banking app and keeps the raw value",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::operator navigation restores only allowlisted tabs and never stores case contents",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::blocked session storage never prevents navigation or fabricates restoration",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::recognizes bcc.kz at a DNS label boundary and retains only the normalized host",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::warns about disguised authorities, explicit credentials, ports and plain HTTP",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::rejects incomplete, ambiguous, oversized or non-web addresses",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::«bank is not calling» is a signed reason on the next transfer of the same customer",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a real bank call is confirmed and never removes risk",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a check belongs to one customer and unknown customers are rejected",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the browser rejects a malformed call-check answer",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::case report exports a bilingual allowlist without identities, raw evidence or clipboard",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::timeline does not turn a deadline or saved questionnaire into an invented release event",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::legacy records preserve unknown model/timestamps and finite timing allowlist",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a held transfer tells its story up to the planned end of the pause",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::answers and the outcome follow the hold",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the police report escapes saved text and cites the law",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a fresh client restores the selected receipt and only its boolean draft",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::message input yields bilingual educational categories, never original text",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::member routes use the configured demo owner and return whitelisted fields",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::an SOC replay link opens exactly one published account and checkpoint",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the source transfers reconcile to each isolated checkpoint without future or hypothetical payments",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::only relevant postings support a signal and a model estimate never receives a transaction attribution",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::five explicit boolean answers are required; a negative answer is never mistaken for missing",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::reopening a partial questionnaire resumes the first unanswered question; complete drafts reopen review",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::unsent edits remain isolated by operation ID when the modal closes or another hold opens",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the in-memory draft cache is bounded and retains only questionnaire fields",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::behavioral hold explains scrutiny without inventing network proof, even with high ML",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::flag policy is explicit with low ML, including a flag found at hold release",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::silent alarm and questionnaire blocks are never renamed as recipient flags",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::server active-hold guard explains the inherited pause without asserting fraud",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::uncorroborated collection and known release rechecks retain their exact source reasons",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::unknown codes remain visible even when their claimed layer looks familiar",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::missing reasons and missing ML never become evidence that risk is absent",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::bilingual headings and count labels stay readable without duplicate model counts",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::presets remain deterministic on repeated use and retain both translations",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::questionnaire blocks red flags immediately, holds clean answers until expiry, and replays identical decisions",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::cancel is durable and idempotent, and cannot release a cancelled hold",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::unknown recipient only blocks verification when combined with pressure signals",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::request UUID replays exactly once, detects changed payloads, and detail reveals current lifecycle",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::abandonment tombstones late requests and never undoes an already processed transfer",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::demo capacity rejects only new intents while preserving replay and existing holds",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::malformed successful API responses fail safely, and nullable legacy ML stays supported",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::real backend nullable call-check context does not hide a saved transfer or the SOC feed",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::hub graph has 12 incoming senders and a shared-device edge",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::invalid amounts and ambiguous recipients are rejected",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC hub KPI excludes scam blocks and deduplicates blocked hub recipients",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::KZT formatting is deterministic in kk and ru, including fractional tenge",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::real event timing detects pauses/deletions and excludes time away from an input",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::recipient paste is sticky until reset; amount paste never flags the recipient",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::clearing a pasted recipient removes that recipient's paste signal",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::waiting after clearing a recipient is not counted as the new recipient's typing time",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::select-all replacement starts fresh recipient cadence without retaining a paste flag",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::recovery storage contains only bounded UUIDs and countdown ignores local wall-clock skew",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::ambiguous evaluation retry uses the original UUID and returns the authoritative current decision",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::biometrics survive request validation with backend-compatible bounds",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::cooling warnings use exact submitted context or server reason codes",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::traffic uses configured accounts, covers four cities and yields diverse decisions",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::prevented loss counts unique blocked transfers only and retains reconciled decisions",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the silent alarm blocks a clean transfer in the demo engine, like the backend",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::published paired cohorts use the shipped weights and identical denominators",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::sensor sums qualifying gaps and counts a deletion independently of its duration",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::callback asks for one contact and only its dialable telephone numbers",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::cancelling or selecting a contact without a phone offers no dial target",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::funds trace binds the selected transaction and rejects inflated or malformed allocations",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::offline funds trace explicitly requires a transaction database",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::pilot funds trace protects the ledger and validates its read-only upstream result",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a capable device gets the 3D scenes",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::weak or constrained devices get the drawn version",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the presenter override wins, except that it cannot create WebGL",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the override is read from the URL first, then from the session",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::modern GPUs are not mistaken for weak ones",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a scene that keeps missing the frame budget asks to drop to lite",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the display and text fonts carry every Kazakh letter and the tenge sign",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::direct fan-in layout keeps all twelve senders, hub and shared account without node overlap",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::expanded graph retains API positions and responses must match the requested depth",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::one transfer visits six stops in order, and the report records the actual verdict",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::Next alone completes the six numbered steps without filling in answers on the visitor's behalf",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::Skip clears this tab's tour and Replay starts a new case with empty answers",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::storage denial and damaged or incomplete sessions still allow the story to start",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::ready API supplies the recipient graph and a failed health or graph read uses frontend data",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the 60 second limit aborts a sleeping API even when its promise never settles",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a temporary cold-start response retries within the same deadline",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::tour probe wakes the configured backend health endpoint and ordinary liveness stays independent",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::p95 excludes unmeasured seed rows and has no invented value before observations",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::p95 uses nearest rank without interpolation and leaves source rows unchanged",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::p95 window chooses 500 latest created observations with deterministic identity ties",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::order comparison requires the intended destination even for a registered alias",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::only RFC 1918 hosts count as the demo Wi-Fi",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::LAN addresses are opt-in, never in the pilot, and prefer Wi-Fi over virtual adapters",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::background recovery of the latest attempt cannot replace another actively reviewed case",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a matching server save consumes a draft so reopening uses newer authoritative answers",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a delayed questionnaire read cannot overwrite unsent edits or another case's draft",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::terminal cancellation deletes only its draft and stale held results cannot recreate it",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::only published phone and card fixtures can be mapped to a beneficiary",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::name comparison only reflects the selected test bank and masked beneficiary",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::wallet uses masked fixture names only for matching details in a training environment",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::live public demo only forwards fixture refs and rejects a different beneficiary's response",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::return contracts bind the receipt to the source and accept explicit consent",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::hosted return uses the transfer key and rejects public review, foreign origin, and destination changes",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::pilot scenario counts only incremental capture and subtracts legitimate review costs",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::no fraud, no additional capture or complete baseline never invent prevented loss",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::invalid assumptions cannot produce NaN, negative costs or out-of-range rates",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::only an explicit report adds a post-call warning for the first transfer",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a known payee stays approved after a call, including one established by a settled payment",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::an active call is distinct from an ended call where payment was requested",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::both reasons are retained on a large first payment at midnight without stacking pauses",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::small nighttime payment",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::large first payment at 05:59",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::large first payment at 06:00",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::post-call recognition keeps the original hold and opens verification",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::post-call scam report is terminal, repeatable and present in SOC alerts",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::anonymous hosted SOC reads synthetic feed and graph while private operations stay server-side",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::flag BFF preserves uncertain success, validates input, and forwards only its own SOC credential",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::reviewed flag blocks a new transfer from another sender, survives replay, and unflag leaves old decisions intact",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::alerts filter excludes approved/cancelled before pagination while retaining global KPIs",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a held transfer rechecks the current flag before release and later unflag never releases that block",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::flag contracts require bounded note, request identity, version and matching response account",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::static Pages persists flag/audit receipts across in-memory reload and applies the same rule",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::two tabs merge receipts without resurrecting a terminal transfer or losing another unknown request",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::history bounds never evict unresolved IDs, and malformed entries do not erase valid recovery",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::duplicate-draft metadata contains a digest, excludes biometrics, and normalizes display formatting",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::missing Web Locks and unreadable or unwritable storage fail before admitting an intent",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::legacy pending IDs survive failed migration until durable local storage acknowledges the write",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::automatic recovery rotates over 250 pending IDs with at most four reads and current receipt priority",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a delayed hold response cannot resurrect a cancelled receipt or overwrite newer questionnaire data",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a concurrent old transaction snapshot cannot erase saved answers despite a later response timestamp",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a website update cannot roll the public Android release backwards",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::different bytes cannot silently reuse a published Android version",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::release verification rejects malformed or incompatible signing identities",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::an unchanged release or a newer signed build can accompany a website update",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::JSON limit counts encoded bytes across chunks, including absent and false lengths",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::malformed JSON and invalid UTF-8 are rejected as client input",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a stalled request times out and cancels its body",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a burst is bounded, quota refills, and backwards time grants no requests",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::invalid admission configuration fails closed",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::shadow evaluation preserves original holds, adds pauses inclusively and sums exact tiyn",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::ledger cutoffs retain microseconds and exclude the decision instant",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::plain SHA-256 matches node crypto, including block boundaries and Kazakh text",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::UUID v4 fallback uses getRandomValues when randomUUID is withheld",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::only a non-secure page falls back to an in-page lock; elsewhere a missing lock still fails closed",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the in-page lock runs operations one at a time and survives a failed one",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC session restores IDs and filters while stripping sensitive text and capability fields",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::broken or stale session formats reset safely without inventing a selected case",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::unavailable-case deferral preserves unknown outcome metadata without replayable text",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::resuming a deferred case restores only the review lock, never an executable action",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::bounded local reconciliation never silently evicts an older unresolved action",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::local filters use loaded rows and Kazakhstan day boundaries without mutating the source",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::old replay receipts never downgrade an already displayed case version",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a conflict rebases only a copy for explicit confirmation and preserves exact retry evidence",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::transition eligibility prevents phantom closures, invalid reopenings and expired actions",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::information requests are available only on the supported client channel and states",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::every SOC message is bilingual and completion is never phrased as returned funds",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::hub evidence discovered at final recheck counts once alongside initial decisions",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::every demo account has a graph with unique nodes and valid non-self edges",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC search and pages cover history beyond the last 50 without changing global totals",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC updated incident ordering and since filter retain authoritative lifecycle timestamps",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC filters validate bounds and malformed pagination cannot masquerade as complete results",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a pinned case survives filtering and fresh rows, and nullable browser overrides remain unknown",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC can read a system-opened hold review and its original actor",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC schemas accept backend-generated examples for every supported operation",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::case and incident contracts reject cross-resource or non-advisory receipts and strip extra fields",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::case action union requires version, disallows injected workflow fields and minimizes note contents",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC capability is server-issued, bounded, role-specific and fails closed",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC boundary permits localhost including IPv6 and refuses public/LAN/proxy origin spoofing",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::proxy route/query allowlist bounds pages, keeps opaque cursors and forbids arbitrary operations",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::proxy forwards only server capability and exact idempotency key with strict body",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::missing capability, invalid keys and unknown body fields never dispatch to backend",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::proxy preserves only known status-matched errors and bounded Retry-After without automatic retries",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::invalid/mismatched upstream successes are never shown as a completed action",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC reload recovers the selected workspace without persisting search names or case content",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC transport preserves bounded Retry-After and never automatically retries an action",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::SOC transport validates method-dependent case receipts and rejects mismatched case identity",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a new pair's third instalment requires confirmation and replays count once",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::established payees, the 24h boundary and one dominant purchase avoid split alerts",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::only the notified contact in the static rehearsal can signal suspicion for its held payment",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the static Pages build answers the demo routes in the browser",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the static build refuses what needs a server",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the static build simulates the trusted circle without Telegram",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::the static message-check guide matches the backend text",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::explicit static demo reset clears restored SOC navigation but preserves language and unrelated storage",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::startup restores one receipt and subsequent recovery does not select another",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a pending unknown result may recover before any result is displayed",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::reviewing A prevents the last attempted B from taking over in either response order",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::a response started before a later review is checked against the latest selection",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::editing a draft or explicitly starting again keeps an empty result despite late recovery",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::selected story separates customer-reported calls, authorization and provider state",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::private projection rejects crossed identities, leaking fields, unknown codes and unbounded collections",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::offline rehearsal separates the owner's report from the guardian response and SOC case opening",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::in a public deployment the story route denies access before contacting the private API",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::scam report precedes its cancellation at the same instant, sub-millisecond events keep their sequence",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::only real test invitations open the configured Guardian bot",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::owner capability matches backend issue_token byte for byte",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::signing key is required and must be long enough",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::only verified contacts with notifications enabled are offered, without extra fields",
+          "result": "PASS"
+        },
+        {
+          "id": "frontend::notifications drop correlation and error details; terminal states stop polling",
+          "result": "PASS"
+        }
+      ]
+    }
+  ],
+  "scope": "Fresh evening targeted backend + Android JS + frontend. Not full backend, not physical scenario count, not GitHub CI.",
+  "historical_checks": "Earlier tests.json retained separately; do not add repeated tests to this total."
+}

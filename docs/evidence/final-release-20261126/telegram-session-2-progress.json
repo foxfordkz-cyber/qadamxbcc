@@ -1,0 +1,84 @@
+{
+  "checked_at": "2026-11-26T07:45:14.795925+00:00",
+  "transaction_id": "01369aae-bc4f-4454-9944-477475a90ca3",
+  "notification_id": "848477b5-5879-428a-a10c-707c5557ff0b",
+  "state": "CONTACT_ACKNOWLEDGED",
+  "attempts": 1,
+  "events": {
+    "transaction_id": "01369aae-bc4f-4454-9944-477475a90ca3",
+    "as_of": "2026-11-26T07:45:15.778572Z",
+    "events": [
+      {
+        "id": "core:0:01369aaebc4f44549944477475a90ca3",
+        "timestamp": "2026-11-26T07:42:25.638874Z",
+        "category": "core",
+        "importance": "information",
+        "code": "TRANSFER_EVALUATED",
+        "correlation_id": null,
+        "description_ru": "\u041f\u0435\u0440\u0435\u0432\u043e\u0434 \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d",
+        "description_kk": "\u0410\u0443\u0434\u0430\u0440\u044b\u043c \u0442\u0435\u043a\u0441\u0435\u0440\u0456\u043b\u0434\u0456",
+        "source": "persisted_core"
+      },
+      {
+        "id": "core:1:01369aaebc4f44549944477475a90ca3",
+        "timestamp": "2026-11-26T07:42:25.638874Z",
+        "category": "core",
+        "importance": "attention",
+        "code": "DECISION_COOLING_OFF",
+        "correlation_id": null,
+        "description_ru": "\u0420\u0435\u0448\u0435\u043d\u0438\u0435: \u043f\u0435\u0440\u0438\u043e\u0434 \u043e\u0436\u0438\u0434\u0430\u043d\u0438\u044f",
+        "description_kk": "\u0428\u0435\u0448\u0456\u043c: \u043a\u04af\u0442\u0443 \u043a\u0435\u0437\u0435\u04a3\u0456",
+        "source": "persisted_core"
+      },
+      {
+        "id": "core:2:01369aaebc4f44549944477475a90ca3",
+        "timestamp": "2026-11-26T07:42:25.638874Z",
+        "category": "core",
+        "importance": "attention",
+        "code": "COOLING_STARTED",
+        "correlation_id": null,
+        "description_ru": "\u041d\u0430\u0447\u0430\u0442 \u043f\u0435\u0440\u0438\u043e\u0434 \u043e\u0436\u0438\u0434\u0430\u043d\u0438\u044f",
+        "description_kk": "\u041a\u04af\u0442\u0443 \u043a\u0435\u0437\u0435\u04a3\u0456 \u0431\u0430\u0441\u0442\u0430\u043b\u0434\u044b",
+        "source": "persisted_core"
+      },
+      {
+        "id": "audit:36ad4ab7eb7a48fd8461bbd2b4c3a7f2",
+        "timestamp": "2026-11-26T07:42:26.346172Z",
+        "category": "contact",
+        "importance": "information",
+        "code": "NOTIFICATION_QUEUED",
+        "correlation_id": "47808053-1175-4b00-8854-2b269436f28f",
+        "description_ru": "\u0423\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u0435 \u0432 \u043e\u0447\u0435\u0440\u0435\u0434\u0438",
+        "description_kk": "\u0425\u0430\u0431\u0430\u0440\u043b\u0430\u043c\u0430 \u043a\u0435\u0437\u0435\u043a\u0442\u0435",
+        "source": "integration_audit"
+      },
+      {
+        "id": "audit:2977d4bcabc044c3802d9fccba25f9e6",
+        "timestamp": "2026-11-26T07:42:27.246645Z",
+        "category": "contact",
+        "importance": "information",
+        "code": "NOTIFICATION_SENT",
+        "correlation_id": "47808053-1175-4b00-8854-2b269436f28f",
+        "description_ru": "\u041f\u0440\u043e\u0432\u0430\u0439\u0434\u0435\u0440 \u043f\u0440\u0438\u043d\u044f\u043b \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u0435",
+        "description_kk": "\u041f\u0440\u043e\u0432\u0430\u0439\u0434\u0435\u0440 \u0445\u0430\u0431\u0430\u0440\u043b\u0430\u043c\u0430\u043d\u044b \u049b\u0430\u0431\u044b\u043b\u0434\u0430\u0434\u044b",
+        "source": "integration_audit"
+      },
+      {
+        "id": "audit:4cc87957fb6e40df9f3d4c6981cc6239",
+        "timestamp": "2026-11-26T07:44:43.690645Z",
+        "category": "contact",
+        "importance": "information",
+        "code": "CONTACT_ACKNOWLEDGED",
+        "correlation_id": "47808053-1175-4b00-8854-2b269436f28f",
+        "description_ru": "\u041a\u043e\u043d\u0442\u0430\u043a\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043b \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u0435",
+        "description_kk": "\u0421\u0435\u043d\u0456\u043c\u0434\u0456 \u0430\u0434\u0430\u043c \u0430\u043b\u0493\u0430\u043d\u044b\u043d \u0440\u0430\u0441\u0442\u0430\u0434\u044b",
+        "source": "integration_audit"
+      }
+    ],
+    "next_cursor": null,
+    "advisory_only": true
+  },
+  "balance": "4546500.00",
+  "creation_method": "Public client API, authorized after physical ADB remained unauthorized; not Android UI",
+  "session": 2
+}

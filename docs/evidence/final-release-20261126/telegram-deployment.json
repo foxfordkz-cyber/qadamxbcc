@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-11-26T06:11:46.064538+00:00",
+  "service": "saq-bol-mobile-staging",
+  "deployment": "dep-dc3solp7lnhs73enlj9g",
+  "revision": "c3f77037ce15f191261cf456b891c74e2ce2672a",
+  "ready": 200,
+  "telegram_mode": "test",
+  "bot": "saq_bol_staging_bekzat_bot",
+  "private_chat_verified": true,
+  "fresh_recipient_consent": true,
+  "contact_app_consent": "pending",
+  "old_honor_transaction_preserved": "fbe36620-a926-498b-b2a1-7dc2a776fdf4",
+  "old_soc_case_preserved": "051bd6f5-feba-5126-8a1d-101b0e9cf790",
+  "balance_preserved": "4546500.00",
+  "main_bot_changed": false,
+  "separate_poller": true,
+  "environment_import_file_removed": true
+}

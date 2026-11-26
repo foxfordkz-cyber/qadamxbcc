@@ -1,0 +1,106 @@
+{
+  "checked_at": "2026-11-26T15:02:46.860875+00:00",
+  "transaction_id": "158a528c-ecf8-4ae7-8a41-f55f1405e97d",
+  "notification_id": "9ecc65a0-fb6f-45c0-a084-3df82ce8e688",
+  "state": "SUSPICION_REPORTED",
+  "attempts": 1,
+  "events": {
+    "transaction_id": "158a528c-ecf8-4ae7-8a41-f55f1405e97d",
+    "as_of": "2026-11-26T15:02:47.193949Z",
+    "events": [
+      {
+        "id": "core:0:158a528cecf84ae78a41f55f1405e97d",
+        "timestamp": "2026-11-26T15:00:30.143439Z",
+        "category": "core",
+        "importance": "information",
+        "code": "TRANSFER_EVALUATED",
+        "correlation_id": null,
+        "description_ru": "\u041f\u0435\u0440\u0435\u0432\u043e\u0434 \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d",
+        "description_kk": "\u0410\u0443\u0434\u0430\u0440\u044b\u043c \u0442\u0435\u043a\u0441\u0435\u0440\u0456\u043b\u0434\u0456",
+        "source": "persisted_core"
+      },
+      {
+        "id": "core:1:158a528cecf84ae78a41f55f1405e97d",
+        "timestamp": "2026-11-26T15:00:30.143439Z",
+        "category": "core",
+        "importance": "attention",
+        "code": "DECISION_COOLING_OFF",
+        "correlation_id": null,
+        "description_ru": "\u0420\u0435\u0448\u0435\u043d\u0438\u0435: \u043f\u0435\u0440\u0438\u043e\u0434 \u043e\u0436\u0438\u0434\u0430\u043d\u0438\u044f",
+        "description_kk": "\u0428\u0435\u0448\u0456\u043c: \u043a\u04af\u0442\u0443 \u043a\u0435\u0437\u0435\u04a3\u0456",
+        "source": "persisted_core"
+      },
+      {
+        "id": "core:2:158a528cecf84ae78a41f55f1405e97d",
+        "timestamp": "2026-11-26T15:00:30.143439Z",
+        "category": "core",
+        "importance": "attention",
+        "code": "COOLING_STARTED",
+        "correlation_id": null,
+        "description_ru": "\u041d\u0430\u0447\u0430\u0442 \u043f\u0435\u0440\u0438\u043e\u0434 \u043e\u0436\u0438\u0434\u0430\u043d\u0438\u044f",
+        "description_kk": "\u041a\u04af\u0442\u0443 \u043a\u0435\u0437\u0435\u04a3\u0456 \u0431\u0430\u0441\u0442\u0430\u043b\u0434\u044b",
+        "source": "persisted_core"
+      },
+      {
+        "id": "audit:f76479e083af46f0a20ae2319f1b4533",
+        "timestamp": "2026-11-26T15:00:49.479880Z",
+        "category": "contact",
+        "importance": "information",
+        "code": "NOTIFICATION_QUEUED",
+        "correlation_id": "9a6703dd-66e3-46ee-bb67-346ae20b6c48",
+        "description_ru": "\u0423\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u0435 \u0432 \u043e\u0447\u0435\u0440\u0435\u0434\u0438",
+        "description_kk": "\u0425\u0430\u0431\u0430\u0440\u043b\u0430\u043c\u0430 \u043a\u0435\u0437\u0435\u043a\u0442\u0435",
+        "source": "integration_audit"
+      },
+      {
+        "id": "audit:2e41204f219c422dbd60a0e75b82d9a4",
+        "timestamp": "2026-11-26T15:00:50.448307Z",
+        "category": "contact",
+        "importance": "information",
+        "code": "NOTIFICATION_SENT",
+        "correlation_id": "9a6703dd-66e3-46ee-bb67-346ae20b6c48",
+        "description_ru": "\u041f\u0440\u043e\u0432\u0430\u0439\u0434\u0435\u0440 \u043f\u0440\u0438\u043d\u044f\u043b \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u0435",
+        "description_kk": "\u041f\u0440\u043e\u0432\u0430\u0439\u0434\u0435\u0440 \u0445\u0430\u0431\u0430\u0440\u043b\u0430\u043c\u0430\u043d\u044b \u049b\u0430\u0431\u044b\u043b\u0434\u0430\u0434\u044b",
+        "source": "integration_audit"
+      },
+      {
+        "id": "audit:f48e75fc77b042df9447b1e9589ef3f6",
+        "timestamp": "2026-11-26T15:01:34.363051Z",
+        "category": "contact",
+        "importance": "information",
+        "code": "CONTACT_ACKNOWLEDGED",
+        "correlation_id": "9a6703dd-66e3-46ee-bb67-346ae20b6c48",
+        "description_ru": "\u041a\u043e\u043d\u0442\u0430\u043a\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u043b \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u0435",
+        "description_kk": "\u0421\u0435\u043d\u0456\u043c\u0434\u0456 \u0430\u0434\u0430\u043c \u0430\u043b\u0493\u0430\u043d\u044b\u043d \u0440\u0430\u0441\u0442\u0430\u0434\u044b",
+        "source": "integration_audit"
+      },
+      {
+        "id": "audit:3482f0ea6caf445e9211a76299143fb2",
+        "timestamp": "2026-11-26T15:02:10.362443Z",
+        "category": "contact",
+        "importance": "attention",
+        "code": "SUSPICION_REPORTED",
+        "correlation_id": "9a6703dd-66e3-46ee-bb67-346ae20b6c48",
+        "description_ru": "\u041a\u043e\u043d\u0442\u0430\u043a\u0442 \u0441\u043e\u043e\u0431\u0449\u0438\u043b \u043e \u043f\u043e\u0434\u043e\u0437\u0440\u0435\u043d\u0438\u0438",
+        "description_kk": "\u0421\u0435\u043d\u0456\u043c\u0434\u0456 \u0430\u0434\u0430\u043c \u043a\u04af\u0434\u0456\u043a \u0442\u0443\u0440\u0430\u043b\u044b \u0445\u0430\u0431\u0430\u0440\u043b\u0430\u0434\u044b",
+        "source": "integration_audit"
+      },
+      {
+        "id": "audit:dfac2463c3dd4f5b9e559714437b5273",
+        "timestamp": "2026-11-26T15:02:12.838267Z",
+        "category": "orchestration",
+        "importance": "information",
+        "code": "INTEGRATION_EVENT",
+        "correlation_id": "e71876ad-5656-5bbc-bd5a-07b8edd35e94",
+        "description_ru": "\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043e \u0441\u043e\u0431\u044b\u0442\u0438\u0435 \u0438\u043d\u0442\u0435\u0433\u0440\u0430\u0446\u0438\u0438",
+        "description_kk": "\u0418\u043d\u0442\u0435\u0433\u0440\u0430\u0446\u0438\u044f \u043e\u049b\u0438\u0493\u0430\u0441\u044b \u0441\u0430\u049b\u0442\u0430\u043b\u0434\u044b",
+        "source": "integration_audit"
+      }
+    ],
+    "next_cursor": null,
+    "advisory_only": true
+  },
+  "balance": "4546500.00",
+  "creation_method": "Physical Honor X6 Android build 26 UI via authorized USB; normal internet, no proxy",
+  "session": 3
+}

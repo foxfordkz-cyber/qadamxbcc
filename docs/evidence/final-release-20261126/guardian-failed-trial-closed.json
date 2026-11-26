@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-11-26T07:32:37.891062+00:00",
+  "transaction_id": "d4492021-7a67-4518-91f0-ede193bc49b1",
+  "case_id": "9460e40f-6156-552a-a9a4-e7d8a88621be",
+  "amount": "900000.00",
+  "guardian_state": "DELIVERY_FAILED",
+  "soc_state": "NEW",
+  "case_source": "guardian_timeout",
+  "client_final_status": "cancelled",
+  "balance": "4546500.00",
+  "balance_unchanged": true,
+  "method": "Public client cancellation API; not an Android UI completion",
+  "timeout_escalation": "PASS: deterministic case visible in public staging SOC",
+  "telegram_callbacks": "NOT TESTED",
+  "history_deleted": false
+}

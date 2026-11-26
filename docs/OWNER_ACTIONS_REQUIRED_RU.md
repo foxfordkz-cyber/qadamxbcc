@@ -5,6 +5,10 @@
 > на Honor; Client → SOC → Client проверен. Актуальные действия — в
 > [передаче техлиду](TECH_LEAD_RELEASE_HANDOFF_RU.md), доказательства — в
 > [приёмке staging](FINAL_LIVE_INTEGRATION_ACCEPTANCE_RU.md).
+> Новейшая [финальная проверка](FINAL_RELEASE_ACCEPTANCE_2026_11_26_RU.md):
+> реальный Guardian → SOC → Honor принят; полный restore **8 373 строки**,
+> 339 свежих уникальных тестов PASS / 1 SKIP; отдельный candidate опубликован в private GitHub.
+> Нужны review/CI, решение о публичном канале и непрерывный дубль двух телефонов.
 > Ниже сохранён контекст проверки 25 ноября **старого** `saq-bol-mobile`;
 > его временная история не переносилась, основной сервис не изменялся.
 

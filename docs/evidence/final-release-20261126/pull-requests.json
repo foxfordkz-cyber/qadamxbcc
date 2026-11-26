@@ -1,0 +1,45 @@
+{
+  "checked_source": "fe0f7332414d891e3a79ccddb5776a6fb293fa14",
+  "main": "ebb065fd85ea1313ec35fa383f3b41ba12184afe",
+  "pr37": {
+    "state": "open",
+    "draft": true,
+    "mergeable": true,
+    "submitted_reviews": 0
+  },
+  "dependencies": [
+    {
+      "number": 33,
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "mergeable": true,
+      "head": "6b775311f2f61d72dce79dc5db887b8916f4d987",
+      "branch": "integration/aidana-design-guardian",
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/pull/33",
+      "already_ancestor_of_final_branch": true
+    },
+    {
+      "number": 35,
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergeable": false,
+      "head": "4e15d432614401b38356e953017ba5bfef629dd6",
+      "branch": "integration/unified-ecosystem",
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/pull/35",
+      "already_ancestor_of_final_branch": true
+    },
+    {
+      "number": 36,
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "mergeable": true,
+      "head": "22ea4038a8aa27805ab2057adef5de0711c1163d",
+      "branch": "release/website-android-24",
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/pull/36",
+      "already_ancestor_of_final_branch": true
+    }
+  ]
+}

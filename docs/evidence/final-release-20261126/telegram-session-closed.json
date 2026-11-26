@@ -1,0 +1,8 @@
+{
+  "closed_at": "2026-11-26T06:24:18.850137+00:00",
+  "result": "PASS",
+  "contact_state": "CONTACT_REVOKED",
+  "method": "authorized owner API at the end of the 15-minute test window",
+  "history_preserved": true,
+  "additional_messages_sent": 0
+}

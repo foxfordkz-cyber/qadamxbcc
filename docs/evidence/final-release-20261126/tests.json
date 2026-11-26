@@ -1,0 +1,885 @@
+{
+  "source_head": "fe0f7332414d891e3a79ccddb5776a6fb293fa14",
+  "unique_passed": 149,
+  "skipped": 1,
+  "groups": [
+    {
+      "group": "final-release-security",
+      "timestamp": "2026-11-26T10:19:57.082007+05:00",
+      "passed": 86,
+      "skipped": 1,
+      "seconds": 36.684,
+      "tests": [
+        {
+          "id": "tests.test_mobile_gateway::test_role_chosen_by_secret_not_request",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_payee_check_uses_scoped_directory_and_minimal_response",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_call_question_previews_without_submitting_and_persists_customer_answer",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[soc/feed]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[soc/graph/00000000-0000-4000-8000-000000000001]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[integrations/health/details]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[integrations/guardian/soc/cases]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[../soc/feed]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[trusted-contacts/simulator/update]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_admin_cannot_transfer_or_change_cooling",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_real_core_evaluation_ownership_and_admin_feed",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_server_cooling_stays_held_after_clean_answers",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_expiration_logout_and_login_quota",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_inputs_do_not_leak_and_bodies_bounded",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_private_scam_check_and_contact_read",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_gateway_disabled_by_default",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_other_customer_transaction_is_not_readable_or_cancellable",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_abandon_is_owned_and_prevents_late_execution",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_session_expiry_fails_closed",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_no_credentials_means_no_mobile_data",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_mobile_health_does_not_expose_secrets",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_two_password_accounts_restore_and_revoke",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_post_call_quiet_period_and_packet",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_incident_packet_is_private_and_masks_recipient",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_pressure_can_cancel_immediately_and_soc_sees_payment_decision",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_switch_delay_independent_of_contact",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_shutdown_can_be_cancelled_and_rescheduled_for_a_full_day",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_protection_requires_owner",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_one_recipient_actual_callback",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states0-1-SUSPICION_REPORTED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states1-None-CONTACT_ACKNOWLEDGED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states2-None-NOTIFICATION_QUEUED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states3-None-NOTIFICATION_SENT]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states4-2-NOTIFICATION_QUEUED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_wallet_amounts_history_and_role_boundaries",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_case_lookup_is_role_scoped_and_respects_retention",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_staging_bootstrap_rejects_shared_or_ambiguous_stores[changes0]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_staging_bootstrap_rejects_shared_or_ambiguous_stores[changes1]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_staging_bootstrap_rejects_shared_or_ambiguous_stores[changes2]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_staging_bootstrap_rejects_shared_or_ambiguous_stores[changes3]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_staging_bootstrap_rejects_shared_or_ambiguous_stores[changes4]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_staging_bootstrap_rejects_shared_or_ambiguous_stores[changes5]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_hosted_mobile_worker_refuses_temporary_or_code_auth[change0]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_hosted_mobile_worker_refuses_temporary_or_code_auth[change1]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_fake_hosted_worker_stops_before_its_resources_close",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_live_hosted_worker_uses_existing_locked_runner",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_staging_runtime::test_hosted_worker_remains_opt_in",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_bootstrap::test_bootstrap_detects_existing_data_without_overwriting",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_disabled_mode_ignores_unused_telegram_configuration",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_malformed_capabilities[]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_malformed_capabilities[owner:bad:9999999999:sig]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_malformed_capabilities[Bearer user]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_malformed_capabilities[a:b:c:d:e]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_signature_binds_role_and_owner",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_missing_auth_and_fake_identity",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_owner_cannot_impersonate_telegram_sender",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_cross_owner_access",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_rate_limit",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_disabled_integrations_leave_core_alive",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_security::test_wrong_contact_cannot_consent",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_fake_adapter_idempotency",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_real_adapter_allowlist_blocks_before_network",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_real_adapter_error_is_sanitized",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_real_adapter_callback_payloads_are_bounded",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_approval_keyboard_has_explicit_transaction_action[ru]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_approval_keyboard_has_explicit_transaction_action[kk]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_delivery_timeout_is_bounded",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_callback_race::test_competing_answers_record_only_one_consent",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_long_rejection_is_durable_and_recovers_without_duplicate",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_delayed_retry_rechecks_consent_deadline_and_core[revoke]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_delayed_retry_rechecks_consent_deadline_and_core[expiry]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_delayed_retry_rechecks_consent_deadline_and_core[resolved]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_rejections_are_bounded_across_worker_restarts",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_retry_after_deadline_is_terminal_without_sleep",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_crash_after_retry_claim_does_not_resend",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_rejected_send_retries_once_without_duplicate[1-NOTIFICATION_SENT]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_rejected_send_retries_once_without_duplicate[3-DELIVERY_FAILED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_ambiguous_send_is_never_retried[failure0]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_ambiguous_send_is_never_retried[failure1]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_long_retry_after_does_not_wait_or_resend",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_polling_boundary_does_not_leak_or_crash[invalid_input]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_polling_boundary_does_not_leak_or_crash[redis_unavailable]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_hosted_telegram::test_hosted_runner_requires_a_private_test_environment",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_hosted_telegram::test_embedded_dispatcher_closes_its_long_poll",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_hosted_telegram::test_runner_stops_both_children[shutdown]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_hosted_telegram::test_runner_stops_both_children[connection-lost]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_hosted_telegram::test_postgres_runner_lock_handoff",
+          "result": "SKIP"
+        }
+      ]
+    },
+    {
+      "group": "final-release-contract",
+      "timestamp": "2026-11-26T10:34:34.973641+05:00",
+      "passed": 2,
+      "skipped": 0,
+      "seconds": 23.077,
+      "tests": [
+        {
+          "id": "tests.test_ecosystem_contract::test_openapi_contract_matches_committed_client_boundary",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_ecosystem_contract::test_discovery_is_nonsecret_and_account_roles_remain_server_enforced",
+          "result": "PASS"
+        }
+      ]
+    },
+    {
+      "group": "npm --prefix android-app test",
+      "passed": 50,
+      "skipped": 0,
+      "seconds": 23.6539584,
+      "tests": [
+        {
+          "id": "a legacy server receives compatible call flags and no new fields",
+          "result": "PASS"
+        },
+        {
+          "id": "the current server decides when to ask and manual testimony stays distinct from presets",
+          "result": "PASS"
+        },
+        {
+          "id": "a missing answer and a neutral rule cannot become exculpatory evidence",
+          "result": "PASS"
+        },
+        {
+          "id": "case ledger links actual receipts and distinguishes missing and empty history in both languages",
+          "result": "PASS"
+        },
+        {
+          "id": "later evidence displays its own recorded time",
+          "result": "PASS"
+        },
+        {
+          "id": "corrupt and unknown storage starts safely",
+          "result": "PASS"
+        },
+        {
+          "id": "restoring storage whitelists fields and rejects invented decisions",
+          "result": "PASS"
+        },
+        {
+          "id": "three distinct fixtures, duplicate IDs and bounded history",
+          "result": "PASS"
+        },
+        {
+          "id": "only cooling can cancel; cancellation never approves",
+          "result": "PASS"
+        },
+        {
+          "id": "education needs all answers, and no-signal result never means safe",
+          "result": "PASS"
+        },
+        {
+          "id": "Russian and Kazakh cover identical interface keys",
+          "result": "PASS"
+        },
+        {
+          "id": "protocol discovery accepts additive fields but rejects a newer major or unsupported build",
+          "result": "PASS"
+        },
+        {
+          "id": "only a missing legacy discovery route is optional; network and auth errors survive",
+          "result": "PASS"
+        },
+        {
+          "id": "read reconnect uses bounded backoff and never overrides Retry-After",
+          "result": "PASS"
+        },
+        {
+          "id": "published client, SOC and platform use the Android ledger; jury is explicitly isolated",
+          "result": "PASS"
+        },
+        {
+          "id": "family opt-in selects a verified contact and distinguishes the jury channel from Telegram",
+          "result": "PASS"
+        },
+        {
+          "id": "scheduled deactivation retains the current contact and an explicit option to keep protection",
+          "result": "PASS"
+        },
+        {
+          "id": "receipt explains exact guardian outcome in both languages",
+          "result": "PASS"
+        },
+        {
+          "id": "gateway cannot take tokens to public, credentialed or path-bearing hosts",
+          "result": "PASS"
+        },
+        {
+          "id": "external pages are limited and do not use the native WebView",
+          "result": "PASS"
+        },
+        {
+          "id": "login role comes from server and token is memory-only",
+          "result": "PASS"
+        },
+        {
+          "id": "unknown delivery is surfaced once without automatic retry",
+          "result": "PASS"
+        },
+        {
+          "id": "the wallet accepts the inbox and its actions view on web and native sessions",
+          "result": "PASS"
+        },
+        {
+          "id": "cold starts extend only the sign-in request deadline",
+          "result": "PASS"
+        },
+        {
+          "id": "expired session is cleared and 429 retains Retry-After",
+          "result": "PASS"
+        },
+        {
+          "id": "timer uses server deadline and is display-only",
+          "result": "PASS"
+        },
+        {
+          "id": "QR from the SOC header and typed addresses become the /mobile URL",
+          "result": "PASS"
+        },
+        {
+          "id": "only the laptop on the local network is opened inside the app",
+          "result": "PASS"
+        },
+        {
+          "id": "recent servers are unique, newest first and bounded",
+          "result": "PASS"
+        },
+        {
+          "id": "5 network nodes fit with room for diameter and border",
+          "result": "PASS"
+        },
+        {
+          "id": "15 network nodes fit with room for diameter and border",
+          "result": "PASS"
+        },
+        {
+          "id": "30 network nodes fit with room for diameter and border",
+          "result": "PASS"
+        },
+        {
+          "id": "identical reads share a request only within one active session",
+          "result": "PASS"
+        },
+        {
+          "id": "case results distinguish the analyst's finding, live ledger state and next action",
+          "result": "PASS"
+        },
+        {
+          "id": "only an assigned officer can offer contact, a terminal answer requires a new customer request",
+          "result": "PASS"
+        },
+        {
+          "id": "case owner can renew declined or expired contact only when the case remains active",
+          "result": "PASS"
+        },
+        {
+          "id": "no offered phone links before agreement, the accepted card ignores any number sent by the server",
+          "result": "PASS"
+        },
+        {
+          "id": "monitor presents the real p95 bound, overflow, and empty-data state separately",
+          "result": "PASS"
+        },
+        {
+          "id": "stages only the selected legacy APK and its verified sidecar",
+          "result": "PASS"
+        },
+        {
+          "id": "stages a manifest-backed release and preserves its metadata",
+          "result": "PASS"
+        },
+        {
+          "id": "uses the same active manifest as the site and rejects the legacy website identity",
+          "result": "PASS"
+        },
+        {
+          "id": "rejects missing artifacts and mismatches in either release record",
+          "result": "PASS"
+        },
+        {
+          "id": "cancelling the device prompt sends no authorization",
+          "result": "PASS"
+        },
+        {
+          "id": "KZT amounts use the same thousands and tiyn separators on both wallet locales",
+          "result": "PASS"
+        },
+        {
+          "id": "privacy mask hides balance and account suffix and opening Guardian preserves consent",
+          "result": "PASS"
+        },
+        {
+          "id": "a selected chart day drills into the same day of the ledger",
+          "result": "PASS"
+        },
+        {
+          "id": "the chart distinguishes an empty ledger from zero settled money",
+          "result": "PASS"
+        },
+        {
+          "id": "period bins preserve chronological ranges and exact posted amounts",
+          "result": "PASS"
+        },
+        {
+          "id": "ledger dates agree across the Kazakhstan midnight boundary",
+          "result": "PASS"
+        },
+        {
+          "id": "officer analytics distinguishes an unlabelled cohort from zero false holds",
+          "result": "PASS"
+        }
+      ]
+    },
+    {
+      "group": "Guardian Fake-to-live transition regression",
+      "source_head": "cee12aba7615ec1f09230b7586c464ad20249818",
+      "timestamp": "2026-11-26T12:27:53.372425+05:00",
+      "passed": 69,
+      "skipped": 0,
+      "seconds": 49.781,
+      "tests": [
+        {
+          "id": "tests.test_guardian_live_transition::test_live_advisory_skips_old_fake_contact_and_deduplicates[True]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_guardian_live_transition::test_live_advisory_skips_old_fake_contact_and_deduplicates[False]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_second_confirmation::test_private_test_guardian_must_be_distinct_from_registered_payer",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_second_confirmation::test_second_confirmation_bound_to_exact_held_transfer[confirmed]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_second_confirmation::test_second_confirmation_bound_to_exact_held_transfer[suspicious]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_second_confirmation::test_second_confirmation_bound_to_exact_held_transfer[revoked]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_second_confirmation::test_second_confirmation_bound_to_exact_held_transfer[expired]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_second_confirmation::test_second_confirmation_bound_to_exact_held_transfer[changed]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_second_confirmation::test_family_policy_preserves_small_known_and_pending_after_disable",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_role_chosen_by_secret_not_request",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_payee_check_uses_scoped_directory_and_minimal_response",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_call_question_previews_without_submitting_and_persists_customer_answer",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[soc/feed]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[soc/graph/00000000-0000-4000-8000-000000000001]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[integrations/health/details]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[integrations/guardian/soc/cases]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[../soc/feed]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_client_cannot_use_admin_or_simulator[trusted-contacts/simulator/update]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_admin_cannot_transfer_or_change_cooling",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_real_core_evaluation_ownership_and_admin_feed",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_server_cooling_stays_held_after_clean_answers",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_expiration_logout_and_login_quota",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_inputs_do_not_leak_and_bodies_bounded",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_private_scam_check_and_contact_read",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_gateway_disabled_by_default",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_other_customer_transaction_is_not_readable_or_cancellable",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_abandon_is_owned_and_prevents_late_execution",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_session_expiry_fails_closed",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_no_credentials_means_no_mobile_data",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_mobile_health_does_not_expose_secrets",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_two_password_accounts_restore_and_revoke",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_post_call_quiet_period_and_packet",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_incident_packet_is_private_and_masks_recipient",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_pressure_can_cancel_immediately_and_soc_sees_payment_decision",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_switch_delay_independent_of_contact",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_shutdown_can_be_cancelled_and_rescheduled_for_a_full_day",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_protection_requires_owner",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_one_recipient_actual_callback",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states0-1-SUSPICION_REPORTED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states1-None-CONTACT_ACKNOWLEDGED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states2-None-NOTIFICATION_QUEUED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states3-None-NOTIFICATION_SENT]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_family_receipt_summarizes_all_contacts[states4-2-NOTIFICATION_QUEUED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_wallet_amounts_history_and_role_boundaries",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.test_mobile_gateway::test_case_lookup_is_role_scoped_and_respects_retention",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_local_refusal_is_terminal_without_provider_request[False]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_local_refusal_is_terminal_without_provider_request[True]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_rejected_send_retries_once_without_duplicate[1-NOTIFICATION_SENT]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_rejected_send_retries_once_without_duplicate[3-DELIVERY_FAILED]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_ambiguous_send_is_never_retried[failure0]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_ambiguous_send_is_never_retried[failure1]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_long_retry_after_does_not_wait_or_resend",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_polling_boundary_does_not_leak_or_crash[invalid_input]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_delivery_recovery::test_polling_boundary_does_not_leak_or_crash[redis_unavailable]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_fake_adapter_idempotency",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_real_adapter_allowlist_blocks_before_network",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_real_adapter_error_is_sanitized",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_real_adapter_callback_payloads_are_bounded",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_approval_keyboard_has_explicit_transaction_action[ru]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_approval_keyboard_has_explicit_transaction_action[kk]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_telegram_adapter::test_delivery_timeout_is_bounded",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_long_rejection_is_durable_and_recovers_without_duplicate",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_delayed_retry_rechecks_consent_deadline_and_core[revoke]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_delayed_retry_rechecks_consent_deadline_and_core[expiry]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_delayed_retry_rechecks_consent_deadline_and_core[resolved]",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_rejections_are_bounded_across_worker_restarts",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_retry_after_deadline_is_terminal_without_sleep",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_durable_retry::test_crash_after_retry_claim_does_not_resend",
+          "result": "PASS"
+        },
+        {
+          "id": "tests.integrations.test_callback_race::test_competing_answers_record_only_one_consent",
+          "result": "PASS"
+        }
+      ]
+    }
+  ],
+  "scope": "Historical initial checks plus fresh affected-code regression; duplicate case IDs counted once. Not full-suite or GitHub CI PASS.",
+  "warning": "Existing Duplicate Operation ID proxy_mobile_v1_api__path__delete during OpenAPI export; contract equality passed",
+  "skip_reason": "PostgreSQL advisory-lock fixture not configured for the local test runner",
+  "guardian_fix": {
+    "revision": "cee12aba7615ec1f09230b7586c464ad20249818",
+    "pytest_passed": 69,
+    "ruff": "PASS",
+    "mypy": "PASS (5 files)",
+    "initial_test_fixture_error": "Corrected; final rerun has no errors"
+  }
+}

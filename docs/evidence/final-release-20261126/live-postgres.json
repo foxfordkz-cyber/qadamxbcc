@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-11-26T15:14:13.660112+00:00",
+  "transaction_id": "158a528c-ecf8-4ae7-8a41-f55f1405e97d",
+  "counts": {
+    "transactions": 1,
+    "cases": 1,
+    "notifications": 1
+  },
+  "idempotent_replay": "PASS: original request hash matched privately; replay returned same UUID, operation list/current cancellation/balance unchanged",
+  "tls": true,
+  "database": "saq_bol_staging",
+  "role": "saq_bol_staging_owner",
+  "migration": "0016_dispute_history",
+  "replay_checked_at": "2026-11-26T15:23:00.647430+00:00"
+}
