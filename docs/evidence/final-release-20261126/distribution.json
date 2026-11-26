@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-11-26T15:21:36.030509+00:00",
+  "public_channel": "build 24 unchanged",
+  "build": 24,
+  "api_origin": "https://saq-bol-mobile.onrender.com",
+  "apk_sha256": "119355ceea55b6087c357006ae14b2f272a72de00538521948d68362ecdfebf1",
+  "bytes": 10754120,
+  "download_bytes": "PASS fresh actual download",
+  "candidate_build": 26,
+  "candidate_channel": "Private GitHub prerelease android-2.9-26-staging-candidate; separate from main public release",
+  "candidate_public_url_requires_github_access": true,
+  "public_cutover": "BLOCKED pending tech-lead decision",
+  "qr_scan_on_second_physical_phone": "NOT TESTED",
+  "qr_previous_software_decode": "PASS earlier today; same download route"
+}

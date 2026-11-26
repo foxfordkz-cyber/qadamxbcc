@@ -1,0 +1,12 @@
+{
+  "closed_at": "2026-11-26T07:46:21.052816+00:00",
+  "reason": "User asked to upload latest APK and defer remaining work",
+  "contact_state": "CONTACT_REVOKED",
+  "additional_messages_sent": 0,
+  "history_preserved": true,
+  "session": 2,
+  "transaction_id": "01369aae-bc4f-4454-9944-477475a90ca3",
+  "notification_state": "CONTACT_ACKNOWLEDGED",
+  "financial_status": "cooling_off",
+  "balance": "4546500.00"
+}

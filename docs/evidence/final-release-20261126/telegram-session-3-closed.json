@@ -1,0 +1,15 @@
+{
+  "closed_at": "2026-11-26T15:04:49.060397+00:00",
+  "session": 3,
+  "contact_state": "CONTACT_REVOKED",
+  "history_preserved": true,
+  "real_service_messages": 3,
+  "limit": 6,
+  "transaction_id": "158a528c-ecf8-4ae7-8a41-f55f1405e97d",
+  "case_id": "e71876ad-5656-5bbc-bd5a-07b8edd35e94",
+  "financial_status": "cancelled",
+  "balance": "4546500.00",
+  "client_cancel": "Physical Honor UI",
+  "telegram": "ACK and SUSPICION persisted separately; buttons removed after suspicion",
+  "two_phone_video": "NOT TESTED; one physical Honor plus actual Telegram Web on laptop"
+}

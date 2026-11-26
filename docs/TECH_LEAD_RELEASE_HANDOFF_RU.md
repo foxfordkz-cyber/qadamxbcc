@@ -1,41 +1,26 @@
-# Передача техлиду: отдельный постоянный staging
+# Передача техлиду — проверенный постоянный staging
 
-26 ноября 2026. Ветка `integration/final-build24`, Draft PR #37. Merge в main не выполнен.
+26 ноября 2026. Ветка `integration/final-build24`, Draft PR #37. Код `cee12ab`, merge не выполнен.
 
-## Что можно проверить сейчас
+**Новое:** физический Honor → настоящий Telegram ACK и подозрение → один SOC-кейс → решение через SOC API → ответ и отмена на Honor. Ноутбук реально показывает тот же кейс, сумму и причины. [Подробная приёмка](FINAL_RELEASE_ACCEPTANCE_2026_11_26_RU.md), [матрица экосистемы](REAL_ECOSYSTEM_VERIFICATION_RU.md).
 
-1. Открыть [ready](https://saq-bol-mobile-staging.onrender.com/ready): HTTP 200.
-2. Открыть [веб-кабинет staging](https://saq-bol-mobile-staging.onrender.com/wallet/). Все три demo-роли реально проверены. Не использовать пароль от другого сервиса по предположению.
-3. Установить переданный **staging candidate build 26** поверх совместимого APK. Он подключён к этому же staging. Публичный build 24 остаётся на старом сервисе и не является staging-клиентом.
-4. Найти операцию `fbe36620-a926-498b-b2a1-7dc2a776fdf4` и кейс `051bd6f5-feba-5126-8a1d-101b0e9cf790`: Android → SOC → Android уже пройден на Honor, финальный статус `cancelled`, баланс 4 546 500 ₸.
-5. Проверить [отчёт](FINAL_LIVE_INTEGRATION_ACCEPTANCE_RU.md) и [полную restore-сверку](evidence/live-staging/backup-restore.json). Два рестарта API сохранили UUID, баланс, историю, кейс и сессии. Restore — отдельная база, снимок до поздней операции Honor.
+- Transaction `158a528c-ecf8-4ae7-8a41-f55f1405e97d`, case `e71876ad-5656-5bbc-bd5a-07b8edd35e94`, 900 000 ₸. Баланс до/после 4 546 500 ₸, cancelled. Точный replay не создал дубль.
+- [Staging wallet](https://saq-bol-mobile-staging.onrender.com/wallet/), [SOC](https://saq-bol-mobile-staging.onrender.com/soc/), `/ready` 200. Не открывать SOC через главный сайт для этой операции: он пока ведёт в старый mobile.
+- Build 26 — [отдельный GitHub prerelease](https://github.com/foxfordkz-cyber/qadamxbcc/releases/tag/android-2.9-26-staging-candidate). Private repo требует доступа; public сайт остаётся на build 24.
+- Новая полная копия включает live-события: 25 таблиц / 8 373 строки, restore `saq_bol_staging_restore_20261126_live`. Две прежние restore-базы сохранены. Внешний /32 удалён, 0 разрешённых IP.
+- Два Render restart прошли раньше сегодня; новые live-события проверены restore, не повторными вечерними restart.
+- Свежие тесты: 78 backend + 50 Android JS + 211 frontend = 339 уникальных PASS, 1 SKIP. Предыдущие проверки не прибавлены повторно.
 
-## Конкретные оставшиеся действия
+## Действия владельцев
 
-| Кто | Действие |
+| Кто | Конкретное действие |
 |---|---|
-| Владелец тестового Telegram | Дать отдельного свободного бота через скрытый локальный ввод либо согласовать окно переключения основного polling. Текущий основной бот не трогаем. Затем private chat, отдельное согласие и live-тест с одним UUID |
-| Владелец GitHub | Разрешить проблему billing/spending limit Actions и повторить CI. Автоматически менять оплату не разрешено |
-| Техлид | Review PR #37; подтвердить live-результат или явно принять отсутствие live для конкретного демо |
-| Владелец релиза | После приёмки согласовать переключение публичного APK/QR/backend. Сейчас build 24, старый сервис и его история сохранены |
+| Владелец GitHub billing | Settings → Billing and licensing → Budgets and alerts: устранить причину Actions spending-limit/payment отказа, затем перезапустить checks PR #37. Бюджет автоматически не менялся |
+| Техлид | Review #37, затем разрешённый обычный merge с сохранением авторства. #33/#35/#36 уже входят в эту ветку |
+| Владелец релиза | Решить, публиковать ли отдельный ясно обозначенный staging-канал, и судьбу временной истории старого mobile. До решения основной сайт/QR/build 24 не переключать |
+| Команда | Непрерывный дубль: два физических телефона и ноутбук; решение сразу кнопкой веб-SOC. Вечернее решение было API-действием; веб-кейс затем прочитан реально |
+| Контакт Guardian | Для следующей отправки — новое ограниченное согласие. Завершённая live-сессия закрыта, согласие отозвано штатно |
 
-Новый сервер, Supabase-проект и платный ресурс для выполненного staging не создавались. Уже имеющийся PostgreSQL Free истекает 20 декабря: дальнейшее хранение требует отдельного решения владельца до этой даты.
+Локальные пароли: Win+R → `%LOCALAPPDATA%\QadamShield\Staging\Open-Staging-Logins.cmd`. Использовать именно staging-учётные данные. Секретов в Git, APK, отчётах и screenshots нет.
 
-## Локальные данные для входа
-
-На ноутбуке Бекзата: **Win+R → `%LOCALAPPDATA%\QadamShield\Staging\Open-Staging-Logins.cmd`**. Окно показывает три проверенных аккаунта именно `saq-bol-mobile-staging`; после просмотра нажать Enter. Пароли не размещаются в PR, APK, отчётах или скриншотах. DPAPI-хранилище другого стенда не подменено.
-
-## Сценарий демонстрации без заявления live Telegram
-
-Клиент на staging APK выбирает учебного получателя и подозрительную сумму → сервер ставит перевод на проверку → сотрудник открывает **тот же ID** в staging SOC → решение отображается в клиентском обращении → клиент отменяет операцию, баланс не меняется. Если показывается Guardian, явно обозначить **Fake Adapter**, пока не выполнена отдельная live-приёмка. Закрытие SOC-кейса не означает автоматический выпуск денег.
-
-## Изменения для review
-
-- `backend/scripts/prepare_staging.py`, `backend/scripts/start-persistent.sh`: изоляция target, TLS, безопасный первый bootstrap, сохранение истории на рестарте.
-- `backend/app/mobile_gateway/hosted_worker.py`, `config.py`, `app.py`: opt-in hosted outbox/Telegram lifespan, остановка фоновых задач.
-- `backend/tests/test_staging_runtime.py`: существенные guard/lifecycle риски.
-- `deploy/render-staging-existing.yaml`: существующая отдельная БД/DB 12, установщик выключен.
-- `android-app/android/app/build.gradle`, `android-app/scripts/release_tools.py`, `verify-staging-candidate.py`: build 26, отдельная проверка staging APK без подмены canonical release.
-- `docs/evidence/live-staging/`: реальные UUID, restore и device evidence, без секретов.
-
-GO: демонстрация постоянного staging и Client → SOC → Client с явным Fake Guardian. NO-GO: заявление о живой Telegram-доставке, публичная замена candidate без решения владельца, production.
+Дизайн Айданы и финансовый движок сохранены. Основной `bcc_shield`, старый mobile и основной бот не изменялись. Новый сервер/платный ресурс/Supabase не создавались. Render PostgreSQL Free истекает 20 декабря 2026 — требуется решение владельца о дальнейшем хранении до этой даты.

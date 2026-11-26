@@ -1,0 +1,46 @@
+{
+  "checked_at": "2026-11-26T15:25:06.587645+00:00",
+  "origin": "https://saq-bol-mobile-staging.onrender.com",
+  "ready": 200,
+  "roles": {
+    "client": "client",
+    "admin": "admin",
+    "platform": "platform_admin"
+  },
+  "wrong_password": 401,
+  "client_soc": 403,
+  "officer_staff": 403,
+  "platform_customer_data": 403,
+  "idempotency": {
+    "result": "PASS",
+    "transaction_id": "f66cf6d8-0297-43bb-a4fa-979f8e4996ec",
+    "balance_unchanged": true
+  },
+  "honor_transaction": {
+    "transaction_id": "fbe36620-a926-498b-b2a1-7dc2a776fdf4",
+    "status": "cancelled",
+    "amount": "900000.00",
+    "case_id": "051bd6f5-feba-5126-8a1d-101b0e9cf790",
+    "case_state": "CLOSED",
+    "outcome": "confirmed_fraud"
+  },
+  "balance": "4546500.00",
+  "compatibility": {
+    "api_major": 1,
+    "minimum_android_build": 0,
+    "transaction_statuses": [
+      "approved",
+      "cooling_off",
+      "blocked",
+      "cancelled"
+    ],
+    "update_url": "https://saq-bol-bcc.zerdeliportald.workers.dev/download/android/"
+  },
+  "integration_health": {
+    "status": "ok",
+    "database": "ok",
+    "redis": "ok",
+    "worker": "ok",
+    "gateway": "mock_ready"
+  }
+}

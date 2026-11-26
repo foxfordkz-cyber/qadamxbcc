@@ -1,0 +1,41 @@
+{
+  "checked_at": "2026-11-26T07:27:11.725372+00:00",
+  "result": "PARTIAL",
+  "bot_username": "saq_bol_staging_bekzat_bot",
+  "service_messages_sent": 2,
+  "transfer_messages_sent": 0,
+  "contact_consent_observed": "CONTACT_VERIFIED",
+  "contact_state_after_window": "CONTACT_REVOKED",
+  "window_closed": true,
+  "transaction_id": "d4492021-7a67-4518-91f0-ede193bc49b1",
+  "amount": "900000.00",
+  "status": "cooling_off",
+  "balance": "4546500.00",
+  "balance_unchanged": true,
+  "protection": {
+    "transaction_id": "d4492021-7a67-4518-91f0-ede193bc49b1",
+    "state": "none",
+    "server_time": "2026-11-26T07:27:13.744559Z",
+    "ready_at": null,
+    "answer": null,
+    "contact_state": "DELIVERY_FAILED",
+    "family_enabled": false,
+    "second_confirmation": {
+      "state": "expired",
+      "expires_at": "2026-11-26T07:05:17.669064Z"
+    },
+    "review_report_id": "9460e40f-6156-552a-a9a4-e7d8a88621be"
+  },
+  "notifications": [
+    {
+      "id": "fa944e3e-4383-4e99-ab52-aba8ad71e486",
+      "state": "DELIVERY_FAILED",
+      "error_code": "delivery_failed_or_uncertain",
+      "attempts": 1
+    }
+  ],
+  "ack": "NOT TESTED",
+  "suspicion": "NOT TESTED",
+  "reason": "Existing family approval policy selected a prior synthetic contact; no financial-policy override and no delivery retry performed.",
+  "mobile_proxy_post_notification": 403
+}

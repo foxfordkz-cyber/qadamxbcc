@@ -1,0 +1,9 @@
+{
+  "checked_at": "2026-11-26T15:21:18.223637+00:00",
+  "result": "PASS",
+  "render_database": "saq-bol-api-db",
+  "temporary_rule_removed": true,
+  "allowed_external_ip_ranges": 0,
+  "ui_evidence": "External traffic not allowed; Save disabled; 0 IP ranges",
+  "main_database_changed": false
+}

@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-11-26T15:39:28.169590+00:00",
+  "username": "saq_bol_staging_bekzat_bot",
+  "created_via": "official BotFather in owner-authenticated Telegram Web",
+  "identity": "PASS getMe; separate from main bot",
+  "webhook": "none at setup",
+  "secret_storage": "Windows DPAPI outside Git; single-use CSRF-protected loopback form closed",
+  "private_chat_verified": true,
+  "sending_authorized": false,
+  "main_bot_changed": false,
+  "staging_runtime_mode": "test",
+  "live_transfer_notifications": 2,
+  "live_result": "PASS session 3: real delivery, ACK, suspicion, SOC API decision and physical Honor receipt; session closed",
+  "session3_real_service_messages": 3,
+  "session3_contact_revoked": true
+}

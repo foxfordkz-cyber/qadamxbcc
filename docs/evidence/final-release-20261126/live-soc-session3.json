@@ -1,0 +1,77 @@
+{
+  "checked_at": "2026-11-26T15:03:29.172720+00:00",
+  "result": "PASS",
+  "transaction_id": "158a528c-ecf8-4ae7-8a41-f55f1405e97d",
+  "case_id": "e71876ad-5656-5bbc-bd5a-07b8edd35e94",
+  "case_before": {
+    "id": "e71876ad-5656-5bbc-bd5a-07b8edd35e94",
+    "report_id": "e71876ad-5656-5bbc-bd5a-07b8edd35e94",
+    "source": "guardian_signal",
+    "category": "other",
+    "state": "NEW",
+    "assignee": null,
+    "version": 1,
+    "created_at": "2026-11-26T15:02:12.825688Z",
+    "status_since": "2026-11-26T15:02:12.825688Z",
+    "expires_at": "2026-12-03T15:02:12.825688Z",
+    "demonstration_only": true
+  },
+  "case_after": {
+    "id": "e71876ad-5656-5bbc-bd5a-07b8edd35e94",
+    "report_id": "e71876ad-5656-5bbc-bd5a-07b8edd35e94",
+    "source": "guardian_signal",
+    "category": "other",
+    "state": "CLOSED",
+    "assignee": null,
+    "version": 2,
+    "created_at": "2026-11-26T15:02:12.825688Z",
+    "status_since": "2026-11-26T15:03:28.987411Z",
+    "expires_at": "2026-12-03T15:02:12.825688Z",
+    "demonstration_only": true
+  },
+  "receipt": {
+    "case_id": "e71876ad-5656-5bbc-bd5a-07b8edd35e94",
+    "case_state": "CLOSED",
+    "callback": null,
+    "resolution": {
+      "outcome": "confirmed_fraud",
+      "closed_at": "2026-11-26T15:03:28.987857Z",
+      "operation": {
+        "transaction_id": "158a528c-ecf8-4ae7-8a41-f55f1405e97d",
+        "amount": "900000.00",
+        "currency": "KZT",
+        "status": "cooling_off"
+      },
+      "balance": "4546500.00"
+    }
+  },
+  "audit_codes": [
+    "TRANSFER_EVALUATED",
+    "DECISION_COOLING_OFF",
+    "COOLING_STARTED",
+    "NOTIFICATION_QUEUED",
+    "NOTIFICATION_SENT",
+    "CONTACT_ACKNOWLEDGED",
+    "SUSPICION_REPORTED",
+    "INTEGRATION_EVENT"
+  ],
+  "balance": "4546500.00",
+  "soc_action": "Authorized public SOC API, not laptop UI",
+  "phone_creation": "Physical Honor X6 Android build 26 UI via authorized USB; normal internet, no proxy",
+  "telegram": "Real Telegram Web ACK then SUSPICION; signed callbacks persisted separately",
+  "duplicate_callback_live": "NOT TESTED: buttons removed after SUSPICION; covered by existing automated tests",
+  "laptop_web_soc": {
+    "checked_at": "2026-11-26T15:33:46.765106+00:00",
+    "result": "PASS read-only",
+    "login": "Owner entered correct staging credentials personally",
+    "verified": [
+      "transaction UUID",
+      "900000 KZT",
+      "recipient",
+      "ACTIVE_CALL/AMOUNT_SPIKE/ML reasons",
+      "same case v2 CLOSED",
+      "20:03 confirmed_fraud timeline"
+    ],
+    "new_browser_decision": "NOT TESTED: case already closed by authorized SOC API"
+  }
+}

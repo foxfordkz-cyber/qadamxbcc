@@ -1,0 +1,45 @@
+{
+  "checked_at": "2026-11-26T05:18:51.229708+00:00",
+  "endpoints": [
+    {
+      "url": "https://saq-bol-mobile-staging.onrender.com/ready",
+      "error": "ReadTimeout"
+    },
+    {
+      "url": "https://saq-bol-mobile-staging.onrender.com/soc/",
+      "error": "ReadTimeout"
+    },
+    {
+      "url": "https://saq-bol-mobile-staging.onrender.com/wallet/",
+      "error": "ReadTimeout"
+    },
+    {
+      "url": "https://saq-bol-bcc.zerdeliportald.workers.dev/soc",
+      "status": 307,
+      "location": "https://saq-bol-mobile.onrender.com/soc/"
+    },
+    {
+      "url": "https://saq-bol-bcc.zerdeliportald.workers.dev/download/android/",
+      "status": 308,
+      "location": "/download/android"
+    },
+    {
+      "url": "https://saq-bol-bcc.zerdeliportald.workers.dev/downloads/team.json",
+      "status": 200,
+      "location": null,
+      "manifest": {
+        "package": "kz.qadamx.bccshield.demo",
+        "versionCode": 24,
+        "version": "2.9",
+        "minSdk": 24,
+        "certificate_sha256": "0dd732df01a3c1d98ec7b2ebfbd448b7d783080bfc784845676df8eb10aad0ab",
+        "api_origin": "https://saq-bol-mobile.onrender.com",
+        "apk_sha256": "119355ceea55b6087c357006ae14b2f272a72de00538521948d68362ecdfebf1",
+        "bytes": 10754120,
+        "date": "2026-11-25",
+        "url": "/downloads/Saq-Bol-2.9-119355ceea55.apk",
+        "source_commit": "24e51149210c8fd4bc96815b457d2b7d55d7e537"
+      }
+    }
+  ]
+}

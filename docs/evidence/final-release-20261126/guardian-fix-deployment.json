@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-11-26T07:37:34.243050+00:00",
+  "deployment": "dep-dc3u09bl550s73fjvaeg",
+  "revision": "cee12aba7615ec1f09230b7586c464ad20249818",
+  "ready": 200,
+  "data_preserved": true,
+  "balance": "4546500.00",
+  "telegram_mode": "test",
+  "bot": "saq_bol_staging_bekzat_bot",
+  "family_advisory_enabled": true,
+  "financial_approval_policy_unchanged": true,
+  "session": 2
+}

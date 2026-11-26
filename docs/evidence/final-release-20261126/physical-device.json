@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-11-26T05:43:31.124281+00:00",
+  "device": "Honor X6 / VNE-LX1",
+  "build": 26,
+  "origin": "https://saq-bol-mobile-staging.onrender.com",
+  "installed_sha256": "8b7cb7d1c724bf3511c6b2175e30fd1a681bb9a072a09f87055758427241bfb2",
+  "client_login": "PASS",
+  "soc_login": "PASS",
+  "platform_login": "PASS",
+  "expired_session": "returned to sign-in; fresh login succeeded",
+  "account_switch": "PASS",
+  "restored_client_session": "PASS force-stop/relaunch",
+  "balance": "4546500.00",
+  "adb_reverse": false,
+  "final_screen": "client home",
+  "new_two_phone_live_e2e": "NOT TESTED: separate bot and recipient consent unavailable",
+  "previous_honor_transfer": "fbe36620-a926-498b-b2a1-7dc2a776fdf4"
+}
