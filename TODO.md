@@ -40,4 +40,5 @@
 - [x] **T23: Website pitch and large text.** `/pitch` as a scrolling five-minute pitch in Kazakh with the 3D card, drop network, BCC value bento, architecture and evidence; console at `/pitch/console`; large-text switch on the site; README rewritten for the jury.
 - [x] **T24: Animated pitch deck.** `/pitch` as 14 full-screen slides with 3D and 2D explanations, Kazakh by default; web version at `/pitch/web`; PDFs in `docs/pitch/`; speaker script updated.
 - [x] **Wallet entry on Cloudflare.** Probe the team and jury stands in the deployed Worker runtime and provide a direct link while the stand starts.
+- [x] **Render cold-start navigation.** Open the selected stand in the visitor's browser when the readiness route reports startup or a Render hibernation rate limit.
 - [ ] **Bank acceptance gates (external dependencies).** Customer/account authorization, authoritative device/deposit feeds, payment outbox adapter, real-data ML validation, SSO/MFA, immutable audit, HA/load testing and policy approval. See `docs/PILOT.md`; these require bank systems and sign-off, not synthetic demo credentials.
