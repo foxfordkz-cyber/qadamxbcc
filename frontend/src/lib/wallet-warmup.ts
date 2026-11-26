@@ -3,6 +3,10 @@ import wallets from "./connected-wallet.json";
 const destinations = { wallet: wallets.url, soc: wallets.socUrl, jury: wallets.juryUrl, trial: new URL("jury/trial", wallets.juryUrl).href };
 export type Stand = keyof typeof destinations;
 
+export function walletEntry(stand: Stand, staticExport = process.env.NEXT_PUBLIC_BCC_STATIC === "1"): string {
+  return staticExport ? destinations[stand] : "/connect?stand=" + stand;
+}
+
 export function walletDestination(stand: string) {
   return Object.hasOwn(destinations, stand) ? destinations[stand as Stand] : null;
 }

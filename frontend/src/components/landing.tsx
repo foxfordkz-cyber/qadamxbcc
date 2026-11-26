@@ -1,5 +1,6 @@
 "use client";
 
+import { walletEntry } from "@/lib/wallet-warmup";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, ChevronDown, Download, FileText, MessageSquareWarning, Menu, PhoneOff, RotateCcw, ShoppingBag, UserCheck, X, Link2Off } from "lucide-react";
@@ -87,7 +88,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
           {sections.map(({ key, href }) => <Link key={key} href={href} onClick={() => setMenuOpen(false)}>{L(key)}</Link>)}
         </nav>
         <div className="public-tools"><LanguageSwitch />
-          <a className="public-signin" href={"/connect?stand=wallet"}>{L("access")}</a>
+          <a className="public-signin" href={walletEntry("wallet")}>{L("access")}</a>
           <button className="public-menu-toggle" type="button" aria-label={L("menu")} aria-controls="public-nav" aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}>
             {menuOpen ? <X size={21} /> : <Menu size={21} />}
           </button>
@@ -125,7 +126,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
       <div className="feat-grid">
         <article className="feat-card">
           <div className="feat-mini mini-call"><span className="mini-icon mini-red"><PhoneOff size={18} /></span><span><b>{L("demoNotBank")}</b><small>{L("heroToastCallSub")}</small></span></div>
-          <h3>{L("fCallTitle")}</h3><p>{L("fCallText")}</p><a href="/connect?stand=wallet">{lang === "kk" ? "Оқу әмияны · қоңыраудан кейін банкоматта 15 минут кідіру" : "Учебный кошелёк · пауза 15 минут при снятии по просьбе звонящего"}</a>
+          <h3>{L("fCallTitle")}</h3><p>{L("fCallText")}</p><a href={walletEntry("wallet")}>{lang === "kk" ? "Оқу әмияны · қоңыраудан кейін банкоматта 15 минут кідіру" : "Учебный кошелёк · пауза 15 минут при снятии по просьбе звонящего"}</a>
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-chat"><span className="mini-bubble">{L("demoBotText")}</span><span className="mini-choices"><i className="mini-scam">{L("demoScam")}</i><i>{L("demoFine")}</i></span></div>
@@ -133,7 +134,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-sms"><span>{L("miniSms")}</span><small><MessageSquareWarning size={14} />{L("miniSmsVerdict")}</small></div>
-          <h3>{L("fSmsTitle")}</h3><p>{L("fSmsText")}</p><a href="/connect?stand=soc">{lang === "kk" ? "SOC · жалған домендер мен Telegram аккаунттары туралы хабарлау" : "SOC · журнал подозрительных доменов и Telegram-аккаунтов"}</a>
+          <h3>{L("fSmsTitle")}</h3><p>{L("fSmsText")}</p><a href={walletEntry("soc")}>{lang === "kk" ? "SOC · жалған домендер мен Telegram аккаунттары туралы хабарлау" : "SOC · журнал подозрительных доменов и Telegram-аккаунтов"}</a>
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-payee"><span><UserCheck size={16} />{L("miniPayeeBank")}</span><small>{L("miniPayeeContact")}</small></div>
@@ -141,7 +142,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-return"><span>{L("miniReturn")}</span><i><RotateCcw size={14} />{L("miniReturnAction")}</i></div>
-          <h3>{L("fReturnTitle")}</h3><p>{L("fReturnText")}</p><a href="/connect?stand=soc">{lang === "kk" ? "Даулы аударым бойынша екі тараптың жауабы · SOC" : "Объяснения отправителя и получателя спорного платежа · SOC"}</a>
+          <h3>{L("fReturnTitle")}</h3><p>{L("fReturnText")}</p><a href={walletEntry("soc")}>{lang === "kk" ? "Даулы аударым бойынша екі тараптың жауабы · SOC" : "Объяснения отправителя и получателя спорного платежа · SOC"}</a>
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-shop"><span className="mini-icon mini-amber"><ShoppingBag size={17} /></span><span>{L("miniShop")}</span></div>
@@ -292,7 +293,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
       <div className="footer-brand"><span><BrandMark size={30} /><strong>Saq Bol</strong></span><p>{L("footLegal")}</p></div>
       <nav aria-label={L("footProduct")}><b>{L("footProduct")}</b>{sections.slice(0, 4).map(({ key, href }) => <a key={key} href={href}>{L(key)}</a>)}</nav>
       <nav aria-label={L("footResources")}><b>{L("footResources")}</b>
-        <Link href="/download/android">{L("heroDownload")}</Link><a href={"/connect?stand=wallet"}>{L("footWallet")}</a><a href={"/connect?stand=soc"}>{L("footSoc")}</a><a href={GITHUB} target="_blank" rel="noopener noreferrer">{L("footCode")}</a>
+        <Link href="/download/android">{L("heroDownload")}</Link><a href={walletEntry("wallet")}>{L("footWallet")}</a><a href={walletEntry("soc")}>{L("footSoc")}</a><a href={GITHUB} target="_blank" rel="noopener noreferrer">{L("footCode")}</a>
       </nav>
     </footer>
   </div>;

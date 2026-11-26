@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LanguageSwitch } from "@/components/language-switch";
 import { LocaleProvider, useLocale } from "@/lib/i18n";
@@ -16,6 +17,10 @@ function WalletEntry() {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!destination) return;
+    if (process.env.NEXT_PUBLIC_BCC_STATIC === "1") {
+      window.location.replace(destination);
+      return;
+    }
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     const timeout = setTimeout(() => { controller.abort(); setExpired(true); }, 60_000);
@@ -43,7 +48,7 @@ function WalletEntry() {
       "Обычно это занимает 20–40 секунд. Кошелёк откроется, когда сервер будет готов."}</p>}
     {destination && expired && <button type="button" onClick={() => { setExpired(false); setAttempt(n => n + 1); }}>
       {kk ? "Қайта тексеру" : "Проверить ещё раз"}</button>}
-    <p><a href="/mobile">{kk ? "Аударым симуляторын ашу" : "Открыть симулятор перевода"}</a></p>
+    <p><Link href="/mobile">{kk ? "Аударым симуляторын ашу" : "Открыть симулятор перевода"}</Link></p>
   </section></main>;
 }
 

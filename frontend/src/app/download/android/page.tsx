@@ -1,5 +1,6 @@
 "use client";
 
+import { walletEntry } from "@/lib/wallet-warmup";
 import { ArrowLeft, ArrowUpRight, Download } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { LanguageSwitch } from "@/components/language-switch";
@@ -63,12 +64,12 @@ function Installer() {
       <span className="installer-step-n">{index + 1}</span>
       <h2>{step.title}</h2>
       <p>{step.text}</p>
-      {index === 2 && <a className="installer-browser" href={"/connect?stand=soc"}>{kk ? "Осы APK-ның SOC кабинетін ашу" : "Открыть SOC для этого APK"}<ArrowUpRight aria-hidden size={17} /></a>}
+      {index === 2 && <a className="installer-browser" href={walletEntry("soc")}>{kk ? "Осы APK-ның SOC кабинетін ашу" : "Открыть SOC для этого APK"}<ArrowUpRight aria-hidden size={17} /></a>}
     </li>)}</ol>
     <section className="installer-help">
       <details><summary>{kk ? "Кіру экраны ашылмаса" : "Если не появился экран входа"}</summary>
         <p>{kk ? "Google Play арқылы Android System WebView мен Chrome қолданбаларын жаңартып, әмиянды қайта ашыңыз. Командалық тіркелгімен браузерден де кіруге болады." : "Обновите Android System WebView и Chrome через Google Play и снова откройте кошелёк. В командный аккаунт также можно войти из браузера."}</p>
-        <a href={"/connect?stand=wallet"}>{kk ? "Командалық әмиянды ашу" : "Открыть командный кошелёк"}</a>
+        <a href={walletEntry("wallet")}>{kk ? "Командалық әмиянды ашу" : "Открыть командный кошелёк"}</a>
       </details>
       <details><summary>{kk ? "APK файлын тексеру" : "Проверить файл APK"}</summary><p>SHA-256</p><code>{release.apk_sha256}</code></details>
       <details><summary>{kk ? "Сайттың бұрынғы нұсқасы орнатылған ба?" : "Уже установлен прежний кошелёк с сайта?"}</summary>

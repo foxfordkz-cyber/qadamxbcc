@@ -9,5 +9,5 @@ test("published client, SOC and platform use the Android ledger; jury is explici
   for(const key of ["url","socUrl","platformUrl"]) assert.equal(new URL(config[key]).origin,config.apiOrigin);
   assert.notEqual(new URL(config.juryUrl).origin,config.apiOrigin);
   assert.match(await read("../android/app/build.gradle"),/configuredOrigin \?: ecosystem.apiOrigin/);
-  assert.match(await read("../../frontend/src/app/soc/page.tsx"),/redirect\(wallets.socUrl\)/);
+  assert.match(await read("../../frontend/src/app/soc/page.tsx"),/redirect\(walletEntry\("soc"\)\)/);
 });

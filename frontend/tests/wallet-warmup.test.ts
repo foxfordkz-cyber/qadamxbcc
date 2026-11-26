@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { probeWallet, walletDestination } from "../src/lib/wallet-warmup";
+import { probeWallet, walletDestination, walletEntry } from "../src/lib/wallet-warmup";
 import wallets from "../src/lib/connected-wallet.json";
 
 test("wake probes only configured origins and never forwards a session", async () => {
@@ -18,5 +18,14 @@ test("wake probes only configured origins and never forwards a session", async (
   }), true);
   for (const response of [new Response("warming", {status:503}), new Response("<html>waiting</html>"), Response.json({status:"unavailable"})]) {
     assert.equal(await probeWallet("jury", async () => response), false);
+  }
+});
+
+test("static Pages links open the configured wallet without a server-side readiness route", () => {
+  const expected = { wallet: wallets.url, soc: wallets.socUrl, jury: wallets.juryUrl, trial: new URL("jury/trial", wallets.juryUrl).href };
+  for (const stand of ["wallet", "soc", "jury", "trial"] as const) {
+    assert.equal(walletDestination(stand), expected[stand]);
+    assert.equal(walletEntry(stand, true), walletDestination(stand));
+    assert.equal(walletEntry(stand, false), "/connect?stand=" + stand);
   }
 });
