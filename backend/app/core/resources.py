@@ -38,6 +38,7 @@ class Resources:
             redis_client,
             GraphStore(),
             timezone=settings.timezone,
+            shared_graph_reads=settings.shared_graph_reads,
             cooling_off_minutes=settings.cooling_off_minutes,
             allow_demo_overrides=settings.allow_demo_overrides,
             allow_model_training=settings.environment != "pilot",
