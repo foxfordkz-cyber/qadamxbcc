@@ -21,6 +21,7 @@
 - [x] Bounded web-wallet wake-up, pre-show readiness and local jury fallback.
 - [x] **T10: Reproducible Demo & Internal Pilot Profile.** Empty-database bootstrap, launch scripts, role service keys, protected operator interface, server trust boundary, dependency readiness, separate storage and disabled demo actions in pilot.
 - [x] **T11: Defense & Rehearsal Package.** Bilingual `/pitch` console, eight-slide editable decks, timer, three-minute demo, assumption-based pilot economics, jury answers, isolated rehearsal launcher and machine-readable end-to-end preflight.
+- [x] SOC passive indicator inbox and bilingual takedown drafts.
 - [x] **T12: SOC Investigation Workspace.** Server-side history search and pagination, global distinct hub metric, stable case selection, authoritative lifecycle refresh, explicit live/historical evidence, bilingual timestamps and allowlisted JSON reports.
 - [x] Read settled graph aggregates across backend workers with an isolated SQL scoring view and a two-process hub test.
 - [x] **T13: Recovery and Device Evidence Regression Fixes.** Read/cancel/abandon persisted intents during scoring dependency outages, preserve the selected transfer through background recovery, count rechecked hubs, and refresh bounded current-device rosters before evaluation/release. Validated on synthetic data: 202 backend tests (including three PostgreSQL concurrency cases), 58 frontend tests, six browser scenarios and nine real Redis outage checkpoints. Scope and limits: `docs/RECOVERY_VERIFICATION_20261118.md`.

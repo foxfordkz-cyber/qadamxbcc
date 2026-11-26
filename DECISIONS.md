@@ -65,3 +65,7 @@ Only an authenticated bank-side source can submit a tenant-keyed HMAC of the IP 
 ## ATM simulation scope
 
 The authenticated client chooses whether the caller requested the cash. The server owns the deadline and serializes one open synthetic instruction per owner in Redis. A separate instruction cannot bypass the hold. No dispenser or banking ledger is connected.
+
+## Passive brand reports
+
+Only authenticated officers add observations from received reports. The application excludes known official channels, strips identifiers to a host or handle, and never opens a target or sends a takedown. Drafts identify an allegation for human verification. Inventory is bounded to 100 observations over 30 days. BCC lists its official support bot at https://www.bcc.kz/.

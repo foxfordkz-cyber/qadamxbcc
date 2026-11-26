@@ -265,7 +265,9 @@ def create_mobile_app(
     app.state.mobile_bot = (
         cfg.telegram_username if core.state.integration_settings.telegram_mode == "test" else ""
     )
+    from app.mobile_gateway.brand_inventory import install_brand_inventory
     from app.mobile_gateway.callbacks import install_callbacks
+    from app.mobile_gateway.cash_window import install_cash_window
     from app.mobile_gateway.protection import install_protection
     from app.mobile_gateway.readiness import install_readiness
     from app.mobile_gateway.staff import install_staff
@@ -273,10 +275,9 @@ def create_mobile_app(
     from app.mobile_gateway.wallet import install_wallet
 
     install_readiness(app)
-    from app.mobile_gateway.cash_window import install_cash_window
-
     install_wallet(app)
     install_cash_window(app)
+    install_brand_inventory(app)
     install_staff(app, cfg)
     install_technical_metrics(app)
     install_accounts(app, integrations_enabled=core.state.integration_settings.enabled)
