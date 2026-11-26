@@ -648,6 +648,9 @@ body {
 #app[data-screen=login] main {
   padding-top: 0;
 }
+#app[data-screen=login] .topbar {
+  padding: calc(8px + var(--safe-top-pad)) clamp(16px, 5vw, 72px) 6px;
+}
 /* Logo lockup on the canvas; the language pill of the top bar sits on the same line. */
 #app .sign-hero {
   position: relative;
@@ -912,24 +915,39 @@ body {
   font-weight: 700;
   letter-spacing: 0;
 }
+/* Eye toggle: icon only on screen, the label stays as its accessible name. */
 #app .q-card .balance-privacy {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: auto;
-  height: auto;
-  min-height: 40px;
-  padding: 0 2px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin-right: -8px;
+  padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 50%;
   background: transparent;
   color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 500;
+}
+#app .q-card .balance-privacy:is(:hover, :active) {
+  background: var(--surface-2);
 }
 #app .q-card .balance-privacy .wi {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
+}
+#app .q-card .balance-privacy span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+#app .q-card .account-heading h2 {
+  min-width: 0;
 }
 #app .q-card .q-balance {
   display: grid;
@@ -2408,7 +2426,7 @@ body {
 }
 
 /* =========================== Protection =========================== */
-#app[data-screen=safety] main {
+#app[data-screen=safety] main:has(> .safety-hero) {
   padding-top: 0;
 }
 /* The protection tab opens on the canvas like home; status first, icon beside it. */
@@ -2752,6 +2770,9 @@ body {
 #app .count-list strong {
   margin-left: auto;
 }
+#app .count-list button::after {
+  margin-left: 6px;
+}
 #app details > summary {
   color: var(--ink);
   font-weight: 600;
@@ -3094,6 +3115,226 @@ body {
   background: var(--warn);
 }
 
+/* =========================== Offline overview (mobile.mjs) =========================== */
+/* The built-in demo screens inherit the older lavender layer; map them to the bank tokens. */
+#app .safety-feature {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 22px;
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 2px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: start;
+}
+#app .safety-feature .feature-icon {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+#app .safety-feature h2 {
+  grid-column: 2;
+  margin: 0;
+  font-size: 1.1rem;
+}
+#app .safety-feature p {
+  grid-column: 2;
+  max-width: none;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+#app .safety-feature .round-arrow {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  position: static;
+  color: var(--muted);
+}
+#app .safety-feature svg {
+  width: 22px;
+  height: 22px;
+}
+#app .paper .section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#app .paper .section-title h2 {
+  margin: 0;
+}
+#app .paper .section-title > svg {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--muted);
+}
+#app .avatars span {
+  background: var(--avatar);
+  border: 3px solid var(--surface);
+  color: var(--avatar-ink);
+  font-size: 0.85rem;
+}
+#app .avatars span:nth-child(2) { background: #e8eef9; color: #2f5fae; }
+#app .avatars span:nth-child(3) { background: var(--fill); color: var(--ink-2); }
+#app .avatars small {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+#app .rules {
+  gap: 14px;
+}
+#app .rules li {
+  color: var(--ink-2);
+  font-size: 0.98rem;
+}
+#app .rules li span {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+#app .result-icon {
+  width: 72px;
+  height: 72px;
+  margin: 4px auto 18px;
+  border-radius: 50%;
+}
+#app .result-icon.approved { background: var(--brand-soft); color: var(--brand); }
+#app .result-icon.cooling_off { background: var(--fill); color: var(--warn-text); }
+#app .result-icon.blocked { background: var(--danger-bg); color: var(--danger); }
+#app .result-icon.cancelled { background: var(--fill); color: var(--ink-3); }
+#app .receipt p {
+  color: var(--ink-3);
+  font-size: 0.95rem;
+}
+#app .timeline li {
+  border-left-color: var(--line);
+}
+#app .timeline li::before {
+  background: var(--brand);
+  outline-color: var(--surface);
+}
+#app .timeline strong {
+  font-size: 0.95rem;
+}
+#app .timeline small {
+  font-size: 0.9rem;
+}
+#app .presets {
+  gap: 10px;
+}
+#app .preset {
+  border: 0;
+  border-radius: var(--r-tile);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink);
+}
+#app .preset.selected {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+#app .preset strong {
+  font-size: 1rem;
+}
+#app .preset small {
+  font-size: 0.88rem;
+}
+#app .preset-number {
+  color: var(--muted);
+  font-weight: 600;
+}
+#app .radio {
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--line-strong);
+}
+#app .selected .radio {
+  border: 6px solid var(--brand);
+  background: var(--surface);
+}
+#app .divider {
+  background: var(--line);
+}
+#app .progress span {
+  background: var(--track);
+}
+#app .progress .filled {
+  background: var(--brand);
+}
+#app .question-card h2 {
+  font-size: 1.5rem;
+  letter-spacing: 0;
+}
+#app .eyebrow {
+  color: var(--muted);
+}
+#app .languages {
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--track);
+}
+#app .languages button {
+  min-width: 52px;
+  min-height: 36px;
+  border-radius: 999px;
+  color: var(--ink-3);
+  font-size: 0.85rem;
+}
+#app .languages button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--brand-text);
+  box-shadow: none;
+}
+#app .connection strong {
+  font-size: 1rem;
+}
+#app .connection small {
+  font-size: 0.9rem;
+}
+#app .tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--ink-2);
+}
+#app .tile.approved {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+#app .danger-button {
+  min-height: 52px;
+  border-radius: var(--r-ctl);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  font-size: 1rem;
+}
+#app .modal {
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: none;
+}
+#app .modal-backdrop {
+  background: rgb(29 29 30 / 45%);
+}
+
 /* =========================== Dark-only touches =========================== */
 html[data-theme="dark"] #app :is(.paper, .settings-group, .protection-index, .day-rows, .money-summary, .donut-card, .wallet-insight, .safety-list, .from-account, .recipient-card, .hold-card, .entry.sign-in) {
   background: var(--surface);
@@ -3104,6 +3345,7 @@ html[data-theme="dark"] #app .keypad input {
 }
 html[data-theme="dark"] #app .people .person.p1 { background: #1d2a3d; color: #9dbcf0; }
 html[data-theme="dark"] #app .people .person.p3 { background: #2b2540; color: #c3b1ef; }
+html[data-theme="dark"] #app .avatars span:nth-child(2) { background: #1d2a3d; color: #9dbcf0; }
 html[data-theme="dark"] #app .connected-nav button[aria-current="page"] {
   color: var(--brand-text);
 }
@@ -3174,7 +3416,18 @@ html[data-theme="dark"] #app .detail-hero .receipt-status .wb.cooling_off {
   #app .wallet-companion {
     margin-top: 0;
   }
-  #app .bank-card {
+  /* Balance on the left, card face on the right. */
+  #app .q-card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+    column-gap: 32px;
+    align-items: start;
+  }
+  #app .q-card > :not(.bank-card) {
+    grid-column: 1;
+  }
+  #app .q-card .bank-card {
+    grid-column: 2;
+    grid-row: 1 / span 3;
     max-width: 340px;
   }
 }

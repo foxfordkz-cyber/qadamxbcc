@@ -1,6 +1,6 @@
 // Light / dark appearance. The choice is a per-device preference, so it lives in localStorage.
 const KEY = "qadam.theme";
-const BAR = { light: "#f3f5f4", dark: "#0b1512" };
+const BAR = { light: "#f5f5fa", dark: "#0f1412" };
 
 export function currentTheme() {
   return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
