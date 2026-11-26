@@ -6,6 +6,7 @@
 - [x] **T04: Real-Time Antifraud & Graph Engine (`backend/app/services/antifraud.py`).** Evaluate transfers in <50ms using Redis velocity counters (10m/1h windows), recipient graph metrics (in-degree, fan-in/fan-out ratio, shared device_id), and behavioral signals. Return bilingual explainable reasons (`reasons_kk`, `reasons_ru`) and action (`approved` <40, `cooling_off` 40–74, `blocked` >=75).
 - [x] **T05: REST API Endpoints.** Build `POST /api/v1/transfers/evaluate`, `POST /api/v1/transfers/{id}/resolve-cooling` (verify anti-scam questionnaire), `GET /api/v1/soc/feed` (live transaction stream), and `GET /api/v1/soc/graph/{account_id}` (subgraph nodes & edges for React Flow).
 - [x] **T06: Tests & Latency Benchmark.** Write pytest suites covering all 4 fraud scenarios, false-positive guard on legitimate transfers, cooling-off resolution, and p95 latency <50ms assertion.
+- [x] **Measured public claims.** Attribute kernel latency, HTTP latency, model false positives and honest scenario holds to their own experiments.
 - [x] **T07: Bilingual Frontend (`kk` / `ru`).** Build Next.js UI in `frontend/` with a global `ҚАЗ / РУС` switcher:
   - Tab 1: **BCC Mobile Transfer Simulator** (amount in ₸, recipient phone/card, context toggles: "Active Phone Call / Белсенді қоңырау", "From Deposit / Депозиттен", "New Device / Жаңа құрылғы", plus interactive Cooling-Off warning modal in KZ/RU).
   - Tab 2: **BCC SOC Officer Dashboard** (live risk feed, interactive React Flow drop-network graph, and bilingual Explainable AI risk breakdown card).

@@ -115,10 +115,10 @@ export const decisions: Decision[] = [
 ];
 
 export const metrics: Metric[] = [
-  { value: "1,06", unit: l("мс", "мс"), label: l("скоринг өзегі, p95", "ядро скоринга, p95"), source: "docs/PERFORMANCE.md" },
-  { value: "23,5", unit: l("мс", "мс"), label: l("HTTP + PostgreSQL толық сұрау, p95", "весь запрос HTTP + PostgreSQL, p95"), source: "docs/PERFORMANCE.md" },
-  { value: "0", unit: l("/ 1000", "/ 1000"), label: l("1, 8 және 16 клиентпен қате", "ошибок при 1, 8 и 16 клиентах"), source: "docs/PERFORMANCE.md" },
-  { value: "97,3", unit: l("% recall", "% recall"), label: l("ML синтетикада, FPR 1,2 %", "ML на синтетике, FPR 1,2 %"), source: "docs/MODEL_EVALUATION.md" },
+  { value: "5,00", unit: l("мс", "мс"), label: l("қыздырылған скоринг өзегі, p95", "прогретое ядро скоринга, p95"), source: "docs/evidence/performance-active-hold-20261120.json" },
+  { value: "98,86", unit: l("мс", "мс"), label: l("бір клиент, HTTP және PostgreSQL, p95", "один клиент, HTTP и PostgreSQL, p95"), source: "docs/evidence/performance-active-hold-20261120.json" },
+  { value: "4 / 60", unit: l("аударым", "переводов"), label: l("жүйе кідірткен адал оқу аударымдары", "обычных учебных переводов задержал весь движок"), source: "docs/evidence/scenario_stand.json" },
+  { value: "1,22", unit: l("% FPR", "% FPR"), label: l("жеке v2 моделінің синтетикалық сынағы", "отдельная модель v2 на синтетической выборке"), source: "docs/evidence/model-evaluation-v2-unseen-seed.json" },
   { value: "663", unit: l("тексеру", "проверки"), label: l("479 backend + 87 frontend + 97 браузерде", "479 backend + 87 frontend + 97 в браузере"), source: "docs/MAIN_READINESS.md" },
   { value: "0", unit: l("кілт", "ключей"), label: l("браузер кодында — маячок-кілттермен тексерілді", "в браузерном коде — проверено ключами-маячками"), source: "docs/MAIN_READINESS.md" },
 ];
