@@ -1,7 +1,5 @@
 // Leave the HTML recovery screen available when the installed WebView cannot run the wallet.
-if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
-    && typeof Object.hasOwn === "function" && typeof structuredClone === "function"
-    && typeof Array.prototype.at === "function") {
+if (typeof AbortController === "function" && typeof globalThis.crypto?.getRandomValues === "function") {
   // Apply the saved light/dark choice before the first screen renders.
   void import("./theme-mode.mjs").then(m => m.loadTheme()).catch(() => {});
   const offline = new URLSearchParams(location.search).get("offline") === "1";

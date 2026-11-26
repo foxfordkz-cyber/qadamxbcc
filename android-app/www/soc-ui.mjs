@@ -1,3 +1,4 @@
+import { last as lastItem } from "./compat.mjs";
 // SOC workspace views (role "admin"). Layout follows the Saq Bol SOC Figma frames.
 // Every value shown comes from the gateway; nothing here invents figures.
 import { layoutNetwork } from "./network-graph.mjs";
@@ -393,7 +394,7 @@ export function socUI(ctx) {
     const share = total ? (held / total * 100) : null;
     const pct = v => v == null ? "—" : String(Math.round(v * 100) / 100).replace(".", ",") + " %";
     const series = d.series || [];
-    const first = series[0]?.day, last = series.at(-1)?.day;
+    const first = series[0]?.day, last = lastItem(series)?.day;
     const range = first && last ? Number(first.slice(8, 10)) + (first.slice(5, 7) !== last.slice(5, 7) ? " " + month(Number(first.slice(5, 7))) : "") + "–" + Number(last.slice(8, 10)) + " " + month(Number(last.slice(5, 7))) + " " + last.slice(0, 4) : "";
     const review = d.policy_comparison;
     const cov = review?.label_coverage == null ? null : Math.max(0, Math.min(1, Number(review.label_coverage)));

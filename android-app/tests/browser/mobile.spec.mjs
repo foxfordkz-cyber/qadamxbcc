@@ -6,14 +6,22 @@ async function offline(page, language = "ru") {
   await page.locator(`[data-lang="${language}"]`).click();
   await page.locator('.bottom-nav [data-route="home"]').click();
 }
-test("an older WebView can open the same team account in a browser", async ({ page }) => {
-  await page.addInitScript(() => Object.defineProperty(AbortSignal, "timeout", {value: undefined}));
+test("both wallet entry points open without APIs introduced after WebView 83", async ({ page }) => {
+  await page.addInitScript(() => {
+    for (const [owner, key] of [[AbortSignal, "timeout"], [window, "structuredClone"],
+      [Object, "hasOwn"], [Array.prototype, "at"], [Crypto.prototype, "randomUUID"]]) {
+      Object.defineProperty(owner, key, {value: undefined, configurable: true});
+    }
+  });
   await page.goto("/");
-  const help = page.locator(".native-start-help");
-  await expect(help.locator('[lang="kk"]')).toContainText("Android System WebView");
-  await expect(help.locator('[lang="ru"]')).toContainText("Android System WebView");
-  await expect(help.locator("a")).toBeVisible();
-  await expect(help.locator("a")).toHaveAttribute("href", "https://saq-bol-mobile.onrender.com/wallet/");
+  await expect(page.locator("#personal-login")).toBeVisible();
+  await page.goto("/index.html?offline=1");
+  await expect(page.locator('.bottom-nav [data-route="home"]')).toBeVisible();
+});
+test("a WebView without request cancellation keeps the browser recovery link", async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(window, "AbortController", {value: undefined}));
+  await page.goto("/");
+  await expect(page.locator(".native-start-help a")).toBeVisible();
   await expect(page.locator("#personal-login")).toHaveCount(0);
 });
 test("welcome exposes personal sign-in and explains unavailable deployment", async ({ page }) => {
