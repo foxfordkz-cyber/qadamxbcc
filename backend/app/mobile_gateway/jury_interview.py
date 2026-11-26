@@ -59,7 +59,11 @@ def install_jury_interview(app: FastAPI, owner: UUID) -> None:
             await redis.set(key(transfer_id), hashlib.sha256(code.encode()).hexdigest(), ex=600)
         except RedisError as exc:
             raise HTTPException(503, "interview_unavailable") from exc
-        return {"fragment": str(transfer_id) + "." + code}
+        result = {"fragment": str(transfer_id) + "." + code}
+        selector = getattr(request.state, "jury_interview_route", None)
+        if isinstance(selector, str):
+            result["routing"] = selector
+        return result
 
     @app.post("/mobile/v1/wallet/jury-interview", response_model_exclude_none=True)
     async def reply(body: InvitationReply, db: SessionDep, request: Request) -> AccountViews:

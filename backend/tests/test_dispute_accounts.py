@@ -1,18 +1,23 @@
 import secrets
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
+import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.deps import get_session
 from app.db.base import utcnow
+from app.mobile_gateway import jury_rooms
 from app.mobile_gateway.app import Identity, identity, session_key
 from app.mobile_gateway.jury_interview import install_jury_interview
+from app.mobile_gateway.jury_rooms import create_jury_app
 from app.models import PaymentReturn, Transaction, TransactionStatus
 from tests.test_mobile_gateway import ADMIN_CODE, OTHER, OWNER, PLATFORM_CODE, login
 from tests.test_mobile_gateway import mobile_world as mobile_world
@@ -72,7 +77,10 @@ async def test_payment_statements_are_party_scoped_and_soc_compares(
 
 
 async def test_jury_invite_binds_one_party_and_dispute(
-    mobile_world: tuple[AsyncClient, Any], session_factory: async_sessionmaker[AsyncSession]
+    mobile_world: tuple[AsyncClient, Any],
+    session_factory: async_sessionmaker[AsyncSession],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _, redis = mobile_world
     room = FastAPI()
@@ -121,3 +129,38 @@ async def test_jury_invite_binds_one_party_and_dispute(
         assert (await browser.post(submit, json={**body, "answer": "agreed"})).status_code == 409
         await browser.post(path)
         assert (await browser.post(submit, json=body)).status_code == 403
+
+    @asynccontextmanager
+    async def room_factory(_: int) -> AsyncIterator[FastAPI]:
+        yield room
+
+    (tmp_path / "counterparty.html").write_text("scoped guest form", encoding="utf8")
+    monkeypatch.setattr(jury_rooms, "WEB_ASSETS", tmp_path)
+    gateway = create_jury_app(room_factory)
+    site = "https://jury.example"
+    async with (
+        AsyncClient(transport=ASGITransport(app=gateway), base_url=site) as officer,
+        AsyncClient(transport=ASGITransport(app=gateway), base_url=site) as guest,
+    ):
+        assert (await officer.post("/jury/start", headers={"Origin": site})).is_redirect
+        issued = (await officer.post(path)).json()
+        headers = {"Origin": site, "X-Saq-Interview": issued["routing"]}
+        body = {**body, "code": issued["fragment"].split(".")[1]}
+        assert not guest.cookies
+        assert (await guest.get("/jury/interview/counterparty.html")).text == "scoped guest form"
+        assert (await guest.get("/jury/interview/index.html")).status_code == 404
+        assert (
+            await guest.post(
+                submit, json=body, headers={**headers, "Origin": "https://other.example"}
+            )
+        ).status_code == 403
+        assert (await guest.get("/mobile/v1/account", headers=headers)).status_code == 403
+        assert (
+            await guest.post(submit, json=body, headers={**headers, "X-Saq-Interview": "expired"})
+        ).status_code == 403
+        reply = await guest.post(submit, json=body, headers=headers)
+        assert reply.status_code == 200
+        assert reply.json()["sender"]["source"] == "jury_invite"
+        assert not guest.cookies
+        await officer.post(path)
+        assert (await guest.post(submit, json=body, headers=headers)).status_code == 403

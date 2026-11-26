@@ -1,4 +1,6 @@
-const [transfer,code]=location.hash.slice(1).split(".");
+const parts=location.hash.slice(1).split(".");
+const route=parts.length===3 ? parts.shift() : null;
+const [transfer,code]=parts;
 history.replaceState(null,"",location.pathname);
 let ru=false, state=transfer && code?"":"invalid", sending=false;
 const labels={
@@ -27,8 +29,8 @@ document.getElementById("interview").onsubmit=async e=>{
   e.preventDefault();if(sending)return;
   sending=true;render();
   try{
-    const response=await fetch("/mobile/v1/wallet/jury-interview",{method:"POST",credentials:"same-origin",redirect:"error",cache:"no-store",
-      headers:{"Content-Type":"application/json"},body:JSON.stringify({transfer,code,answer:new FormData(e.target).get("answer")})});
+    const response=await fetch("/mobile/v1/wallet/jury-interview",{method:"POST",credentials:route ? "omit" : "same-origin",redirect:"error",cache:"no-store",
+      headers:{"Content-Type":"application/json",...(route?{"X-Saq-Interview":route}:{})},body:JSON.stringify({transfer,code,answer:new FormData(e.target).get("answer")})});
     state=response.ok?"done":[403,404,422].includes(response.status)?"invalid":response.status===409?"closed":"error";
   }catch{state="error";}finally{sending=false;render();}
 };
