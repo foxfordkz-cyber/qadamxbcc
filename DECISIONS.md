@@ -40,4 +40,4 @@ The team rejected the glossy clay icons, tinted backgrounds and floating objects
 
 ## Preflight on the website origin
 
-Render may return HTML before it can serve the wallet. The independent website polls an allowlisted credential-free readiness endpoint and redirects only after a positive database/Redis check.
+Render may return HTML before it can serve the wallet. The independent website polls an allowlisted credential-free readiness endpoint and redirects only after a positive database/Redis check. GitHub Pages has no server route, so the static export keeps direct configured wallet links and can be warmed before a demonstration.

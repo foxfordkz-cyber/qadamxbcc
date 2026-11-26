@@ -1,5 +1,6 @@
 "use client";
 
+import { walletEntry } from "@/lib/wallet-warmup";
 import { useState } from "react";
 import { money, useLocale } from "@/lib/i18n";
 import trial from "@/lib/familiar-call-trial.json";
@@ -66,7 +67,7 @@ export function ModelTrial() {
         contributors: trial.example.contributors,
       }} />
     </details>
-    <a className={styles.verdict} href={"/connect?stand=trial"}>
+    <a className={styles.verdict} href={walletEntry("trial")}>
       {kk ? "Өз CSV файлыңызды тексеру →" : "Проверить свой CSV в комнате жюри →"}
     </a>
   </section>;
