@@ -141,7 +141,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-return"><span>{L("miniReturn")}</span><i><RotateCcw size={14} />{L("miniReturnAction")}</i></div>
-          <h3>{L("fReturnTitle")}</h3><p>{L("fReturnText")}</p>
+          <h3>{L("fReturnTitle")}</h3><p>{L("fReturnText")}</p><a href="/connect?stand=soc">{lang === "kk" ? "Даулы аударым бойынша екі тараптың жауабы · SOC" : "Объяснения отправителя и получателя спорного платежа · SOC"}</a>
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-shop"><span className="mini-icon mini-amber"><ShoppingBag size={17} /></span><span>{L("miniShop")}</span></div>

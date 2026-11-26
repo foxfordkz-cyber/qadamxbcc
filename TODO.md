@@ -26,6 +26,7 @@
 - [x] Read settled graph aggregates across backend workers with an isolated SQL scoring view and a two-process hub test.
 - [x] **T13: Recovery and Device Evidence Regression Fixes.** Read/cancel/abandon persisted intents during scoring dependency outages, preserve the selected transfer through background recovery, count rechecked hubs, and refresh bounded current-device rosters before evaluation/release. Validated on synthetic data: 202 backend tests (including three PostgreSQL concurrency cases), 58 frontend tests, six browser scenarios and nine real Redis outage checkpoints. Scope and limits: `docs/RECOVERY_VERIFICATION_20261118.md`.
 - [x] **T14: Verified transfer evidence.** Device-confirmed payments in isolated jury rooms, time-bounded ledger receipts, KZT exposure for shadow policies, and signed institution-to-institution case advisories with withdrawal.
+- [x] Participant-owned statements on disputed transfers and a two-sided officer view.
 - [x] **T15: Disputed incoming funds.** Reserve the reported credit only, preserve the available balance, review and appeal a dispute, and verify signed case statements against the current status.
 - [x] **T16: First-hour response queue.** Let officers prioritize the oldest unanswered reports and measure the time to the first audited staff action.
 - [x] **Independent calibration check.** Freeze the synthetic cohort and report precision and calibration at an assumed 0.05% prevalence, alongside the separate European-card benchmark.
