@@ -655,3 +655,12 @@ tbody tr.selected { background: var(--emerald-soft); box-shadow: inset 3px 0 0 v
 
 /* Android download page: app/download/android/installer.css */
 
+
+/* Large text for older clients: the "Aa" switch in the header scales the whole page. */
+html[data-text-size="large"] body { zoom: 1.18; }
+.text-size-toggle { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; padding: 0 10px; border: 0; border-radius: 12px; background: transparent; color: var(--ink-2, #3A3A3B); cursor: pointer; transition: background-color .15s, color .15s; }
+.text-size-toggle span { font: 600 14px/1 var(--font-display); letter-spacing: -.02em; }
+.text-size-toggle b { font-size: 19px; font-weight: 700; }
+.text-size-toggle:hover { background: #EFEFF4; }
+.text-size-toggle[aria-pressed="true"] { background: #E6F6EF; color: #007A53; }
+.text-size-toggle:focus-visible { outline: 2px solid #00875C; outline-offset: 2px; }

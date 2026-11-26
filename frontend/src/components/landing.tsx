@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/i18n";
 import { landingText, type LandingKey } from "@/lib/landing-copy";
 import { BrandMark } from "./brand-mark";
 import { LanguageSwitch } from "./language-switch";
+import { TextSizeToggle } from "./text-size";
 import { MobileQr } from "./mobile-qr";
 import { DropNetwork } from "./drop-network";
 import { HeroDemo } from "./hero-demo";
@@ -90,7 +91,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
         <nav id="public-nav" className="public-nav" data-open={menuOpen || undefined} aria-label={L("nav")}>
           {sections.map(({ key, href }) => <Link key={key} href={href} onClick={() => setMenuOpen(false)}>{L(key)}</Link>)}
         </nav>
-        <div className="public-tools"><LanguageSwitch />
+        <div className="public-tools"><TextSizeToggle label={lang === "kk" ? "Ірі мәтін" : "Крупный текст"} /><LanguageSwitch />
           <a className="public-signin" href={walletEntry("wallet")}>{L("access")}</a>
           <button className="public-menu-toggle" type="button" aria-label={L("menu")} aria-controls="public-nav" aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}>
             {menuOpen ? <X size={21} /> : <Menu size={21} />}
@@ -296,7 +297,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
       <div className="footer-brand"><span><BrandMark size={30} /><strong>Saq Bol</strong></span><p>{L("footLegal")}</p></div>
       <nav aria-label={L("footProduct")}><b>{L("footProduct")}</b>{sections.slice(0, 4).map(({ key, href }) => <a key={key} href={href}>{L(key)}</a>)}</nav>
       <nav aria-label={L("footResources")}><b>{L("footResources")}</b>
-        <Link href="/download/android">{L("heroDownload")}</Link><a href={walletEntry("wallet")}>{L("footWallet")}</a><a href={walletEntry("soc")}>{L("footSoc")}</a><a href={GITHUB} target="_blank" rel="noopener noreferrer">{L("footCode")}</a>
+        <Link href="/download/android">{L("heroDownload")}</Link><Link href="/pitch">{lang === "kk" ? "5 минуттық питч" : "Питч за 5 минут"}</Link><a href={walletEntry("wallet")}>{L("footWallet")}</a><a href={walletEntry("soc")}>{L("footSoc")}</a><a href={GITHUB} target="_blank" rel="noopener noreferrer">{L("footCode")}</a>
       </nav>
     </footer>
   </div>;

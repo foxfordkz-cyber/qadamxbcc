@@ -26,11 +26,14 @@ function useHoldClock(active: boolean) {
  * pause, the call check, the family member and the saved money. Visitors can
  * pick any step; autoplay stops for reduced motion and while hovered.
  */
-export function HeroDemo() {
+export function HeroDemo({ step: shown, bare = false }: { step?: number; bare?: boolean } = {}) {
   const { lang } = useLocale();
   const L = (key: LandingKey) => landingText(lang, key);
   const reduced = useReducedMotion();
-  const [step, setStep] = useState(0);
+  const [own, setStep] = useState(0);
+  // The pitch drives the screen from the scroll position; the homepage plays it on its own.
+  const controlled = shown !== undefined;
+  const step = shown ?? own;
   const [hold, setHold] = useState(false);
   const host = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
@@ -43,13 +46,13 @@ export function HeroDemo() {
     return () => io.disconnect();
   }, []);
   useEffect(() => {
-    if (reduced || hold || !visible) return;
+    if (controlled || reduced || hold || !visible) return;
     const timer = setTimeout(() => setStep(value => (value + 1) % steps.length), STEP_MS);
     return () => clearTimeout(timer);
-  }, [step, reduced, hold, visible]);
+  }, [step, controlled, reduced, hold, visible]);
 
   const tone = step === 1 ? "held" : step === 2 ? "alert" : step === 4 ? "saved" : "idle";
-  return <div ref={host} className="hd" data-step={step} data-tone={tone} data-playing={!reduced && !hold && visible || undefined}
+  return <div ref={host} className={bare ? "hd hd-bare" : "hd"} data-step={step} data-tone={tone} data-playing={!controlled && !reduced && !hold && visible || undefined}
     onPointerEnter={event => { if (event.pointerType === "mouse") setHold(true); }} onPointerLeave={() => setHold(false)}>
     <div className="hd-device" aria-hidden="true">
       <div className="hd-screen">
@@ -99,10 +102,10 @@ export function HeroDemo() {
         </section>
       </div>
     </div>
-    <ol className="hd-steps" aria-label={L("navHow")}>{steps.map((key, index) => <li key={key}>
+    {!bare && <ol className="hd-steps" aria-label={L("navHow")}>{steps.map((key, index) => <li key={key}>
       <button type="button" aria-current={step === index ? "step" : undefined} onClick={() => setStep(index)}>
         <span className="hd-bar"><i /></span>{L(key)}
       </button>
-    </li>)}</ol>
+    </li>)}</ol>}
   </div>;
 }

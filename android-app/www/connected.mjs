@@ -147,7 +147,7 @@ function clearVisible() {
 import { SAMPLE } from "./soc-sample.mjs";
 import { Gateway, gatewayOrigin, remainingSeconds } from "./gateway.mjs";
 import { installBackHandler } from "./native.mjs";
-import { currentTheme, toggleTheme } from "./theme-mode.mjs";
+import { currentTextSize, currentTheme, toggleTextSize, toggleTheme } from "./theme-mode.mjs";
 import { socUI } from "./soc-ui.mjs";
 import { PollBackoff, pollInterval } from "./poll-backoff.mjs";
 
@@ -1271,6 +1271,7 @@ function settingsView() {
       `<section class="settings-group"><h2>${T("Приложение","Қолданба")}</h2>` +
       settingsRow("language", "lang", T("Язык · Русский / ҚАЗ","Тіл · Қазақша / РУС")) +
       settingsRow("theme", "moon", T("Тёмная тема","Қараңғы тақырып"), toggle, `role="switch" aria-checked="${dark}"`) +
+      settingsRow("text-size", "lang", T("Крупный текст","Ірі мәтін"), toggle, `role="switch" aria-checked="${currentTextSize() === "large"}"`) +
       settingsRow("open-guardian", "plane", T("Открыть Telegram-бот","Telegram-ботты ашу")) + `</section>` +
       button("logout",T("Выйти","Шығу"),"secondary") +
       `<p class="screen-foot">Saq Bol × BCC ${edition} · ${T("Учебный стенд","Оқу стенді")}</p>`;
@@ -1979,6 +1980,7 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "theme") { toggleTheme(); render(); return; }
+  if (act === "text-size") { toggleTextSize(); render(); return; }
   if (act === "language") {
     const transferForm = root.querySelector("#transfer-form");
     if (page === "transfer" && transferForm) draft = readTransferDraft(new FormData(transferForm));

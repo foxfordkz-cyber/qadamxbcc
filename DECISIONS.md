@@ -77,3 +77,12 @@ Only the authenticated sender or recipient can submit their own categorical acco
 ## Ledger and privacy handoff
 
 The adapter contract is a proposed bank interface. Decision state is distinct from a ledger receipt. Bank identity, lawful basis, residency and retention require agreement before receiving identifiable client records.
+
+## Pitch as one scrolling page (26 Nov 2026)
+
+`/pitch` is now the five-minute pitch laid out as a page, not a slide console: a deep-green opening with the live phone, the 3D card freezing, the client story told by a sticky phone, the 3D drop network, a bento of what BCC gets, SOC, architecture, evidence, the case requirements, competitors and the shadow pilot. Arrow keys and Space move between 15 anchors whose timings add up to 300 seconds; T starts the clock and N shows speaker notes. It opens in Kazakh (`?lang=ru` for Russian) because the defence is given in Kazakh. The previous console with pilot economics and jury questions stays at `/pitch/console`. Figures are the ones already measured in the repository; each links to its file on the `codex/final-nov26` branch.
+
+## Large text (26 Nov 2026)
+
+Older clients asked for bigger type. Rather than a second set of font sizes, the "Aa" switch on the site and Profile → Large text in Android scale the whole document (`zoom`), so layouts keep their proportions. The choice is a per-device preference in localStorage.
+

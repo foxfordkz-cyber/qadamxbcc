@@ -107,9 +107,9 @@ body:has(.public-home) { background: #F5F5FA; }
 .hd-chat-head span { display: grid; line-height: 1.2; }
 .hd-chat-head b { font-size: 14px; }
 .hd-chat-head small { color: var(--muted); font-size: 11px; }
-.hd-bubble { max-width: 90%; padding: 12px; border-radius: 16px 16px 16px 4px; background: var(--surface); font-size: 13px; line-height: 1.45; }
+.hd-bubble { width: 90%; max-width: 90%; padding: 12px; border-radius: 16px 16px 16px 4px; background: var(--surface); font-size: 13px; line-height: 1.45; }
 .hd-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
-.hd-choices span { display: grid; place-items: center; min-height: 34px; border-radius: 10px; background: var(--surface-3); font-size: 12px; font-weight: 600; }
+.hd-choices span { display: grid; place-items: center; min-height: 34px; padding: 6px 8px; border-radius: 10px; background: var(--surface-3); font-size: 12px; font-weight: 600; line-height: 1.2; text-align: center; }
 .hd-choices .hd-choice-scam { background: var(--red); color: #fff; }
 .hd-reply { align-self: flex-end; padding: 9px 13px; border-radius: 16px 16px 4px 16px; background: #DDF4E8; font-size: 13px; font-weight: 600; }
 .hd[data-playing] .hd-chat.is-on .hd-reply { animation: hd-reply 3.6s ease both; }
