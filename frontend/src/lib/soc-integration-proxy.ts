@@ -78,6 +78,10 @@ export function resolveSocProxyRoute(parts: string[], method: string, query: URL
     if (method === "POST") body = openCaseSchema;
     else if (method === "GET") parameters = { limit: "limit", cursor: 500 };
     else return { status: 405, error: "invalid" };
+  } else if (path === "guardian/soc/cases/outcomes") {
+    if (method !== "GET") return { status: 405, error: "invalid" };
+    if (query.has("days") && !["7", "30", "90"].includes(query.get("days")!)) return { status: 422, error: "invalid" };
+    parameters = { days: 2 };
   } else if (path === "guardian/soc/cases/analytics" || path === "health/details") {
     if (method !== "GET") return { status: 405, error: "invalid" };
   } else if (parts.length >= 4 && parts.slice(0, 3).join("/") === "guardian/soc/cases" && uuid.safeParse(parts[3]).success) {

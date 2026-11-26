@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Activity, Clock3, RefreshCw, ShieldCheck } from "lucide-react";
 import { api, ApiError } from "@/lib/contracts";
-import type { IncidentTimeline, IntegrationHealth, IncidentSummary } from "@/lib/soc-integrations";
+import type { HoldMetrics, IncidentTimeline, IntegrationHealth, IncidentSummary } from "@/lib/soc-integrations";
 import { integrationCopy, integrationText, type IntegrationMessage } from "@/lib/soc-integration-copy";
 import { useLocale } from "@/lib/i18n";
 import "./soc-integration-insights.css";
@@ -24,6 +24,29 @@ function useSnapshot<T>(path: string | null, revision: number) {
     return () => { disposed = true; controller.abort(); };
   }, [path, revision]);
   return state?.path === path ? state : { path, data: null, loading: !!path, error: null, retryAt: 0 };
+}
+
+export function HoldOutcomesPanel({ revision }: { revision: number }) {
+  const { lang } = useLocale();
+  const kk = lang === "kk";
+  const [days, setDays] = useState(7);
+  const [retry, setRetry] = useState(0);
+  const state = useSnapshot<HoldMetrics>("integrations/guardian/soc/cases/outcomes?days=" + days, revision + retry);
+  const report = state.data;
+  return <section className="panel" aria-labelledby="hold-outcomes-title">
+    <h3 id="hold-outcomes-title">{kk ? "Кідіртілген аударымдардың нәтижесі" : "Исходы удержанных переводов"}</h3>
+    <label>{kk ? "Кезең, күн" : "Период, дни"} <select value={days} onChange={e => setDays(Number(e.target.value))}>
+      {[7, 30, 90].map(period => <option key={period}>{period}</option>)}
+    </select></label>
+    <p>{kk ? "Бір аударым SOC ісіне де, кейін бас тартылған төлемдерге де кіруі мүмкін. Адал төлемдер жабылған істер бойынша саналады."
+      : "У одного удержания может быть и дело SOC, и последующая отмена. Ложные паузы считаются по подтверждённым исходам закрытых дел."}</p>
+    {state.loading && <p role="status">{kk ? "Жүктелуде…" : "Загрузка…"}</p>}
+    {state.error && <button type="button" onClick={() => setRetry(n => n + 1)}>{kk ? "Есепті қайта жүктеу" : "Загрузить отчёт ещё раз"}</button>}
+    {report && !state.error && <><dl>{report.rows.map(row => <div key={row.key}><dt>{row[lang]}</dt>
+      <dd>{row.value?.toLocaleString(kk ? "kk-KZ" : "ru-KZ", {maximumFractionDigits: 2}) ?? "—"}</dd></div>)}</dl>
+      <a download={"soc-" + days + ".csv"} href={"data:text/csv;charset=utf-8," + encodeURIComponent("\uFEFF" + report.csv)}>
+        {kk ? "CSV жүктеп алу" : "Скачать CSV"}</a></>}
+  </section>;
 }
 
 export function SocIntegrationInsights({ transactionId, revision }: { transactionId: string | null; revision: number }) {

@@ -19,6 +19,12 @@ const policyComparisonSchema = z.object({
       legitimate_held_kzt: z.string().regex(/^\d+(?:\.\d{1,2})?$/).nullish(),
   })).max(101).optional(),
 });
+export const holdMetricsSchema = z.object({
+  days: z.union([z.literal(7), z.literal(30), z.literal(90)]), start: timestamp, as_of: timestamp,
+  rows: z.array(z.object({ key: z.string(), kk: z.string(), ru: z.string(), value: z.number().nonnegative().nullable() })).max(30),
+  csv: z.string().max(32000),
+});
+export type HoldMetrics = z.infer<typeof holdMetricsSchema>;
 export const caseStates = ["NEW", "IN_REVIEW", "NEEDS_INFORMATION", "ESCALATED", "RESOLVED", "CLOSED"] as const;
 export const caseStaff = ["demo_analyst_a", "demo_analyst_b"] as const;
 export const caseCategories = ["impersonation", "safe_account", "remote_access", "other"] as const;
@@ -117,6 +123,7 @@ export function socIntegrationSchema(path: string): z.ZodType | undefined {
   const route = path.split("?")[0];
   if (route === "integrations/guardian/soc/cases") return casePageSchema;
   if (/^integrations\/soc\/transactions\/[0-9a-f-]{36}\/story$/i.test(route)) return privateStorySchema;
+  if (route === "integrations/guardian/soc/cases/outcomes") return holdMetricsSchema;
   if (route === "integrations/guardian/soc/cases/analytics") return caseAnalyticsSchema;
   const caseMatch = /^integrations\/guardian\/soc\/cases\/([0-9a-f-]{36})(?:\/(actions|history|notes|evidence|export))?$/i.exec(route);
   if (caseMatch) return ({ history: caseHistorySchema, notes: caseNotesSchema, evidence: caseEvidenceSchema, export: caseExportSchema } as Record<string, z.ZodType>)[caseMatch[2]] ?? caseSchema;

@@ -10,6 +10,7 @@
   - Tab 1: **BCC Mobile Transfer Simulator** (amount in ₸, recipient phone/card, context toggles: "Active Phone Call / Белсенді қоңырау", "From Deposit / Депозиттен", "New Device / Жаңа құрылғы", plus interactive Cooling-Off warning modal in KZ/RU).
   - Tab 2: **BCC SOC Officer Dashboard** (live risk feed, interactive React Flow drop-network graph, and bilingual Explainable AI risk breakdown card).
 
+- [x] **SOC outcome analytics.** Show period-based hold outcomes, adjudicated false pauses by segment, rule frequency and first human response times in the officer views with aggregate CSV export.
 - [x] **T08: Hybrid ML & Browser Biometrics.** Deterministic local model, tree-path contributions, real paste/cadence/hesitation signals, live synthetic traffic and light BCC visual system.
 - [x] **T09: Durable Decision Lifecycle.** Persist ML/context/evidence, idempotent request IDs, atomic graph aggregates, strict 15-minute hold, questionnaire persistence, cancellation and recovery from SOC/reload. Separate attempted velocity from settled funds.
 - [x] **T10: Reproducible Demo & Internal Pilot Profile.** Empty-database bootstrap, launch scripts, role service keys, protected operator interface, server trust boundary, dependency readiness, separate storage and disabled demo actions in pilot.
