@@ -18,7 +18,7 @@ export async function probeWallet(stand: string, fetcher = fetch): Promise<boole
   const probe = jury ? wallets.readiness.jury : wallets.readiness.team;
   try {
     const result = await fetcher(new URL(probe.url, target), {
-      method: "GET", credentials: "omit", redirect: "error", cache: "no-store",
+      method: "GET", credentials: "omit", redirect: "manual", cache: "no-store",
       signal: AbortSignal.timeout(5000),
     });
     if (!result.ok || !result.headers.get("content-type")?.includes("application/json")) return false;

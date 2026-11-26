@@ -10,13 +10,14 @@ test("wake probes only configured origins and never forwards a session", async (
     assert.equal(String(url), new URL("/ready", wallets.socUrl).href);
     assert.equal(options?.method, "GET");
     assert.equal(options?.credentials, "omit");
+    assert.equal(options?.redirect, "manual");
     return Response.json({status:"ready"});
   }), true);
   assert.equal(await probeWallet("jury", async url => {
     assert.equal(String(url), new URL("/health", wallets.juryUrl).href);
     return Response.json({status:"ok", mode:"synthetic-jury"});
   }), true);
-  for (const response of [new Response("warming", {status:503}), new Response("<html>waiting</html>"), Response.json({status:"unavailable"})]) {
+  for (const response of [Response.redirect("https://elsewhere.example/"), new Response("warming", {status:503}), new Response("<html>waiting</html>"), Response.json({status:"unavailable"}), Response.json({status:"ok", mode:"team"})]) {
     assert.equal(await probeWallet("jury", async () => response), false);
   }
 });
