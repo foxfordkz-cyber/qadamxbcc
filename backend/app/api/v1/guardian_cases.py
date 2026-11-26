@@ -2,7 +2,7 @@ import uuid
 from collections.abc import Callable, Coroutine
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Header, Query, Request, Response
+from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.api.deps import SessionDep
 from app.db.base import utcnow
 from app.integrations.cases import service
+from app.integrations.cases.hold_metrics import HoldMetrics, hold_metrics
 from app.integrations.cases.ledger import RecipientLedger, recipient_ledger
 from app.integrations.cases.models import CaseContent, CaseEvent
 from app.integrations.cases.schemas import (
@@ -96,6 +97,16 @@ async def case_analytics(
 ) -> CaseAnalytics:
     require_role(principal, "soc")
     return await service.analytics(session)
+
+
+@router.get("/soc/cases/outcomes", response_model=HoldMetrics)
+async def case_outcomes(
+    session: SessionDep, cfg: ConfigDep, principal: PrincipalDep, days: int = 7
+) -> HoldMetrics:
+    require_role(principal, "soc")
+    if days not in (7, 30, 90):
+        raise HTTPException(422, "invalid_period")
+    return await hold_metrics(session, days)
 
 
 @router.get("/soc/cases/{case_id}", response_model=CaseOut)

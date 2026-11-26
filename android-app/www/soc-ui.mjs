@@ -423,7 +423,13 @@ export function socUI(ctx) {
       '<p class="sx-sub">' + T("Время оценки движком, без сети", "Желісіз қозғалтқыш бағалау уақыты") + "</p>");
     const decisions = card("sx-decisions", "<h2>" + T("Решения по операциям", "Операциялар бойынша шешімдер") + "</h2>" + Object.entries(st).map(([k, v]) =>
       '<div class="sx-decision">' + pill(E(status(k)), statusTone(k)) + "<b>" + num(v.count) + "</b><span>" + amount(v.amount) + "</span></div>").join(""));
-    return head + kpis + '<div class="sx-grid g-analytics">' + chart + donut + "</div>" + '<div class="sx-grid g-analytics">' + (policies || decisions) + '<div class="sx-col">' + p95 + (policies ? decisions : "") + "</div></div>" +
+    const outcomes = d.hold_outcomes;
+    const outcomePanel = outcomes ? card("sx-decisions", "<h2>" + T("Исходы удержанных переводов", "Кідіртілген аударымдардың нәтижесі") + "</h2><p>" +
+      T("Дело SOC и отмена могут относиться к одному удержанию. Ложные паузы считаются по подтверждённым исходам.",
+        "SOC ісі мен бас тарту бір аударымға қатысты болуы мүмкін. Адал төлемдер расталған нәтижелер бойынша саналады.") + "</p>" +
+      outcomes.rows.map(row => '<div class="sx-decision"><span>' + E(T(row.ru, row.kk)) + "</span><b>" + (row.value == null ? "—" : Number(row.value).toLocaleString(T("ru-KZ","kk-KZ"), {maximumFractionDigits: 2})) + "</b></div>").join("") +
+      '<a download="soc-' + Number(d.days) + '.csv" href="data:text/csv;charset=utf-8,' + E(encodeURIComponent("\uFEFF" + outcomes.csv)) + '">' + T("Скачать CSV", "CSV жүктеп алу") + "</a>") : "";
+    return head + kpis + outcomePanel + '<div class="sx-grid g-analytics">' + chart + donut + "</div>" + '<div class="sx-grid g-analytics">' + (policies || decisions) + '<div class="sx-col">' + p95 + (policies ? decisions : "") + "</div></div>" +
       '<p class="sx-note">' + T("По дате создания с", "Жасалған күні бойынша") + " " + E(d.from || "—") + " · UTC+5</p>";
   }
 

@@ -246,6 +246,7 @@ Core BFF возвращает `{"error": "notFound" | "conflict" | "invalid" |
 | `POST` | `/api/v1/integrations/guardian/soc/cases` | Bearer + Idempotency-Key | `OpenCase` | `CaseOut` | 201, 422 |
 | `GET` | `/api/v1/integrations/guardian/soc/cases` | Bearer | — | `CasePage` | 200, 422 |
 | `GET` | `/api/v1/integrations/guardian/soc/cases/analytics` | Bearer | — | `CaseAnalytics` | 200 |
+| `GET` | `/api/v1/integrations/guardian/soc/cases/outcomes` | Bearer | — | `HoldMetrics` | 200, 422 |
 | `GET` | `/api/v1/integrations/guardian/soc/cases/{case_id}` | Bearer | — | `CaseOut` | 200, 422 |
 | `POST` | `/api/v1/integrations/guardian/soc/cases/{case_id}/actions` | Bearer + Idempotency-Key | `object` | `CaseOut` | 200, 422 |
 | `GET` | `/api/v1/integrations/guardian/soc/cases/{case_id}/history` | Bearer | — | `EventPage` | 200, 422 |

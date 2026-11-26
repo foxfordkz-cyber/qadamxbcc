@@ -2943,6 +2943,55 @@
         ]
       }
     },
+    "/api/v1/integrations/guardian/soc/cases/outcomes": {
+      "get": {
+        "tags": [
+          "advisory orchestration",
+          "Guardian synthetic SOC cases"
+        ],
+        "summary": "Case Outcomes",
+        "operationId": "case_outcomes_api_v1_integrations_guardian_soc_cases_outcomes_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 7,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldMetrics"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/integrations/guardian/soc/cases/{case_id}": {
       "get": {
         "tags": [
@@ -6371,6 +6420,131 @@
         ],
         "title": "HealthDetails"
       },
+      "HoldMetrics": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          },
+          "held": {
+            "type": "integer",
+            "title": "Held"
+          },
+          "cancelled": {
+            "type": "integer",
+            "title": "Cancelled"
+          },
+          "released": {
+            "type": "integer",
+            "title": "Released"
+          },
+          "referred": {
+            "type": "integer",
+            "title": "Referred"
+          },
+          "confirmed_fraud": {
+            "type": "integer",
+            "title": "Confirmed Fraud"
+          },
+          "confirmed_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed Share"
+          },
+          "labelled": {
+            "type": "integer",
+            "title": "Labelled"
+          },
+          "false_holds": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "False Holds"
+          },
+          "rules": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Rules"
+          },
+          "responses": {
+            "type": "integer",
+            "title": "Responses"
+          },
+          "median_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Seconds"
+          },
+          "p90_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P90 Seconds"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/MetricRow"
+            },
+            "type": "array",
+            "title": "Rows",
+            "default": []
+          },
+          "csv": {
+            "type": "string",
+            "title": "Csv",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "start",
+          "as_of",
+          "held",
+          "cancelled",
+          "released",
+          "referred",
+          "confirmed_fraud",
+          "confirmed_share",
+          "labelled",
+          "false_holds",
+          "rules",
+          "responses",
+          "median_seconds",
+          "p90_seconds"
+        ],
+        "title": "HoldMetrics"
+      },
       "IncidentSummary": {
         "properties": {
           "transaction_id": {
@@ -6936,6 +7110,44 @@
           "label_ru"
         ],
         "title": "MLContributorOut"
+      },
+      "MetricRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kk": {
+            "type": "string",
+            "title": "Kk"
+          },
+          "ru": {
+            "type": "string",
+            "title": "Ru"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kk",
+          "ru",
+          "value"
+        ],
+        "title": "MetricRow"
       },
       "Note": {
         "properties": {

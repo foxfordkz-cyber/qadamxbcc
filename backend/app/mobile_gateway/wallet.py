@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import SessionDep
 from app.db.base import utcnow
+from app.integrations.cases.hold_metrics import hold_metrics
 from app.integrations.cases.models import CaseEvent, FraudCase
 from app.integrations.cases.policy_review import compare_policies
 from app.integrations.cases.schemas import CaseOut, State
@@ -357,7 +358,10 @@ def install_wallet(app: FastAPI) -> None:
             "latency_sample_size": len(sample),
             "latency_sample_limit": LATENCY_SAMPLE_LIMIT,
             **(
-                {"policy_comparison": await compare_policies(session, end, start=start)}
+                {
+                    "policy_comparison": await compare_policies(session, end, start=start),
+                    "hold_outcomes": (await hold_metrics(session, days, end)).model_dump(),
+                }
                 if include_policy
                 else {}
             ),

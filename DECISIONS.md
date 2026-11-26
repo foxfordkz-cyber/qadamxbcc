@@ -30,6 +30,10 @@ Run the existing blind-call scorer on accepted rows of anonymous UTF-8 CSVs, wit
 
 Only the synthetic clearing register supplies settlement evidence. Match the posting reference, debtor, beneficiary, currency and integer amount, and require receipt before scoring, a current validity window and no effective revocation. Re-evaluate collection-only pressure with the matched payout attributed to clearing in an isolated projection. Preserve the observed ledger and all decisions with independent warnings. The paired trial is read-only and never changes a customer payment decision.
 
+### Officer outcome denominators
+
+The cohort follows transfer creation dates in Kazakhstan time. A cancellation and a referral can describe the same original hold. Confirmed share divides unambiguous retained fraud findings by all original holds. Reopened and conflicting findings do not label a payment. Rule counts deduplicate each transfer per code. Reaction time starts at the report and ends at the first staff event for a linked case. Unanswered cases do not contribute to response percentiles.
+
 ### Local message checks and case consent
 
 Run the same phrase matcher in the browser client and connected wallet. Keep the original message and matched fragments on the device. An authenticated owner may share one of four fixed categories with one eligible report after explicit consent. The server checks ownership, status and retention time, then records at most one event per report and category using the existing audit table. SOC receives the category and timestamp. A category alone has no effect on a transfer decision.
