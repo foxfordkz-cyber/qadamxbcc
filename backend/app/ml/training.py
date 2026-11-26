@@ -22,6 +22,9 @@ from app.ml.features import FEATURE_NAMES
 from app.ml.model import GENERATOR_VERSION, MODEL_VERSION
 
 SEED = 20261113
+# Reserved evaluation population. Never pass this seed to an estimator fit or threshold search.
+FROZEN_EVALUATION_SEED = 78114239
+FROZEN_EVALUATION_ROWS = 20_000
 
 
 def routine_population(n: int, seed: int) -> tuple[NDArray[np.float32], NDArray[np.int64]]:
