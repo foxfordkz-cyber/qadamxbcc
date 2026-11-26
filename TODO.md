@@ -11,6 +11,7 @@
   - Tab 2: **BCC SOC Officer Dashboard** (live risk feed, interactive React Flow drop-network graph, and bilingual Explainable AI risk breakdown card).
 
 - [x] **T08: Hybrid ML & Browser Biometrics.** Deterministic local model, tree-path contributions, real paste/cadence/hesitation signals, live synthetic traffic and light BCC visual system.
+- [x] Run website and server decisions against one executable P2P contract.
 - [x] **T09: Durable Decision Lifecycle.** Persist ML/context/evidence, idempotent request IDs, atomic graph aggregates, strict 15-minute hold, questionnaire persistence, cancellation and recovery from SOC/reload. Separate attempted velocity from settled funds.
 - [x] **T10: Reproducible Demo & Internal Pilot Profile.** Empty-database bootstrap, launch scripts, role service keys, protected operator interface, server trust boundary, dependency readiness, separate storage and disabled demo actions in pilot.
 - [x] **T11: Defense & Rehearsal Package.** Bilingual `/pitch` console, eight-slide editable decks, timer, three-minute demo, assumption-based pilot economics, jury answers, isolated rehearsal launcher and machine-readable end-to-end preflight.
