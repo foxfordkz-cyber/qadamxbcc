@@ -10,6 +10,7 @@ from zipfile import ZipFile
 ROOT = Path(__file__).resolve().parents[2]
 DOWNLOADS = ROOT / "frontend/public/downloads"
 API = "https://saq-bol-mobile.onrender.com"
+STAGING_API = "https://saq-bol-mobile-staging.onrender.com"
 CHANNELS = {
     "website": ("legacy-website-2.9.json", DOWNLOADS / "Saq-Bol-Android-2.7.json"),
     "team": ("current.json", ROOT / "deliverables/android/Saq-Bol-Android-2.7.json"),
@@ -30,7 +31,10 @@ def get_tool(directory, name):
     return directory / (name + ext)
 
 
-def inspect_apk(apk, signer, channel):
+def inspect_apk(apk, signer, channel, *, staging_candidate=False):
+    # Publication callers keep the canonical origin. Only the explicit candidate
+    # verifier accepts the separately authorized staging, never an arbitrary host.
+    expected_api = STAGING_API if staging_candidate else API
     def run(path, *args):
         return subprocess.check_output([str(path), *args, str(apk.resolve())], encoding="utf-8")
 
@@ -47,10 +51,10 @@ def inspect_apk(apk, signer, channel):
         raise ValueError(f"Unexpected Android manifest for the {channel} package")
     resources = run(aapt, "dump", "--values", "resources")
     origins = re.findall(r'^\s*resource [^\n]+:string/qadam_api_origin:[^\n]*\n\s*\(string8\) "([^"]+)"', resources, re.M)
-    if set(origins) != {API}:
+    if set(origins) != {expected_api}:
         raise ValueError("Unexpected Android API origin")
     return dict(package=identity[1], versionCode=int(identity[2]), version=identity[3],
-                minSdk=int(sdk[1]), certificate_sha256=fingerprints[0], api_origin=API)
+                minSdk=int(sdk[1]), certificate_sha256=fingerprints[0], api_origin=expected_api)
 
 
 def verify_source(apk, source, version):
