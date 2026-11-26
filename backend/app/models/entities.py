@@ -80,6 +80,9 @@ class Account(Base):
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False)
     flag_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     flag_updated_at: Mapped[datetime | None] = mapped_column()
+    has_network_history: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false()
+    )
     has_dispute_history: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=false()
     )
@@ -89,6 +92,22 @@ class Account(Base):
         CheckConstraint("length(iin) = 12", name="iin_len"),
         CheckConstraint("iban LIKE 'KZ%'", name="iban_kz"),
     )
+
+
+class NetworkObservation(Base):
+    __tablename__ = "bank_session_observations"
+    __table_args__ = (
+        Index("ix_bank_session_account_time", "account_id", "observed_at"),
+        Index("ix_bank_session_network_time", "network_token", "observed_at"),
+        Index("ix_bank_session_expiry", "observed_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"))
+    network_token: Mapped[str] = mapped_column(String(64))
+    country: Mapped[str] = mapped_column(String(2))
+    city: Mapped[str | None] = mapped_column(String(32))
+    observed_at: Mapped[datetime] = mapped_column()
+    received_at: Mapped[datetime] = mapped_column()
 
 
 class RecipientFlagAudit(Base):

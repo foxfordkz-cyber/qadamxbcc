@@ -168,6 +168,8 @@ class TransferContext:
     first_day_payee: SettledPayee | None = None
     payment_requested_after_call: bool = False
     settled_payee_is_new: bool | None = None  # SQL pair history held under the sender lock
+    shared_network_size: int = 0
+    new_region: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -588,6 +590,11 @@ class AntifraudEngine:
         is_night: bool,
     ) -> list[RiskReason]:
         out: list[RiskReason] = []
+        if ctx.new_region and (ctx.is_new_device or (ctx.active_call and is_new_recipient)):
+            if ctx.new_region == "country":
+                out.append(_reason("NEW_SESSION_COUNTRY", LAYER_BEHAVIORAL, 8))
+            elif ctx.new_region == "city":
+                out.append(_reason("NEW_SESSION_CITY", LAYER_BEHAVIORAL, 5))
         if ctx.duress:
             out.append(_reason("DURESS_SIGNAL", LAYER_BEHAVIORAL, W_DURESS))
         if ctx.active_call:
@@ -692,6 +699,12 @@ class AntifraudEngine:
                     ratio=f"{rm.transit_ratio:.2f}".replace(".", ","),
                 )
             )
+        if (
+            ctx.shared_network_size >= 2
+            and is_new_recipient
+            and (ctx.active_call or ctx.is_new_device)
+        ):
+            out.append(_reason("SHARED_IP_CLUSTER", LAYER_GRAPH, 4))
         if rm.shared_device_accounts >= SHARED_DEVICE_MIN:
             out.append(
                 _reason(

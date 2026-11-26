@@ -57,3 +57,7 @@ BCC_SHARED_GRAPH_READS selects committed SQL aggregates for each evaluation and 
 ## Offline scoring parity
 
 Both test suites independently execute five shared cases and compare the complete rule-code set, numeric score and outcome. The model and Redis engine run in the Python test. Offline examples only have the scenario coverage exercised here.
+
+## Bank-side session evidence
+
+Only an authenticated bank-side source can submit a tenant-keyed HMAC of the IP and coarse region. At most 30 days of observations are eligible and the next ingest purges expired rows. The P2P browser cannot supply these fields. Workplace NAT, shared Wi-Fi and travel alone add no risk. Either new region needs established history across two days.
