@@ -1,5 +1,6 @@
 "use client";
 
+import { walletEntry } from "@/lib/wallet-warmup";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, ChevronDown, Download, FileText, MessageSquareWarning, Menu, PhoneOff, RotateCcw, ShoppingBag, UserCheck, X, Link2Off } from "lucide-react";
@@ -15,7 +16,6 @@ import type { DropStage } from "./drop-scene";
 import { ScenarioPolicy } from "./scenario-policy";
 import { ModelTrial } from "./model-trial";
 import { SettlementTrial } from "./settlement-trial";
-import wallets from "@/lib/connected-wallet.json";
 import "./landing.css";
 
 const dropSteps = [1, 2, 3, 4] as const;
@@ -88,7 +88,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
           {sections.map(({ key, href }) => <Link key={key} href={href} onClick={() => setMenuOpen(false)}>{L(key)}</Link>)}
         </nav>
         <div className="public-tools"><LanguageSwitch />
-          <a className="public-signin" href={wallets.url}>{L("access")}</a>
+          <a className="public-signin" href={walletEntry("wallet")}>{L("access")}</a>
           <button className="public-menu-toggle" type="button" aria-label={L("menu")} aria-controls="public-nav" aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}>
             {menuOpen ? <X size={21} /> : <Menu size={21} />}
           </button>
@@ -293,7 +293,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
       <div className="footer-brand"><span><BrandMark size={30} /><strong>Saq Bol</strong></span><p>{L("footLegal")}</p></div>
       <nav aria-label={L("footProduct")}><b>{L("footProduct")}</b>{sections.slice(0, 4).map(({ key, href }) => <a key={key} href={href}>{L(key)}</a>)}</nav>
       <nav aria-label={L("footResources")}><b>{L("footResources")}</b>
-        <Link href="/download/android">{L("heroDownload")}</Link><a href={wallets.url}>{L("footWallet")}</a><a href={wallets.socUrl}>{L("footSoc")}</a><a href={GITHUB} target="_blank" rel="noopener noreferrer">{L("footCode")}</a>
+        <Link href="/download/android">{L("heroDownload")}</Link><a href={walletEntry("wallet")}>{L("footWallet")}</a><a href={walletEntry("soc")}>{L("footSoc")}</a><a href={GITHUB} target="_blank" rel="noopener noreferrer">{L("footCode")}</a>
       </nav>
     </footer>
   </div>;

@@ -1,5 +1,6 @@
 "use client";
 
+import { walletEntry } from "@/lib/wallet-warmup";
 import { Suspense, useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -349,19 +350,19 @@ function App({ config, layout = "full" }: { config: AppConfig; layout?: AppLayou
   const languageSwitch = <LanguageSwitch />;
   const showWallet = config.demoActionsEnabled !== false && (!STATIC_DEMO || process.env.NEXT_PUBLIC_BCC_PAGES_WALLET === "1");
   const showScenarios = config.demoActionsEnabled !== false && config.accountMode !== "pilot";
-  const walletLink = showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("connectedWallet")}<ArrowRight size={15} aria-hidden="true" /></a>;
+  const walletLink = showWallet && <a className="pitch-link" href={walletEntry("wallet")}>{t("connectedWallet")}<ArrowRight size={15} aria-hidden="true" /></a>;
   const androidDownload = config.demoActionsEnabled !== false && config.accountMode !== "pilot" && (
     <AndroidDownload kk={lang === "kk"} />
   );
   const juryEntry = config.demoActionsEnabled !== false && config.accountMode !== "pilot" && (
-    <a className="jury-entry" href={connectedWallet.juryUrl}><LogIn size={17} aria-hidden="true" />{t("juryLogin")}</a>
+    <a className="jury-entry" href={walletEntry("jury")}><LogIn size={17} aria-hidden="true" />{t("juryLogin")}</a>
   );
   if (layout === "officer") return <div className="officer-root">
     <header className="topbar"><div className="topbar-inner"><div className="brand">
       <BrandMark /><div><strong>Saq Bol</strong><small>{t("officerWorkspace")}</small></div>
     </div>{juryEntry}{languageSwitch}</div></header>
     <main className="shell">
-      {showWallet && <a className="pitch-link" href={connectedWallet.url}>{t("staffWalletLogin")}<ArrowRight size={15} aria-hidden="true" /></a>}
+      {showWallet && <a className="pitch-link" href={walletEntry("wallet")}>{t("staffWalletLogin")}<ArrowRight size={15} aria-hidden="true" /></a>}
       {showScenarios && <Suspense fallback={null}><CollectionReplayInspector /></Suspense>}
       <SocDashboard tourEnabled={showScenarios} privateStoryAccess={config.privateStoryAccess} liveLedger={config.mode === "live" && !STATIC_DEMO} readOnly={config.publicSocReadOnly} initialSelection={null} revision={revision} evaluations={evaluations} traffic={traffic}
       onTrafficSync={syncTraffic} stream={{ ...stream, canStart: stream.canStart && !hasUnknown }} busy={busy} />

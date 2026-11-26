@@ -12,6 +12,7 @@
 
 - [x] **T08: Hybrid ML & Browser Biometrics.** Deterministic local model, tree-path contributions, real paste/cadence/hesitation signals, live synthetic traffic and light BCC visual system.
 - [x] **T09: Durable Decision Lifecycle.** Persist ML/context/evidence, idempotent request IDs, atomic graph aggregates, strict 15-minute hold, questionnaire persistence, cancellation and recovery from SOC/reload. Separate attempted velocity from settled funds.
+- [x] Bounded web-wallet wake-up, pre-show readiness and local jury fallback.
 - [x] **T10: Reproducible Demo & Internal Pilot Profile.** Empty-database bootstrap, launch scripts, role service keys, protected operator interface, server trust boundary, dependency readiness, separate storage and disabled demo actions in pilot.
 - [x] **T11: Defense & Rehearsal Package.** Bilingual `/pitch` console, eight-slide editable decks, timer, three-minute demo, assumption-based pilot economics, jury answers, isolated rehearsal launcher and machine-readable end-to-end preflight.
 - [x] **T12: SOC Investigation Workspace.** Server-side history search and pagination, global distinct hub metric, stable case selection, authoritative lifecycle refresh, explicit live/historical evidence, bilingual timestamps and allowlisted JSON reports.
