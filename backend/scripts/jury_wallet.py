@@ -50,6 +50,7 @@ class JuryStorage:
         from app.mobile_gateway.app import create_mobile_app
         from app.mobile_gateway.dispute_receipts import install_dispute_receipts
         from app.mobile_gateway.jury_contact import install_jury_contact
+        from app.mobile_gateway.jury_interview import install_jury_interview
         from app.mobile_gateway.partner_signal import install_partner_signal
 
         if not 1 <= slot <= 8 or slot in self.active:
@@ -107,6 +108,7 @@ class JuryStorage:
                     await install_jury_contact(app, sessions, integration, self.mobile.customer_id)
                     install_partner_signal(app)
                     install_dispute_receipts(app, self.mobile.customer_id)
+                    install_jury_interview(app, self.mobile.customer_id)
                     if with_history:
                         # Populate only this new private SQLite lease; the contact
                         # already occupies its slot and startup will replay the graph.
