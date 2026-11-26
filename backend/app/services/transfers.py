@@ -6,6 +6,7 @@ import uuid
 from collections import Counter
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from copy import copy
 from dataclasses import asdict, replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -292,7 +293,9 @@ def transfer_detail(
 class TransferService:
     def __init__(self, session: AsyncSession, engine: AntifraudEngine) -> None:
         self.session = session
-        self.engine = engine
+        # In shared mode only the cheap graph view is request-local. ML and Redis
+        # clients, pending Redis settlements and the recovery coordinator are shared.
+        self.engine = copy(engine) if engine.shared_graph_reads else engine
 
     @asynccontextmanager
     async def _serialized(self, identity: uuid.UUID) -> AsyncIterator[None]:
@@ -408,6 +411,15 @@ class TransferService:
         self, sender: Account, recipient: Account, supplied_device: str
     ) -> None:
         """Load complete, bounded current rosters before either scoring boundary."""
+        if self.engine.shared_graph_reads:
+            self.engine.graph = await scoring_graph(
+                self.session,
+                recipient.id,
+                sender.device_id,
+                recipient.device_id,
+                supplied_device,
+                include_observed=self.engine.allow_demo_overrides,
+            )
         graph = self.engine.graph
         devices = {sender.device_id, recipient.device_id, supplied_device} - {""}
         known_ids = {
@@ -1114,6 +1126,70 @@ class TransferService:
             return AbandonRequestResponse(
                 request_id=request_id, status="abandoned", server_time=datetime.now(UTC)
             )
+
+
+async def scoring_graph(
+    session: AsyncSession, recipient_id: uuid.UUID, *device_ids: str, include_observed: bool
+) -> GraphStore:
+    """Re-read the complete local neighbourhood from the shared committed aggregates."""
+    graph = GraphStore()
+    edges = list(
+        await session.scalars(
+            select(GraphEdge)
+            .where(or_(GraphEdge.source_id == recipient_id, GraphEdge.target_id == recipient_id))
+            .limit(2 * MAX_GRAPH_NEIGHBOURS + 1)
+        )
+    )
+    if len(edges) > 2 * MAX_GRAPH_NEIGHBOURS:
+        raise GraphCapacityError("Recipient graph exceeds supported capacity")
+    for edge in edges:
+        source, target = str(edge.source_id), str(edge.target_id)
+        if edge.edge_type == EdgeType.TRANSFER:
+            graph.add_transfer(
+                source,
+                target,
+                edge.weight,
+                tx_count=edge.tx_count,
+                ts=edge.last_seen_at.timestamp(),
+            )
+        else:
+            link = "link:" + ":".join(sorted([source, target]))
+            graph.link_device(source, link)
+            graph.link_device(target, link)
+    # The existing roster read also registers the current devices of the two parties.
+    if include_observed:
+        historical_devices = set(
+            await session.scalars(
+                select(Transaction.device_id)
+                .where(Transaction.sender_id == recipient_id)
+                .distinct()
+                .limit(MAX_GRAPH_NEIGHBOURS + 1)
+            )
+        )
+        if len(historical_devices) > MAX_GRAPH_NEIGHBOURS:
+            raise GraphCapacityError("Recipient device history exceeds supported capacity")
+        devices = historical_devices.union(device_ids)
+        limit = MAX_GRAPH_NEIGHBOURS + 1
+        observations = (
+            await session.execute(
+                select(Transaction.sender_id, Transaction.device_id)
+                .where(Transaction.device_id.in_(devices))
+                .distinct()
+                .limit(limit)
+            )
+        ).all()
+        registrations = list(
+            await session.scalars(
+                select(Account).where(Account.device_id.in_(historical_devices)).limit(limit)
+            )
+        )
+        if len(observations) == limit or len(registrations) == limit:
+            raise GraphCapacityError("Shared device roster exceeds supported capacity")
+        for account, device in observations:
+            graph.link_device(str(account), device)
+        for peer in registrations:
+            register_account(graph, peer)
+    return graph
 
 
 async def hydrate_graph(

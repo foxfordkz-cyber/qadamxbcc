@@ -253,8 +253,10 @@ class AntifraudEngine:
         allow_model_training: bool = True,
         use_virtual_wallet: bool = True,
         observe_familiar_calls: bool = False,
+        shared_graph_reads: bool = False,
     ) -> None:
         self.graph = graph
+        self.shared_graph_reads = shared_graph_reads
         self.redis = redis
         self.velocity = VelocityCounters(redis)
         self._tz = ZoneInfo(timezone)

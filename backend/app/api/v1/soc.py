@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
+from sqlalchemy import text
 
 from app.api.deps import EngineDep, SessionDep
 from app.models import TransactionStatus
@@ -17,9 +18,10 @@ from app.schemas.soc import (
 from app.services import recipient_flags, soc, submission_limits
 from app.services.edge_receipts import EdgeReceipts, edge_receipts
 from app.services.funds_trace import funds_trace
+from app.services.graph import GraphStore
 from app.services.recipient_lookback import PriorReceipts, prior_receipts
 from app.services.trace_anchors import TraceAnchors, recent_anchors
-from app.services.transfers import NotFoundError
+from app.services.transfers import NotFoundError, hydrate_graph
 
 router = APIRouter(prefix="/soc", tags=["soc"])
 
@@ -155,6 +157,17 @@ async def soc_graph(
     """Money-flow subgraph around an account, shaped for React Flow (nodes + edges)."""
     await engine.ensure_consistent()
     try:
-        return await soc.account_graph(session, engine.graph, account_id, depth=depth)
+        graph = engine.graph
+        if engine.shared_graph_reads:
+            graph = GraphStore()
+            # A read-only repeatable snapshot for the officer's graph, never for a debit.
+            if session.get_bind().dialect.name == "postgresql":
+                await session.execute(
+                    text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+                )
+            await hydrate_graph(
+                session, graph, include_observed_devices=engine.allow_demo_overrides
+            )
+        return await soc.account_graph(session, graph, account_id, depth=depth)
     except NotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
