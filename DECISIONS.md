@@ -18,6 +18,10 @@ The incumbent is the v3 call-aware forest. Train a regularized logistic speciali
 
 The first specialist missed three additional labelled scams in the sensor-loss cohort. The browser also sums all gaps of at least 1.5 seconds, while both legacy generators used the longest gap. Preserve that trial in `docs/evidence/familiar-call-first-trial.json`. Before recalculating any results, give the sensor-aligned revision a new version and independent seeds (training 204113, development 37013, test 72491, extra loss 78157). Keep the historical 640 unchanged for continuity. Retain the development objective and gates above. Both specialists remain observational for this release because the legacy-sensor stress test already found an additional miss. Publish the revision's benchmark verdict separately from its actual activation status.
 
+### Frozen model calibration cohort
+
+Bind seed 78114239, 20,000 generated rows and the feature order to a versioned SHA-256 before inspecting predictions or modifying the decision rules. At the fixed 0.50 cutoff, report the original simulation and a prior-shift sensitivity with prevalence 0.0005. Reliability, Brier and precision use the same class weights. Retain the trained forests and threshold unchanged.
+
 ### Jury CSV trial, 25 November 2026
 
 Run the existing blind-call scorer on accepted rows of anonymous UTF-8 CSVs, with at most 32 rows per jury run. Store only the latest frozen forecast in its private ephemeral room. Reject repeated identifiers on all affected rows. Bind the downloadable forecast and subsequent grade to the same SHA-256, and keep labels out of scoring. The room and its examples use synthetic transfers.

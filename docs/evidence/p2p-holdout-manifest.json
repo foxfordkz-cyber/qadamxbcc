@@ -1,0 +1,20 @@
+{
+  "seed": 78114239,
+  "rows": 20000,
+  "feature_names": [
+    "amount_ratio",
+    "night_hour",
+    "new_recipient",
+    "active_call",
+    "deposit_withdrawal",
+    "fan_in_velocity",
+    "transit_ratio",
+    "paste_detected",
+    "typing_speed_cps",
+    "hesitation_ms",
+    "hesitation_count",
+    "new_device"
+  ],
+  "encoding": "Concatenated row-major little-endian float32 features followed by uint8 labels",
+  "sha256": "1bc14cfe8681d84e3071828a15a34d449619f9312e9b0a1fe7ef2a3ef0b91282"
+}
