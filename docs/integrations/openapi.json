@@ -1152,6 +1152,58 @@
         }
       }
     },
+    "/api/v1/soc/session-observations": {
+      "post": {
+        "tags": [
+          "soc"
+        ],
+        "summary": "Record Bank Session",
+        "operationId": "record_bank_session_api_v1_soc_session_observations_post",
+        "parameters": [
+          {
+            "name": "X-BCC-SOC-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Bcc-Soc-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BankSessionObservation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/soc/feed": {
       "get": {
         "tags": [
@@ -4183,6 +4235,58 @@
           "checked_at"
         ],
         "title": "BankCallEvidence"
+      },
+      "BankSessionObservation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Account Id"
+          },
+          "network_token": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Network Token"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$",
+            "title": "Country"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_-]{0,31}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "account_id",
+          "network_token",
+          "country",
+          "observed_at"
+        ],
+        "title": "BankSessionObservation",
+        "description": "Pseudonymous signals from an authenticated bank-side session gateway."
       },
       "CallCheckRequest": {
         "properties": {

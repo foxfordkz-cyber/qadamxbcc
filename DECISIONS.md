@@ -37,3 +37,7 @@ The homepage takes its palette, heading face and shapes from bcc.kz as measured 
 ### Homepage shows the product, not decoration, 26 November 2026
 
 The team rejected the glossy clay icons, tinted backgrounds and floating objects as generated-looking. The homepage now presents the product the way Freedom Bank presents cards: large white product panels with a title, checked benefits and one green button beside a real-time render. The hero renders the Saq Bol card in three.js as deep-green plastic under the glass shield, which frosts while a transfer is held. Below, a features section shows eight working functions with small interface excerpts: call pause, call check, trusted person, message and link checks, payee name, mistaken-transfer return, prepayment warning and police report. Amber appears only in status dots and pills, never as a background. The ULB/Worldline Kaggle benchmark moves from the ignored `.local-checks` folder into `backend/scripts/ulb_card_benchmark.py` with its result in `docs/evidence`. The page reports it with its limits: European card data without call features, so it is not presented as evidence about BCC customers.
+
+## Bank-side session evidence
+
+Only an authenticated bank-side source can submit a tenant-keyed HMAC of the IP and coarse region. At most 30 days of observations are eligible and the next ingest purges expired rows. The P2P browser cannot supply these fields. Workplace NAT, shared Wi-Fi and travel alone add no risk. Either new region needs established history across two days.

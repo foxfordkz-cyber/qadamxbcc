@@ -14,7 +14,8 @@ from app.schemas.soc import (
     RecipientFlagResponse,
     RecipientFlagState,
 )
-from app.services import recipient_flags, soc, submission_limits
+from app.schemas.transfers import BankSessionObservation
+from app.services import network_context, recipient_flags, soc, submission_limits
 from app.services.edge_receipts import EdgeReceipts, edge_receipts
 from app.services.funds_trace import funds_trace
 from app.services.recipient_lookback import PriorReceipts, prior_receipts
@@ -58,6 +59,16 @@ async def trace_transfer(
     if result is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "transaction_not_found")
     return result
+
+
+@router.post("/session-observations", status_code=204)
+async def record_bank_session(
+    payload: BankSessionObservation, session: SessionDep, request: Request
+) -> Response:
+    if not request.app.state.settings.soc_api_key:
+        raise HTTPException(403, "bank_session_gateway_disabled")
+    await network_context.ingest(session, payload)
+    return Response(status_code=204, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/feed", response_model=FeedResponse)
