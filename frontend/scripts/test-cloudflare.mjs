@@ -81,18 +81,21 @@ function checkInitialLanguageSwitch(html) {
 }
 try {
   await checkPrivateCircle();
-  for (const pathname of ["/", "/mobile", "/pitch"]) {
+  const connect = await fetch("/connect?stand=wallet");
+  assert.equal(connect.status, 200, "/connect warm-up page");
+  for (const pathname of ["/", "/mobile", "/pitch", "/pitch/console"]) {
     const response = await fetch(pathname);
     assert.equal(response.status, 200, pathname);
     const html = await response.text();
     assert.ok(html.includes("Saq Bol"), pathname);
-    if (pathname !== "/pitch") {
+    if (!pathname.startsWith("/pitch")) {
       const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
       checkInitialLanguageSwitch(header);
       assert.match(header, /<img\b[^>]*src="\/saq-bol-mark\.svg"/, pathname);
-      const entry = pathname === "/" ? "https://saq-bol-mobile.onrender.com/wallet/" : "https://saq-bol-jury.onrender.com/";
+      // The Worker sends visitors through /connect, which wakes the Render stand before redirecting.
+      const entry = pathname === "/" ? "/connect?stand=wallet" : "/connect?stand=jury";
       assert.ok(header.includes(`href="${entry}"`), pathname);
-      assert.ok(html.includes('href="https://saq-bol-mobile.onrender.com/wallet/"'), pathname);
+      assert.ok(html.includes(pathname === "/" ? 'href="/connect?stand=soc"' : 'href="/connect?stand=wallet"'), pathname);
     }
     if (pathname === "/") {
       assert.match(html, /class="public-signin"[^>]*>Кіру/, "Public navigation must lead to sign-in");
@@ -104,7 +107,7 @@ try {
   for (const path of ["/soc", "/soc?workspace=full"]) {
     const response = await fetch(path, { redirect: "manual" });
     assert.ok([303, 307, 308].includes(response.status), "Hosted SOC requires wallet sign-in");
-    assert.equal(response.headers.get("location"), "https://saq-bol-mobile.onrender.com/soc/");
+    assert.equal(response.headers.get("location"), "/connect?stand=soc");
   }
   assert.equal((await (await fetch("/health")).json()).status, "ok");
   assert.deepEqual(await (await fetch("/health?tour=1")).json(), { source: "api" });
