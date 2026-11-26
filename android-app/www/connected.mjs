@@ -5,6 +5,7 @@ import { layoutNetwork, graphCamera } from "./network-graph.mjs";
 let camera, caseTransaction=null, caseNetwork=null;
 import { ledgerTime } from "./wallet-date.mjs";
 import { canUseTransferKey, verifyWithDevice } from "./transfer-key.mjs";
+import { brandReports } from "./brand-reports.mjs";
 import { disputeView } from "./dispute.mjs";
 import { walletUI, icon, cardThumbnail, formatTenge as amount } from "./wallet.mjs";
 import { serviceDesk } from "./service-desk.mjs";
@@ -402,7 +403,8 @@ async function open(next, id, remember=true) {
     return;
   }
   await perform(async () => {
-    if (next==="home" && gateway.role==="platform_admin") data=await gateway.request("/admin/metrics");
+    if(next==="brandReports") data=await gateway.request("/wallet/brand-reports");
+    else if (next==="home" && gateway.role==="platform_admin") data=await gateway.request("/admin/metrics");
     else if (next==="staff") data=await gateway.request("/admin/staff");
     else if (next==="callbacks") data=await gateway.request("/callbacks");
     else if (next === "home" || next === "history") {
@@ -1307,6 +1309,7 @@ function callLogView() {
 }
 
 const screens = {
+  brandReports:()=>brandReports(data,T,E),
   staff:()=>desk.staff(data),
   callbacks:()=>desk.callbacks(data),
   analytics:()=>wallet.analytics(data,selectedDay),
@@ -1418,7 +1421,8 @@ let socCasesAt="";
 {
   const legacy={...screens};
   const own={
-    home:()=>soc.home({summary,feed:data,filter,query,offset,projector}),
+    brandReports:()=>brandReports(data,T,E),
+    home:()=>soc.home({summary,feed:data,filter,query,offset,projector})+button("brand-reports",T("Сообщения о подделках","Жалған ресурстар туралы хабарламалар"),"secondary"),
     detail:()=>evaluation?soc.detail(evaluation,{timer:timerText(),callEvidence:officerCallEvidence(evaluation)}):"",
     cases:()=>soc.cases({data,queue:queueSnapshot,filter:caseFilter,offset:caseOffset,caseState,states:caseStates,updated:socCasesAt}),
     graph:()=>data?soc.graph(data):"",
@@ -1812,6 +1816,7 @@ root.addEventListener("click", async (event) => {
     return;
   }
   const act = b.dataset.action;
+  if(act==="brand-reports" && gateway.role==="admin"){await open("brandReports");return;}
   if (act==="callbacks" && gateway?.role==="client") { await open("callbacks"); return; }
   if (b.dataset.staff && page==="staff" && gateway?.role==="platform_admin") {
     const staff=data?.items?.find(s=>s.subject===b.dataset.staff);
@@ -2308,6 +2313,10 @@ root.addEventListener("submit", async (event) => {
       offset = 0;
     });
     if (gateway?.token) await open("home");
+    return;
+  }
+  if(form.id==="brand-report-form" && gateway.role==="admin") {
+    await perform(async()=>{data=await gateway.request("/wallet/brand-reports","POST",{indicator:fields.get("indicator"),basis:fields.get("basis")});});
     return;
   }
   if (form.id === "transfer-form") {

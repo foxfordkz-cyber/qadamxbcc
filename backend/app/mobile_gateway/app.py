@@ -273,6 +273,9 @@ def create_mobile_app(
     from app.mobile_gateway.wallet import install_wallet
 
     install_readiness(app)
+    from app.mobile_gateway.brand_inventory import install_brand_inventory
+
+    install_brand_inventory(app)
     install_wallet(app)
     install_staff(app, cfg)
     install_technical_metrics(app)

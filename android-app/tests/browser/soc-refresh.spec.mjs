@@ -11,11 +11,16 @@ for (const width of [393,1440]) test(`SOC ${width}: same receipt, graph evidence
   await page.setViewportSize({width,height:900});
   const errors=[];page.on("pageerror",e=>errors.push(e.message));
   let role="admin",summaryUnavailable=false;
+  let leads=[];
   await page.route("https://wallet.test/**",async route=>{
     const u=new URL(route.request().url());
     if(!u.pathname.startsWith("/mobile/v1/"))return route.fulfill({response:await route.fetch({url:new URL(u.pathname,baseURL).href})});
     const path=u.pathname.slice(11);let json={},status=200;
     if(path==="compatibility")return route.fulfill({json:{api_major:1,minimum_android_build:0}});
+    if(path==="wallet/brand-reports"){
+      if(route.request().method()==="POST")leads.push({...route.request().postDataJSON(),observed_at:"2026-11-26T10:00:00Z"});
+      return route.fulfill({json:leads});
+    }
     if(path==="auth/login")json={role,subject:role,token:"fixture-session"};
     else if(path==="session"&&route.request().method()==="DELETE")return route.fulfill({status:204});
     else if(path==="inbox")json={items:[]};
@@ -41,6 +46,12 @@ for (const width of [393,1440]) test(`SOC ${width}: same receipt, graph evidence
   };
   await login("admin_demo");
   await expect(page.locator(".sx-shell")).toBeVisible();
+  await page.locator('[data-action="brand-reports"]').click();
+  await page.locator('#brand-report-form [name="indicator"]').fill("fixture.example");
+  await page.locator('#brand-report-form button').click();
+  await page.getByText("Черновик обращения на удаление").click();
+  await expect(page.locator("#app")).toContainText("fixture[.]example");
+  await page.locator('[data-nav="home"]').first().click();
   await expect(page.locator(`[data-detail="${id}"]`)).toBeEnabled();
   await expect(page.locator(".sx-kpi").filter({hasText:"Участники в ленте"})).toContainText("2");
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

@@ -134,7 +134,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-sms"><span>{L("miniSms")}</span><small><MessageSquareWarning size={14} />{L("miniSmsVerdict")}</small></div>
-          <h3>{L("fSmsTitle")}</h3><p>{L("fSmsText")}</p>
+          <h3>{L("fSmsTitle")}</h3><p>{L("fSmsText")}</p><a href={wallets.socUrl}>{lang === "kk" ? "SOC · жалған домендер мен Telegram аккаунттары туралы хабарлау" : "SOC · журнал подозрительных доменов и Telegram-аккаунтов"}</a>
         </article>
         <article className="feat-card">
           <div className="feat-mini mini-payee"><span><UserCheck size={16} />{L("miniPayeeBank")}</span><small>{L("miniPayeeContact")}</small></div>
