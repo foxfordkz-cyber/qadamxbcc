@@ -87,36 +87,39 @@ export class Gateway {
     if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
     const timeoutMs = path === "/auth/login" || path === "/sessions" ? 120000 : 20000;
     const sentToken = this.token;
-    let response;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      response = await this.fetcher(`${this.origin}/mobile/v1${path}`, {
+      const response = await this.fetcher(`${this.origin}/mobile/v1${path}`, {
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         cache: "no-store",
         credentials: this.webSession ? "same-origin" : "omit",
         redirect: "error",
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: controller.signal,
       }, timeoutMs);
-    } catch {
-      throw new GatewayError(0);
-    } // Never replay a mutation with an unknown outcome.
-    if (!response.ok) {
-      if (response.status === 401 && this.token === sentToken) {
-        this.token = null;
-        this.role = null;
-        if (sentToken) this.onExpired?.();
+      if (!response.ok) {
+        if (response.status === 401 && this.token === sentToken) {
+          this.token = null;
+          this.role = null;
+          if (sentToken) this.onExpired?.();
+        }
+        if (response.status === 409 && (await response.json().catch(() => null))?.detail === "disputed_amount_reserved") {
+          throw Object.assign(new GatewayError(409), {code:"disputed_amount_reserved"});
+        }
+        throw new GatewayError(
+          response.status,
+          response.headers.get("Retry-After"),
+        );
       }
-      if (response.status === 409 && (await response.json().catch(() => null))?.detail === "disputed_amount_reserved") {
-        throw Object.assign(new GatewayError(409), {code:"disputed_amount_reserved"});
-      }
-      throw new GatewayError(
-        response.status,
-        response.headers.get("Retry-After"),
-      );
+      return response.status === 204 ? null : await response.json();
+    } catch (error) {
+      if (error instanceof GatewayError) throw error;
+      throw new GatewayError(error instanceof SyntaxError ? 502 : 0);
+    } finally {
+      clearTimeout(timeout);
     }
-    if (response.status === 204) return null;
-    return response.json();
   }
   async login(code) {
     const result = await this.request("/sessions", "POST", { code });
