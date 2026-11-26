@@ -114,7 +114,9 @@ function languageButtons() {
   return `<div class="languages" role="group" aria-label="Тіл / Язык"><button data-lang="kk" aria-pressed="${state.language === "kk"}">ҚАЗ</button><button data-lang="ru" aria-pressed="${state.language === "ru"}">РУС</button></div>`;
 }
 const T=(ru,kk)=>state.language==="ru"?ru:kk;
-const wallet=walletUI({T,E:esc,amount:money,when:ledgerTime,button:action,status:t});
+// Ledger pills use short labels; the long scenario titles stay on the receipt screen.
+const ledgerStatus={approved:["Выполнен","Орындалды"],cooling_off:["На проверке","Тексерілуде"],blocked:["Отклонён","Қабылданбады"],cancelled:["Отменён","Тоқтатылды"]};
+const wallet=walletUI({T,E:esc,amount:money,when:ledgerTime,button:action,status:s=>ledgerStatus[s]?T(...ledgerStatus[s]):t(s)});
 let days=7,selection=null,hideBalance=false,historyFilter={q:"",status:"",direction:"",day:"",through:"",days:""};
 function home() {
   const local=offlineWallet(state);

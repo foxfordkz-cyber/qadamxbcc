@@ -38,6 +38,25 @@ export const icon = (k) =>
   '<svg aria-hidden="true" viewBox="0 0 24 24" class="wi"><path d="' +
   (paths[k] || paths.arrow) +
   '"/></svg>';
+// Line pictograms for the home actions: 24px, stroke 2, round caps.
+const glyphs = {
+  transfer: '<path d="M7 7h11m-3-3 3 3-3 3M17 17H6m3-3-3 3 3 3"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
+  shield: '<path d="M12 3 5 6v5.5c0 4.3 3 7.8 7 9.5 4-1.7 7-5.2 7-9.5V6z"/><path d="m9 12 2.2 2.2L15.5 10"/>',
+  alert: '<path d="M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V5a1 1 0 0 1 1-1z"/><path d="M12 7.5v4M12 14.5h.01"/>',
+  plane: '<path d="M21 3 10.5 13.5"/><path d="M21 3 14.5 21l-4-7.5L3 9.5z"/>',
+  chevron: '<path d="m9 6 6 6-6 6"/>',
+};
+const glyph = (k) =>
+  '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  (glyphs[k] || glyphs.chevron) + "</svg>";
+// The Saq Bol S-mark from mark.svg, drawn white for the card face.
+const cardMark =
+  '<svg class="bank-card-mark" viewBox="12 10 40 44" aria-hidden="true"><path fill="#fff" d="M50 12H29.6C20.5 12 14 16.9 14 24.2c0 5.2 2.9 8.5 8.8 10.7l2.7 1 7-7.6-5.9-2.1c-2-.7-2.9-1.4-2.9-2.6 0-1.8 1.9-3 5.3-3h13.2Z"/>' +
+  '<path fill="#fff" fill-opacity=".78" d="M14 52h20.4C43.5 52 50 47.1 50 39.8c0-5.2-2.9-8.5-8.8-10.7l-2.7-1-7 7.6 5.9 2.1c2 .7 2.9 1.4 2.9 2.6 0 1.8-1.9 3-5.3 3H21.8Z"/></svg>';
+const contactless =
+  '<svg class="bank-card-nfc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">' +
+  '<path d="M6.5 9a4.3 4.3 0 0 1 0 6"/><path d="M10 6.5a8 8 0 0 1 0 11"/><path d="M13.5 4a11.6 11.6 0 0 1 0 16"/><path d="M17 1.8a15 15 0 0 1 0 20.4"/></svg>';
 const initials = (name) =>
   String(name || "Q")
     .trim()
@@ -115,13 +134,23 @@ export function walletUI({ T, E, amount, when, button, status }) {
   }
   function protectionCard(stats, a) {
     const p = protection(stats, a);
-    return `<button class="protection-index" data-action="safety"><b>${E(p.title)}</b>` +
-      `${p.checks ? `<span>${E(p.checks)}</span>` : ""}<small>${T("Открыть защиту","Қорғанысты ашу")}</small>` +
-      `<i class="art art-shield" aria-hidden="true"></i><i class="ring" aria-hidden="true"></i></button>`;
+    const held = a?.active_pause || a?.pending_call;
+    return `<button class="protection-index${held ? " held" : ""}" data-action="safety"><i class="pi-icon" aria-hidden="true">${glyph("shield")}</i>` +
+      `<span class="pi-text"><b>${E(p.title)}</b>${p.checks ? `<span>${E(p.checks)}</span>` : ""}<small>${T("Открыть защиту","Қорғанысты ашу")}</small></span>` +
+      `<i class="pi-go" aria-hidden="true">${glyph("chevron")}</i></button>`;
+  }
+  // A card face in true ID-1 proportions. Number and expiry come from the account; nothing is invented.
+  function bankCard(a, hidden) {
+    const last4 = hidden ? "••••" : E(a.card_last4 || "••••");
+    const expiry = !hidden && /^\d{2}\/\d{2}$/.test(String(a.card_expiry || "")) ? E(a.card_expiry) : "••/••";
+    return `<div class="bank-card" role="img" aria-label="${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${last4}">` +
+      `<span class="bank-card-brand">${cardMark}<b>Saq Bol</b></span>${contactless}<i class="bank-card-chip" aria-hidden="true"></i>` +
+      `<span class="bank-card-number">•••• ${last4}</span><span class="bank-card-holder">${E(a.display_name || "")}</span>` +
+      `<span class="bank-card-expiry">${expiry}</span></div>`;
   }
   function card(a, hidden) {
     return `<article class="q-card"><div class="account-heading"><h2>${T("Мои счета", "Менің шоттарым")}</h2><button class="balance-privacy" data-action="mask-balance">${icon("eye")}<span>${hidden ? T("Показать баланс", "Балансты көрсету") : T("Скрыть баланс", "Балансты жасыру")}</span></button></div>
-      <div class="q-balance"><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><small>${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</small>${!hidden && Number(a.disputed_kzt)>0 ? "<small>"+T("Доступно", "Қолжетімді")+" "+amount(a.available_kzt)+"</small>" : ""}</div><i class="art art-card" aria-hidden="true"></i></article>`;
+      <div class="q-balance"><strong>${hidden ? "•••••• ₸" : amount(a.balance)}</strong><small>${T("Карта Saq Bol", "Saq Bol картасы")} · •••• ${hidden ? "••••" : E(a.card_last4 || "••••")}</small>${!hidden && Number(a.disputed_kzt)>0 ? "<small>"+T("Доступно", "Қолжетімді")+" "+amount(a.available_kzt)+"</small>" : ""}</div>${bankCard(a, hidden)}</article>`;
   }
   // Anti-fraud tips; each opens an existing protection screen.
   function stories() {
@@ -141,10 +170,10 @@ export function walletUI({ T, E, amount, when, button, status }) {
     const actions = [
       ["history", "clock", T("История", "Тарих")],
       ["safety", "shield", T("Защита", "Қорғаныс")],
-      offline ? ["check", "search", T("Проверка","Тексеру")] : ["open-guardian", "plane", "Telegram"],
+      offline ? ["check", "alert", T("Проверка","Тексеру")] : ["open-guardian", "plane", "Telegram"],
     ];
-    const greet = `<header class="wallet-greeting"><h1><button class="profile-entry" data-action="settings" aria-label="${T("Открыть профиль", "Профильді ашу")} · ${E(a.display_name)}"><span class="avatar" aria-hidden="true">${E(initials(a.display_name))}</span><span><strong>${E(a.display_name)}</strong><small>saq bol · ${T("Учебный счёт", "Оқу шоты")}</small></span></button></h1><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button>${offline?"":`<button data-action="inbox" aria-label="${T("Уведомления", "Хабарламалар")}">${icon("bell")}</button>`}</header>`;
-    const links = actions.map(([k, art, n]) => `<button data-action="${k}"><i class="art art-${art}" aria-hidden="true"></i><span>${n}</span></button>`).join("");
+    const greet = `<header class="wallet-greeting"><h1><button class="profile-entry" data-action="settings" aria-label="${T("Открыть профиль", "Профильді ашу")} · ${E(a.display_name)}"><span class="avatar" aria-hidden="true">${E(initials(a.display_name))}</span><span><small>${T("Добрый день", "Қайырлы күн")}</small><strong>${E(a.display_name)}</strong></span></button></h1><button class="locale-short" data-action="language" aria-label="${T("Сменить язык", "Тілді ауыстыру")}">${T("ҚАЗ", "РУС")}</button>${offline?"":`<button data-action="inbox" aria-label="${T("Уведомления", "Хабарламалар")}">${icon("bell")}</button>`}</header>`;
+    const links = actions.map(([k, g, n]) => `<button data-action="${k}"><i class="dock-icon" aria-hidden="true">${glyph(g)}</i><span>${n}</span></button>`).join("");
     const pause = a.active_pause
       ? `<button class="wallet-check" data-detail="${E(a.active_pause)}">${icon("history")}<span>${T("Перевод на проверке", "Аударым тексерілуде")}</span>${icon("arrow")}</button>`
       : "";
@@ -152,9 +181,9 @@ export function walletUI({ T, E, amount, when, button, status }) {
       ? `<button class="wallet-check" data-call-id="${E(a.pending_call)}">${icon("call")}<span>${T("Проверка после звонка", "Қоңыраудан кейінгі тексеру")}</span>${icon("arrow")}</button>`
       : "";
     const people = a.recipients
-      .map((r, i) => `<button data-payee="${E(r.phone)}"><i class="person p${i % 4}" aria-hidden="true">${E(initials(r.name))}</i><span class="sr-only">${E(r.name)}</span></button>`)
+      .map((r, i) => `<button data-payee="${E(r.phone)}" aria-label="${E(r.name)}"><i class="person p${i % 4}" aria-hidden="true">${E(initials(r.name))}</i><span class="person-name" aria-hidden="true">${E(String(r.name || "").trim().split(/\s+/)[0])}</span></button>`)
       .join("");
-    const dock = '<div class="action-dock"><button class="transfer-primary" data-action="transfer"><i class="art art-transfer" aria-hidden="true"></i><span>'+T("Перевести","Аудару")+'</span></button><div class="wallet-quick">'+links+'</div></div>';
+    const dock = '<div class="action-dock"><button class="transfer-primary" data-action="transfer"><i class="dock-icon" aria-hidden="true">'+glyph("transfer")+'</i><span>'+T("Перевести","Аудару")+'</span></button><div class="wallet-quick">'+links+'</div></div>';
     return (
       `<section class="home-hero">${greet}${card(a, hidden)}</section>` +
       '<div class="wallet-dashboard"><div class="wallet-overview"><div class="wallet-account">' + dock +
@@ -174,7 +203,7 @@ export function walletUI({ T, E, amount, when, button, status }) {
         : button("retry-summary",T("Сводка недоступна · Повторить","Жиынтық қолжетімсіз · Қайталау"),"secondary")) +
       `<p class="fine">${T("Все данные учебные", "Барлық дерек оқу үшін")}</p>` +
       '<section class="wallet-section wallet-recipients">' + heading(T("Кому перевести","Кімге аударамыз")) +
-      (people ? '<div class="people">' + people + `<button class="people-add" data-action="new-recipient" aria-label="${T("Новый перевод", "Жаңа аударым")}">+</button></div>` : '<p class="empty">'+T("Учебные получатели пока не добавлены.","Оқу алушылары әзірге қосылмаған.")+'</p>') +
+      (people ? '<div class="people">' + people + `<button class="people-add" data-action="new-recipient" aria-label="${T("Новый перевод", "Жаңа аударым")}"><i aria-hidden="true">+</i><span class="person-name" aria-hidden="true">${T("Новый", "Жаңа")}</span></button></div>` : '<p class="empty">'+T("Учебные получатели пока не добавлены.","Оқу алушылары әзірге қосылмаған.")+'</p>') +
       "</section></div></div>"
     );
   }

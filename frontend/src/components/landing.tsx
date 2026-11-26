@@ -15,7 +15,7 @@ import { FxCard } from "./fx-card";
 import type { DropStage } from "./drop-scene";
 import { ScenarioPolicy } from "./scenario-policy";
 import { ModelTrial } from "./model-trial";
-import { SettlementTrial } from "./settlement-trial";
+import { CollectionComparison } from "./collection-comparison";
 import "./landing.css";
 
 const dropSteps = [1, 2, 3, 4] as const;
@@ -33,7 +33,7 @@ const feed = [
   { time: "12:58", from: "Мұрат К.", to: "Дархан Б.", amount: "300 000 ₸", status: "blocked", score: 88 },
 ] as const;
 /** Anchors inside the collapsed analysis that README and docs link to directly. */
-const analysisAnchors = ["analysis", "risk-policy", "settlement-proof", "model-trial"];
+const analysisAnchors = ["analysis", "risk-policy", "collection-comparison", "settlement-proof", "model-trial"];
 const GITHUB = "https://github.com/foxfordkz-cyber/qadamxbcc";
 
 export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
@@ -65,7 +65,10 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
       const id = decodeURIComponent(window.location.hash.slice(1));
       if (!analysisAnchors.includes(id) || !analysis.current) return;
       analysis.current.open = true;
-      requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
+      // Open every collapsed block around the target, e.g. the settlement proof inside the collection comparison.
+      const target = document.getElementById(id);
+      for (let node = target; node; node = node.parentElement) if (node instanceof HTMLDetailsElement) node.open = true;
+      requestAnimationFrame(() => target?.scrollIntoView({ block: "start" }));
     };
     reveal();
     window.addEventListener("hashchange", reveal);
@@ -252,7 +255,7 @@ export function Landing({ tourEnabled }: { tourEnabled: boolean }) {
           <ChevronDown className="land-more-chevron" size={22} aria-hidden="true" />
         </summary>
         <ScenarioPolicy />
-        <SettlementTrial />
+        <CollectionComparison />
         <ModelTrial />
       </details>
     </section>

@@ -18,9 +18,10 @@
   /* bcc.kz green card, the same object as the wallet's 3D card (public/media/3d/card.webp). */
   position: relative; width: 100%; aspect-ratio: 1.586; border-radius: 6.5% / 10.3%; overflow: hidden;
   background:
-    linear-gradient(160deg, rgba(255, 255, 255, .22) 0%, rgba(255, 255, 255, 0) 38%),
-    linear-gradient(135deg, #19C08B 0%, #00AB75 46%, #008A60 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .45) inset, 0 -1px 0 rgba(0, 0, 0, .12) inset, 0 30px 50px -30px rgba(0, 80, 54, .6), 0 12px 24px -16px rgba(0, 60, 40, .4);
+    linear-gradient(160deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, 0) 40%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 6px),
+    linear-gradient(135deg, #0E5C44 0%, #0A4736 55%, #073426 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .45) inset, 0 -1px 0 rgba(0, 0, 0, .12) inset, 0 30px 50px -30px rgba(7, 52, 38, .7), 0 12px 24px -16px rgba(7, 52, 38, .45);
   transform: rotateX(calc(var(--py) * -9deg)) rotateY(calc(var(--px) * 12deg));
   transition: transform .5s var(--ease-out), box-shadow .8s;
   transform-style: preserve-3d;

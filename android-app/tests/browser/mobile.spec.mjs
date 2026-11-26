@@ -27,7 +27,7 @@ test("a WebView without request cancellation keeps the browser recovery link", a
 test("welcome exposes personal sign-in and explains unavailable deployment", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".sign-hero")).toContainText("Saq Bol × BCC");
-  await expect(page.locator(".sign-heading h1")).toHaveText(/Кабинетке кіру|Вход в кабинет/);
+  await expect(page.locator(".sign-heading h1")).toHaveText(/Saq Bol-ға кіру|Вход в Saq Bol/);
   await page.locator('[name="login"]').fill("client_demo");
   await page.locator('[name="password"]').fill("example");
   await page.locator('[data-action="show-password"]').click();
@@ -65,7 +65,8 @@ for (const [preset, status] of [
     }
     await page.reload();
     await page.locator('.bottom-nav [data-route="history"]').click();
-    await expect(page.locator(".ledger-row")).toHaveCount(1);
+    // The two built-in sample operations are always listed; the visitor's example appears exactly once.
+    await expect(page.locator('.ledger-row:not([data-detail^="sample-"])')).toHaveCount(1);
     expect(mutations).toEqual([]);
   });
 }
