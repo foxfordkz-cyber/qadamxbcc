@@ -38,7 +38,7 @@ const SLIDES: Slide[] = [
   { id: "soc", tone: "deep", seconds: 20, note: ["Оператор бүкіл желіні көреді: аналитика 7/30/90 күн, CSV, екі тараптың түсіндірмесі, банкомат, жалған домендер.", "Оператор видит всю сеть: аналитика 7/30/90 дней, CSV, объяснения обеих сторон, банкомат, поддельные домены."] },
   { id: "value", tone: "light", seconds: 25, note: ["BCC не алады: ақша шоттан шықпайды, ереже дәл сәтте жұмыс істейді, SOC жылдам, зейнеткерлерге түсінікті, банк өзегіне тимейміз.", "Что получает BCC: деньги не уходят, правило срабатывает вовремя, SOC быстрее, понятно пенсионерам, ядро банка не трогаем."] },
   { id: "arch", tone: "light", seconds: 25, note: ["FastAPI, PostgreSQL 16, Redis 7, NetworkX. Скоринг өзегі p95 — 5 мс. Әр балдың себебі бар.", "FastAPI, PostgreSQL 16, Redis 7, NetworkX. Ядро скоринга p95 — 5 мс. У каждого балла есть причина."] },
-  { id: "proof", tone: "deep", seconds: 20, note: ["57/60 тоқтатылды, 4/60 артық кідіріс. 1,17 %-ды жасырмаймыз — сол үшін модель жалғыз шешпейді.", "57/60 остановлено, 4/60 лишних пауз. 1,17 % не прячем — поэтому модель не решает в одиночку."] },
+  { id: "proof", tone: "deep", seconds: 20, note: ["57/60 тоқтатылды. 26 қарашада нақты Honor телефоны мен Telegram-да 900 000 ₸ шотта қалды.", "57/60 остановлено. 26 ноября на настоящем Honor и в Telegram 900 000 ₸ остались на счёте."] },
   { id: "plan", tone: "light", seconds: 15, note: ["Shadow-пилот, үш ай: алдымен көлеңкеде есептейміз, содан кейін салыстырамыз, соңында клиенттердің бір бөлігіне қосамыз. BCC-тен үш нәрсе керек.", "Shadow-пилот, три месяца: сначала считаем в тени, затем сравниваем, потом включаем для части клиентов. От BCC нужны три вещи."] },
   { id: "close", tone: "deep", seconds: 15, note: ["(Баяу:) Алаяқ адамды көндіре алады. Saq Bol сол адамға 15 минут, қасында жақын адамды және бүкіл желіні көретін операторды береді. Рақмет!", "(Медленно:) Мошенник может уговорить человека. Saq Bol даёт ему 15 минут, близкого рядом и оператора, который видит всю сеть. Спасибо!"] },
 ];
@@ -428,7 +428,7 @@ function MetricArt({ i, p }: { i: number; p: Tr }) {
   if (i === 4) return <div className="sh-stackbar" aria-hidden="true">
     {([["Backend", 829], ["Frontend", 214], ["Android", 55]] as const).map(([name, n], k) => <span key={name} style={{ flexGrow: n, "--k": k } as CSSProperties}><b>{n}</b>{name}</span>)}
   </div>;
-  return <div className="sh-dots sh-dots-rare" aria-hidden="true">{Array.from({ length: 85 }, (_, k) => <i key={k} className={k === 42 ? "on" : undefined} style={{ "--k": k } as CSSProperties} />)}</div>;
+  return <div className="sh-chain" aria-hidden="true">{["Honor X6", "Telegram", "SOC", p(["Ақша орнында", "Деньги на месте"])].map((step, k) => <span key={step} style={{ "--k": k } as CSSProperties}>{step}</span>)}</div>;
 }
 
 function Proof({ on, p }: { on: boolean; p: Tr }) {
