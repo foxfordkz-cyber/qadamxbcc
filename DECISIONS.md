@@ -53,3 +53,7 @@ Render may return HTML before it can serve the wallet. The independent website p
 ## Multiworker graph authority
 
 BCC_SHARED_GRAPH_READS selects committed SQL aggregates for each evaluation and release and a repeatable PostgreSQL snapshot for the SOC graph. Each transfer receives its own graph view. Redis continues to deduplicate settled velocity by transfer UUID.
+
+## Offline scoring parity
+
+Both test suites independently execute five shared cases and compare the complete rule-code set, numeric score and outcome. The model and Redis engine run in the Python test. Offline examples only have the scenario coverage exercised here.
