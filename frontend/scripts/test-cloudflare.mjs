@@ -25,7 +25,7 @@ const walletConfig = JSON.parse(await readFile("src/lib/connected-wallet.json", 
 const teamProbe = new URL(walletConfig.readiness.team.url, walletConfig.url).href;
 const juryProbe = new URL(walletConfig.readiness.jury.url, walletConfig.juryUrl).href;
 const walletRequests = [];
-let walletResponds = false;
+let walletReply = "redirect";
 const mf = new Miniflare(await convertV4MiniflareOptions({
   name: config.name, modules, modulesRoot: directory,
   compatibilityDate: config.compatibility_date, compatibilityFlags: config.compatibility_flags,
@@ -39,7 +39,10 @@ const mf = new Miniflare(await convertV4MiniflareOptions({
       assert.equal(request.method, "GET");
       assert.equal(request.headers.get("cookie"), null);
       assert.equal(request.headers.get("authorization"), null);
-      if (!walletResponds) return Response.redirect("https://warming.example/");
+      if (walletReply === "redirect") return Response.redirect("https://warming.example/");
+      if (walletReply === "hibernating") {
+        return new Response(null, { status: 429, headers: { "x-render-routing": "hibernate-rate-limited" } });
+      }
       return Response.json(url.href === teamProbe ? { status: "ready" } : { status: "ok", mode: "synthetic-jury" });
     }
     assert.equal(url.origin, upstream);
@@ -103,7 +106,12 @@ try {
   assert.equal(cold.status, 503);
   assert.equal(cold.headers.get("retry-after"), "4");
   assert.deepEqual(await cold.json(), { ready: false });
-  walletResponds = true;
+  walletReply = "hibernating";
+  const limited = await readiness("wallet");
+  assert.equal(limited.status, 429);
+  assert.equal(limited.headers.get("retry-after"), null);
+  assert.deepEqual(await limited.json(), { ready: false, open_directly: true });
+  walletReply = "ready";
   for (const stand of ["wallet", "soc", "jury", "trial"]) {
     const ready = await readiness(stand);
     assert.equal(ready.status, 200, stand);
@@ -111,7 +119,7 @@ try {
     assert.deepEqual(await ready.json(), { ready: true });
   }
   assert.equal((await readiness("unknown")).status, 400);
-  assert.deepEqual(walletRequests, [teamProbe, teamProbe, teamProbe, juryProbe, juryProbe]);
+  assert.deepEqual(walletRequests, [teamProbe, teamProbe, teamProbe, teamProbe, juryProbe, juryProbe]);
   for (const pathname of ["/", "/mobile", "/pitch", "/pitch/console", "/pitch/web"]) {
     const response = await fetch(pathname);
     assert.equal(response.status, 200, pathname);

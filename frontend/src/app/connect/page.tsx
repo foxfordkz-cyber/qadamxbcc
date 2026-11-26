@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LanguageSwitch } from "@/components/language-switch";
 import { LocaleProvider, useLocale } from "@/lib/i18n";
-import { walletDestination } from "@/lib/wallet-warmup";
+import { shouldOpenWallet, walletDestination } from "@/lib/wallet-warmup";
 
 function WalletEntry() {
   const params = useSearchParams();
@@ -29,7 +29,7 @@ function WalletEntry() {
         const response = await fetch("/api/wallet-readiness?stand=" + encodeURIComponent(stand), {
           cache: "no-store", credentials: "omit", signal: controller.signal,
         });
-        if (response.ok && (await response.json()).ready === true && !controller.signal.aborted) {
+        if (await shouldOpenWallet(response) && !controller.signal.aborted) {
           clearTimeout(timeout);
           window.location.replace(destination!);
           return;
