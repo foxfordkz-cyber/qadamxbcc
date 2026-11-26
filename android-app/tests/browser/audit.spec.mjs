@@ -401,13 +401,18 @@ test("the payer can submit only their own structured statement from the transfer
   await expect(page.locator("#app")).not.toContainText("Объяснения участников");
 });
 
-test("a jury invitation submits one attributed reply without opening a wallet",async({page})=>{
+for(const routed of [false,true]) test("a jury invitation submits one attributed reply "+(routed?"in a fresh browser":"inside a room"),async({page,context,baseURL})=>{
   const code="A".repeat(43);
   let payload;
+  if(routed)await context.addCookies([{name:"unrelated",value:"fixture",url:baseURL}]);
   await page.route("**/mobile/v1/wallet/jury-interview",async route=>{
+    if(routed){
+      expect(await route.request().headerValue("x-saq-interview")).toBe("room-selector");
+      expect(await route.request().headerValue("cookie")).toBeNull();
+    }
     payload=route.request().postDataJSON();await route.fulfill({json:{audience:"recipient"}});
   });
-  await page.goto("/counterparty.html#"+ids[0]+"."+code);
+  await page.goto("/counterparty.html#"+(routed?"room-selector.":"")+ids[0]+"."+code);
   await expect(page.locator("#title")).toContainText("Екінші қатысушы");
   expect(new URL(page.url()).hash).toBe("");
   await page.locator("#language").click();

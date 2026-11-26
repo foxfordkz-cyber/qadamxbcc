@@ -1828,8 +1828,9 @@ root.addEventListener("click", async (event) => {
     if (!transfer) return;
     await perform(async()=>{
       const issue=await gateway.request("/wallet/participant-statements/"+transfer+"/jury-invite","POST",{});
-      const url=new URL("/wallet/counterparty.html",location.origin);
-      url.hash=issue.fragment;interviewHref=url.href;
+      const url=new URL(issue.routing ? "/jury/interview/counterparty.html" : "/wallet/counterparty.html",location.origin);
+      url.hash=issue.routing ? issue.routing+"."+issue.fragment : issue.fragment;
+      interviewHref=url.href;
     });return;
   }
   if (act?.startsWith("statement-") && participantView && gateway.role === "client") {

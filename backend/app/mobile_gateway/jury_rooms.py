@@ -10,7 +10,7 @@ from posixpath import normpath
 from time import monotonic
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -34,6 +34,7 @@ class Room:
     active: int = 0
     trial_forecast: bytes | None = None
     contact_invite: str = field(default_factory=lambda: secrets.token_urlsafe(32))
+    interview_route: str = field(default_factory=lambda: secrets.token_urlsafe(18))
     contact_session: str = field(default_factory=lambda: secrets.token_urlsafe(32))
 
 
@@ -311,6 +312,19 @@ def create_jury_app(
     install_trial(app, pool)
     app.mount("/jury/visuals", StaticFiles(directory=WEB_ASSETS / "media", check_dir=False))
 
+    @app.get("/jury/interview/{asset}")
+    async def interview_asset(asset: str) -> Response:
+        if asset not in {"counterparty.html", "counterparty.mjs", "mobile.css"}:
+            return Response(status_code=404)
+        file = WEB_ASSETS / asset
+        if not file.is_file():
+            return Response(status_code=404)
+        return FileResponse(
+            file,
+            media_type="text/javascript" if asset.endswith(".mjs") else None,
+            headers={"Referrer-Policy": "no-referrer"},
+        )
+
     @app.api_route("/health", methods=["GET", "HEAD"])
     async def health() -> JSONResponse:
         try:
@@ -453,10 +467,40 @@ def create_jury_app(
         ):
             await JSONResponse({"detail": "not_found"}, status_code=404)(scope, receive, send)
             return
-        with pool.borrow(request.cookies.get(ROOM_COOKIE)) as room:
+        room_key = request.cookies.get(ROOM_COOKIE)
+        selector = request.headers.get("x-saq-interview")
+        if selector is not None:
+            # This reference routes a single reply. It cannot open a wallet or create a session.
+            if (
+                path != "/mobile/v1/wallet/jury-interview"
+                or request.method != "POST"
+                or not same_origin(request)
+            ):
+                await JSONResponse({"detail": "invalid_interview"}, 403)(scope, receive, send)
+                return
+            room_key = next(
+                (
+                    key
+                    for key, candidate in pool.rooms.items()
+                    if candidate.interview_route == selector
+                ),
+                None,
+            )
+        with pool.borrow(room_key) as room:
             if room:
+                if path.endswith("/jury-invite") and request.method == "POST":
+                    scope = {
+                        **scope,
+                        "state": {
+                            **scope.get("state", {}),
+                            "jury_interview_route": room.interview_route,
+                        },
+                    }
                 await room.app(scope, receive, send)
                 return
+        if selector is not None:
+            await JSONResponse({"detail": "invalid_interview"}, 403)(scope, receive, send)
+            return
         response: Response = (
             redirect("/jury")
             if is_wallet
