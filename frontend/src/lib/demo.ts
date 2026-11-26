@@ -1,5 +1,6 @@
 import { latencySummary } from "./latency-summary";
 import { ids } from "./demo-ids";
+import contract from "./demo-decision-contract.json";
 import type { PriorReceiptQuery, PriorReceipts } from "./recipient-lookback";
 import { feedQuerySchema, type FeedQuery } from "./contracts";
 import { countBlockedHubs } from "./feed-summary";
@@ -184,7 +185,8 @@ export function evaluateDemo(input: TransferInput, now = Date.now(), capacity = 
   if (ctx.active_call && (ctx.from_deposit || isNew)) reasons.push(reason("SOCIAL_ENGINEERING_PATTERN", "behavioral", 10, "Белгілер әлеуметтік инженерияға сәйкес келеді.", "Сочетание сигналов указывает на социальную инженерию."));
   const behavioral = Math.min(ctx.duress ? 100 : 74, reasons.reduce((sum, r) => sum + r.score_delta, 0));
   const t1 = performance.now();
-  if (recipient.id === ids.hub) reasons.push(
+  const network = contract.networks.find(row => row.account === recipient.id);
+  if (network && network.senders >= 12 && network.transit_ratio >= 0.7) reasons.push(
     reason("DROP_HUB_FAN_IN", "velocity", 35, "Демо граф: 30 минутта 12 кіріс аударым.", "Демо граф: 12 входящих переводов за 30 минут."),
     reason("RECIPIENT_MANY_SENDERS", "graph", 20, "Алушымен 12 жіберуші байланысқан.", "С получателем связаны 12 отправителей."),
     reason("RECIPIENT_SHARED_DEVICE", "graph", 15, "Екі шот бір құрылғыны пайдаланады.", "Два счёта используют общее устройство."),
@@ -360,11 +362,12 @@ export function feedDemo(query: Partial<FeedQuery> = {}): Feed {
 export function graphDemo(center: string, depth = 2, isFlagged = (id: string) => flags().get(id)?.flagged === true): Graph {
   const account = accounts.find(a => a.id === center);
   if (!account) throw new DemoError(404, "notFound");
-  const isHub = center === ids.hub;
+  const network = contract.networks.find(row => row.account === center);
+  const isHub = !!network && network.senders >= 12 && network.transit_ratio >= 0.7;
   const data = (party: Party, patch: Partial<GraphData> = {}): GraphData => ({ label: party.full_name, role: "normal", depth: 1, device_id: `device-${party.id.slice(-4)}`, flagged: isFlagged(party.id), suspected_mule: false, in_degree: 0, out_degree: 1, in_weight: 0, out_weight: 90000, transit_ratio: 0, shared_device_accounts: 0, ...patch });
-  const nodes: Graph["nodes"] = [{ id: center, type: "account", position: { x: 0, y: 0 }, data: data(account, { role: "center", depth: 0, suspected_mule: isHub, in_degree: isHub ? 12 : 1, shared_device_accounts: isHub ? 2 : 0, transit_ratio: isHub ? 0.85 : 0 }) }];
+  const nodes: Graph["nodes"] = [{ id: center, type: "account", position: { x: 0, y: 0 }, data: data(account, { role: "center", depth: 0, suspected_mule: isHub, in_degree: isHub ? network.senders : 1, shared_device_accounts: isHub ? network.device_peers : 0, transit_ratio: isHub ? network.transit_ratio : 0 }) }];
   const edges: Graph["edges"] = [];
-  const count = isHub ? 12 : 1;
+  const count = isHub ? network.senders : 1;
   const neighbour = accounts.find(party => party.id !== center)!;
   for (let i = 0; i < count; i++) {
     const id = isHub ? `feeder-${i + 1}` : neighbour.id;

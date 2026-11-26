@@ -1,0 +1,108 @@
+{
+  "timestamp": "2026-11-13T09:00:00Z",
+  "sender_id": "00000000-0000-4000-8000-000000000001",
+  "familiar_recipient": "00000000-0000-4000-8000-000000000002",
+  "sender_mean": 40000,
+  "networks": [
+    {
+      "account": "00000000-0000-4000-8000-000000000004",
+      "senders": 12,
+      "incoming_each": 10000,
+      "transit_ratio": 0.85,
+      "device_peers": 2
+    }
+  ],
+  "cases": [
+    {
+      "name": "normal",
+      "recipient_id": "00000000-0000-4000-8000-000000000002",
+      "amount": "25000",
+      "context": {
+        "active_call": false,
+        "from_deposit": false,
+        "is_new_device": false,
+        "is_new_recipient": false
+      },
+      "status": "approved",
+      "score": 0,
+      "codes": []
+    },
+    {
+      "name": "scam",
+      "recipient_id": "00000000-0000-4000-8000-000000000003",
+      "amount": "900000",
+      "context": {
+        "active_call": true,
+        "from_deposit": true,
+        "is_new_device": false,
+        "is_new_recipient": true
+      },
+      "status": "cooling_off",
+      "score": 74,
+      "codes": [
+        "ACTIVE_CALL",
+        "AMOUNT_SPIKE",
+        "DEPOSIT_WITHDRAWAL",
+        "NEW_RECIPIENT",
+        "SOCIAL_ENGINEERING_PATTERN"
+      ]
+    },
+    {
+      "name": "hub",
+      "recipient_id": "00000000-0000-4000-8000-000000000004",
+      "amount": "250000",
+      "context": {
+        "active_call": false,
+        "from_deposit": false,
+        "is_new_device": false,
+        "is_new_recipient": true
+      },
+      "status": "blocked",
+      "score": 100,
+      "codes": [
+        "AMOUNT_SPIKE",
+        "DROP_HUB_FAN_IN",
+        "NEW_RECIPIENT",
+        "RECIPIENT_MANY_SENDERS",
+        "RECIPIENT_SHARED_DEVICE",
+        "RECIPIENT_TRANSIT_RATIO"
+      ]
+    },
+    {
+      "name": "new_payee",
+      "recipient_id": "00000000-0000-4000-8000-000000000003",
+      "amount": "20000",
+      "context": {
+        "active_call": false,
+        "from_deposit": false,
+        "is_new_device": false,
+        "is_new_recipient": true
+      },
+      "status": "approved",
+      "score": 10,
+      "codes": [
+        "NEW_RECIPIENT"
+      ]
+    },
+    {
+      "name": "paste_call",
+      "recipient_id": "00000000-0000-4000-8000-000000000003",
+      "amount": "20000",
+      "context": {
+        "active_call": true,
+        "from_deposit": false,
+        "is_new_device": false,
+        "is_new_recipient": true,
+        "pasted_recipient": true
+      },
+      "status": "cooling_off",
+      "score": 60,
+      "codes": [
+        "ACTIVE_CALL",
+        "NEW_RECIPIENT",
+        "PASTED_DURING_CALL",
+        "SOCIAL_ENGINEERING_PATTERN"
+      ]
+    }
+  ]
+}
