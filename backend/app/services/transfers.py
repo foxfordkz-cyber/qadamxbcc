@@ -44,7 +44,7 @@ from app.schemas.transfers import (
     TransferEvaluateRequest,
     TransferEvaluateResponse,
 )
-from app.services import demo_funds, explain, family_approval
+from app.services import demo_funds, explain, family_approval, network_context
 from app.services.antifraud import (
     ACTIVE_HOLD_RULE,
     AMOUNT_SPIKE_RATIO,
@@ -563,6 +563,14 @@ class TransferService:
             else device_id != sender.device_id
         )
         occurred_at = (req.occurred_at or datetime.now(UTC)).astimezone(UTC)
+        signal_time = (
+            min(occurred_at, datetime.now(UTC))
+            if self.engine.allow_demo_overrides
+            else datetime.now(UTC)
+        )
+        shared_network_size, new_region = await network_context.signals(
+            self.session, sender, recipient, signal_time
+        )
         bank_check = await CallCheckService(self.engine.redis).result_for(
             req.context.bank_call_check_id, sender.id
         )
@@ -575,6 +583,8 @@ class TransferService:
             occurred_at=occurred_at,
             sender_avg_amount=float(sender.avg_tx_amount),
             first_day_payee=first_day_payee,
+            shared_network_size=shared_network_size,
+            new_region=new_region,
             settled_payee_is_new=is_first_payment,
             active_call=req.context.active_call or req.context.call_pressure_answer == "on_call",
             payment_requested_after_call=(
@@ -982,6 +992,9 @@ class TransferService:
     async def _revalidate_release(self, tx: Transaction, now: datetime) -> Evaluation:
         sender = await self._get_account(tx.sender_id)
         await self._refresh_device_peers(sender, tx.recipient, tx.device_id)
+        shared_network_size, new_region = await network_context.signals(
+            self.session, sender, tx.recipient, now
+        )
         original = TransferContextIn.model_validate(tx.context_snapshot or {})
         ctx = TransferContext(
             tx_id=str(tx.id),
@@ -995,6 +1008,8 @@ class TransferService:
             payment_requested_after_call=original.payment_requested_after_call,
             from_deposit=tx.from_deposit,
             is_new_device=tx.is_new_device,
+            shared_network_size=shared_network_size,
+            new_region=new_region,
             recipient_flagged=tx.recipient.is_flagged,
             pasted_recipient=original.pasted_recipient,
             duress=original.duress,

@@ -9,6 +9,18 @@ from app.ml.features import ExplanationMethod
 from app.models import TransactionStatus
 
 
+class BankSessionObservation(BaseModel):
+    """Pseudonymous signals from an authenticated bank-side session gateway."""
+
+    model_config = ConfigDict(extra="forbid")
+    id: uuid.UUID
+    account_id: uuid.UUID
+    network_token: str = Field(pattern=r"^[a-f0-9]{64}$")
+    country: str = Field(pattern=r"^[A-Z]{2}$")
+    city: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_-]{0,31}$")
+    observed_at: AwareDatetime
+
+
 class TransferContextIn(BaseModel):
     """Client-side signals captured by the BCC mobile app at the moment of transfer."""
 

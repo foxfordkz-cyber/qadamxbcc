@@ -2,6 +2,7 @@ import statistics
 import time
 import uuid
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import fakeredis
@@ -277,3 +278,22 @@ async def test_repeat_payer_to_known_recipient_is_not_a_drop_hub(
     assert not codes(result) & {"DROP_HUB_FAN_IN", "FAN_IN_VELOCITY"}
     assert result.velocity.recipient_in.count("30m") == 15
     assert result.velocity.recipient_in.distinct("30m") == 1
+
+
+@pytest.mark.parametrize(
+    ("region", "code"), [("country", "NEW_SESSION_COUNTRY"), ("city", "NEW_SESSION_CITY")]
+)
+async def test_shared_network_and_travel_need_independent_context(
+    engine: AntifraudEngine, region: str, code: str
+) -> None:
+    ordinary = replace(ctx("traveler", "relative"), shared_network_size=4, new_region=region)
+    clean = await engine.evaluate(ordinary)
+    assert clean.decision is TransactionStatus.APPROVED
+    assert "SHARED_IP_CLUSTER" not in codes(clean)
+    assert code not in codes(clean)
+    corroborated = replace(ordinary, tx_id=str(uuid.uuid4()), active_call=True)
+    alert = await engine.evaluate(corroborated)
+    reasons = {r.code: r for r in alert.reasons}
+    assert code in reasons
+    assert 0 < reasons["SHARED_IP_CLUSTER"].score_delta < 15
+    assert reasons[code].reason_kk != reasons[code].reason_ru

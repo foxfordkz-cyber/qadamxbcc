@@ -24,7 +24,7 @@ from app.models import Account, RecipientFlagAudit
 
 ACCOUNT = uuid.UUID("00000000-0000-4000-8000-000000000901")
 CONTACT = uuid.UUID("00000000-0000-4000-8000-000000000902")
-HEAD = "0016_dispute_history"
+HEAD = "0017_bank_session_context"
 
 
 async def require_empty(url: str) -> None:
