@@ -339,7 +339,7 @@ def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
             )
         )
         if not already_requested:
-            contact = await session.scalar(
+            candidates = (
                 select(TrustedContact)
                 .where(
                     TrustedContact.owner_id == owner,
@@ -348,8 +348,16 @@ def install_protection(app: FastAPI, settings: IntegrationSettings) -> None:
                     TrustedContact.notifications_enabled.is_(True),
                 )
                 .order_by(TrustedContact.created_at, TrustedContact.id)
-                .limit(1)
             )
+            if settings.telegram_mode == "test":
+                # Old Fake contacts can remain in the same persistent demo database.
+                # Advisory delivery must choose one consented, allowlisted recipient.
+                candidates = candidates.where(
+                    TrustedContact.telegram_chat_id.in_(
+                        [str(chat) for chat in settings.telegram_allowed_chat_ids]
+                    )
+                )
+            contact = await session.scalar(candidates.limit(1))
             if contact is None:
                 raise HTTPException(409, "no_consented_contact")
             try:

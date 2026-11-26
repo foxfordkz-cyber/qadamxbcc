@@ -12,6 +12,10 @@ class DeliveryError(Exception):
     """Sanitized delivery failure; ambiguous failures must not be automatically retried."""
 
 
+class DeliveryNotAttemptedError(DeliveryError):
+    """Local preflight refused the send before contacting Telegram; still terminal."""
+
+
 class RejectedDeliveryError(DeliveryError):
     """Explicit flood-control rejection: Telegram did not accept the send request."""
 
@@ -53,7 +57,7 @@ class AiogramTelegramAdapter:
         approval: bool = False,
     ) -> str:
         if chat_id not in self.allowed:
-            raise DeliveryError("recipient_not_allowlisted")
+            raise DeliveryNotAttemptedError("recipient_not_allowlisted")
         ack, suspect = BUTTONS[language]
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[

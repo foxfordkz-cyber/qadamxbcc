@@ -19,6 +19,7 @@ from app.integrations.models import ContactNotification, TrustedContact
 from app.integrations.telegram.adapter import (
     AiogramTelegramAdapter,
     ApprovalAdapter,
+    DeliveryNotAttemptedError,
     RejectedDeliveryError,
     TelegramAdapter,
 )
@@ -46,14 +47,14 @@ async def send_notice(
     deadline = row.expires_at.strftime("%Y-%m-%d %H:%M UTC")
     if approval and row.contact_id == approval.contact_id:
         if not isinstance(adapter, ApprovalAdapter):
-            raise ValueError("Adapter does not support transfer approval")
+            raise DeliveryNotAttemptedError("approval_adapter_unavailable")
         if not (
             contact.contact_consented_at
             and contact.owner_id == row.owner_id == tx.sender_id
             and cfg.approval_chat_allowed(tx.sender_id, int(contact.telegram_chat_id))
             and matches_terms(approval, tx)
         ):
-            raise ValueError("Approval details changed")
+            raise DeliveryNotAttemptedError("approval_configuration_unavailable")
         amount = fmt_tenge(float(approval.amount), with_tiyn=True)
         text = (
             f"Saq Bol · Учебный перевод\n{amount} ₸ → {approval.recipient_label}\n"
@@ -160,6 +161,19 @@ async def _deliver(
                 async with asyncio.timeout(cfg.adapter_timeout_seconds):
                     row.message_id = await send_notice(adapter, cfg, row, tx, contact, approval)
                     row.state = NotificationState.SENT
+            except DeliveryNotAttemptedError as exc:
+                # Terminal, not a new retry path. Only fixed local codes are persisted.
+                row.state = NotificationState.FAILED
+                row.error_code = (
+                    str(exc)
+                    if str(exc)
+                    in {
+                        "recipient_not_allowlisted",
+                        "approval_adapter_unavailable",
+                        "approval_configuration_unavailable",
+                    }
+                    else "delivery_preflight_rejected"
+                )
             except RejectedDeliveryError as exc:
                 # A persisted explicit rejection is the ONLY retryable outcome.
                 # No locks/sleep across the delay. Each future claim rechecks consent/core.

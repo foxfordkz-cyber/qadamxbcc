@@ -12,12 +12,52 @@ from pydantic import SecretStr
 from redis.asyncio import Redis
 from sqlalchemy import select
 
-from app.integrations.models import IntegrationAudit
+from app.integrations.models import ContactNotification, IntegrationAudit
 from app.integrations.telegram import bot as polling
 from app.integrations.telegram.adapter import AiogramTelegramAdapter
 from app.integrations.telegram.worker import deliver_one
+from app.models import Transaction
+from app.models.family_approval import FamilyApproval
 from tests.integrations.conftest import IntegrationWorld
 from tests.integrations.test_durable_retry import make_due
+
+
+@pytest.mark.parametrize("approval", [False, True])
+async def test_local_refusal_is_terminal_without_provider_request(
+    iw: IntegrationWorld, approval: bool
+) -> None:
+    row = await iw.queue(await iw.verified())
+    bot = AsyncMock()
+    if approval:
+        async with iw.factory() as session:
+            tx = await session.get(Transaction, uuid.UUID(str(row["transaction_id"])))
+            assert tx is not None
+            session.add(
+                FamilyApproval(
+                    transaction_id=tx.id,
+                    contact_id=uuid.UUID(str(row["contact_id"])),
+                    recipient_id=tx.recipient_id,
+                    recipient_label="Synthetic recipient",
+                    amount=tx.amount,
+                    currency=tx.currency,
+                    expires_at=tx.cooling_until,
+                )
+            )
+            await session.commit()
+    cfg = iw.cfg.model_copy(update={"telegram_mode": "test", "telegram_allowed_chat_ids": [456]})
+    adapter = AiogramTelegramAdapter(cast(Bot, bot), [456])
+    assert await deliver_one(iw.factory, adapter, cfg)
+    assert not await deliver_one(iw.factory, adapter, cfg)
+    bot.send_message.assert_not_called()
+    async with iw.factory() as session:
+        saved = await session.get(ContactNotification, uuid.UUID(str(row["id"])))
+        assert saved is not None
+        assert saved.state == "DELIVERY_FAILED"
+        assert saved.message_id is None
+        assert saved.attempts == 1
+        assert saved.error_code == (
+            "approval_configuration_unavailable" if approval else "recipient_not_allowlisted"
+        )
 
 
 @pytest.mark.parametrize(
