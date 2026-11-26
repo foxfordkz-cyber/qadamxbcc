@@ -12,6 +12,7 @@ import { walletEntry } from "@/lib/wallet-warmup";
 import { attack, bank, drops, fit, hero, hold, how, pilot, problem, proof, REPO, slides, tech, totalSeconds, ui, value, type L } from "@/content/pitch-site";
 import { FxCard } from "./fx-card";
 import { BrandMark } from "./brand-mark";
+import { CountUp } from "./count-up";
 import { DropNetwork } from "./drop-network";
 import type { DropStage } from "./drop-scene";
 import { HeroDemo } from "./hero-demo";
@@ -25,42 +26,6 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const GITHUB = "https://github.com/foxfordkz-cyber/qadamxbcc";
 const featureIcons = [BarChart3, Database, Banknote, Scale, Globe2, Network, Undo2, FileText];
 const nav = [["navProblem", "#problem"], ["navHow", "#how"], ["navValue", "#value"], ["navBank", "#bank"], ["navTech", "#tech"], ["navProof", "#proof"], ["navPilot", "#pilot"]] as const;
-const FIGURE = /^(\d[\d\s]*)(?:,(\d+))?(\D.*)?$/;
-
-/** Counts a figure such as "1 098", "57 / 60" or "1,17 %" up from zero the first time it is seen. */
-function CountUp({ value }: { value: string }) {
-  const node = useRef<HTMLElement>(null);
-  const reduced = useReducedMotion();
-  const [shown, setShown] = useState<string | null>(null);
-  useEffect(() => {
-    const match = FIGURE.exec(value);
-    if (!match || reduced || !node.current) return;
-    const [, whole, fraction = "", rest = ""] = match;
-    const target = Number(`${whole.replace(/\s/g, "")}.${fraction || "0"}`);
-    const grouped = /\s/.test(whole.trim());
-    const format = (n: number) => {
-      const [i, f] = n.toFixed(fraction.length).split(".");
-      return `${grouped ? i.replace(/\B(?=(\d{3})+(?!\d))/g, " ") : i}${f ? `,${f}` : ""}${whole.endsWith(" ") ? " " : ""}${rest}`;
-    };
-    setShown(format(0));
-    let frame = 0;
-    const io = new IntersectionObserver(entries => {
-      if (!entries.some(entry => entry.isIntersecting)) return;
-      io.disconnect();
-      const start = performance.now();
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - start) / 1400);
-        setShown(format(target * (1 - Math.pow(1 - t, 3))));
-        if (t < 1) frame = requestAnimationFrame(tick); else setShown(null);
-      };
-      frame = requestAnimationFrame(tick);
-    }, { threshold: 0.6 });
-    io.observe(node.current);
-    return () => { io.disconnect(); cancelAnimationFrame(frame); };
-  }, [value, reduced]);
-  return <strong ref={node} aria-label={value}><span aria-hidden="true">{shown ?? value}</span></strong>;
-}
-
 function Phone({ src, alt }: { src: string; alt: string }) {
   return <div className="ps-phone"><div className="ps-phone-screen"><img src={`${BASE}${src}`} alt={alt} loading="lazy" decoding="async" /></div></div>;
 }

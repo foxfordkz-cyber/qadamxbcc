@@ -50,7 +50,7 @@
 
 | Что | Где | Время |
 | --- | --- | --- |
-| Питч на казахском (← → листают, T — таймер, N — заметки) | [/pitch](https://saq-bol-bcc.zerdeliportald.workers.dev/pitch) · [на русском](https://saq-bol-bcc.zerdeliportald.workers.dev/pitch?lang=ru) | 5 мин |
+| Питч: 14 анимированных слайдов на казахском (→ / пробел, F — полный экран, T — таймер, N — заметки) | [/pitch](https://saq-bol-bcc.zerdeliportald.workers.dev/pitch) · [на русском](https://saq-bol-bcc.zerdeliportald.workers.dev/pitch?lang=ru) · PDF [ҚАЗ](docs/pitch/Saq-Bol-pitch-kk.pdf) / [РУС](docs/pitch/Saq-Bol-pitch-ru.pdf) · [текст выступления](docs/PITCH_5MIN_KK.md) | 5 мин |
 | Тур по продукту прямо в браузере, без входа | [Смотреть демо](https://saq-bol-bcc.zerdeliportald.workers.dev/mobile?tour=1) | 2 мин |
 | Настоящий сервер: роли, дела, граф, аналитика | [Стенд жюри](https://saq-bol-jury.onrender.com/) → **«Открыть с историей»** | 5 мин |
 | Android-кошелёк | [APK 2.9](https://saq-bol-bcc.zerdeliportald.workers.dev/download/android/), SHA-256 в [манифесте](https://saq-bol-bcc.zerdeliportald.workers.dev/downloads/current.json) | 3 мин |

@@ -42,7 +42,7 @@ try {
     ].join("\n"));
   }
   for (const server of ["src/app/api", "src/app/health", "src/app/mobile/link", "src/proxy.ts"]) await rm(path.join(work, server), { recursive: true, force: true });
-  for (const page of ["src/app/page.tsx", "src/app/mobile/page.tsx", "src/app/soc/page.tsx", "src/app/pitch/page.tsx", "src/app/pitch/console/page.tsx"]) {
+  for (const page of ["src/app/page.tsx", "src/app/mobile/page.tsx", "src/app/soc/page.tsx", "src/app/pitch/page.tsx", "src/app/pitch/console/page.tsx", "src/app/pitch/web/page.tsx"]) {
     const file = path.join(work, page);
     const text = await readFile(file, "utf8");
     if (!text.includes('export const dynamic = "force-dynamic";')) throw new Error(`${page}: expected a force-dynamic export`);

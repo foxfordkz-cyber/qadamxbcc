@@ -83,7 +83,7 @@ try {
   await checkPrivateCircle();
   const connect = await fetch("/connect?stand=wallet");
   assert.equal(connect.status, 200, "/connect warm-up page");
-  for (const pathname of ["/", "/mobile", "/pitch", "/pitch/console"]) {
+  for (const pathname of ["/", "/mobile", "/pitch", "/pitch/console", "/pitch/web"]) {
     const response = await fetch(pathname);
     assert.equal(response.status, 200, pathname);
     const html = await response.text();
