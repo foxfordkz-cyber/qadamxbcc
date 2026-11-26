@@ -1,0 +1,102 @@
+{
+  "main": {
+    "http": 200,
+    "sha": "ebb065fd85ea1313ec35fa383f3b41ba12184afe",
+    "protected": false
+  },
+  "protection": {
+    "http": 404
+  },
+  "rules": {
+    "http": 403
+  },
+  "checks_http": 200,
+  "checks": [
+    {
+      "name": "worker",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513721/job/139676899848"
+    },
+    {
+      "name": "validate",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513762/job/139676899752"
+    },
+    {
+      "name": "gateway",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513736/job/139676899677"
+    },
+    {
+      "name": "upgrade (30, --legacy-system-image)",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513720/job/139676899667"
+    },
+    {
+      "name": "verify",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513723/job/139676899659"
+    },
+    {
+      "name": "apk",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513776/job/139676899541"
+    },
+    {
+      "name": "upgrade (35)",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513720/job/139676899530"
+    },
+    {
+      "name": "compose-demo",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513723/job/139676899398"
+    },
+    {
+      "name": "restore-rehearsal",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513762/job/139676899326"
+    },
+    {
+      "name": "handoff",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513736/job/139676899304"
+    },
+    {
+      "name": "three-roles",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750513712/job/139676899251"
+    },
+    {
+      "name": "apk",
+      "status": "completed",
+      "conclusion": "failure",
+      "billing_blocked": true,
+      "url": "https://github.com/foxfordkz-cyber/qadamxbcc/actions/runs/45750508671/job/139676881464"
+    }
+  ],
+  "commit": "904f84e2ec7332a18691cbfbbc4b8d43d544b86d",
+  "checked_at": "2026-11-26T04:07:00.309088+00:00"
+}

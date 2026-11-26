@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-11-26T04:07:00.309088+00:00",
+  "origin": "https://saq-bol-mobile-staging.onrender.com",
+  "device": "Honor X6 / VNE-LX1",
+  "version": "2.9",
+  "build": 26,
+  "package": "kz.qadamx.bccshield.demo",
+  "installed_base_apk_sha256": "8b7cb7d1c724bf3511c6b2175e30fd1a681bb9a072a09f87055758427241bfb2",
+  "update_over_build": 24,
+  "uninstall_or_data_clear": false,
+  "transport": "ordinary phone internet; no adb reverse or local API proxy",
+  "native_role_screens": {
+    "client": "PASS home/transfer/receipt",
+    "admin": "PASS SOC overview",
+    "platform_admin": "PASS API metrics"
+  },
+  "browser_role_screens": {
+    "client": "PASS home/history",
+    "admin": "PASS case work/close",
+    "platform_admin": "PASS metrics/staff access"
+  },
+  "public_login_and_protected_api": {
+    "client": "PASS",
+    "admin": "PASS",
+    "platform_admin": "PASS",
+    "incorrect_password": 401,
+    "client_soc_access": 403
+  },
+  "account_switch": "client -> admin -> platform -> client; old-role navigation removed",
+  "native_session_restore": "PASS after force-stop and relaunch, no new login",
+  "balance": "4546500.00",
+  "final_screen": "client home",
+  "emulator": "NOT RUN: insufficient free RAM",
+  "live_telegram": "BLOCKED: available bot is shared with primary API; no new live consent or messages"
+}

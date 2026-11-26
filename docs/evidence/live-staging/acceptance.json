@@ -1,0 +1,47 @@
+{
+  "origin": "https://saq-bol-mobile-staging.onrender.com",
+  "started_at": "2026-11-26T03:16:26.828207+00:00",
+  "ready": 200,
+  "restarts": [
+    {
+      "verified_at": "2026-11-26T03:22:37.521029+00:00",
+      "result": "PASS",
+      "sessions": "preserved"
+    },
+    {
+      "verified_at": "2026-11-26T03:29:54.614436+00:00",
+      "result": "PASS",
+      "sessions": "preserved"
+    }
+  ],
+  "baseline_balance": "4571500.00",
+  "final_balance": "4546500.00",
+  "guardian": {
+    "notification_id": "38770dc3-363c-4dfc-8e82-b433e8737b00",
+    "ack_events": 1,
+    "suspicion_events": 1,
+    "case_id": "302f0612-06ce-5404-91e6-6baf593ad83c",
+    "cases": 1,
+    "mode": "FAKE"
+  },
+  "transactions": {
+    "approved": {
+      "transaction_id": "f66cf6d8-0297-43bb-a4fa-979f8e4996ec",
+      "status": "approved",
+      "amount": "25000",
+      "cooling_off_until": null
+    },
+    "cooling_off": {
+      "transaction_id": "5a371615-7e50-456d-a9ac-e1d2ea7b62ef",
+      "status": "cooling_off",
+      "amount": "900000",
+      "cooling_off_until": "2026-11-26T03:32:20.623386Z"
+    },
+    "blocked": {
+      "transaction_id": "e61668a7-568b-4d3b-b8ea-9b11bd33929e",
+      "status": "blocked",
+      "amount": "250000",
+      "cooling_off_until": null
+    }
+  }
+}

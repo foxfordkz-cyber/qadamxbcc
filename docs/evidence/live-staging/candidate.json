@@ -1,0 +1,13 @@
+{
+  "package": "kz.qadamx.bccshield.demo",
+  "versionCode": 26,
+  "version": "2.9",
+  "minSdk": 24,
+  "certificate_sha256": "0dd732df01a3c1d98ec7b2ebfbd448b7d783080bfc784845676df8eb10aad0ab",
+  "api_origin": "https://saq-bol-mobile-staging.onrender.com",
+  "source_commit": "904f84e2ec7332a18691cbfbbc4b8d43d544b86d",
+  "apk_sha256": "8b7cb7d1c724bf3511c6b2175e30fd1a681bb9a072a09f87055758427241bfb2",
+  "bytes": 10760760,
+  "publication": "NOT_ACCEPTED",
+  "verified_ui_files": 40
+}

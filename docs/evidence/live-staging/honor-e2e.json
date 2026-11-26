@@ -1,0 +1,26 @@
+{
+  "origin": "https://saq-bol-mobile-staging.onrender.com",
+  "transaction_id": "fbe36620-a926-498b-b2a1-7dc2a776fdf4",
+  "transaction_status": "cancelled",
+  "case_id": "051bd6f5-feba-5126-8a1d-101b0e9cf790",
+  "balance": "4546500.00",
+  "receipt": {
+    "case_id": "051bd6f5-feba-5126-8a1d-101b0e9cf790",
+    "case_state": "CLOSED",
+    "callback": null,
+    "resolution": {
+      "outcome": "confirmed_fraud",
+      "closed_at": "2026-11-26T03:40:42.770546Z",
+      "operation": {
+        "transaction_id": "fbe36620-a926-498b-b2a1-7dc2a776fdf4",
+        "amount": "900000.00",
+        "currency": "KZT",
+        "status": "cancelled"
+      },
+      "balance": "4546500.00"
+    }
+  },
+  "guardian_mode": "FAKE",
+  "device": "Honor X6 / VNE-LX1",
+  "build": 26
+}

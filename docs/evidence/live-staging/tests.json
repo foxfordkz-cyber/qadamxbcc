@@ -1,0 +1,23 @@
+{
+  "backend": {
+    "passed": 52,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 1,
+    "modules": [
+      "tests.integrations.test_hosted_telegram",
+      "tests.test_bootstrap",
+      "tests.test_mobile_gateway",
+      "tests.test_staging_runtime"
+    ]
+  },
+  "android_js": {
+    "passed": 50,
+    "command": "npm --prefix android-app test"
+  },
+  "unique_passed": 102,
+  "gradle": "PASS assembleShowcase",
+  "scope": "targeted current run, not complete project suite",
+  "ruff": "PASS changed code",
+  "mypy": "PASS changed code"
+}
