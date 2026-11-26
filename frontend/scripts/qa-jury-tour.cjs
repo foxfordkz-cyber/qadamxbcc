@@ -69,7 +69,7 @@ async function walk(browser, viewport, lang, cold) {
         await menu.click();
         assert.equal(await menu.getAttribute('aria-expanded'), 'false');
       }
-      const entry = page.locator('.land-hero').getByRole('link', { name: lang === 'ru' ? 'Демо для жюри' : 'Қазыларға арналған көрсетілім' });
+      const entry = page.locator('.land-hero').getByRole('link', { name: lang === 'ru' ? 'Смотреть демо' : 'Демоны көру' });
       await entry.waitFor();
       await page.evaluate(() => document.fonts.ready);
       const box = await entry.boundingBox();

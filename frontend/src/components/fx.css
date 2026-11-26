@@ -15,26 +15,26 @@
 
 /* ---- Drawn card ---- */
 .fx-css-card {
+  /* bcc.kz green card, the same object as the wallet's 3D card (public/media/3d/card.webp). */
   position: relative; width: 100%; aspect-ratio: 1.586; border-radius: 6.5% / 10.3%; overflow: hidden;
   background:
-    repeating-linear-gradient(180deg, rgba(255, 255, 255, .22) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(180deg, rgba(30, 40, 35, .05) 0 1px, transparent 1px 5px),
-    linear-gradient(135deg, #F6F7F4 0%, #CCD2CE 40%, #F0F2EE 58%, #B7BFBA 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 -1px 0 rgba(0, 0, 0, .12) inset, 0 0 0 1px rgba(14, 19, 17, .08), 0 30px 60px -30px rgba(14, 19, 17, .55), 0 12px 24px -16px rgba(14, 19, 17, .35);
+    linear-gradient(160deg, rgba(255, 255, 255, .22) 0%, rgba(255, 255, 255, 0) 38%),
+    linear-gradient(135deg, #19C08B 0%, #00AB75 46%, #008A60 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .45) inset, 0 -1px 0 rgba(0, 0, 0, .12) inset, 0 30px 50px -30px rgba(0, 80, 54, .6), 0 12px 24px -16px rgba(0, 60, 40, .4);
   transform: rotateX(calc(var(--py) * -9deg)) rotateY(calc(var(--px) * 12deg));
   transition: transform .5s var(--ease-out), box-shadow .8s;
   transform-style: preserve-3d;
 }
 .fx-css-mark { position: absolute; left: 6.5%; top: 9%; width: 13%; }
 .fx-css-mark svg { display: block; width: 100%; height: auto; }
-.fx-mark-top { fill: #0B5C42; } .fx-mark-bottom { fill: #13A274; }
-.fx-chip { position: absolute; left: 7%; top: 41%; width: 11%; aspect-ratio: 1.15; border-radius: 14%; background: linear-gradient(135deg, #E1E4DC, #9DA59E); box-shadow: inset 0 0 0 1px rgba(30, 40, 35, .25); }
+.fx-mark-top { fill: #FFFFFF; } .fx-mark-bottom { fill: rgba(255, 255, 255, .72); }
+.fx-chip { position: absolute; left: 7%; top: 41%; width: 11%; aspect-ratio: 1.15; border-radius: 14%; background: linear-gradient(135deg, #F6DE98, #C99F45); box-shadow: inset 0 0 0 1px rgba(90, 60, 10, .3); }
 .fx-chip::before, .fx-chip::after { content: ""; position: absolute; background: rgba(30, 40, 35, .3); }
 .fx-chip::before { left: 33%; right: 33%; top: 0; bottom: 0; border-inline: 1px solid rgba(30, 40, 35, .3); background: none; }
 .fx-chip::after { left: 0; right: 0; top: 50%; height: 1px; }
-.fx-wave { position: absolute; right: 7%; top: 11%; width: 7%; fill: none; stroke: rgba(24, 33, 29, .55); stroke-width: 2; stroke-linecap: round; }
-.fx-css-name { position: absolute; left: 7%; bottom: 9%; font-family: var(--font-display); font-weight: 620; letter-spacing: -.03em; color: #18211D; font-size: clamp(13px, 5.2cqw, 30px); }
-.fx-css-number { position: absolute; right: 7%; bottom: 9.5%; font-weight: 500; color: #18211D; letter-spacing: .04em; font-variant-numeric: tabular-nums; font-size: clamp(10px, 3.6cqw, 20px); }
+.fx-wave { position: absolute; right: 7%; top: 11%; width: 7%; fill: none; stroke: rgba(255, 255, 255, .8); stroke-width: 2; stroke-linecap: round; }
+.fx-css-name { position: absolute; left: 7%; bottom: 9%; font-family: var(--font-display); font-weight: 620; letter-spacing: -.02em; color: #FFFFFF; font-size: clamp(9px, 4.6cqw, 30px); }
+.fx-css-number { position: absolute; right: 7%; bottom: 9.5%; font-weight: 500; color: rgba(255, 255, 255, .92); letter-spacing: .04em; font-variant-numeric: tabular-nums; font-size: clamp(8px, 3.4cqw, 20px); }
 .fx-stage { container-type: inline-size; }
 .fx-sheen { position: absolute; inset: -40%; background: radial-gradient(circle at calc(50% + var(--px) * 30%) calc(40% + var(--py) * 30%), rgba(255, 255, 255, .55), transparent 38%); mix-blend-mode: soft-light; pointer-events: none; transition: background-position .3s; }
 .fx-css-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .45) 48%, transparent 60%); transform: translateX(-100%); animation: fx-glint 7s var(--ease-out) 1.2s infinite; pointer-events: none; }
@@ -55,11 +55,11 @@
   position: absolute; inset: 0; opacity: 0; transition: opacity 1.6s var(--ease-out);
   background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' seed='7'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.1 -.55'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
-    radial-gradient(ellipse at center, rgba(214, 231, 241, 0) 45%, rgba(222, 236, 244, .6) 100%);
+    radial-gradient(ellipse at center, rgba(255, 246, 229, 0) 45%, rgba(255, 243, 220, .62) 100%);
   background-size: 240px 160px, 100% 100%;
 }
 .fx-card:is([data-state=frozen], [data-state=blocked], [data-state=locked]) .fx-glass { --ring: 1; }
-.fx-card:is([data-state=frozen], [data-state=blocked]) .fx-glass { -webkit-backdrop-filter: blur(2.5px) saturate(.9); backdrop-filter: blur(2.5px) saturate(.9); background-color: rgba(222, 236, 244, .22); }
+.fx-card:is([data-state=frozen], [data-state=blocked]) .fx-glass { -webkit-backdrop-filter: blur(2.5px) saturate(.9); backdrop-filter: blur(2.5px) saturate(.75); background-color: rgba(255, 243, 220, .26); }
 .fx-card:is([data-state=frozen], [data-state=blocked]) .fx-frost { opacity: 1; }
 .fx-card[data-state=blocked] .fx-glass { background-color: rgba(240, 211, 214, .34); border-color: rgba(255, 235, 236, .9); }
 .fx-card:is([data-state=frozen], [data-state=blocked]) .fx-glass::after { animation: none; }
@@ -81,5 +81,5 @@
 }
 
 /* On the emerald hero the drawn card picks up the brand colour at its edge, like chrome under a coloured light. */
-.fx-hero .fx-css-card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset -14px -10px 40px -10px rgba(47, 211, 154, .35), 0 0 0 1px rgba(0, 0, 0, .12), 0 50px 80px -30px rgba(0, 20, 12, .7), 0 18px 30px -16px rgba(0, 20, 12, .5); }
+.fx-hero .fx-css-card { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset -14px -10px 40px -10px rgba(255, 255, 255, .18), 0 0 0 1px rgba(0, 0, 0, .12), 0 50px 80px -30px rgba(0, 20, 12, .7), 0 18px 30px -16px rgba(0, 20, 12, .5); }
 .fx-hero .fx-floor { background: radial-gradient(closest-side, rgba(0, 18, 11, .55), transparent); }
