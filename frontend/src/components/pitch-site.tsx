@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight, Banknote, BarChart3, Check, ChevronLeft, ChevronRight, CircleDashed, Database, Download, FileText, Globe2,
-  MessageSquareText, Minus, Network, Pause, Play, RotateCcw, Scale, ShieldAlert, StickyNote, Undo2,
+  ArrowRight, Banknote, BarChart3, Check, ChevronLeft, ChevronRight, Database, Download, FileText, Globe2,
+  MessageSquareText, Network, Pause, Play, RotateCcw, Scale, ShieldAlert, StickyNote, Undo2,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n";
 import { landingText, type LandingKey } from "@/lib/landing-copy";
@@ -320,14 +320,6 @@ export function PitchSite() {
           <span role="cell" className="ps-req-proof"><Check size={15} />{LT(`req${n}Proof` as LandingKey)}</span>
         </div>)}
       </div>
-      <h3 className="ps-h3">{p(fit.competitorsTitle)}</h3>
-      <div className="ps-table-wrap"><table className="ps-compare">
-        <thead><tr><th scope="col"><span className="sr-only">{p(["Мүмкіндік", "Возможность"])}</span></th>{fit.competitors.map(name => <th key={name} scope="col" className={name === "Saq Bol" ? "ours" : undefined}>{name}</th>)}</tr></thead>
-        <tbody>{fit.rows.map(row => <tr key={row.feature[1]}><th scope="row">{p(row.feature)}</th>{row.cells.map((cell, i) => <td key={fit.competitors[i]} className={`${cell}${i === fit.competitors.length - 1 ? " ours" : ""}`}>
-          <span className="ps-cell">{cell === "yes" ? <Check size={17} /> : cell === "no" ? <Minus size={15} /> : <CircleDashed size={15} />}<span>{p(fit.cell[cell])}</span></span>
-        </td>)}</tr>)}</tbody>
-      </table></div>
-      <p className="ps-note">{p(fit.note)}</p>
     </section>
 
     <section id="pilot" className="ps-band ps-close" aria-labelledby="pilot-title">

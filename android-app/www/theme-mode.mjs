@@ -32,36 +32,3 @@ export function toggleTheme() {
   }
   return next;
 }
-
-// Large text for older clients. The whole app scales so screens keep their layout.
-const TEXT_KEY = "qadam.text-size";
-
-export function currentTextSize() {
-  return document.documentElement.dataset.textSize === "large" ? "large" : "normal";
-}
-
-export function applyTextSize(mode) {
-  if (mode === "large") document.documentElement.dataset.textSize = "large";
-  else delete document.documentElement.dataset.textSize;
-  return currentTextSize();
-}
-
-export function loadTextSize() {
-  let saved = "normal";
-  try {
-    saved = localStorage.getItem(TEXT_KEY) || "normal";
-  } catch {
-    // Storage can be disabled; normal text is the default.
-  }
-  return applyTextSize(saved);
-}
-
-export function toggleTextSize() {
-  const next = applyTextSize(currentTextSize() === "large" ? "normal" : "large");
-  try {
-    localStorage.setItem(TEXT_KEY, next);
-  } catch {
-    // The size still applies for this session.
-  }
-  return next;
-}

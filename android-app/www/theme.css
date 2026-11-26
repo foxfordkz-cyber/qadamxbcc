@@ -3431,6 +3431,3 @@ html[data-theme="dark"] #app .detail-hero .receipt-status .wb.cooling_off {
     max-width: 340px;
   }
 }
-
-/* Large text (Profile → Крупный текст / Ірі мәтін): the whole app scales for older clients. */
-html[data-text-size="large"] body { zoom: 1.15; }

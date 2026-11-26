@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  Banknote, BarChart3, Check, ChevronLeft, ChevronRight, CircleDashed, Expand, FileText, Fingerprint, Globe2, KeyRound,
-  Mail, Minus, MonitorSmartphone, Pause, PhoneCall, Play, RotateCcw, Scale, ShieldAlert, StickyNote, X,
+  ArrowRight, Banknote, BarChart3, Check, ChevronLeft, ChevronRight, Expand, FileText, Fingerprint, Globe2, KeyRound,
+  Mail, MonitorSmartphone, Pause, PhoneCall, Play, RotateCcw, Scale, ShieldAlert, StickyNote, X,
 } from "lucide-react";
 import { useLocale } from "@/lib/i18n";
 import { landingText, type LandingKey } from "@/lib/landing-copy";
-import { bank, fit, hero, hold, how, pilot, problem, proof, tech, value, type L } from "@/content/pitch-site";
+import { bank, hero, hold, how, pilot, problem, proof, tech, value, type L } from "@/content/pitch-site";
+import QRCode from "qrcode";
 import { BrandMark } from "./brand-mark";
 import { CountUp } from "./count-up";
 import { DropNetwork } from "./drop-network";
@@ -38,8 +39,8 @@ const SLIDES: Slide[] = [
   { id: "value", tone: "light", seconds: 25, note: ["BCC не алады: ақша шоттан шықпайды, ереже дәл сәтте жұмыс істейді, SOC жылдам, зейнеткерлерге түсінікті, банк өзегіне тимейміз.", "Что получает BCC: деньги не уходят, правило срабатывает вовремя, SOC быстрее, понятно пенсионерам, ядро банка не трогаем."] },
   { id: "arch", tone: "light", seconds: 25, note: ["FastAPI, PostgreSQL 16, Redis 7, NetworkX. Скоринг өзегі p95 — 5 мс. Әр балдың себебі бар.", "FastAPI, PostgreSQL 16, Redis 7, NetworkX. Ядро скоринга p95 — 5 мс. У каждого балла есть причина."] },
   { id: "proof", tone: "deep", seconds: 20, note: ["57/60 тоқтатылды, 4/60 артық кідіріс. 1,17 %-ды жасырмаймыз — сол үшін модель жалғыз шешпейді.", "57/60 остановлено, 4/60 лишних пауз. 1,17 % не прячем — поэтому модель не решает в одиночку."] },
-  { id: "market", tone: "light", seconds: 10, note: ["Басқаларда — бөлек функциялар. Бізде — бір ағын.", "У других — отдельные функции. У нас — один поток."] },
-  { id: "pilot", tone: "deep", seconds: 20, note: ["Shadow-пилот ұсынамыз. (Баяу:) Алаяқ адамды көндіре алады. Saq Bol сол адамға 15 минут береді. Рақмет.", "Предлагаем shadow-пилот. (Медленно:) Мошенник может уговорить человека. Saq Bol даёт ему 15 минут. Спасибо."] },
+  { id: "plan", tone: "light", seconds: 15, note: ["Shadow-пилот, үш ай: алдымен көлеңкеде есептейміз, содан кейін салыстырамыз, соңында клиенттердің бір бөлігіне қосамыз. BCC-тен үш нәрсе керек.", "Shadow-пилот, три месяца: сначала считаем в тени, затем сравниваем, потом включаем для части клиентов. От BCC нужны три вещи."] },
+  { id: "close", tone: "deep", seconds: 15, note: ["(Баяу:) Алаяқ адамды көндіре алады. Saq Bol сол адамға 15 минут, қасында жақын адамды және бүкіл желіні көретін операторды береді. Рақмет!", "(Медленно:) Мошенник может уговорить человека. Saq Bol даёт ему 15 минут, близкого рядом и оператора, который видит всю сеть. Спасибо!"] },
 ];
 const TOTAL = SLIDES.reduce((sum, slide) => sum + slide.seconds, 0);
 
@@ -81,6 +82,24 @@ export function PitchShow() {
   const [left, setLeft] = useState(TOTAL);
   const [idle, setIdle] = useState(false);
   const touch = useRef<number | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+
+  // Phones, screens and the layer stack lean toward the pointer (CSS vars --px / --py in -1..1).
+  useEffect(() => {
+    if (reducedMotion) return;
+    let frame = 0;
+    const move = (event: PointerEvent) => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        root.current?.style.setProperty("--px", ((event.clientX / window.innerWidth) * 2 - 1).toFixed(3));
+        root.current?.style.setProperty("--py", ((event.clientY / window.innerHeight) * 2 - 1).toFixed(3));
+      });
+    };
+    window.addEventListener("pointermove", move);
+    return () => { window.removeEventListener("pointermove", move); cancelAnimationFrame(frame); };
+  }, [reducedMotion]);
 
   // Kazakh by default; ?lang=ru for Russian. #5 opens slide 5.
   useEffect(() => {
@@ -131,7 +150,7 @@ export function PitchShow() {
   const clock = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
   const slide = SLIDES[index];
 
-  return <div className={`sh-root${idle ? " is-idle" : ""}`} data-tone={slide.tone}
+  return <div ref={root} className={`sh-root${idle ? " is-idle" : ""}`} data-tone={slide.tone}
     onTouchStart={event => { touch.current = event.touches[0]?.clientX ?? null; }}
     onTouchEnd={event => { const start = touch.current; const end = event.changedTouches[0]?.clientX; if (start !== null && end !== undefined && Math.abs(end - start) > 50) go(index + (end < start ? 1 : -1)); touch.current = null; }}>
     <div className="sh-stage" style={{ width: W, height: H, transform: `translate(-50%, -50%) scale(${scale})` }}>
@@ -149,8 +168,8 @@ export function PitchShow() {
         {item.id === "value" && <Value p={p} />}
         {item.id === "arch" && <Arch p={p} />}
         {item.id === "proof" && <Proof on={on("proof")} p={p} />}
-        {item.id === "market" && <Market p={p} />}
-        {item.id === "pilot" && <Pilot p={p} />}
+        {item.id === "plan" && <Plan p={p} />}
+        {item.id === "close" && <Close p={p} />}
       </section>)}
       <div className="sh-progress" aria-hidden="true"><i style={{ width: `${((index + 1) / SLIDES.length) * 100}%` }} /></div>
     </div>
@@ -395,11 +414,28 @@ function Arch({ p }: { p: Tr }) {
   </div>;
 }
 
-/* 12 · Evidence */
+/* 12 · Evidence: every figure gets its own picture */
+function MetricArt({ i, p }: { i: number; p: Tr }) {
+  if (i === 0 || i === 1) {
+    const lit = i === 0 ? 57 : 4;
+    return <div className={`sh-dots${i === 1 ? " is-hold" : ""}`} aria-hidden="true">{Array.from({ length: 60 }, (_, k) => <i key={k} className={k < lit ? "on" : undefined} style={{ "--k": k } as CSSProperties} />)}</div>;
+  }
+  if (i === 2) return <div className="sh-bars" aria-hidden="true">
+    <span style={{ "--w": "10%" } as CSSProperties}><b>5 мс</b>{p(["өзек", "ядро"])}</span>
+    <span className="is-http" style={{ "--w": "99%" } as CSSProperties}><b>99 мс</b>HTTP + PostgreSQL</span>
+  </div>;
+  if (i === 3) return <div className="sh-dots sh-dots-wide" aria-hidden="true">{Array.from({ length: 114 }, (_, k) => <i key={k} className={k < 91 ? "on" : undefined} style={{ "--k": k * 0.6 } as CSSProperties} />)}</div>;
+  if (i === 4) return <div className="sh-stackbar" aria-hidden="true">
+    {([["Backend", 829], ["Frontend", 214], ["Android", 55]] as const).map(([name, n], k) => <span key={name} style={{ flexGrow: n, "--k": k } as CSSProperties}><b>{n}</b>{name}</span>)}
+  </div>;
+  return <div className="sh-dots sh-dots-rare" aria-hidden="true">{Array.from({ length: 85 }, (_, k) => <i key={k} className={k === 42 ? "on" : undefined} style={{ "--k": k } as CSSProperties} />)}</div>;
+}
+
 function Proof({ on, p }: { on: boolean; p: Tr }) {
   return <div className="sh-proof">
     <Title kicker={p(proof.eyebrow)} light>{p(proof.title)}</Title>
     <ul className="sh-metrics">{proof.metrics.map((metric, i) => <li key={metric.value} className="sh-in" style={d(2 + i)}>
+      <MetricArt i={i} p={p} />
       <CountUp value={metric.value} run={on} />
       <p>{p(metric.label)}</p>
       <small><FileText size={14} />{metric.file}</small>
@@ -408,29 +444,52 @@ function Proof({ on, p }: { on: boolean; p: Tr }) {
   </div>;
 }
 
-/* 13 · Market */
-function Market({ p }: { p: Tr }) {
-  return <div className="sh-market">
-    <Title kicker={p(fit.eyebrow)}>{p(fit.competitorsTitle)} — {p(["бізде бір ағын", "у нас один поток"])}</Title>
-    <table className="sh-table">
-      <thead><tr><th />{fit.competitors.map((name, i) => <th key={name} className={`sh-in${i === fit.competitors.length - 1 ? " ours" : ""}`} style={d(2 + i)}>{name}</th>)}</tr></thead>
-      <tbody>{fit.rows.map((row, r) => <tr key={row.feature[1]}><th className="sh-in" style={d(2 + r)}>{p(row.feature)}</th>{row.cells.map((cell, i) => <td key={fit.competitors[i]} className={`sh-in ${cell}${i === fit.competitors.length - 1 ? " ours" : ""}`} style={d(3 + i + r * 0.5)}>
-        {cell === "yes" ? <Check size={28} /> : cell === "no" ? <Minus size={24} /> : <CircleDashed size={24} />}
-      </td>)}</tr>)}</tbody>
-    </table>
-    <p className="sh-foot sh-in" style={d(10)}>{p(fit.note)}</p>
+/* 13 · Pilot plan: three months, what BCC gives, what we deliver */
+function Plan({ p }: { p: Tr }) {
+  return <div className="sh-plan">
+    <Title kicker={p(pilot.eyebrow)}>{p(pilot.title)}</Title>
+    <div className="sh-timeline">
+      <div className="sh-timeline-line" aria-hidden="true"><i /></div>
+      {pilot.phases.map((phase, i) => <article key={phase.name[1]} className="sh-in" style={d(2 + i * 2)}>
+        <span className="sh-month">{p(pilot.months[i])}</span>
+        <b>{p(phase.name)}</b>
+        <small>{p(phase.detail)}</small>
+      </article>)}
+    </div>
+    <div className="sh-deal">
+      <section className="sh-in" style={d(8)}><h3>{p(pilot.askTitle)}</h3><ol>{pilot.ask.map((item, i) => <li key={item[1]}><span>{i + 1}</span>{p(item)}</li>)}</ol></section>
+      <ArrowRight className="sh-deal-arrow sh-in" style={d(9)} size={44} aria-hidden="true" />
+      <section className="sh-in sh-deal-give" style={d(10)}><h3>{p(pilot.giveTitle)}</h3><ol>{pilot.give.map((item, i) => <li key={item[1]}><span><Check size={18} /></span>{p(item)}</li>)}</ol></section>
+    </div>
   </div>;
 }
 
-/* 14 · Pilot and close */
-function Pilot({ p }: { p: Tr }) {
-  return <div className="sh-pilot">
-    <Title kicker={p(pilot.eyebrow)} light>{p(pilot.title)}</Title>
-    <ol className="sh-phases">{pilot.phases.map((phase, i) => <li key={phase.name[1]} className="sh-in" style={d(2 + i)}><span>{i + 1}</span><b>{p(phase.name)}</b><small>{p(phase.detail)}</small></li>)}</ol>
-    <div className="sh-close">
-      <blockquote className="sh-in" style={d(6)}>{p(pilot.final)}</blockquote>
-      <div className="sh-qr sh-in" style={d(7)}><img src={`${BASE}/downloads/android-qr.svg`} alt="" /><span>{p(["Android қосымшасы", "Приложение для Android"])}<small>saq-bol-bcc…/download/android</small></span></div>
+/** QR code drawn locally from a URL (no external service). */
+function Qr({ url, label, hint }: { url: string; label: string; hint: string }) {
+  const [svg, setSvg] = useState("");
+  useEffect(() => {
+    let live = true;
+    void QRCode.toString(url, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#1D1D1E", light: "#FFFFFF" } }).then(markup => { if (live) setSvg(markup); });
+    return () => { live = false; };
+  }, [url]);
+  return <div className="sh-qr-card"><div className="sh-qr-code" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} /><b>{label}</b><small>{hint}</small></div>;
+}
+
+/* 14 · Close: the line, two QR codes, the team */
+function Close({ p }: { p: Tr }) {
+  const site = "https://saq-bol-bcc.zerdeliportald.workers.dev";
+  return <div className="sh-closing">
+    <div className="sh-closing-main">
+      <p className="sh-kicker sh-in">Saq Bol — «сақ бол»</p>
+      <blockquote className="sh-in" style={d(1)}>{p(pilot.final)}</blockquote>
+      <strong className="sh-thanks sh-in" style={d(3)}>{p(pilot.thanks)}</strong>
     </div>
-    <ul className="sh-team sh-in" style={d(8)}>{pilot.team.map(member => <li key={member.name[1]}><b>{p(member.name)}</b>{p(member.role)}</li>)}</ul>
+    <div className="sh-closing-qr sh-in" style={d(4)}>
+      <Qr url={`${site}/mobile?tour=1`} label={p(["Демоны көру", "Смотреть демо"])} hint={p(["2 минут, кірусіз", "2 минуты, без входа"])} />
+      <Qr url={`${site}/download/android`} label="Android" hint={p(["APK 2.9 жүктеу", "Скачать APK 2.9"])} />
+    </div>
+    <ul className="sh-crew">{pilot.team.map((member, i) => <li key={member.name[1]} className="sh-in" style={d(5 + i)}>
+      <span aria-hidden="true">{p(member.name).slice(0, 1)}</span><b>{p(member.name)}</b><small>{p(member.role)}</small>
+    </li>)}</ul>
   </div>;
 }

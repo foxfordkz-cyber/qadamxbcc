@@ -92,3 +92,19 @@ html[data-product] body, #app .shell, #app .topbar {
   .access-switch:hover span { transform: translate(2px,-2px); }
 }
 @keyframes access-photo { from { transform: scale(1.035); } to { transform: scale(1); } }
+
+/* Sign-in artwork: the Saq Bol card on the brand green instead of a stock photo. */
+.access-art { background: radial-gradient(120% 90% at 70% 10%, #0D5C45 0%, #073B2D 45%, #04261D 100%); }
+.access-art::before { display: none; }
+.access-card { position: absolute; left: 50%; top: 42%; width: min(74%, 440px); aspect-ratio: 1.586; translate: -50% -50%; border-radius: 22px; background: linear-gradient(135deg, #12684E, #0A4736 55%, #073426); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%), 0 44px 80px -30px rgb(0 0 0 / 65%); transform: perspective(1200px) rotateY(-16deg) rotateX(9deg); }
+.access-card-mark { position: absolute; left: 7%; top: 11%; width: 13%; height: auto; border-radius: 22%; }
+.access-card-chip { position: absolute; left: 7%; top: 42%; width: 13%; aspect-ratio: 1.3; border-radius: 6px; background: linear-gradient(135deg, #EED38A, #B8913F); }
+.access-card-name, .access-card-number { position: absolute; bottom: 11%; color: rgb(255 255 255 / 90%); font-size: clamp(13px, 1.3vw, 18px); font-weight: 600; }
+.access-card-name { left: 7%; }
+.access-card-number { right: 7%; letter-spacing: .12em; }
+@media (max-width: 680px) { .access-card { display: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .access-card { animation: access-float 7s ease-in-out infinite; }
+  @keyframes access-float { 50% { translate: -50% calc(-50% - 10px); } }
+}
+#app .access-art .access-caption { max-width: 12ch; font-size: clamp(30px, 3.6vw, 56px); overflow-wrap: normal; word-break: normal; hyphens: manual; }

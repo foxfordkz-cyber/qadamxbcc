@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("the team sign-in adapts its photo and links directly to jury rooms", async ({ page }) => {
+test("the team sign-in shows the brand card and links directly to jury rooms", async ({ page }) => {
   await page.route("**/", async route => {
     const response = await route.fetch();
     const html = (await response.text()).replace("data-product>", "data-product data-web-wallet>");
@@ -11,10 +11,10 @@ test("the team sign-in adapts its photo and links directly to jury rooms", async
     await page.goto("/");
     await expect(page.locator(".access-switch")).toHaveAttribute("href", "https://saq-bol-jury.onrender.com/");
     await expect(page.locator('#personal-login select, [data-role]')).toHaveCount(0);
-    const photo = page.locator(".access-art picture img");
-    await expect.poll(() => photo.evaluate(img => img.naturalWidth)).toBe(width === 360 ? 640 : 1280);
+    await expect(page.locator(".access-art picture")).toHaveCount(0);
+    await expect(page.locator(".access-card")).toBeVisible({ visible: width !== 360 });
     const form = await page.locator("#personal-login").boundingBox();
-    const artwork = await photo.boundingBox();
+    const artwork = await page.locator(".access-art").boundingBox();
     if (width === 360) expect(form.y).toBeGreaterThanOrEqual(artwork.y + artwork.height - 4);
     else expect(form.x).toBeGreaterThanOrEqual(artwork.x + artwork.width - 12);
     await expect(page.locator("#personal-login button[type=submit]")).toBeInViewport({ratio: 1});

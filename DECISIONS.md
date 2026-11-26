@@ -84,9 +84,10 @@ The adapter contract is a proposed bank interface. Decision state is distinct fr
 
 ## Large text (26 Nov 2026)
 
-Older clients asked for bigger type. Rather than a second set of font sizes, the "Aa" switch on the site and Profile → Large text in Android scale the whole document (`zoom`), so layouts keep their proportions. The choice is a per-device preference in localStorage.
+Older clients asked for bigger type. Rather than a second set of font sizes, the "Aa" switch on the site scales the whole document (`zoom`), so layouts keep their proportions. The choice is a per-device preference in localStorage. The team decided against the switch in Android; it was removed before any APK build.
 
 ## Pitch as a slide deck (26 Nov 2026, later)
 
 A scrolling page read as a website, not a pitch. `/pitch` is now a 1920×1080 deck scaled to the screen: 14 slides, 300 seconds, one idea per slide and one moving explanation each (the scam call, the antifraud blind spot, a 3D stack of the four layers, the live phone, the freezing card, the Telegram link, the 3D drop network, the tilted SOC screen, the decision gauge). Animations replay on every entry; heavy 3D mounts only for the current and adjacent slides. Controls hide while the mouse rests. The scrolling page moved to `/pitch/web`. PDFs in `docs/pitch/` are full-HD screenshots of each slide with the 3D rendered, because a print of the page would lose the WebGL scenes.
 
+The competitor comparison slide was dropped from the deck and the web pitch: naming other banks invites questions the prototype cannot answer from public data alone. Slide 13 is now the pilot plan (what BCC provides, what the team delivers) and slide 14 the close with QR codes and the full team, presented by Almaz.

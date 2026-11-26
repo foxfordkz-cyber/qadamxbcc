@@ -147,7 +147,7 @@ function clearVisible() {
 import { SAMPLE } from "./soc-sample.mjs";
 import { Gateway, gatewayOrigin, remainingSeconds } from "./gateway.mjs";
 import { installBackHandler } from "./native.mjs";
-import { currentTextSize, currentTheme, toggleTextSize, toggleTheme } from "./theme-mode.mjs";
+import { currentTheme, toggleTheme } from "./theme-mode.mjs";
 import { socUI } from "./soc-ui.mjs";
 import { PollBackoff, pollInterval } from "./poll-backoff.mjs";
 
@@ -573,13 +573,12 @@ async function readReport(session,id) {
 }
 function loginView() {
   if (product && webWallet) {
-    const photograph = juryWallet ? "alatau" : "facade";
     const place = juryWallet ? T("Комната жюри", "Қазылар бөлмесі") : T("Кошелёк команды", "Команда әмияны");
     const otherEntrance = juryWallet
       ? '<a class="access-switch" href="/jury#accounts">'+T("Данные для входа","Кіру деректері")+' <span aria-hidden="true">↗</span></a>'
       : '<a class="access-switch" href="https://saq-bol-jury.onrender.com/">'+T("Вход для жюри","Қазылар кабинеті")+' <span aria-hidden="true">↗</span></a>';
     return `<section class="wallet-access">
-    <div class="access-art"><picture><source media="(max-width: 680px)" srcset="media/${photograph}-640.webp"><img alt="" src="media/${photograph}-${juryWallet ? 764 : 1280}.webp" fetchpriority="high"></picture>
+    <div class="access-art"><div class="access-card" aria-hidden="true"><img class="access-card-mark" src="mark.svg" alt=""><span class="access-card-chip"></span><span class="access-card-name">Saq Bol</span><span class="access-card-number">•••• 4821</span></div>
     <p class="access-caption">${juryWallet ? T("Комната жюри","Қазылар бөлмесі") : T("Защита переводов","Аударымдарды қорғау")}</p></div>
     <div class="access-panel"><header class="access-heading"><small>${place}</small><h1>${T("Вход в кабинет","Кабинетке кіру")}</h1></header>
     <p class="access-hint">${juryWallet ? T("Введите логин и пароль для комнаты жюри.", "Қазылар бөлмесіне арналған логин мен құпиясөзді енгізіңіз.") : T("Используйте логин и пароль, выданные команде.", "Командаға берілген логин мен құпиясөзді енгізіңіз.")}</p>
@@ -1271,7 +1270,6 @@ function settingsView() {
       `<section class="settings-group"><h2>${T("Приложение","Қолданба")}</h2>` +
       settingsRow("language", "lang", T("Язык · Русский / ҚАЗ","Тіл · Қазақша / РУС")) +
       settingsRow("theme", "moon", T("Тёмная тема","Қараңғы тақырып"), toggle, `role="switch" aria-checked="${dark}"`) +
-      settingsRow("text-size", "lang", T("Крупный текст","Ірі мәтін"), toggle, `role="switch" aria-checked="${currentTextSize() === "large"}"`) +
       settingsRow("open-guardian", "plane", T("Открыть Telegram-бот","Telegram-ботты ашу")) + `</section>` +
       button("logout",T("Выйти","Шығу"),"secondary") +
       `<p class="screen-foot">Saq Bol × BCC ${edition} · ${T("Учебный стенд","Оқу стенді")}</p>`;
@@ -1980,7 +1978,6 @@ root.addEventListener("click", async (event) => {
     return;
   }
   if (act === "theme") { toggleTheme(); render(); return; }
-  if (act === "text-size") { toggleTextSize(); render(); return; }
   if (act === "language") {
     const transferForm = root.querySelector("#transfer-form");
     if (page === "transfer" && transferForm) draft = readTransferDraft(new FormData(transferForm));
