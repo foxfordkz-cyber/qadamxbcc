@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     app_name: str = "Saq Bol Core"
     environment: Literal["local", "demo", "pilot"] = "local"
     api_prefix: str = "/api/v1"
+    shared_graph_reads: bool = False
     allow_demo_overrides: bool = True
     render_telegram_test: bool = False
     api_key: SecretStr | None = None

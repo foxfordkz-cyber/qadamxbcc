@@ -49,3 +49,7 @@ The team rejected the glossy clay icons, tinted backgrounds and floating objects
 ## Preflight on the website origin
 
 Render may return HTML before it can serve the wallet. The independent website polls an allowlisted credential-free readiness endpoint and redirects only after a positive database/Redis check.
+
+## Multiworker graph authority
+
+BCC_SHARED_GRAPH_READS selects committed SQL aggregates for each evaluation and release and a repeatable PostgreSQL snapshot for the SOC graph. Each transfer receives its own graph view. Redis continues to deduplicate settled velocity by transfer UUID.
