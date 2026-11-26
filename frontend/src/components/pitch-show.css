@@ -61,11 +61,15 @@ body:has(.sh-root) { overflow: hidden; background: #DCDFE5; }
 .sh-cover-points svg { flex: none; padding: 6px; border-radius: 50%; background: rgb(47 211 155 / 18%); color: var(--glow); width: 36px; height: 36px; }
 .sh-cover-card { position: relative; display: grid; place-items: center; height: 760px; }
 .sh-cover-card .fx-card, .sh-freeze-card .fx-card { width: 100%; max-width: 780px; }
+/* A light product stage keeps the green card readable on green slides, in 3D and in the drawn fallback alike. */
+.sh-cover-card, .sh-freeze-card { border-radius: 44px; background: radial-gradient(75% 65% at 50% 42%, #FFFFFF 0%, #EEF2F0 62%, #DCE5E1 100%); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 60%), 0 50px 100px -50px rgb(0 0 0 / 60%); }
+.sh-cover-card { padding: 40px; }
+.sh-freeze-card { height: 720px; padding: 40px; }
 .sh-chip { position: absolute; z-index: 3; display: inline-flex; align-items: center; gap: 12px; padding: 18px 24px; border-radius: 20px; background: #fff; color: var(--ink); font: 600 26px/1 var(--font); box-shadow: 0 30px 60px -30px rgb(0 0 0 / 55%); opacity: 0; transform: translateY(18px) scale(.96); transition: opacity .5s, transform .7s cubic-bezier(.2, .8, .2, 1); }
 .sh-chip.is-on { opacity: 1; transform: none; }
-.sh-chip-hold { left: 0; bottom: 110px; }
+.sh-chip-hold { left: -40px; bottom: 90px; }
 .sh-chip-hold i { width: 14px; height: 14px; border-radius: 50%; background: var(--hold-accent); box-shadow: 0 0 0 6px rgb(227 155 27 / 22%); }
-.sh-chip-safe { right: 10px; top: 120px; color: var(--brand-text); transition-delay: .25s; }
+.sh-chip-safe { right: -30px; top: 90px; color: var(--brand-text); transition-delay: .25s; }
 
 /* 02 · Scam */
 .sh-huge { display: block; font: 700 220px/.9 var(--font-display); letter-spacing: -.05em; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -175,8 +179,8 @@ body:has(.sh-root) { overflow: hidden; background: #DCDFE5; }
 .sh-family figure { display: grid; justify-items: center; gap: 12px; margin: 0; zoom: 1.12; }
 .sh-family figcaption { color: var(--ink-3); font-size: 22px; font-weight: 600; }
 .sh-link { position: relative; height: 240px; }
-.sh-link svg { position: absolute; left: 0; right: 0; top: 60px; width: 100%; height: 120px; }
-.sh-link path { fill: none; stroke: var(--line-strong); stroke-width: 4; stroke-dasharray: 10 12; }
+.sh-link > svg { position: absolute; left: 0; right: 0; top: 60px; width: 100%; height: 120px; }
+.sh-link > svg path { fill: none; stroke: var(--line-strong); stroke-width: 4; stroke-dasharray: 10 12; }
 .sh-envelope, .sh-reply, .sh-lock { position: absolute; display: inline-flex; align-items: center; gap: 10px; padding: 14px 20px; border-radius: 16px; font: 700 24px/1 var(--font-display); white-space: nowrap; opacity: 0; }
 .sh-envelope { --run: 700px; left: 0; top: 92px; background: #229ED9; color: #fff; }
 .sh-reply { --run: 640px; right: 0; top: 92px; background: var(--red); color: #fff; }

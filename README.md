@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://saq-bol-bcc.zerdeliportald.workers.dev/pitch"><img src="docs/screenshots/readme/pitch-hero-kk.png" width="900" alt="Питч Saq Bol на казахском: заголовок и три экрана приложения, в центре перевод на паузе 15 минут"></a>
+  <a href="https://saq-bol-bcc.zerdeliportald.workers.dev/pitch"><img src="docs/screenshots/readme/pitch-hero-kk.png" width="900" alt="Первый слайд питча Saq Bol на казахском: 3D-карта замерзает, перевод на паузе 15 минут"></a>
 </p>
 
 Антифрод для клиентов Банка ЦентрКредит, кейс ITU Hackathon 2026. Когда человек под диктовку «службы безопасности» переводит деньги, Saq Bol **держит перевод 15 минут на сервере**, объясняет причины на казахском и русском, **сверяет звонок с журналом банка**, зовёт **близкого человека в Telegram** и показывает сотруднику SOC **всю сеть дропов** за получателем.
