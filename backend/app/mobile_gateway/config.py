@@ -11,6 +11,7 @@ class MobileSettings(BaseSettings):
     )
     enabled: bool = False
     ephemeral_store: bool = False
+    hosted_worker: bool = False
     environment: Literal["test"] = "test"
     auth_mode: Literal["rehearsal", "password"] = "rehearsal"
     client_hash: SecretStr = SecretStr("")

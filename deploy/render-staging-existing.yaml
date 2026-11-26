@@ -10,7 +10,7 @@ services:
     autoDeployTrigger: "off"
     dockerContext: .
     dockerfilePath: ./backend/Dockerfile.persistent
-    dockerCommand: sh scripts/start-persistent.sh api
+    dockerCommand: sh scripts/start-persistent.sh staging-api
     healthCheckPath: /ready
     envVars:
       - key: DATABASE_URL
@@ -25,6 +25,10 @@ services:
         value: "true"
       - key: BCC_MOBILE_AUTH_MODE
         value: password
+      - key: BCC_MOBILE_HOSTED_WORKER
+        value: "true"
+      - key: QADAM_INCLUDE_ANDROID_RELEASE
+        value: "false"
       - key: BCC_MOBILE_CLIENT_HASH
         sync: false
       - key: BCC_MOBILE_ADMIN_HASH

@@ -35,6 +35,7 @@ from app.integrations.scam_check import EXPLANATIONS, GUIDANCE, LIMITATION, Scam
 from app.main import create_app
 from app.mobile_gateway.config import MobileSettings
 from app.mobile_gateway.demo_catalog import allowed_recipient
+from app.mobile_gateway.hosted_worker import mobile_worker, validate_hosted_worker
 from app.mobile_gateway.staff_models import staff_status
 from app.models import Account, Transaction
 
@@ -180,6 +181,7 @@ def create_mobile_app(
     core_cfg = settings or Settings()
     if not cfg.enabled or core_cfg.environment == "pilot":
         raise ValueError("Mobile gateway requires an explicitly enabled synthetic test environment")
+    validate_hosted_worker(cfg, core_cfg)
     # The API process owns Telegram's single update consumer.
     core = create_app(core_cfg.model_copy(update={"render_telegram_test": False}), resources)
     if integrations is not None:
@@ -205,7 +207,13 @@ def create_mobile_app(
                     return
                 task = asyncio.create_task(monitor(app.state.resources.session_factory))
                 try:
-                    yield
+                    async with mobile_worker(
+                        cfg,
+                        core_cfg,
+                        core.state.integration_settings,
+                        app.state.resources.session_factory,
+                    ):
+                        yield
                 finally:
                     task.cancel()
                     with suppress(asyncio.CancelledError):

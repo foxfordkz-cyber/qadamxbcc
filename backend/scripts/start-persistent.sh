@@ -15,11 +15,17 @@ case "${1:-api}" in
   api)
     exec uvicorn app.mobile_gateway.app:factory --factory --host 0.0.0.0 --port "${PORT:-10000}"
     ;;
+  staging-api)
+    # Migrations are applied to the new database by the authorized operator first.
+    # This guard refuses the core database and an occupied cache before first seed.
+    python -m scripts.prepare_staging
+    exec uvicorn app.mobile_gateway.app:factory --factory --host 0.0.0.0 --port "${PORT:-10000}"
+    ;;
   worker)
     if [ "${BCC_INTEGRATIONS_TELEGRAM_MODE:-fake}" = test ]; then
       exec python -m app.integrations.telegram.hosted
     fi
     exec python -m app.integrations.worker
     ;;
-  *) echo 'Expected api, migrate or worker.' >&2; exit 1 ;;
+  *) echo 'Expected api, staging-api, migrate or worker.' >&2; exit 1 ;;
 esac

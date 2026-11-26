@@ -5,7 +5,13 @@ RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY android-app/www ./www
 COPY frontend/src/lib/message-patterns.mjs ../frontend/src/lib/message-patterns.mjs
 COPY android-app/scripts/vendor.mjs android-app/scripts/build-wallet.mjs android-app/scripts/stage-installer.mjs ./scripts/
-RUN --mount=type=bind,source=frontend/public/downloads,target=/releases node scripts/stage-installer.mjs package.json /releases ../backend/.qadam-web/install https://saq-bol-mobile.onrender.com
+ARG QADAM_INCLUDE_ANDROID_RELEASE=true
+RUN --mount=type=bind,source=frontend/public/downloads,target=/releases \
+    case "$QADAM_INCLUDE_ANDROID_RELEASE" in \
+      true) node scripts/stage-installer.mjs package.json /releases ../backend/.qadam-web/install https://saq-bol-mobile.onrender.com ;; \
+      false) echo 'Staging: no unaccepted Android installer is published.' ;; \
+      *) exit 1 ;; \
+    esac
 RUN npm run web
 
 FROM python:3.12-slim
