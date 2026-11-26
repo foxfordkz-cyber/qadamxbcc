@@ -1,0 +1,169 @@
+{
+  "model_version": "bcc-synthetic-rf-v3",
+  "generator_version": "v3-assisted-transfers",
+  "artifact_sha256": "27484bf2d98edead12f477813469b026ef8d87f6356a47d831bd03849b29a47d",
+  "dataset_sha256": "1bc14cfe8681d84e3071828a15a34d449619f9312e9b0a1fe7ef2a3ef0b91282",
+  "sample_count": 20000,
+  "positives": 5211,
+  "original": {
+    "prevalence": 0.26055,
+    "precision_at_50": 0.8928637627432725,
+    "recall_at_50": 0.9243907119554083,
+    "fpr_at_50": 0.03908310230576823,
+    "brier": 0.036079208145817825,
+    "ece_10_bins": 0.010726281365460475,
+    "reliability": [
+      {
+        "lower": 0.0,
+        "upper": 0.1,
+        "weight": 0.6571499999999358,
+        "mean_prediction": 0.007045931038143694,
+        "observed_rate": 0.004869512287910392
+      },
+      {
+        "lower": 0.1,
+        "upper": 0.2,
+        "weight": 0.02600000000000023,
+        "mean_prediction": 0.1430470747866764,
+        "observed_rate": 0.1134615384615375
+      },
+      {
+        "lower": 0.2,
+        "upper": 0.3,
+        "weight": 0.020650000000000078,
+        "mean_prediction": 0.24204160844948405,
+        "observed_rate": 0.24939467312348557
+      },
+      {
+        "lower": 0.3,
+        "upper": 0.4,
+        "weight": 0.011399999999999959,
+        "mean_prediction": 0.3501576129008484,
+        "observed_rate": 0.24561403508772026
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.5,
+        "weight": 0.015049999999999937,
+        "mean_prediction": 0.45088647622597755,
+        "observed_rate": 0.3720930232558151
+      },
+      {
+        "lower": 0.5,
+        "upper": 0.6,
+        "weight": 0.02000000000000006,
+        "mean_prediction": 0.5535542095062321,
+        "observed_rate": 0.49499999999999694
+      },
+      {
+        "lower": 0.6,
+        "upper": 0.7,
+        "weight": 0.017749999999999995,
+        "mean_prediction": 0.6496538669486713,
+        "observed_rate": 0.6760563380281667
+      },
+      {
+        "lower": 0.7,
+        "upper": 0.8,
+        "weight": 0.024000000000000174,
+        "mean_prediction": 0.7548633329836193,
+        "observed_rate": 0.8041666666666625
+      },
+      {
+        "lower": 0.8,
+        "upper": 0.9,
+        "weight": 0.046400000000000816,
+        "mean_prediction": 0.8557949894179738,
+        "observed_rate": 0.8997844827586196
+      },
+      {
+        "lower": 0.9,
+        "upper": 1.0,
+        "weight": 0.16159999999999036,
+        "mean_prediction": 0.9700914341069459,
+        "observed_rate": 0.9771039603960407
+      }
+    ]
+  },
+  "assumed_prevalence_0_0005": {
+    "prevalence": 0.0005,
+    "precision_at_50": 0.01169352345049343,
+    "recall_at_50": 0.9243907119554036,
+    "fpr_at_50": 0.03908310230576806,
+    "brier": 0.026125243183823803,
+    "ece_10_bins": 0.052731142033736175,
+    "reliability": [
+      {
+        "lower": 0.0,
+        "upper": 0.1,
+        "weight": 0.8839374749555619,
+        "mean_prediction": 0.006921200892571593,
+        "observed_rate": 6.947160920060831e-06
+      },
+      {
+        "lower": 0.1,
+        "upper": 0.2,
+        "weight": 0.03116189208400316,
+        "mean_prediction": 0.14315644412878623,
+        "observed_rate": 0.0001816674514103046
+      },
+      {
+        "lower": 0.2,
+        "upper": 0.3,
+        "weight": 0.020960927635316467,
+        "mean_prediction": 0.24389234592180575,
+        "observed_rate": 0.00047149344278551444
+      },
+      {
+        "lower": 0.3,
+        "upper": 0.4,
+        "weight": 0.011629823854076064,
+        "mean_prediction": 0.34934972415670673,
+        "observed_rate": 0.00046202323990330484
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.5,
+        "weight": 0.012784125360461297,
+        "mean_prediction": 0.447192873003739,
+        "observed_rate": 0.0008406126731490473
+      },
+      {
+        "lower": 0.5,
+        "upper": 0.6,
+        "weight": 0.013670969332455553,
+        "mean_prediction": 0.5535927578539525,
+        "observed_rate": 0.0013896800162648596
+      },
+      {
+        "lower": 0.6,
+        "upper": 0.7,
+        "weight": 0.007795189951391883,
+        "mean_prediction": 0.6456588971056815,
+        "observed_rate": 0.0029541563066843735
+      },
+      {
+        "lower": 0.7,
+        "upper": 0.8,
+        "weight": 0.006389934460797961,
+        "mean_prediction": 0.7499382238428015,
+        "observed_rate": 0.005796152881419708
+      },
+      {
+        "lower": 0.8,
+        "upper": 0.9,
+        "weight": 0.006365432387697272,
+        "mean_prediction": 0.8439611115327383,
+        "observed_rate": 0.012586572946334026
+      },
+      {
+        "lower": 0.9,
+        "upper": 1.0,
+        "weight": 0.00530422997825009,
+        "mean_prediction": 0.9416513569902525,
+        "observed_rate": 0.057126643953881416
+      }
+    ]
+  },
+  "scope": "Synthetic class-conditional distributions, raw model scores, fixed cutoff 0.50. Prevalence reweighting is a sensitivity analysis and does not establish bank prevalence."
+}

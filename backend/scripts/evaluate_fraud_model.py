@@ -34,7 +34,7 @@ from app.ml.model import (
     RiskScorer,
     load_model,
 )
-from app.ml.training import SEED, synthetic_data
+from app.ml.training import FROZEN_EVALUATION_ROWS, FROZEN_EVALUATION_SEED, SEED, synthetic_data
 from app.services.antifraud import AntifraudEngine, TransferContext, decide
 from app.services.graph import GraphStore
 
@@ -605,6 +605,38 @@ async def evaluate_artifact(
     }
 
 
+def frozen_report() -> dict[str, Any]:
+    """Check the committed input fingerprint before scoring. No fitting or threshold search."""
+    from scripts.model_calibration import assess, fingerprint
+
+    x, y = synthetic_data(FROZEN_EVALUATION_ROWS, seed=FROZEN_EVALUATION_SEED)
+    digest = fingerprint(x, y)
+    manifest_path = Path(__file__).resolve().parents[2] / "docs/evidence/p2p-holdout-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if (
+        manifest["sha256"] != digest
+        or manifest["seed"] != FROZEN_EVALUATION_SEED
+        or manifest["rows"] != len(y)
+        or manifest["feature_names"] != list(FEATURE_NAMES)
+    ):
+        raise ValueError("Frozen synthetic evaluation inputs changed")
+    model = load_model(MODEL_PATH, allow_training=False)
+    scores = [model.score(serving_features(row)).score / 100 for row in x]
+    labels = [int(label) for label in y]
+    return {
+        "model_version": MODEL_VERSION,
+        "generator_version": GENERATOR_VERSION,
+        "artifact_sha256": hashlib.sha256(MODEL_PATH.read_bytes()).hexdigest(),
+        "dataset_sha256": digest,
+        "sample_count": len(labels),
+        "positives": sum(labels),
+        "original": assess(labels, scores, sum(labels) / len(labels)),
+        "assumed_prevalence_0_0005": assess(labels, scores, 0.0005),
+        "scope": "Synthetic class-conditional distributions, raw model scores, fixed cutoff 0.50. "
+        "Prevalence reweighting is a sensitivity analysis and does not establish bank prevalence.",
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rows", type=int, default=10_000)
@@ -615,9 +647,22 @@ def main() -> None:
         help="Optional trusted v1 joblib artifact; never downloaded by this tool",
     )
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--frozen", action="store_true", help="Run the fingerprinted calibration cohort"
+    )
     args = parser.parse_args()
-    report = asyncio.run(
-        evaluate_artifact(rows=args.rows, seed=args.seed, baseline_artifact=args.baseline_artifact)
+    if args.frozen and (
+        args.rows != 10_000 or args.seed != EVALUATION_SEED or args.baseline_artifact
+    ):
+        parser.error("--frozen uses the predeclared seed, row count and current artifact")
+    report = (
+        frozen_report()
+        if args.frozen
+        else asyncio.run(
+            evaluate_artifact(
+                rows=args.rows, seed=args.seed, baseline_artifact=args.baseline_artifact
+            )
+        )
     )
     serialized = json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
     if args.output:
